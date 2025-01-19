@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  user-management:
+    build:
+      context: ./user-management
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./user-management:/app
+    command: npm start
+
+  project-management:
+    build:
+      context: ./project-management
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./project-management:/app
+    command: npm start
+
+  notifications:
+    build:
+      context: ./notifications
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./notifications:/app
+    command: npm start
+
+  dao-governance:
+    build:
+      context: ./dao-governance
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./dao-governance:/app
+    command: npm start
