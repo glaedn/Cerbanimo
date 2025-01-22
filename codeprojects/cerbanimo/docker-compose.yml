@@ -44,3 +44,14 @@ services:
     volumes:
       - ./dao-governance:/app
     command: npm start
+  postgres:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgreSQL
+      POSTGRES_PASSWORD: c3rebellum4n1m
+      POSTGRES_DB: cerbanimo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data

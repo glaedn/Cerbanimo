@@ -1,6 +1,11 @@
 require('dotenv').config();
 const Project = require('./models/project');
 const mongoose = require('mongoose');
+console.log('MongoDB URL:', process.env.MONGODB_URL);
+console.log('createUserTable:', typeof createUserTable);
+console.log('createProjectTable:', typeof createProjectTable);
+console.log('createTaskTable:', typeof createTaskTable);
+console.log('Project Model:', typeof Project);
 
 const testMongoDB = async () => {
   try {
