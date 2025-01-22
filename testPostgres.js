@@ -16,9 +16,11 @@ pool.query('SELECT 1 + 1 AS result', (err, res) => {
 const testPostgres = async () => {
   try {
     // Initialize schemas
-    await createProjectTable();
-    await createTaskTable();
-
+    (async () => {
+        await createUserTable();
+        await createProjectTable();
+        await createTaskTable();
+      })();
     // Insert a project
     const projectResult = await pool.query(
       `INSERT INTO projects (name, description, user_ids, creator_id, tags)

@@ -7,7 +7,18 @@ const testMongoDB = async () => {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log('MongoDB Connected');
-
+    (async () => {
+        try {
+          const project = await Project.create({
+            name: 'Sample Project',
+            description: 'This is a test project.',
+            tags: ['#test', '#example'],
+          });
+          console.log('MongoDB: Project created:', project);
+        } catch (err) {
+          console.error('MongoDB: Error creating project:', err);
+        }
+      })();
     // Create a project
     const project = await Project.create({
       name: 'Project A',
