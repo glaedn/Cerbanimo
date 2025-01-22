@@ -15,7 +15,7 @@ const testMongoDB = async () => {
       tags: ['#tech', '#collaboration'],
     });
     console.log('Inserted Project:', project);
-
+    console.log('Project:', Project);
     // Create a task associated with the project
     //const task = await Task.create({
     //  name: 'Task 1',

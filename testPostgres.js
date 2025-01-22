@@ -5,6 +5,14 @@ const { createTaskTable } = require('./models/task');
 // PostgreSQL connection
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
+pool.query('SELECT 1 + 1 AS result', (err, res) => {
+    if (err) {
+      console.error('Connection Test Error:', err);
+    } else {
+      console.log('PostgreSQL Connection Successful:', res.rows);
+    }
+  });
+
 const testPostgres = async () => {
   try {
     // Initialize schemas
