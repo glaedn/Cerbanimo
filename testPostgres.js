@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Pool } = require('pg');
 const { createUserTable } = require('./models/user')
 const { createProjectTable } = require('./models/project');
