@@ -3,8 +3,15 @@ require('dotenv').config();
 
 // PostgreSQL
 const { Pool } = require('pg');
+const { createUserTable } = require('./models/user');
+const { createProjectTable } = require('./models/project');
+const { createTaskTable } = require('./models/task');
+
 // MongoDB
 const mongoose = require('mongoose');
+const User = require('./models/user');
+const User = require('./models/project');
+const User = require('./models/task');
 
 // PostgreSQL Connection
 const pool = new Pool({
