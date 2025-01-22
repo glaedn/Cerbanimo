@@ -1,6 +1,12 @@
 const { Pool } = require('pg');
+const { createUserTable } = require('./models/user')
 const { createProjectTable } = require('./models/project');
 const { createTaskTable } = require('./models/task');
+console.log('Postgres URL:', process.env.POSTGRES_URL);
+console.log('createUserTable:', typeof createUserTable);
+console.log('createProjectTable:', typeof createProjectTable);
+console.log('createTaskTable:', typeof createTaskTable);
+console.log('Project Model:', typeof Project);
 
 // PostgreSQL connection
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
