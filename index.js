@@ -10,8 +10,8 @@ const { createTaskTable } = require('./models/task');
 // MongoDB
 const mongoose = require('mongoose');
 const User = require('./models/user');
-const User = require('./models/project');
-const User = require('./models/task');
+const Project = require('./models/project');
+const Task = require('./models/task');
 
 // PostgreSQL Connection
 const pool = new Pool({
