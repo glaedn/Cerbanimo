@@ -28,11 +28,18 @@ const testPostgres = async () => {
         await createProjectTable();
         await createTaskTable();
       })();
+    const userResult = await pool.query(
+      `INSERT INTO users (username, email, password_hash)
+      VALUES ($1, $2, $3) RETURNING *`,
+      ['testuser', 'testuser@example.com', 'hashed_password']
+    );
+    console.log('Inserted User:', userResult.rows[0]);
+      
     // Insert a project
     const projectResult = await pool.query(
       `INSERT INTO projects (name, description, user_ids, creator_id, tags)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      ['Project A', 'A sample project', [1, 2, 3], 1, ['#tech', '#collaboration']]
+      ['Project A', 'A sample project', [userResult.rows[0].id], userResult.rows[0].id, ['#tech', '#collaboration']]
     );
     console.log('Inserted Project:', projectResult.rows[0]);
 
@@ -40,7 +47,7 @@ const testPostgres = async () => {
     const taskResult = await pool.query(
       `INSERT INTO tasks (name, description, project_id, assigned_user_ids)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      ['Task 1', 'A sample task', projectResult.rows[0].id, [1, 2]]
+      ['Task 1', 'A sample task', projectResult.rows[0].id, [userResult.rows[0].id]]
     );
     console.log('Inserted Task:', taskResult.rows[0]);
   } catch (err) {

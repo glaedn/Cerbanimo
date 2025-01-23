@@ -12,6 +12,7 @@ const createTaskTable = async () => {
       description TEXT,
       project_id INT REFERENCES projects(id) ON DELETE CASCADE,
       assigned_user_ids INT[] DEFAULT '{}',
+      creator_id INT[] DEFAULT '{}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
