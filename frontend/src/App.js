@@ -1,15 +1,15 @@
-import React from 'react';
+import logo from './logo.svg';
 import LoginButton from './components/Auth/LoginButton';
-import LogoutButton from './components/Auth/LogoutButton';
+import LogoutButton from './components/Auth/Logoutbutton';
+import './App.css';
 
-const App = () => {
+function App() {
   return (
     <div>
-      <h1>Welcome to Cerbanimo</h1>
-      <LoginButton />
-      <LogoutButton />
-    </div>
+          <h1>Welcome to Cerbanimo</h1>
+          <LoginButton />
+          <LogoutButton />
+        </div>
   );
-};
-
-export default App;
+}
+export default App; 
