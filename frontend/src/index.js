@@ -13,8 +13,8 @@ root.render(
       domain="dev-i5331ndl5kxve1hd.us.auth0.com"
       clientId="vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"
       authorizationParams={{
-        audience: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/api/v2/',
-        redirect_uri: window.location.origin,
+        //audience: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/api/v2/',
+        redirect_uri: `${window.location.origin}/dashboard`,
       }}
     >
       <Provider store={store}>

@@ -32,5 +32,6 @@ router.post('/save-user', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+console.log('Postgres URL:', process.env.POSTGRES_URL);
 
 module.exports = router;

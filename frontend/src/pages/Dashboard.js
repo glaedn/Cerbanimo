@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import api from '../utils/api';
+import axios from 'axios';
 
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently } = useAuth0();
@@ -9,22 +9,29 @@ const Dashboard = () => {
     const saveUserToken = async () => {
       try {
         if (isAuthenticated && user) {
+          // Get JWT token from Auth0
           const token = await getAccessTokenSilently();
           console.log('JWT Token:', token);
 
-          // Save token in localStorage or send it to the backend
+          // Save token in localStorage
           localStorage.setItem('token', token);
 
-          // Optional: Save user details to the backend
-          await api.post('/auth/save-user', {
-            sub: user.sub,
+          // Send user data and token to the backend
+          await axios.post('http://localhost:4000/auth/save-user', {
+            sub: user.sub, // Auth0 user ID
             email: user.email,
             name: user.name,
-            token, // Include the token if needed
+          }, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
           });
+
+          console.log('User saved successfully!');
         }
       } catch (err) {
-        console.error('Error saving user token:', err);
+        console.error('Error saving user token or sending data:', err.response?.data || err.message);
       }
     };
 
