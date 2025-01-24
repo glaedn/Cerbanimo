@@ -1,9 +1,17 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
+import { Button, Box, Typography } from '@mui/material';
 
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently } = useAuth0();
+  
+  const navigate = useNavigate(); // Properly declare navigate using useNavigate
+
+  const goToProfile = () => {
+    navigate('/profile'); // Ensure the `/profile` route is properly defined
+  };
 
   useEffect(() => {
     const saveUserToken = async () => {
@@ -12,7 +20,7 @@ const Dashboard = () => {
           // Get JWT token from Auth0
           const token = await getAccessTokenSilently();
           console.log('JWT Token:', token);
-
+          console.log('User is authenticated, caching session...');
           // Save token in localStorage
           localStorage.setItem('token', token);
 
@@ -39,9 +47,14 @@ const Dashboard = () => {
   }, [isAuthenticated, user, getAccessTokenSilently]);
 
   return (
-    <div>
-      <h1>Welcome to the Dashboard</h1>
-    </div>
+    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
+      <Typography variant="h4" gutterBottom>
+        Welcome to the Dashboard
+      </Typography>
+      <Button variant="contained" color="primary" onClick={goToProfile}>
+        Profile
+      </Button>
+    </Box>
   );
 };
 
