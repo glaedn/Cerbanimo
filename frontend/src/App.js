@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import PrivateRoute from './components/PrivateRoute';
 import Dashboard from './pages/Dashboard';
 import AuthChecker from './components/AuthChecker'; // New component
+import ProfilePage from './pages/ProfilePage/ProfilePage';
 
 const App = () => {
   return (
@@ -25,6 +26,14 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
         </Routes>
       </AuthChecker>
     </Router>

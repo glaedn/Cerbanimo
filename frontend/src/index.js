@@ -14,10 +14,11 @@ root.render(
       clientId="vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"
       authorizationParams={{
         //audience: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/api/v2/',
-        redirect_uri: `${window.location.origin}/dashboard`,
+        redirect_uri: window.location.origin,
       }}
+      cacheLocation="localstorage" // Use local storage to persist session
     >
-      <Provider store={store}>
+        // <Provider store={store}>
         <App />
       </Provider>
     </Auth0Provider>,

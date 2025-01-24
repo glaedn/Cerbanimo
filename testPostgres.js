@@ -20,41 +20,53 @@ pool.query('SELECT 1 + 1 AS result', (err, res) => {
     }
   });
 
-const testPostgres = async () => {
-  try {
-    // Initialize schemas
-    (async () => {
-        await createUserTable();
-        await createProjectTable();
-        await createTaskTable();
-      })();
-    const userResult = await pool.query(
-      `INSERT INTO users (username, email, password_hash)
-      VALUES ($1, $2, $3) RETURNING *`,
-      ['testuser', 'testuser@example.com', 'hashed_password']
-    );
-    console.log('Inserted User:', userResult.rows[0]);
-      
-    // Insert a project
-    const projectResult = await pool.query(
-      `INSERT INTO projects (name, description, user_ids, creator_id, tags)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      ['Project A', 'A sample project', [userResult.rows[0].id], userResult.rows[0].id, ['#tech', '#collaboration']]
-    );
-    console.log('Inserted Project:', projectResult.rows[0]);
-
-    // Insert a task associated with the project
-    const taskResult = await pool.query(
-      `INSERT INTO tasks (name, description, project_id, assigned_user_ids)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      ['Task 1', 'A sample task', projectResult.rows[0].id, [userResult.rows[0].id]]
-    );
-    console.log('Inserted Task:', taskResult.rows[0]);
-  } catch (err) {
-    console.error('PostgreSQL Test Error:', err);
-  } finally {
-    pool.end();
-  }
-};
-
-testPostgres();
+  const testPostgres = async () => {
+    try {
+      console.log('Initializing PostgreSQL test...');
+  
+      // Initialize schema
+      await createUserTable();
+      await createProjectTable();
+      await createTaskTable();
+  
+      // Insert a user
+      const userResult = await pool.query(
+        `INSERT INTO users (username, email, skills, interests, experience)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [
+          'testuser2',
+          'testuser2@example.com',
+          ['React', 'Node.js'], // Skills
+          ['Web Development', 'Open Source'], // Interests
+          ['https://tasks.cerbanimo.com/task/1', 'https://tasks.cerbanimo.com/task/2'], // Experience links
+        ]
+      );
+      console.log('Inserted User:', userResult.rows[0]);
+  
+      // Fetch the user
+      const fetchedUser = await pool.query('SELECT * FROM users WHERE username = $1', ['testuser']);
+      console.log('Fetched User:', fetchedUser.rows[0]);
+  
+      // Update the user's profile
+      const updatedUser = await pool.query(
+        `UPDATE users
+         SET skills = $1, interests = $2, experience = $3
+         WHERE username = $4
+         RETURNING *`,
+        [
+          ['React', 'TypeScript', 'GraphQL'], // Updated skills
+          ['Open Source', 'UI/UX Design'], // Updated interests
+          ['https://tasks.cerbanimo.com/task/3'], // Updated experience links
+          'testuser2',
+        ]
+      );
+      console.log('Updated User:', updatedUser.rows[2]);
+    } catch (err) {
+      console.error('PostgreSQL Test Error:', err);
+    } finally {
+      pool.end();
+    }
+  };
+  
+  testPostgres();
