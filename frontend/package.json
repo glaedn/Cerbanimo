@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@auth0/auth0-react": "^2.2.4",
+    "@auth0/auth0-react": "^2.3.0",
     "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@babel/preset-env": "^7.26.0",
     "@babel/preset-react": "^7.26.3",

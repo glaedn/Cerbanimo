@@ -2,31 +2,27 @@ import './App.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import PrivateRoute from './components/PrivateRoute';
 import Dashboard from './pages/Dashboard';
-import AuthChecker from './components/AuthChecker'; // New component
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 
 const App = () => {
   return (
     <Router>
-      <AuthChecker>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+      <Routes>
+        {/* Public Route */}
+        <Route path="/login" element={<LoginPage />} />
 
-          {/* Private Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
+        {/* Private Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <PrivateRoute>
@@ -34,8 +30,10 @@ const App = () => {
             </PrivateRoute>
           }
         />
-        </Routes>
-      </AuthChecker>
+
+        {/* Default Route */}
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
     </Router>
   );
 };
