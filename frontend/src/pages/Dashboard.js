@@ -18,7 +18,9 @@ const Dashboard = () => {
       try {
         if (isAuthenticated && user) {
           // Get JWT token from Auth0
-          const token = await getAccessTokenSilently();
+          const token = await getAccessTokenSilently({
+            audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+        });
           console.log('JWT Token:', token);
           console.log('User is authenticated, caching session...');
           // Save token in localStorage
