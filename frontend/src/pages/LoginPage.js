@@ -20,7 +20,7 @@ const LoginPage = () => {
       {/* Login UI */}
       <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh" position="relative" zIndex={1}>
         <Typography variant="h4" gutterBottom color="white">
-          Welcome to Cerbanimo
+         .
         </Typography>
         <Button variant="contained" color="primary" onClick={handleLogin}>
           Log In

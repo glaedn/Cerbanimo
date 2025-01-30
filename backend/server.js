@@ -1,14 +1,22 @@
-require('dotenv').config(); // Load environment variables from .env
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const { auth } = require('express-oauth2-jwt-bearer');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
-
+const taskRoutes = require('./routes/tasks');
 // Initialize app
 const app = express();
+
+// JWT middleware for secured routes
+const jwtCheck = auth({
+  audience: 'http://localhost:4000',
+  issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
+  tokenSigningAlg: 'RS256',
+});
 
 // Middleware
 app.use(cors());
@@ -23,21 +31,8 @@ app.use('/uploads', express.static('uploads'));
 
 // Register routes
 app.use('/auth', authRoutes);
-app.use('/profile', profileRoutes);
-
-// Example protected route
-const { generateToken } = require('./services/auth/jwtUtils');
-const authenticate = require('./middlewares/authenticate');
-
-app.get('/token', (req, res) => {
-  const token = generateToken('user-management');
-  res.json({ token });
-});
-
-app.get('/protected', authenticate, (req, res) => {
-  res.json({ message: 'You have access!', service: req.service });
-});
-
+app.use('/profile', jwtCheck, profileRoutes); // Protect profile routes
+app.use('/tasks', taskRoutes);
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
