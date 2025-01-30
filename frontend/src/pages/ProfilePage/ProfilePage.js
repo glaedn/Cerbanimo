@@ -3,9 +3,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { TextField, Autocomplete, Button, Box, Typography, Avatar, Chip } from '@mui/material';
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
+import { useNavigate } from 'react-router-dom';
 
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState({
     username: '',
     skills: [],
@@ -106,6 +108,10 @@ const ProfilePage = () => {
         profile_picture: file, // Save the file for when the profile is saved
       }));
     }
+  };
+
+  const goToDashboard = () => {
+    navigate('/dashboard'); // Ensure the `/profile` route is properly defined
   };
 
   const handleSaveProfile = async () => {
@@ -243,6 +249,9 @@ const ProfilePage = () => {
       </ul>
       <Button variant="contained" color="primary" onClick={handleSaveProfile}>
         Save Profile
+      </Button>
+      <Button variant="contained" color="primary" onClick={goToDashboard}>
+        Back to Dashboard
       </Button>
     </Box>
   );
