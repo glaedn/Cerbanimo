@@ -1,0 +1,28 @@
+ docker run -d --name kong-database  --network=cerbanimo  -p 5432:5432  -e "POSTGRES_USER=kong"  -e "POSTGRES_DB=kong"  -e "POSTGRES_PASSWORD=c3rebellum4n1m"  postgres:13
+
+docker run --rm --network=cerbanimo -e "KONG_DATABASE=postgres" -e "KONG_PG_HOST=kong-database" -e "KONG_PG_PASSWORD=c3rebellum4n1m" kong:3.9.0 kong migrations bootstrap
+
+docker run -d --name kong-gateway  --network=cerbanimo  -e "KONG_DATABASE=postgres"  -e "KONG_PG_HOST=kong-database"  -e "KONG_PG_USER=kong"  -e "KONG_PG_PASSWORD=c3rebellum4n1m"  -e "KONG_PROXY_ACCESS_LOG=/dev/stdout"  -e "KONG_ADMIN_ACCESS_LOG=/dev/stdout"  -e "KONG_PROXY_ERROR_LOG=/dev/stderr"  -e "KONG_ADMIN_ERROR_LOG=/dev/stderr"  -e "KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl"  -e "KONG_ADMIN_GUI_URL=http://localhost:8002"  -p 8000:8000  -p 8443:8443  -p 127.0.0.1:8001:8001  -p 127.0.0.1:8002:8002  -p 127.0.0.1:8444:8444  kong:3.9.0
+
+# User Management Service
+curl -i -X POST http://localhost:8001/services   --data "name=user-management"   --data "url=https://user-management-iqbv.onrender.com/"
+
+# Project Management Service
+curl -i -X POST http://localhost:8001/services   --data "name=project-management"   --data "url=https://project-management-0ay9.onrender.com/"
+
+# Notifications Service
+curl -i -X POST http://localhost:8001/services   --data "name=notifications"   --data "url=https://notifications-t1os.onrender.com"
+
+# DAO Governance Service
+curl -i -X POST http://localhost:8001/services   --data "name=dao-governance"   --data "url=https://dao-governance.onrender.com"
+
+curl -i -X POST http://localhost:8001/routes   --data "paths[]=/users"   --data "service.name=user-management"
+
+port 5433 for postgreSQL
+
+postgresql://postgreSQL:c3rebellum4n1m@localhost:5432/cerbanimo
+
+mongoDB Atlas pw lnjICw8QxsABaiS2 username - cerbanimo_user 
+
+connection string for mongoDB:
+mongodb+srv://cerbanimo_user:lnjICw8QxsABaiS2@cerbanimo-cluster.ofgzx.mongodb.net/?retryWrites=true&w=majority&appName=cerbanimo-cluster
