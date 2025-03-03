@@ -1,0 +1,225 @@
+/* Profile Page - Space Game Theme */
+.profile-container {
+    padding: 20px;
+    color: rgb(255, 255, 255);
+    font-family: 'Orbitron', sans-serif; /* Sci-Fi Font */
+    text-align: center;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+
+}
+
+.profile-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.profile-container::-webkit-scrollbar-track {
+    background: rgba(13, 71, 161, 0.2);
+    border-radius: 5px;
+}
+
+.profile-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+}
+
+.profile-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+}
+
+/* Profile Title */
+.profile-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 20px;
+}
+
+/* Profile Card Styling */
+.profile-card {
+    background: rgba(26, 9, 57, 0.9); /* Dark translucent for contrast */
+    border-radius: 10px;
+    padding: 10px;
+    width: 100px;
+    height: 100px;
+    max-width: 100px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+}
+
+/* Profile Picture */
+.profile-avatar {
+    width: 120px !important;
+    height: 120px !important;
+    margin-bottom: 10px;
+    border: 3px solid #6dd5ed;
+    box-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+}
+
+/* Profile Fields */
+.profile-field {
+    width: 100%;
+    margin: 10px 0;
+    border: 1px solid #6dd5ed;
+}
+
+.profile-textfield .MuiOutlinedInput-root {
+    background: rgba(0, 0, 0, 0.6); 
+    color: white;
+    border-radius: 10px;
+    border: 2px solid #6dd5ed;
+}
+
+.profile-textfield .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: #29b6f6;
+}
+
+.profile-textfield .MuiOutlinedInput-notchedOutline {
+    border-color: #6dd5ed;
+}
+
+.profile-textfield label {
+    color: #6dd5ed;
+    background:rgba(0, 0, 0, 0.6)
+}
+
+/* Autocomplete Fields */
+.profile-autocomplete .MuiInputBase-root {
+    background: rgba(0, 0, 0, 0.6); /* Slightly transparent input */
+    color: white;
+}
+
+.profile-autocomplete label {
+    color: #6dd5ed;
+}
+
+.profile-autocomplete .MuiOutlinedInput-notchedOutline {
+    border-color: #6dd5ed;
+}
+
+.profile-autocomplete .MuiAutocomplete-tag {
+    background-color: rgba(109, 213, 237, 0.8);
+}
+
+/* Experience Section */
+.profile-experience {
+    font-size: 1rem;
+    color: #ffab00;
+}
+
+/* Buttons */
+.profile-footer {
+    width: 80%;
+    max-width: 500px;
+    position: absolute; /* Instead of fixed, so it respects container height */
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+.profile-buttons {
+    display: flex;
+    justify-content: space-between;
+    width: 80%;
+    max-width: 600px;
+    margin-top: 20px;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+
+.profile-button {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    margin-top: 10px;
+    width: 48%;
+    text-align: center;
+}
+
+.profile-button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+
+/* Experience Section */
+.profile-experience-container {
+    background: rgba(26, 9, 57, 0.9); 
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 20px;
+    margin-bottom: 120px;
+    margin-left: 20px;
+    margin-right: 20px;
+    width: 95%;
+    max-width: 600px;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+}
+
+.profile-experience-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 10px;
+}
+
+/* Experience List */
+.profile-experience-list {
+    list-style: none;
+    padding: 0;
+}
+
+.profile-experience-list li {
+    margin: 10px 0;
+}
+
+/* Experience Links */
+.profile-experience-link {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-decoration: none;
+    padding: 10px 15px;
+    background: rgba(109, 213, 237, 0.2);
+    border-radius: 8px;
+    transition: 0.3s ease-in-out;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    display: inline-block;
+}
+
+.profile-experience-link:hover {
+    color: #29b6f6;
+    background: rgba(109, 213, 237, 0.4);
+    box-shadow: 0 0 20px rgba(109, 213, 237, 1);
+}
+
+  /* Task Browser Wrapper */
+  .task-browser-wrapper {
+    flex-grow: 1;
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: center;
+    overflow-y: auto;
+    padding-bottom: 80px; /* Keeps it from colliding with the footer */
+}

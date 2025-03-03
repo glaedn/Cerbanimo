@@ -1,0 +1,98 @@
+/* Reset body & html padding/margins to remove white space */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent any scrolling due to extra space */
+}
+
+/* Full-Screen Space Background */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh; /* Ensures the whole screen is filled */
+    min-height: 100vh;
+    width: 100vw;  /* Ensures no extra space on sides */
+    min-width: 100vw;
+    overflow: hidden;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    color: white;
+    font-family: 'Orbitron', sans-serif; /* Futuristic font */
+}
+  
+  /* Title & Logout Button Section */
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 90%;
+    max-width: 1200px;
+    margin-bottom: 20px;
+  }
+  
+  /* Dashboard Title */
+  .dashboard-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+  }
+  
+  /* Logout Button */
+  .logout-button {
+    background-color: #ff1744;
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ff3d00;
+    transition: background-color 0.3s ease-in-out;
+  }
+  
+  .logout-button:hover {
+    background-color: #ff5252;
+    text-shadow: 0 0 10px #ff5252;
+  }
+
+.dashboard-footer {
+    width: 80%;
+    max-width: 500px;
+    position: absolute; /* Instead of fixed, so it respects container height */
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+}
+
+/* Sci-Fi Themed Buttons */
+.dashboard-button {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+}
+
+.dashboard-button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+  
+.task-browser-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+svg {
+  width: 100vw;
+  height: 100vh;
+}
