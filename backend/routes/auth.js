@@ -1,10 +1,13 @@
-const express = require('express');
+import express from 'express';
+import pg from 'pg';
+
+
+const { Pool } = pg;
+// Create a router instance
 const router = express.Router();
-const { Pool } = require('pg');
 
 // PostgreSQL connection
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
-
 // Save or Update User
 router.post('/save-user', async (req, res) => {
   const { sub, email, name } = req.body;
@@ -34,4 +37,4 @@ router.post('/save-user', async (req, res) => {
 });
 console.log('Postgres URL:', process.env.POSTGRES_URL);
 
-module.exports = router;
+export default router;
