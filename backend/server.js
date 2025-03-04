@@ -1,13 +1,15 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const { auth } = require('express-oauth2-jwt-bearer');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import { auth } from 'express-oauth2-jwt-bearer';
 
 // Import routes
-const authRoutes = require('./routes/auth');
-const profileRoutes = require('./routes/profile');
-const taskRoutes = require('./routes/tasks');
+import authRoutes from './routes/auth.js';
+import profileRoutes from './routes/profile.js';
+import taskRoutes from './routes/tasks.js';
+import skillsRoutes from './routes/skills.js'; // ✅ Ensure the `.js` extension is included
+
 // Initialize app
 const app = express();
 
@@ -33,6 +35,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/auth', authRoutes);
 app.use('/profile', jwtCheck, profileRoutes); // Protect profile routes
 app.use('/tasks', taskRoutes);
+app.use('/skills', skillsRoutes); 
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

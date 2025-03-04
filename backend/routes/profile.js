@@ -1,8 +1,13 @@
-const express = require('express');
-const multer = require('multer');
-const { Pool } = require('pg');
+import express from 'express';
+import multer from 'multer';
+import pg from 'pg';
 
+const { Pool } = pg;
+
+// Create a router instance
 const router = express.Router();
+
+// PostgreSQL connection
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
 // Multer configuration for file uploads
@@ -66,8 +71,6 @@ router.get('/', async (req, res) => {
     const skillsPool = skillsResult.rows.map((row) => row.name);
     const interestsPool = interestsResult.rows.map((row) => row.name);
 
-
-
     res.status(200).json(profile);
   } catch (err) {
     console.error('Error fetching profile:', err);
@@ -108,4 +111,5 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
   }
 });
 
-module.exports = router;
+// Export the router
+export default router;
