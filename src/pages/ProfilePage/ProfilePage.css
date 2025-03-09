@@ -65,9 +65,10 @@
 
 /* Profile Fields */
 .profile-field {
-    width: 100%;
+    max-width: 1200px;
     margin: 10px 0;
     border: 1px solid #6dd5ed;
+    justify-content: center;
 }
 
 .profile-textfield .MuiOutlinedInput-root {
@@ -119,7 +120,7 @@
     width: 80%;
     max-width: 500px;
     position: absolute; /* Instead of fixed, so it respects container height */
-    bottom: 20px;
+    bottom: 0px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -141,7 +142,7 @@
 
 
 .profile-button {
-    background-color: rgba(109, 213, 237, 0.8);
+    background-color: #29f652;
     color: black;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
@@ -156,7 +157,7 @@
 }
 
 .profile-button:hover {
-    background-color: #29b6f6;
+    background-color: #71f88c;
     text-shadow: 0 0 20px #6dd5ed;
 }
 

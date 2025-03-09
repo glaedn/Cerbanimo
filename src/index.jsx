@@ -27,4 +27,5 @@ root.render(
   >
     <App />
   </Auth0Provider>
+  
 );

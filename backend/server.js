@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import profileRoutes from './routes/profile.js';
 import taskRoutes from './routes/tasks.js';
 import skillsRoutes from './routes/skills.js'; // ✅ Ensure the `.js` extension is included
+import projectRoutes from './routes/projects.js';
 
 // Initialize app
 const app = express();
@@ -19,6 +20,7 @@ const jwtCheck = auth({
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
   tokenSigningAlg: 'RS256',
 });
+
 
 // Middleware
 app.use(cors());
@@ -36,6 +38,7 @@ app.use('/auth', authRoutes);
 app.use('/profile', jwtCheck, profileRoutes); // Protect profile routes
 app.use('/tasks', taskRoutes);
 app.use('/skills', skillsRoutes); 
+app.use('/projects', projectRoutes);
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

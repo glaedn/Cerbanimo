@@ -1,0 +1,283 @@
+/* Reset body & html padding/margins to remove white space */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent any scrolling due to extra space */
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    color: white;
+    font-family: 'Orbitron', sans-serif; /* Futuristic font */
+}
+
+/* Container for Project Pages */
+.project-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh;
+    width: 100vw;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Page Title */
+.project-page-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 10px;
+}
+
+/* Search Bar & Add Button */
+.search-bar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 80%;
+    max-width: 600px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background: rgba(26, 9, 57, 0.9);
+    color: white;
+    margin-right: 10px;
+}
+
+.add-project-button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+
+
+/* Project List Wrapper */
+.project-list-wrapper {
+    flex-grow: 1;
+    width: 80%;
+    max-width: 1200px;
+    margin-top: 10px;
+    overflow-y: auto;
+    background: rgba(26, 9, 57, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+    padding: 20px;
+}
+
+/* Custom Scrollbar */
+.project-list-wrapper::-webkit-scrollbar {
+    width: 10px;
+}
+
+.project-list-wrapper::-webkit-scrollbar-track {
+    background: rgba(13, 71, 161, 0.2);
+    border-radius: 5px;
+}
+
+.project-list-wrapper::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+}
+
+.project-list-wrapper::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+}
+
+/* Project Card */
+.project-card {
+    background-color: rgba(26, 9, 57, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+}
+
+.project-card:hover {
+    transform: scale(1.02);
+    background: rgba(109, 213, 237, 0.1);
+}
+
+/* Project Title */
+.project-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 10px;
+}
+
+/* Project Description */
+.project-description {
+    font-size: 1rem;
+    color: #e0e0e0;
+    margin-bottom: 5px;
+}
+
+/* Pagination & Search Bar */
+.pagination-container, .search-bar-container {
+    width: 80%;
+    max-width: 1200px;
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    z-index: 10;
+}
+
+/* Search Input */
+.search-input {
+    flex: 1;
+    padding: 10px;
+    margin-right: 10px;
+    border-radius: 5px;
+    border: none;
+    background-color: rgba(109, 213, 237, 0.2);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* Add Project Button */
+.add-project-button {
+    background-color: #6dd5ed;
+    color: black;
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    font-weight: bold;
+    border-radius: 50%;
+    border: none;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 1);
+}
+
+.add-project-button:hover {
+    background-color: #29b6f6;
+}
+
+/* Sci-Fi Themed Buttons */
+.project-button {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    margin: 5px;
+}
+
+.pagination-button {
+    background-color: rgba(128, 0, 128, 0.8); /* Purple */
+    color: white;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin: 5px;
+}
+
+.pagination-button:disabled {
+    background-color: rgba(100, 100, 100, 0.5);
+    cursor: not-allowed;
+}
+
+/* Contribute Button */
+.contribute-button {
+    padding: 8px 12px;
+    background-color: #6dd5ed;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.contribute-button:hover {
+    background-color: #29b6f6;
+}
+
+/* Task Popup */
+.task-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 600px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(109, 213, 237, 1);
+    z-index: 1000;
+    color: white;
+}
+
+.popup-title {
+    font-size: 1.8rem;
+    color: #6dd5ed;
+    margin-bottom: 20px;
+}
+
+.task-list {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-y: auto;
+    max-height: 40vh;
+}
+
+.task-card {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    min-width: 100%;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+}
+
+.accept-button {
+    padding: 8px 15px;
+    border-radius: 5px;
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.accept-button:disabled {
+    background-color: grey;
+    color: white;
+    cursor: not-allowed;
+}
+
+.close-popup-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #ff1744;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-popup-button:hover {
+    background-color: #ff5252;
+    text-shadow: 0 0 20px #ff5252;
+}

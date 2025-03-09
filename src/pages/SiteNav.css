@@ -1,0 +1,170 @@
+/* Site Navigation Bar - Sci-Fi Theme */
+
+body {
+    padding-top: 0px; /* Add padding to push content below the fixed nav bar */
+}
+
+.title-container {
+    position: absolute;
+    top: 20px;
+    left: 50px;
+}
+
+.site-title {
+    font-family: 'Valera Round', sans-serif; /* If Valera Round isn't available, it will fallback to sans-serif */
+    font-size: 25px;
+    color: #fff; /* White text color */
+    margin: 0;
+}
+
+.site-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 20px;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    z-index: 1000;
+    border-bottom: 2px solid rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+}
+
+/* Sidebar Toggle (Hamburger) Container */
+.sidebar-toggle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    width: 60px;  /* Increased width for better space */
+    height: 40px;  /* Same for height, to keep it a square */
+    z-index: 1001; /* Ensure hamburger is always visible above sidebar */
+}
+
+/* Hamburger Icon */
+.hamburger {
+    width: 30px;
+    height: 3px;
+    background-color: white;
+    transition: all 0.3s ease-in-out;
+}
+
+.hamburger.open {
+    transform: rotate(45deg);
+    position: relative;
+}
+
+.hamburger.open::before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 3px;
+    background-color: white;
+    top: -10px;
+    left: 0;
+    transform: rotate(90deg);
+}
+
+.hamburger.open::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 3px;
+    background-color: white;
+    top: 10px;
+    left: 0;
+    transform: rotate(90deg);
+}
+
+/* Sidebar styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: -270px;  /* Sidebar is hidden off-screen by default */
+    width: 250px;
+    height: 100%;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    transition: all 0.3s ease-in-out;
+    z-index: 1000;
+}
+
+.sidebar.open {
+    right: 0; /* Sidebar slides in */
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    flex-grow: 1; /* Allow nav links to take available space */
+}
+
+.nav-link {
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    text-decoration: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+    background-color: rgba(26, 9, 57, 0.8);
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    width: 100%;
+}
+
+.nav-link.active {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+}
+
+.nav-link:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+
+.nav-button {
+    background-color: rgba(255, 23, 68, 0.8);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(255, 23, 68, 1);
+    border: none;
+    width: 100%;
+}
+
+.nav-button:hover {
+    background-color: #ff5252;
+    text-shadow: 0 0 20px #ff5252;
+}
+
+.logout-button {
+    margin-top: auto;
+    margin-bottom: 30px;
+    background-color: rgba(255, 23, 68, 0.8);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(255, 23, 68, 1);
+    border: none;
+    width: 100%;
+}
+
+.logout-button:hover {
+    background-color: #ff5252;
+    text-shadow: 0 0 20px #ff5252;
+}
