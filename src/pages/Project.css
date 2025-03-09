@@ -1,0 +1,231 @@
+/* Reset body & html padding/margins to remove white space */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* Container for the Project Page */
+.project-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh;
+    width: 100vw;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Project Header Section */
+.project-header {
+    width: 90%;
+    background: rgba(26, 9, 57, 0.9);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    margin-top: 30px;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.5);
+}
+
+/* Project Title */
+.project-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 10px;
+}
+
+/* Project Description */
+.project-description {
+    font-size: 1rem;
+    color: #e0e0e0;
+    margin-bottom: 5px;
+    background: transparent;
+    border: none;
+    width: 100%;
+    padding: 10px;
+    resize: none;
+}
+
+/* Project Tags Input (for creators) */
+.project-tags-input {
+    width: 90%;
+    padding: 10px;
+    margin-top: 10px;
+    background: rgba(26, 9, 57, 0.8);
+    color: white;
+    border-radius: 5px;
+    border: 1px solid #6dd5ed;
+    font-size: 1rem;
+}
+
+/* Tasks Section */
+.tasks-section {
+    width: 100%;
+    margin-top: 20px;
+    overflow-y: auto;
+}
+
+.tasks-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+}
+
+/* Add Task Button */
+.add-task-button {
+    background-color: #6dd5ed;
+    color: black;
+    font-size: 2rem;
+    width: 40px;
+    height: 40px;
+    font-weight: bold;
+    border-radius: 50%;
+    border: none;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 1);
+}
+
+.add-task-button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+
+/* Task List */
+.tasks-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: flex-start;
+}
+
+.task-card {
+    background-color: rgba(26, 9, 57, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    width: calc(33.33% - 20px);
+    box-sizing: border-box;
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+}
+
+.task-card:hover {
+    transform: scale(1.02);
+    background: rgba(109, 213, 237, 0.1);
+}
+
+.task-card h3 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #6dd5ed;
+}
+
+/* Task Card Description */
+.task-card p {
+    font-size: 1rem;
+    color: #e0e0e0;
+}
+
+/* Task Card Skill */
+.task-card p strong {
+    color: #6dd5ed;
+}
+
+/* Task Popup */
+.task-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.task-popup {
+    background: rgba(26, 9, 57, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.5);
+    width: 400px;
+    color: white;
+}
+
+.task-popup h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    margin-bottom: 15px;
+}
+
+.task-popup input, .task-popup select, .task-popup textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: rgba(26, 9, 57, 0.8);
+    color: white;
+    border-radius: 5px;
+    border: 1px solid #6dd5ed;
+    font-size: 1rem;
+}
+
+.task-popup input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+/* Buttons in Popup */
+.task-popup button {
+    background-color: #6dd5ed;
+    color: black;
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: 0.3s;
+}
+
+.task-popup button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}
+
+.close-popup-button {
+    background-color: transparent;
+    color: #e0e0e0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.close-popup-button:hover {
+    color: #6dd5ed;
+}
+
+/* Sci-Fi Themed Buttons */
+.project-button {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+}

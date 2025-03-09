@@ -1,0 +1,73 @@
+/* Project Creation Page - Space Game Theme */
+.project-creation-container {
+    padding: 20px;
+    color: rgb(255, 255, 255);
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 30px;
+}
+
+/* Title Styling */
+.form-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 20px;
+}
+
+/* Input Fields */
+.form-input {
+    width: 100%;
+    max-width: 600px;
+    margin: 10px 0;
+    border-radius: 10px;
+}
+
+.form-input label {
+    color: #6dd5ed;
+}
+
+.form-input .MuiOutlinedInput-root {
+    color: white;
+    background: rgba(26, 9, 57, 0.9);
+    border-radius: 10px;
+}
+
+.form-input .MuiOutlinedInput-notchedOutline {
+    border-color: #6dd5ed;
+}
+
+.form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: #29b6f6;
+}
+
+.MuiAutocomplete-root {
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Create Button */
+.create-button {
+    background-color: rgba(109, 213, 237, 0.8);
+    color: black;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    width: 100%;
+    max-width: 300px;
+}
+
+.create-button:hover {
+    background-color: #29b6f6;
+    text-shadow: 0 0 20px #6dd5ed;
+}

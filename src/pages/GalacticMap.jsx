@@ -475,14 +475,8 @@ const GalacticMap = () => {
 
     // Scale and move tasks with the planet
     svg.selectAll(".task")
-      .filter(d => d.index === selectedPlanet.index)
-      .transition().duration(750)
-      .attr("transform", (d) => {
-        const scaleFactor = 80 / 15; // Scale factor based on planet radius change
-        const dx = width / 2 - selectedPlanet.x;
-        const dy = height / 2 - selectedPlanet.y;
-        return `translate(${dx}, ${dy}) scale(${scaleFactor})`;
-      });
+      .transition().duration(50)
+      .style("opacity", 0);
 
     // Hide all other planets and the star
     svg.selectAll(".planet")
@@ -624,6 +618,7 @@ const GalacticMap = () => {
           x: width / 2 + 150 * Math.cos(angle),
           y: height / 2 + 150 * Math.sin(angle),
           tasks: project.tasks,
+          index: i,
         };
       });
 
@@ -685,19 +680,19 @@ const GalacticMap = () => {
   
     return (
       <div className="task-details-popup">
-        <h2>{task.name}</h2>
-        <p>{task.description}</p>
-        <p>Assigned Users: {task.assigned_user_ids ? task.assigned_user_ids.join(", ") : "Open"}</p>
-        <p>Skill: {task.skill_id}</p>
-        <button 
-          onClick={() => onClose()} 
-          disabled={!!task.assigned_user_ids}
-        >
-          Accept Task
-        </button>
-        <button onClick={onClose}>Close</button>
+          <h2>{task.name || "Unnamed Task"}</h2>
+          <p>{task.description || "No description available"}</p>
+          <p>Assigned Users: {task.assigned_user_ids ? task.assigned_user_ids.join(", ") : "Open"}</p>
+          <p>Skill: {task.skill_id || "No skill information"}</p>
+          <button 
+              onClick={onClose} 
+              disabled={!!task.assigned_user_ids}
+          >
+              Accept Task
+          </button>
+          <button onClick={onClose}>Close</button>
       </div>
-    );
+  );
   };
 
   useEffect(() => {

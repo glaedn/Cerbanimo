@@ -175,10 +175,9 @@ const ProfilePage = () => {
         />
       </Box>
       
-      
       {/* File input to change the profile picture */}
-      <Button variant="contained" component="label" className="profile-button">
-        Choose Profile Picture
+      <Button variant="contained" component="label" className="edit-button">
+        Edit
         <input type="file" hidden onChange={handleProfilePictureChange} />
       </Button>
       
@@ -190,7 +189,7 @@ const ProfilePage = () => {
         fullWidth
         margin="normal"
       />
-      <Box mb={2} width="100%">
+      <Box mb={2} >
         <Autocomplete
           className="profile-textfield profile-field"
           multiple
@@ -216,7 +215,7 @@ const ProfilePage = () => {
           }
         />
       </Box>
-      <Box mb={2} width="100%">
+      <Box mb={2}>
         <Autocomplete
           className="profile-textfield profile-field"
           multiple
@@ -264,13 +263,13 @@ const ProfilePage = () => {
       </Box>
       
       <Box className="profile-footer">
-      <Button variant="contained" className="profile-button" color="primary" onClick={handleSaveProfile}>
+      <Button variant="contained" color="secondary" className="profile-button"  onClick={handleSaveProfile}>
         Save Profile
       </Button>
-      <Button variant="contained" color="primary" className="profile-button"  onClick={goToDashboard}>
-        Back to Dashboard
+      <Button variant="contained" className="profile-button"  onClick={goToDashboard}>
+        Dashboard
       </Button>
-      <Button variant="contained" color="secondary" className="profile-button"  onClick={() => logout({ returnTo: window.location.origin })}>
+      <Button variant="contained" className="profile-button"  onClick={() => logout({ returnTo: window.location.origin })}>
         Logout
       </Button>
       </Box>

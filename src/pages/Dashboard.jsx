@@ -18,6 +18,10 @@ const Dashboard = () => {
     navigate('/profile'); // Ensure the `/profile` route is properly defined
   };
 
+  const goToProjects = () => {
+    navigate('/projects');
+  }
+
   useEffect(() => {
     const saveUserToken = async () => {
       try {
@@ -61,8 +65,8 @@ const Dashboard = () => {
         <Button className="dashboard-button" variant="contained" color="primary" onClick={goToProfile}>
           Profile
         </Button>
-        <Button className="dashboard-button" variant="contained" color="secondary" onClick={() => logout({ returnTo: window.location.origin })}>
-          Logout
+        <Button className="dashboard-button" variant="contained" color="secondary" onClick={goToProjects}>
+          Projects
         </Button>
       </Box>
     </Box>
