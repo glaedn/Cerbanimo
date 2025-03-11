@@ -24,10 +24,14 @@ const upload = multer({ storage });
 // Endpoint to fetch skills and interests pool
 router.get('/options', async (req, res) => {
   try {
-    const skillsResult = await pool.query('SELECT name FROM skills');
+    const skillsResult = await pool.query('SELECT id, name FROM skills'); // Include id
     const interestsResult = await pool.query('SELECT name FROM interests');
 
-    const skillsPool = skillsResult.rows.map((row) => row.name);
+    const skillsPool = skillsResult.rows.map((row) => ({
+      id: row.id,  // Keep the actual skill ID
+      name: row.name
+    }));
+
     const interestsPool = interestsResult.rows.map((row) => row.name);
 
     res.json({ skillsPool, interestsPool });

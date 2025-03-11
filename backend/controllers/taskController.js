@@ -95,6 +95,40 @@ const getPlanetSpecificTasks = async (skillName) => {
   return result.rows;
 };
 
+// Fetch tasks for a specific project
+const getTasksByProjectId = async (projectId) => {
+  const parsedProjectId = parseInt(projectId, 10);
+  
+  if (isNaN(parsedProjectId)) {
+      throw new Error(`Invalid projectId: ${projectId}`);
+  }
+
+  console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
+
+  const query = `SELECT * FROM tasks WHERE project_id = $1`;
+  const { rows } = await pool.query(query, [parsedProjectId]);
+  
+  return rows;
+};
+
+// Fetch skill names by an array of skill IDs
+const getSkillNamesByIds = async (skillIds) => {
+  const query = `
+    SELECT id, name FROM skills WHERE id = ANY($1)
+  `;
+  const result = await pool.query(query, [skillIds]);
+  return result.rows; // Returns [{ id: 1, name: 'Programming' }, ...]
+};
+
+// Fetch skill ID by skill name
+const getSkillIdByName = async (skillName) => {
+  const query = `
+    SELECT id FROM skills WHERE LOWER(name) = LOWER($1) LIMIT 1
+  `;
+  const result = await pool.query(query, [skillName]);
+  return result.rows[0] || null; // Returns { id: 1 } or null if not found
+};
+
 const acceptTask = async (taskId, userId) => {
   const updateQuery = `
     UPDATE tasks 
@@ -104,12 +138,26 @@ const acceptTask = async (taskId, userId) => {
   await pool.query(updateQuery, [userId, taskId]);
 };
 
-const createNewTask = async (title, description, skill, active, projectId) => {
+const createNewTask = async (title, description, skill_id, active, projectId) => {
   const insertQuery = `
-    INSERT INTO tasks (title, description, skill, active, project_id)
+    INSERT INTO tasks (name, description, skill_id, active_ind, project_id)
     VALUES ($1, $2, $3, $4, $5) RETURNING *;
   `;
-  const result = await pool.query(insertQuery, [title, description, skill, active, projectId]);
+  const result = await pool.query(insertQuery, [title, description, skill_id, active, projectId]);
+  return result.rows[0];
+};
+
+const updateTask = async (title, description, skill_id, active, projectId, taskId) => {
+  const updateQuery = `
+    UPDATE tasks
+    SET name = $1, description = $2, skill_id = $3, active_ind = $4, project_id = $5
+    WHERE id = $6
+    RETURNING *;
+  `;
+  const result = await pool.query(updateQuery, [title, description, skill_id, active, projectId, taskId]);
+  console.log("Query Result:", result.rows);
+  console.log("Query Params:", { title, description, skill_id, active, projectId, taskId });
+
   return result.rows[0];
 };
 
@@ -119,5 +167,9 @@ export default {
   getProjectRelevantTasks,
   getPlanetSpecificTasks,
   acceptTask,
-  createNewTask
+  getTasksByProjectId,
+  getSkillNamesByIds,
+  getSkillIdByName,
+  createNewTask,
+  updateTask
 };

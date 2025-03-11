@@ -11,6 +11,7 @@
     align-items: center;
     justify-content: flex-start;
     overflow-y: auto;
+    margin-top: 50px;
 
 }
 
@@ -69,6 +70,10 @@
     margin: 10px 0;
     border: 1px solid #6dd5ed;
     justify-content: center;
+}
+
+.profile-textfield {
+    max-width: 500px;
 }
 
 .profile-textfield .MuiOutlinedInput-root {

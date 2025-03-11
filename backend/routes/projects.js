@@ -120,6 +120,29 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// Update an existing project
+router.put('/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  const { name, description, tags } = req.body;
+
+  if (!name || !description) {
+      return res.status(400).json({ error: 'Name and description are required' });
+  }
+
+  try {
+      await pool.query(
+          `UPDATE projects 
+          SET name = $1, description = $2, tags = $3 
+          WHERE id = $4`,
+          [name, description, tags, projectId]
+      );
+      res.status(200).json({ message: 'Project updated successfully' });
+  } catch (error) {
+      console.error('Failed to update project:', error);
+      res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
 
 
 export default router;

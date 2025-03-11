@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 import './ProjectPages.css';
 
 const ProjectPages = () => {
@@ -11,6 +12,8 @@ const ProjectPages = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [tasks, setTasks] = useState([]);
+
+  const navigate = useNavigate();
   
   // Fetch user profile for skills
   const fetchUserProfile = async () => {
@@ -32,7 +35,20 @@ const ProjectPages = () => {
       const response = await axios.get('http://localhost:4000/projects', {
         params: { search, page, auth0Id: user.sub },
       });
-      setProjects(response.data);
+  
+      // Normalize the search term to lowercase (case-insensitive)
+      const searchTerm = search.toLowerCase();
+  
+      // Filter the projects based on partial, case-insensitive matches for both title and description
+      const filteredProjects = response.data.filter(project => {
+        const projectName = project.name.toLowerCase(); // Normalize project name to lowercase
+        const projectDescription = project.description.toLowerCase(); // Normalize project description to lowercase
+  
+        // Check if the search term is anywhere in the project name or description
+        return projectName.includes(searchTerm) || projectDescription.includes(searchTerm);
+      });
+  
+      setProjects(filteredProjects);
     } catch (error) {
       console.error('Failed to fetch projects:', error);
     }
@@ -90,7 +106,7 @@ const ProjectPages = () => {
         />
         <button
           className="add-project-button"
-          onClick={() => window.location.href = '/project/create'}
+          onClick={() => window.location.href = '/projectcreation'}
           title="Add New Project"
         >
           +
@@ -110,6 +126,14 @@ const ProjectPages = () => {
               }}
             >
               Contribute
+            </button>
+            <button
+              className="open-project-button"
+              onClick={() => {
+                navigate(`/project/${project.id}`);
+              }}
+            >
+              Open Project
             </button>
           </div>
         ))}
