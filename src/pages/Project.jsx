@@ -281,48 +281,62 @@ const handleTaskFormChange = (e) => {
             readOnly={!isProjectCreator}
           />
           {isProjectCreator && (
-    <Autocomplete
-    className="profile-textfield profile-field"
-    multiple
-    options={interestsPool}
-    value={project.tags || []}
-    onChange={(event, newValue) => setProject({ ...project, tags: newValue })}
-    renderInput={(params) => (
-      <TextField
-        {...params}
-        variant="outlined"
-        label="Project Tags"
-        placeholder="Add tags"
-      />
-    )}
-    renderTags={(value, getTagProps) =>
-      value.map((option, index) => {
-        const { key, ...otherProps } = getTagProps({ index }); // Extract key separately
-        return (
-          <Chip
-            key={key} // Explicitly pass key
-            label={option}
-            style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px' }}
-            {...otherProps} // Spread remaining props without key
-          />
-        );
-      })
-    }
-  />
-
-)}
+            <Autocomplete
+              className="profile-textfield profile-field"
+              multiple
+              options={interestsPool}
+              value={project.tags || []}
+              onChange={(event, newValue) => setProject({ ...project, tags: newValue })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  label="Project Tags"
+                  placeholder="Add tags"
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...otherProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      label={option}
+                      style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px' }}
+                      {...otherProps}
+                    />
+                  );
+                })
+              }
+            />
+          )}
         </div>
       )}
       <div className="tasks-section">
         <h2 className="tasks-title">Tasks</h2>
-        {isProjectCreator && <button className="add-task-button" onClick={() => 
-          handleTaskPopupOpen()}>+</button>}
+        {isProjectCreator && <button className="add-task-button" onClick={() => handleTaskPopupOpen()}>+</button>}
         <div className="tasks-list">
           {tasks.map((task) => (
             <div key={task.id} className="task-card">
               <h3>{task.name || 'Untitled Task'}</h3>
               <p>{task.description || 'No description provided.'}</p>
               <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
+              {task.submitted && isProjectCreator && (
+                <button 
+                  className="approve-task-button" 
+                  onClick={async () => {
+                    try {
+                      await axios.put(`http://localhost:4000/tasks/${task.id}/approve`);
+                      alert('Task approved successfully!');
+                      fetchTasks();
+                    } catch (error) {
+                      console.error('Failed to approve task:', error);
+                    }
+                  }}
+                >
+                  Approve Work
+                </button>
+              )}
               {isProjectCreator && (
                 <button className="edit-task-button" onClick={() => { 
                   setTaskForm({
@@ -333,52 +347,96 @@ const handleTaskFormChange = (e) => {
                     active_ind: task.active,
                     assigned_user_ids: task.assigned_user_ids
                   });
-                  handleTaskPopupOpen(task);                  
+                  handleTaskPopupOpen(task);                   
                   setShowTaskPopup(true);
                 }}>Edit</button>
               )}
-              <button 
-                className="accept-task-button" 
+              {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && (
+                <button
+                  className="submit-task-button"
+                  onClick={async () => {
+                    try {
+                          await axios.post(`http://localhost:4000/tasks/${task.id}/submit`);
+                          alert('Task submitted for approval!');
+                          fetchTasks(); // Refresh the task list
+                        } catch (error) {
+                          console.error('Failed to submit task:', error);
+                        }
+                    }}
+                >
+                  Submit for Approval
+                </button>
+              )}
+
+<button
+  className="accept-task-button"
+  style={{
+    backgroundColor: task.assigned_user_ids?.includes(parseInt(profileData.id))
+      ? "rgba(237, 124, 109, 0.8)"
+      : "",
+  }}
+  onClick={async () => {
+    try {
+      if (task.assigned_user_ids?.includes(parseInt(profileData.id))) {
+        await axios.put(`http://localhost:4000/tasks/${task.id}/drop`, { userId: profileData.id });
+        alert("Task dropped!");
+      } else {
+        await axios.put(`http://localhost:4000/tasks/${task.id}/accept`, { userId: profileData.id });
+        alert("Task accepted!");
+      }
+      fetchTasks();
+    } catch (error) {
+      console.error("Failed to update task assignment:", error);
+    }
+  }}
+  disabled={!task.active_ind} // 🔹 Disable button if task is not active
+>
+  {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
+</button>
+
+
+              {/* Reject button (Project Owner can reject a submitted task) */}
+              {isProjectCreator && task.submitted && (
+              <button
+                className="reject-task-button"
                 onClick={async () => {
                   try {
-                    await axios.put(`http://localhost:4000/tasks/${task.id}/accept`, { userId: profileData.id });
-                    alert('Task accepted!');
+                    await axios.put(`http://localhost:4000/tasks/${task.id}/reject`);
+                    alert('Task rejected.');
                     fetchTasks(); // Refresh the task list
                   } catch (error) {
-                    console.error('Failed to accept task:', error);
+                    console.error('Failed to reject task:', error);
                   }
                 }}
-                disabled={task.assigned_user_ids?.includes(parseInt(profileData.id))}
               >
-              {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'Reject' : 'Accept'}
+                Reject Work
               </button>
-
+            )}
             </div>
           ))}
         </div>
       </div>
       <div className="project-controls">
-    <button 
-      className="save-project-button" 
-      onClick={async () => {
-        try {
-          await axios.put(`http://localhost:4000/projects/${projectId}`, project);
-          alert('Project saved successfully!');
-        } catch (error) {
-          console.error('Failed to save project:', error);
-        }
-      }}
-    >
-      Save Project
-    </button>
-
-    <button 
-      className="back-to-projects-button" 
-      onClick={() => window.location.href = '/projects'}
-    >
-      Projects
-    </button>
-    </div>
+        <button 
+          className="save-project-button" 
+          onClick={async () => {
+            try {
+              await axios.put(`http://localhost:4000/projects/${projectId}`, project);
+              alert('Project saved successfully!');
+            } catch (error) {
+              console.error('Failed to save project:', error);
+            }
+          }}
+        >
+          Save Project
+        </button>
+        <button 
+          className="back-to-projects-button" 
+          onClick={() => window.location.href = '/projects'}
+        >
+          Projects
+        </button>
+      </div>
 
       {showTaskPopup && (
         <div className="task-popup-overlay">

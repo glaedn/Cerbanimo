@@ -1,0 +1,9 @@
+body {
+    padding-top: 50px; /* Add padding to push content below the fixed nav bar */
+    margin-left: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 20px;
+}

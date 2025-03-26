@@ -3,12 +3,14 @@ import * as React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import PrivateRoute from './components/PrivateRoute.jsx';
-import Dashboard from './pages/Dashboard.jsx';
+//import Dashboard from './pages/Dashboard.jsx';
 import ProfilePage from './pages/ProfilePage/ProfilePage.jsx';
 import ProjectPages from './pages/ProjectPages.jsx';
 import SiteNav from './pages/SiteNav.jsx'; 
 import ProjectCreation from './pages/ProjectCreation.jsx';
 import Project from './pages/Project.jsx';
+import SkillTree from './pages/SkillTree.jsx';
+import RewardDashboard from './pages/RewardDashboard.jsx';
 
 const App = () => {
   return (
@@ -23,7 +25,7 @@ const App = () => {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <RewardDashboard />
             </PrivateRoute>
           }
         />
@@ -56,6 +58,14 @@ const App = () => {
           element={
             <PrivateRoute>
               <Project />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile/skilltree"
+          element={
+            <PrivateRoute>
+              <SkillTree />
             </PrivateRoute>
           }
         />

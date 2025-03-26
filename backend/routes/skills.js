@@ -31,4 +31,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+//Fetch the whole Skills table.
+router.get('/all', async (req, res) => {
+  try {
+
+    const query = `SELECT * FROM skills`;
+    const result = await pool.query(query);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No skills found" });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching skills:", err);
+    res.status(500).json({ message: "Failed to fetch skills" });
+  }
+});
+
 export default router;

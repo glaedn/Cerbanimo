@@ -1,0 +1,95 @@
+body {
+    padding-top: 70px; /* Add padding to push content below the fixed nav bar */
+    margin-left: 10px;
+}
+
+/* Reward Dashboard Styling */
+.reward-dashboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #121212;
+    min-height: 100vh;
+}
+
+.dashboard-title {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+/* Ensure grid items are in a row */
+.dashboard-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+}
+
+/* Individual grid items */
+.dashboard-grid-item {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Card Styling */
+.reward-card {
+    background: linear-gradient(145deg, #282728, #4c4350);
+    border-radius: 12px;
+    padding: 20px;
+    width: 280px;
+    box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
+    text-align: center;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    color: #35313c;
+}
+
+.reward-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 0px 25px rgba(0, 255, 255, 0.5);
+}
+
+/* Icons */
+.reward-icon {
+    font-size: 40px;
+    color: #000000;
+    margin-bottom: 10px;
+}
+
+/* Badges Container */
+.badges-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.badge-avatar {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #ffcc00;
+    box-shadow: 0px 0px 10px rgba(255, 204, 0, 0.5);
+}
+
+/* Leaderboard Styling */
+.leaderboard-entry {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #000000;
+
+    transition: background 0.3s ease-in-out;
+}
+
+.leaderboard-entry:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

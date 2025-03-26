@@ -10,7 +10,7 @@ import profileRoutes from './routes/profile.js';
 import taskRoutes from './routes/tasks.js';
 import skillsRoutes from './routes/skills.js'; // ✅ Ensure the `.js` extension is included
 import projectRoutes from './routes/projects.js';
-
+import rewardsRoutes from './routes/rewards.js';
 // Initialize app
 const app = express();
 
@@ -39,6 +39,7 @@ app.use('/profile', jwtCheck, profileRoutes); // Protect profile routes
 app.use('/tasks', taskRoutes);
 app.use('/skills', skillsRoutes); 
 app.use('/projects', projectRoutes);
+app.use('/rewards', rewardsRoutes);
 // Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
