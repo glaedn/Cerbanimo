@@ -185,5 +185,39 @@ router.put('/update/:taskId', async (req, res) => {
   }
 });
 
+router.put('/:taskId/drop', async (req, res) => {
+  const { taskId } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const updatedTask = await taskController.dropTask(taskId, userId);
+    res.status(200).json({ message: 'Task dropped successfully', task: updatedTask });
+  } catch (error) {
+    console.error('Failed to drop task:', error);
+    res.status(500).json({ error: 'Failed to drop task' });
+  }
+});
+
+
+
+router.post("/:taskId/submit", taskController.submitTask);
+
+router.put("/:taskId/approve", async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    const result = await taskController.approveTask(taskId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Failed to approve task:", error);
+    res.status(500).json({ error: "Failed to approve task" });
+  }
+});
+
+router.put("/:taskId/reject", taskController.rejectTask);
 
 export default router;

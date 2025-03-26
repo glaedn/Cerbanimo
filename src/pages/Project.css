@@ -195,6 +195,51 @@ html, body {
     cursor: not-allowed;
   }
   
+  .submit-task-button {
+    background-color: rgba(109, 237, 147, 0.8);
+    color: black;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .submit-task-button:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+  }
+
+  .reject-task-button {
+    background-color: rgba(237, 124, 109, 0.8);
+    color: black;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .reject-task-button:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+  }
+
+  .approve-task-button {
+    background-color: rgba(109, 237, 147, 0.8);
+    color: black;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .approve-task-button:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+  }
+  
 
 /* Task Popup */
 .task-popup-overlay {

@@ -161,6 +161,111 @@ const updateTask = async (title, description, skill_id, active, projectId, taskI
   return result.rows[0];
 };
 
+const submitTask = async (req, res) => {
+  const { taskId } = req.params;
+  try {
+      const result = await pool.query(
+          `UPDATE tasks 
+           SET submitted = TRUE, submitted_at = NOW() 
+           WHERE id = $1 RETURNING *`, 
+           [taskId]
+      );
+
+      if (result.rowCount === 0) {
+          return res.status(404).json({ error: "Task not found" });
+      }
+
+      res.json({ message: "Task submitted for approval", task: result.rows[0] });
+  } catch (error) {
+      console.error("Error submitting task:", error);
+      res.status(500).json({ error: "Failed to submit task" });
+  }
+};
+
+const approveTask = async (taskId) => {
+  try {
+    // Fetch the task to get assigned users and reward tokens
+    const taskQuery = `SELECT assigned_user_ids, reward_tokens FROM tasks WHERE id = $1;`;
+    const taskResult = await pool.query(taskQuery, [taskId]);
+
+    if (taskResult.rowCount === 0) {
+      throw new Error("Task not found.");
+    }
+
+    const { assigned_user_ids, reward_tokens } = taskResult.rows[0];
+
+    if (assigned_user_ids.length === 0) {
+      throw new Error("No users assigned to this task.");
+    }
+
+    // Distribute rewards to all assigned users
+    const rewardQuery = `
+      UPDATE users 
+      SET cotokens = cotokens + $1 
+      WHERE id = ANY($2::int[]);
+    `;
+    await pool.query(rewardQuery, [reward_tokens, assigned_user_ids]);
+
+    // Mark task as complete and clear assigned users
+    const updateTaskQuery = `
+      UPDATE tasks 
+      SET active_ind = FALSE, submitted = FALSE, assigned_user_ids = '{}' 
+      WHERE id = $1;
+    `;
+    await pool.query(updateTaskQuery, [taskId]);
+
+    return { message: "Task approved, rewards distributed, and task closed." };
+  } catch (error) {
+    console.error("Error approving task:", error);
+    throw error;
+  }
+};
+
+const rejectTask = async (req, res) => {
+  const { taskId } = req.params;
+  try {
+      const result = await pool.query(
+          `UPDATE tasks 
+           SET submitted = FALSE 
+           WHERE id = $1 RETURNING *`, 
+           [taskId]
+      );
+
+      if (result.rowCount === 0) {
+          return res.status(404).json({ error: "Task not found" });
+      }
+
+      res.json({ message: "Task rejected", task: result.rows[0] });
+  } catch (error) {
+      console.error("Error rejecting task:", error);
+      res.status(500).json({ error: "Failed to reject task" });
+  }
+};
+
+const dropTask = async (taskId, userId) => {
+  try {
+    // Remove the user ID from assigned_user_ids array
+    const updateQuery = `
+      UPDATE tasks 
+      SET assigned_user_ids = array_remove(assigned_user_ids, $1)
+      WHERE id = $2 RETURNING *;
+    `;
+
+    const result = await pool.query(updateQuery, [userId, taskId]);
+
+    if (result.rowCount === 0) {
+      throw new Error("Task not found or user was not assigned.");
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    console.error("Error dropping task:", error);
+    throw error;
+  }
+};
+
+
+
 export default {
   getAllTasks,
   getRelevantTasks,
@@ -171,5 +276,9 @@ export default {
   getSkillNamesByIds,
   getSkillIdByName,
   createNewTask,
-  updateTask
+  updateTask,
+  submitTask,
+  approveTask,
+  rejectTask,
+  dropTask
 };

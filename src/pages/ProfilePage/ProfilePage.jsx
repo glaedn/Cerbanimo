@@ -116,6 +116,9 @@ const ProfilePage = () => {
   const goToDashboard = () => {
     navigate('/dashboard'); // Ensure the `/profile` route is properly defined
   };
+  const goToSkillTree = () => {
+    navigate('/profile/skilltree'); // Ensure the `/profile` route is properly defined
+  };
 
   const handleSaveProfile = async () => {
     try {
@@ -215,6 +218,9 @@ const ProfilePage = () => {
           }
         />
       </Box>
+      <Button variant="contained" className="tree-button"  onClick={goToSkillTree}>
+        Skill Tree
+      </Button>
       <Box mb={2}>
         <Autocomplete
           className="profile-textfield profile-field"
