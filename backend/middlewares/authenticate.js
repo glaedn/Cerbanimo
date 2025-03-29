@@ -4,10 +4,7 @@ const jwksClient = require('jwks-rsa');
 // Auth0 configuration
 const authConfig = {
   domain: 'dev-i5331ndl5kxve1hd.us.auth0.com',
-  //clientId: '${process.env.REACT_APP_CLIENT_ID}',
-  //redirectUri: '${window.location.origin}/dashboard',
-  audience: 'http://localhost:4000', // Use the uneditable audience
-  //scope: 'openid profile email',
+  audience: 'http://localhost:4000',
 };
 
 // Set up JWKS client for token verification
@@ -15,19 +12,20 @@ const client = jwksClient({
   jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`,
 });
 
-
-
 // Middleware to authenticate requests
 const ensureAuthenticated = (req, res, next) => {
+  // Check if the route is the public profile route
+  if (req.path.startsWith('/public/')) {
+    return next(); // Skip authentication for public routes
+  }
+
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
     return res.status(401).json({ message: 'Authorization header missing' });
   }
-  console.log('Raw Token:', authHeader);
 
   const token = authHeader.split(' ')[1]; // Extract the token
-  console.log('Received Token:', token);
 
   if (!token) {
     return res.status(401).json({ message: 'Token missing' });
@@ -67,5 +65,16 @@ const ensureAuthenticated = (req, res, next) => {
     }
   );
 };
+
+// Helper function to get the signing key
+function getKey(header, callback) {
+  client.getSigningKey(header.kid, function(err, key) {
+    if (err) {
+      return callback(err);
+    }
+    const signingKey = key.publicKey || key.rsaPublicKey;
+    callback(null, signingKey);
+  });
+}
 
 module.exports = ensureAuthenticated;

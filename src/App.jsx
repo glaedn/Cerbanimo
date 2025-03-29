@@ -11,6 +11,8 @@ import ProjectCreation from './pages/ProjectCreation.jsx';
 import Project from './pages/Project.jsx';
 import SkillTree from './pages/SkillTree.jsx';
 import RewardDashboard from './pages/RewardDashboard.jsx';
+import PublicProfile from './pages/PublicProfile.jsx';
+import BadgeCreation from './pages/BadgeCreation.jsx';
 
 const App = () => {
   return (
@@ -61,11 +63,20 @@ const App = () => {
             </PrivateRoute>
           }
         />
+        <Route path="/profile/public/:userId" element={<PublicProfile />} />
         <Route
           path="/profile/skilltree"
           element={
             <PrivateRoute>
               <SkillTree />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/BadgeCreation"
+          element={
+            <PrivateRoute>
+              <BadgeCreation />
             </PrivateRoute>
           }
         />

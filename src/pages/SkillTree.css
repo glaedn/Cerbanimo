@@ -7,3 +7,14 @@ body {
     text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
     margin-bottom: 20px;
 }
+
+/* In your SkillTree.css */
+.node text {
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+  }
+  
+  .node circle {
+    stroke: #fff;
+    stroke-width: 1.5px;
+  }

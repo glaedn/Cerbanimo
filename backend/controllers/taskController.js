@@ -198,13 +198,15 @@ const approveTask = async (taskId) => {
       throw new Error("No users assigned to this task.");
     }
 
-    // Distribute rewards to all assigned users
+    // Distribute rewards to all assigned users and update their experience array
     const rewardQuery = `
       UPDATE users 
-      SET cotokens = cotokens + $1 
-      WHERE id = ANY($2::int[]);
+      SET 
+        cotokens = cotokens + $1,
+        experience = array_append(experience, $2::text)
+      WHERE id = ANY($3::int[]);
     `;
-    await pool.query(rewardQuery, [reward_tokens, assigned_user_ids]);
+    await pool.query(rewardQuery, [reward_tokens, taskId.toString(), assigned_user_ids]);
 
     // Mark task as complete and clear assigned users
     const updateTaskQuery = `
@@ -247,7 +249,8 @@ const dropTask = async (taskId, userId) => {
     // Remove the user ID from assigned_user_ids array
     const updateQuery = `
       UPDATE tasks 
-      SET assigned_user_ids = array_remove(assigned_user_ids, $1)
+      SET assigned_user_ids = array_remove(assigned_user_ids, $1),
+      submitted = false
       WHERE id = $2 RETURNING *;
     `;
 

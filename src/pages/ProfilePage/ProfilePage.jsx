@@ -6,6 +6,7 @@ import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/mater
 import { useNavigate } from 'react-router-dom';
 import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
+import { Link } from 'react-router-dom';
 
 
 const ProfilePage = () => {
@@ -24,8 +25,8 @@ const ProfilePage = () => {
   const [newProfilePicture, setNewProfilePicture] = useState(null); // New state for the file input
 
   const colorPalette = [
-    blue[100], red[100], green[100], orange[100], purple[100], teal[100], pink[100], indigo[100],
-    blue[200], red[200], green[200], orange[200], purple[200], teal[200], pink[200], indigo[200],
+      blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
+      blue[400], red[400], green[400], orange[400], purple[400], teal[400], pink[400], indigo[400],
   ];
 
   const getRandomColorFromPalette = () => {
@@ -64,12 +65,40 @@ const ProfilePage = () => {
           });
 
           setProfileData({
+            id: profileResponse.data.id,
             username: profileResponse.data.username || '',
-            skills: profileResponse.data.skills || [],
-            interests: profileResponse.data.interests || [],
+            skills: (profileResponse.data.skills || []).map(skill => {
+              // Handle different potential formats
+              if (typeof skill === 'string') {
+                try {
+                  if (skill.startsWith('{') && skill.includes('"name"')) {
+                    return JSON.parse(skill);
+                  }
+                  return { name: skill };
+                } catch (e) {
+                  return { name: skill };
+                }
+              }
+              return skill;
+            }),
+            interests: (profileResponse.data.interests || []).map(interest => {
+              // Same logic as skills
+              if (typeof interest === 'string') {
+                try {
+                  if (interest.startsWith('{') && interest.includes('"name"')) {
+                    return JSON.parse(interest);
+                  }
+                  return { name: interest };
+                } catch (e) {
+                  return { name: interest };
+                }
+              }
+              return interest;
+            }),
             experience: profileResponse.data.experience || [],
-            profile_picture: profileResponse.data.profile_picture || '', // Use the profile picture from backend
+            profile_picture: profileResponse.data.profile_picture || '',
           });
+
 
           // Fetch skills and interests pool
           const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
@@ -79,9 +108,9 @@ const ProfilePage = () => {
           });
           setSkillsPool(optionsResponse.data.skillsPool);
           setInterestsPool(optionsResponse.data.interestsPool);
+          console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);
-
           if (err.response && err.response.status === 401) {
             setError('Session expired. Please log in again.');
             //logout({ returnTo: window.location.origin });
@@ -94,6 +123,41 @@ const ProfilePage = () => {
       fetchProfileAndOptions();
     }
   }, [isAuthenticated, isLoading, user, logout, getAccessTokenSilently]);
+
+  const [experienceDetails, setExperienceDetails] = useState([]);
+
+  useEffect(() => {
+    const fetchExperienceDetails = async () => {
+      try {
+        if (profileData.experience && profileData.experience.length > 0) {
+          const token = await getAccessTokenSilently({
+            audience: 'http://localhost:4000',
+            scope: 'openid profile email read:profile',
+          });
+
+          // Use Promise.all to fetch details for all tasks concurrently
+          const taskDetailsPromises = profileData.experience.map(async (taskId) => {
+            const response = await axios.get(`http://localhost:4000/tasks/${taskId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            return response.data;
+          });
+
+          const taskDetails = await Promise.all(taskDetailsPromises);
+          setExperienceDetails(taskDetails);
+        }
+      } catch (error) {
+        console.error('Error fetching experience details:', error);
+      }
+    };
+
+    if (isAuthenticated && !isLoading && profileData.experience.length > 0) {
+      fetchExperienceDetails();
+    }
+  }, [profileData.experience, isAuthenticated, isLoading]);
 
   const handleInputChange = (field, value) => {
     setProfileData((prevData) => ({
@@ -130,6 +194,10 @@ const ProfilePage = () => {
       formData.append('username', profileData.username);
       formData.append('skills', JSON.stringify(profileData.skills));
       formData.append('interests', JSON.stringify(profileData.interests));
+
+      if (profileData.id) {
+        formData.append('user_id', profileData.id);
+      }
 
       if (profileData.profile_picture) {
         formData.append('profilePicture', profileData.profile_picture); // Use the file selected for the profile picture
@@ -193,79 +261,107 @@ const ProfilePage = () => {
         margin="normal"
       />
       <Box mb={2} >
-        <Autocomplete
-          className="profile-textfield profile-field"
-          multiple
-          options={skillsPool}
-          value={profileData.skills || []}
-          onChange={(event, newValue) => handleInputChange('skills', newValue)}
-          freeSolo
-          renderInput={(params) => (
-            <TextField {...params} variant="outlined" label="Skills" placeholder="Add skills" />
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...otherProps } = getTagProps({ index }); // Extract the key separately
-              return (
-                <Chip
-                  key={key} // Explicitly pass key
-                  label={option}
-                  {...otherProps} // Spread remaining props without key
-                  style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px' }}
-                />
-              );
-            })
-          }
-        />
+      <Autocomplete
+        className="profile-textfield profile-field"
+        multiple
+        options={skillsPool}
+        getOptionLabel={(option) => option.name || ''} // Ensure it returns a string
+        value={profileData.skills || []}
+        onChange={(event, newValue) => handleInputChange('skills', newValue)}
+        freeSolo
+        renderInput={(params) => (
+          <TextField {...params} variant="outlined" label="Skills" placeholder="Add skills" />
+        )}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...otherProps } = getTagProps({ index });
+            
+            // Attempt to parse the option if it's a string that looks like JSON
+            let label = '';
+            
+            if (typeof option === 'string') {
+              try {
+                // Check if it's a stringified JSON
+                if (option.startsWith('{') && option.includes('"name"')) {
+                  const parsed = JSON.parse(option);
+                  label = parsed.name || '';
+                } else {
+                  label = option;
+                }
+              } catch (e) {
+                label = option;
+              }
+            } else if (option && typeof option === 'object') {
+              // It's an object, get the name property
+              label = option.name || '';
+            }
+            
+            return (
+              <Chip
+                key={key}
+                label={label}
+                {...otherProps}
+                style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color: 'white' }}
+              />
+            );
+          })
+        }
+      />
       </Box>
       <Button variant="contained" className="tree-button"  onClick={goToSkillTree}>
         Skill Tree
       </Button>
       <Box mb={2}>
-        <Autocomplete
-          className="profile-textfield profile-field"
-          multiple
-          options={interestsPool}
-          value={profileData.interests || []}
-          onChange={(event, newValue) => handleInputChange('interests', newValue)}
-          freeSolo
-          renderInput={(params) => (
-            <TextField {...params} variant="outlined" label="Interests" placeholder="Add interests" />
-          )}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...otherProps } = getTagProps({ index }); // Extract the key separately
-              return (
-                <Chip
-                  key={key} // Explicitly pass key
-                  label={option}
-                  {...otherProps} // Spread remaining props without key
-                  style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px' }}
-                />
-              );
-            })
-          }
-        />
+      <Autocomplete
+        className="profile-textfield profile-field"
+        multiple
+        options={interestsPool}
+        getOptionLabel={(option) => option.name || ''} // Ensure string return
+        value={profileData.interests || []}
+        onChange={(event, newValue) => handleInputChange('interests', newValue)}
+        freeSolo
+        renderInput={(params) => (
+          <TextField {...params} variant="outlined" label="Interests" placeholder="Add interests" />
+        )}
+        
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...otherProps } = getTagProps({ index });
+            return (
+              <Chip
+                key={key}
+                label={option.name} // Ensure label is a string
+                {...otherProps}
+                style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color:'white' }}
+              />
+            );
+          })
+        }
+      />
+
       </Box>
       <Box className="profile-experience-container">
       <Typography className="profile-experience-title">
         Experience:
       </Typography>
-      <ul className="profile-experience-list">
-        {profileData.experience &&
-          profileData.experience.map((link, index) => (
-            <li key={index}>
-              <a href={link} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="profile-experience-link">
-                {link}
-              </a>
-            </li>
-          ))}
-      </ul>
-      <Box className="task-browser-wrapper"><TaskBrowser />
-            </Box>
+      <Box className="experience-list">
+      {experienceDetails.map((task, index) => (
+        <Box key={index} className="experience-item">
+            <Typography variant="h6" className="task-name">
+            {task.name || 'Unnamed Task'}
+          </Typography>
+          <Typography variant="body1" className="task-description">
+            {task.description || 'No description available'}
+          </Typography>
+            <Link 
+              to={`/project/${task.project_id}`} 
+              className="view-project-link"
+            >
+              🚀 View Project
+            </Link>
+        </Box>
+      ))}
+    </Box>
       </Box>
       
       <Box className="profile-footer">

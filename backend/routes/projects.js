@@ -27,14 +27,17 @@ router.get('/', async (req, res) => {
       // Fetch projects, prioritizing those created by the user
       const projectsQuery = `
         SELECT * FROM projects 
-        WHERE name LIKE $1 
+        WHERE 
+          LOWER(name) LIKE LOWER($1) OR 
+          LOWER(description) LIKE LOWER($1)
         ORDER BY 
           (CASE WHEN creator_id = $2 THEN 0 ELSE 1 END), 
           id ASC
         LIMIT 10 OFFSET $3
       `;
       const offset = (page - 1) * 10;
-      const projectsResult = await pool.query(projectsQuery, [`%${search}%`, userId, offset]);
+      const searchParam = `%${search}%`;
+      const projectsResult = await pool.query(projectsQuery, [searchParam, userId, offset]);
   
       res.status(200).json(projectsResult.rows);
     } catch (err) {

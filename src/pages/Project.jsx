@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { Chip, Autocomplete, TextField } from '@mui/material';
 
 import './Project.css';
 
+// Updated axios interceptor to handle errors more comprehensively
 axios.interceptors.response.use(
     response => response,
     error => {
@@ -22,94 +23,92 @@ axios.interceptors.response.use(
     }
 );
 
-
 const Project = () => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
   const { user, getAccessTokenSilently } = useAuth0();
   const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [skills, setSkills] = useState([]);
+  const [isProjectCreator, setIsProjectCreator] = useState(false);
+  const [profileData, setProfileData] = useState({
+    username: '',
+    skills: [],
+    id: "",
+  });
+
   const [taskForm, setTaskForm] = useState({
     id: null,
     name: '',
     description: '',
-    skill_id: '', // Store skill_id directly instead of name
+    skill_id: '',
     active_ind: true,
     assigned_user_ids: []
-});
+  });
 
-
+  // Existing color palette and utility functions...
   const colorPalette = [
-    blue[100], red[100], green[100], orange[100], purple[100], teal[100], pink[100], indigo[100],
-    blue[200], red[200], green[200], orange[200], purple[200], teal[200], pink[200], indigo[200],
+    blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
+    blue[400], red[400], green[400], orange[400], purple[400], teal[400], pink[400], indigo[400],
   ];
 
   const getRandomColorFromPalette = () => {
     return colorPalette[Math.floor(Math.random() * colorPalette.length)];
   };
 
-  const [profileData, setProfileData] = useState({
-    username: '',
-    skills: [],
-    interests: [],
-    experience: [],
-    profile_picture: '', // This will hold the file path or URL of the profile picture
-    id: "", // Ensure the id field is part of profileData
-  });
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        console.log('Fetching skills and interests...');
-        const token = await getAccessTokenSilently({
-          audience: 'http://localhost:4000',
-          scope: 'openid profile email read:profile write:profile',
-        });
-
-        const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setSkills(optionsResponse.data.skillsPool || []);
-        setInterestsPool(optionsResponse.data.interestsPool || []);
-      } catch (err) {
-        console.error('Error fetching options:', err);
-      }
-    };
-
-    fetchOptions();
-  }, [getAccessTokenSilently]);
-
-  const [skills, setSkills] = useState([]);
-  const [isProjectCreator, setIsProjectCreator] = useState(false);
-
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchSkills(); // Load skills first
-      if (skills.length > 0) { // Wait until skills are available
-        await fetchProject(); // Then fetch project details
-        await fetchTasks();   // Fetch tasks last, ensuring skills are available
-      }
-    };
-  
-    loadData();
-  }, [projectId, skills.length]);
-
-  useEffect(() => {
-    // Only calculate if both project and profileData are available
-    if (project && profileData.id) {
-      console.log('Project Creator ID:', project.creator_id);
-      console.log('Profile ID:', profileData.id);
-
-      // Make sure both values are strings for comparison
-      setIsProjectCreator(String(project.creator_id) === String(profileData.id));
+  // Centralized token retrieval method
+  const getToken = async () => {
+    try {
+      return await getAccessTokenSilently({
+        audience: 'http://localhost:4000',
+        scope: 'openid profile email read:write:profile'
+      });
+    } catch (error) {
+      console.error('Failed to get token:', error);
+      throw error;
     }
-}, [project, profileData]); // Dependency on both project and profileData
+  };
+
+  // Consolidated data fetching methods
+  const fetchSkillsAndProfile = async () => {
+    try {
+      const token = await getToken();
+
+      // Fetch skills and interests
+      const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setSkills(optionsResponse.data.skillsPool || []);
+      setInterestsPool(optionsResponse.data.interestsPool || []);
+
+      // Fetch user profile
+      const profileResponse = await axios.get('http://localhost:4000/profile', {
+        params: { sub: user.sub, email: user.email, name: user.name },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setProfileData({
+        username: profileResponse.data.username || '',
+        skills: profileResponse.data.skills || [],
+        id: profileResponse.data.id || "",
+      });
+    } catch (error) {
+      console.error('Failed to fetch skills and profile:', error);
+    }
+  };
 
   const fetchProject = async () => {
     try {
-      const response = await axios.get(`http://localhost:4000/projects/${projectId}`);
+      const token = await getToken();
+      const response = await axios.get(`http://localhost:4000/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setProject(response.data);
     } catch (error) {
       console.error('Failed to fetch project:', error);
@@ -118,62 +117,104 @@ const Project = () => {
 
   const fetchTasks = async () => {
     try {
-        const parsedProjectId = parseInt(projectId, 10);
+      const token = await getToken();
+      const parsedProjectId = parseInt(projectId, 10);
 
-        if (isNaN(parsedProjectId)) {
-            console.error("Invalid project ID:", projectId);
-            return;
-        }
+      if (isNaN(parsedProjectId)) {
+        console.error("Invalid project ID:", projectId);
+        return;
+      }
 
-        const response = await axios.get(`http://localhost:4000/tasks/${parsedProjectId}`);
-        const tasks = response.data;
-
-        console.log("Fetched Tasks for Project:", tasks);
-
-        // Assign skill names to tasks
-        const updatedTasks = tasks.map(task => ({
-            ...task,
-            skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
-        }));
-         setTasks(updatedTasks);
-    } catch (error) {
-        console.error('Failed to fetch tasks for project:', error);
-    }
-};
-
-const fetchSkills = async () => {
-  try {
-      const token = await getAccessTokenSilently({
+      const response = await axios.get(`http://localhost:4000/tasks/p/${parsedProjectId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
           audience: 'http://localhost:4000',
-          scope: 'openid profile email read:profile',
+          scope: 'openid profile email read:profile'
+        }
       });
 
-      const response = await axios.get('http://localhost:4000/profile/options', {
-          headers: { Authorization: `Bearer ${token}` },
+      const tasks = response.data;
+      const updatedTasks = tasks.map(task => ({
+        ...task,
+        skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
+      }));
+      setTasks(updatedTasks);
+    } catch (error) {
+      console.error('Failed to fetch tasks for project:', error);
+    }
+  };
+
+  // Unified method for task actions
+  const handleTaskAction = async (taskId, action) => {
+    try {
+      const token = await getToken();
+      const actionEndpoints = {
+        'submit': `/tasks/${taskId}/submit`,
+        'approve': `/tasks/${taskId}/approve`,
+        'reject': `/tasks/${taskId}/reject`,
+        'accept': `/tasks/${taskId}/accept`,
+        'drop': `/tasks/${taskId}/drop`
+      };
+
+      const endpoint = actionEndpoints[action];
+      if (!endpoint) {
+        throw new Error(`Invalid action: ${action}`);
+      }
+
+      const method = action === 'submit' ? 'post' : 'put';
+      const payload = action === 'accept' || action === 'drop' 
+        ? { userId: profileData.id } 
+        : {};
+
+      await axios[method](`http://localhost:4000${endpoint}`, payload, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      console.log("Fetched Skills:", response.data.skillsPool); // 🔍 Debugging
+      alert(`Task ${action}ed successfully!`);
+      fetchTasks();
+    } catch (error) {
+      console.error(`Failed to ${action} task:`, error);
+      alert(`Failed to ${action} task: ${error.response?.data?.message || error.message}`);
+    }
+  };
 
-      setSkills(response.data.skillsPool || []); // Now skillsPool contains { id, name }
-
-      const profileResponse = await axios.get('http://localhost:4000/profile', {
-          params: { sub: user.sub, email: user.email, name: user.name },
-          headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-          },
+  // Save project method
+  const saveProject = async () => {
+    try {
+      const token = await getToken();
+      await axios.put(`http://localhost:4000/projects/${projectId}`, project, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      alert('Project saved successfully!');
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      alert(`Failed to save project: ${error.response?.data?.message || error.message}`);
+    }
+  };
 
-      setProfileData({
-          username: profileResponse.data.username || '',
-          skills: profileResponse.data.skills || [],
-          id: profileResponse.data.id || "",
-      });
+  // Consolidated useEffects
+  useEffect(() => {
+    fetchSkillsAndProfile();
+  }, [user]);
 
-  } catch (error) {
-      console.error('Failed to fetch skills:', error);
-  }
-};
+  useEffect(() => {
+    if (skills.length > 0 && projectId) {
+      fetchProject();
+      fetchTasks();
+    }
+  }, [skills.length, projectId]);
+
+  useEffect(() => {
+    if (project && profileData.id) {
+      setIsProjectCreator(String(project.creator_id) === String(profileData.id));
+    }
+  }, [project, profileData]);
 
 
  
@@ -195,12 +236,6 @@ const handleTaskFormChange = (e) => {
     }));
   }
 };
-
-
-
-
-
-
 
   // ✅ Submit Task (Create or Update)
   const handleSubmitTask = async () => {
@@ -238,17 +273,34 @@ const handleTaskFormChange = (e) => {
     console.log('Submitting Task Payload:', taskPayload); // 🔍 Debugging
   
     try {
-        if (taskForm.id) {
-            await axios.put(`http://localhost:4000/tasks/update/${taskForm.id}`, taskPayload);
-        } else {
-            await axios.post('http://localhost:4000/tasks/newtask', taskPayload);
-        }
+      // Get access token before making the request
+      const token = await getAccessTokenSilently({
+        audience: 'http://localhost:4000',
+        scope: 'openid profile email write:profile'
+      });
   
-        setShowTaskPopup(false);
-        fetchTasks();
-        setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [] });
+      if (taskForm.id) {
+        await axios.put(`http://localhost:4000/tasks/update/${taskForm.id}`, taskPayload, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        await axios.post('http://localhost:4000/tasks/newtask', taskPayload, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+  
+      setShowTaskPopup(false);
+      fetchTasks();
+      setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [] });
     } catch (error) {
-        console.error('Failed to save task:', error.response?.data || error.message);
+      console.error('Failed to save task:', error.response?.data || error.message);
+      alert(`Failed to save task: ${error.response?.data?.message || error.message}`);
     }
   };
   
@@ -300,9 +352,10 @@ const handleTaskFormChange = (e) => {
                   const { key, ...otherProps } = getTagProps({ index });
                   return (
                     <Chip
+                      className="tags"
                       key={key}
                       label={option}
-                      style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px' }}
+                      style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color: 'white' }}
                       {...otherProps}
                     />
                   );
@@ -324,15 +377,7 @@ const handleTaskFormChange = (e) => {
               {task.submitted && isProjectCreator && (
                 <button 
                   className="approve-task-button" 
-                  onClick={async () => {
-                    try {
-                      await axios.put(`http://localhost:4000/tasks/${task.id}/approve`);
-                      alert('Task approved successfully!');
-                      fetchTasks();
-                    } catch (error) {
-                      console.error('Failed to approve task:', error);
-                    }
-                  }}
+                  onClick={() => handleTaskAction(task.id, 'approve')}
                 >
                   Approve Work
                 </button>
@@ -354,60 +399,28 @@ const handleTaskFormChange = (e) => {
               {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && (
                 <button
                   className="submit-task-button"
-                  onClick={async () => {
-                    try {
-                          await axios.post(`http://localhost:4000/tasks/${task.id}/submit`);
-                          alert('Task submitted for approval!');
-                          fetchTasks(); // Refresh the task list
-                        } catch (error) {
-                          console.error('Failed to submit task:', error);
-                        }
-                    }}
+                  onClick={() => handleTaskAction(task.id, 'submit')}
                 >
                   Submit for Approval
                 </button>
               )}
 
-<button
-  className="accept-task-button"
-  style={{
-    backgroundColor: task.assigned_user_ids?.includes(parseInt(profileData.id))
-      ? "rgba(237, 124, 109, 0.8)"
-      : "",
-  }}
-  onClick={async () => {
-    try {
-      if (task.assigned_user_ids?.includes(parseInt(profileData.id))) {
-        await axios.put(`http://localhost:4000/tasks/${task.id}/drop`, { userId: profileData.id });
-        alert("Task dropped!");
-      } else {
-        await axios.put(`http://localhost:4000/tasks/${task.id}/accept`, { userId: profileData.id });
-        alert("Task accepted!");
-      }
-      fetchTasks();
-    } catch (error) {
-      console.error("Failed to update task assignment:", error);
-    }
-  }}
-  disabled={!task.active_ind} // 🔹 Disable button if task is not active
->
-  {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
-</button>
+              <button 
+                className={`accept-task-button ${task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop-task-button' : ''}`}
+                onClick={() => handleTaskAction(
+                task.id, 
+                task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+                )}
+              >
+      {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
+    </button>
 
 
               {/* Reject button (Project Owner can reject a submitted task) */}
               {isProjectCreator && task.submitted && (
-              <button
+              <button 
                 className="reject-task-button"
-                onClick={async () => {
-                  try {
-                    await axios.put(`http://localhost:4000/tasks/${task.id}/reject`);
-                    alert('Task rejected.');
-                    fetchTasks(); // Refresh the task list
-                  } catch (error) {
-                    console.error('Failed to reject task:', error);
-                  }
-                }}
+                onClick={() => handleTaskAction(task.id, 'reject')}
               >
                 Reject Work
               </button>
