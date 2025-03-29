@@ -2,26 +2,79 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import * as d3 from 'd3';
 import './SkillTree.css';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const SkillTree = () => {
   const svgRef = useRef();
   const transformRef = useRef({ x: 0, y: 0 });
   const [skills, setSkills] = useState([]);
   const gRef = useRef();
+  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [dimensions] = useState({ width: 800, height: 600 });
+  const userIdRef = useRef(null);
 
   useEffect(() => {
     const fetchSkills = async () => {
-      try {
-        const response = await axios.get('http://localhost:4000/skills/all');
-        const userId = "15";
+      if (!isAuthenticated || !user) return;
 
-        const processedSkills = response.data.map(skill => ({
-          ...skill,
-          unlocked_users: Array.isArray(skill.unlocked_users) ? skill.unlocked_users : [],
-          unlocked: (skill.unlocked_users || []).includes(userId),
-          hidden: true,
-        }));
+      try {
+        const token = await getAccessTokenSilently({
+          audience: 'http://localhost:4000',
+          scope: 'openid profile email read:profile',
+        });
+
+        // Fetch the user's profile to get their ID
+        const profileResponse = await axios.get('http://localhost:4000/profile', {
+          params: { 
+            sub: user.sub, 
+            email: user.email, 
+            name: user.name 
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        userIdRef.current = profileResponse.data.id;
+
+        const skillsResponse = await axios.get('http://localhost:4000/skills/all', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const processedSkills = skillsResponse.data.map(skill => {
+          // Handle both array and non-array cases for unlocked_users
+          let unlockedUsers = skill.unlocked_users || [];
+          if (typeof unlockedUsers === 'string') {
+            unlockedUsers = JSON.parse(unlockedUsers); // Parse the stringified JSON if necessary
+          }
+          if (!Array.isArray(unlockedUsers)) {
+            unlockedUsers = [unlockedUsers];
+          }
+          console.log("Unlocked Users for skill:", skill.name, unlockedUsers);
+
+          // Check if user is in unlocked_users array (now array of objects)
+          const isUnlocked = unlockedUsers.some(userObj => {
+            // Handle both string and number user IDs
+            return userObj && (
+              userObj.user_id === parseInt(userIdRef.current) || 
+              userObj.user_id === userId.toString()
+            );
+          });
+          console.log("unlockedUsers:", unlockedUsers);
+console.log("Checking for user_id:", userIdRef.current, userIdRef.current.toString());
+          return {
+            ...skill,
+            unlocked_users: unlockedUsers,
+            unlocked: isUnlocked,
+            hidden: true,
+            // Store user's level directly on the skill for easier access
+            userLevel: isUnlocked 
+              ? unlockedUsers.find(userObj => userObj.user_id === parseInt(userIdRef.current))?.level || 0
+              : 0
+          };
+        });
+        console.log("Processed skills:", processedSkills);
         setSkills(processedSkills);
       } catch (error) {
         console.error('Failed to fetch skills:', error);
@@ -29,7 +82,7 @@ const SkillTree = () => {
     };
 
     fetchSkills();
-  }, []);
+  }, [isAuthenticated, user, getAccessTokenSilently]);
 
   useEffect(() => {
     if (!skills.length) return;
@@ -70,9 +123,9 @@ const SkillTree = () => {
     const minY = d3.min(nodes, d => d.y);
     const initialX = (width * 0.03)
     const initialY = margin.top - root.descendants()[0].x + height / 3.5;
-    
-    transformRef.current = { x: initialX, y: initialY };
 
+    transformRef.current = { x: initialX, y: initialY };
+        
     // Set up SVG
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -119,18 +172,32 @@ const SkillTree = () => {
       });
 
     node.append('circle')
-      .attr('r', 8)
+      .attr('r', 15)
       .attr('fill', d => d.data.unlocked ? 'green' : 'gray')
       .style('display', d => d.data.hidden ? 'none' : 'block');
 
+    // Add level text inside the circles
     node.append('text')
-      .attr('dx', 12)
+      .attr('dy', 4) // Vertical alignment
+      .attr('text-anchor', 'middle') // Center text horizontally
+      .style('font-size', '10px') // Smaller font for circle
+      .style('fill', 'white')
+      .style('pointer-events', 'none') // Prevent text from blocking clicks
+      .text(d => d.data.unlocked ? (d.data.userLevel || 0) : '') // Show 0 as fallback if no level
+      .style('display', d => (d.data.unlocked && !d.data.hidden ? 'block' : 'none'))
+      .style('dominant-baseline', 'middle')
+      .style('font-weight', 'bold');
+
+
+
+    // Keep your existing node text (skill name) but adjust positioning
+    node.append('text')
+      .attr('dx', 20) // Move further right to avoid circle
       .attr('dy', 4)
       .text(d => d.data.name)
       .style('fill', 'white')
       .style('font-size', '12px')
       .style('display', d => d.data.hidden ? 'none' : 'block');
-
     // Set up drag behavior
     const dragHandler = d3.drag()
       .on('drag', (event) => {

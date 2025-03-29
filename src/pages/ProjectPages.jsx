@@ -29,23 +29,29 @@ const ProjectPages = () => {
     }
   };
 
-  // Fetch projects
+  // Comprehensive case-insensitive search function
+  const matchesSearch = (text, searchTerm) => {
+    if (!searchTerm) return true;
+    return text.toLowerCase().includes(searchTerm.toLowerCase());
+  };
+
   const fetchProjects = async () => {
     try {
+      const token = await getAccessTokenSilently();
+
       const response = await axios.get('http://localhost:4000/projects', {
         params: { search, page, auth0Id: user.sub },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
   
-      // Normalize the search term to lowercase (case-insensitive)
-      const searchTerm = search.toLowerCase();
+      const searchTerm = search.trim();
   
-      // Filter the projects based on partial, case-insensitive matches for both title and description
       const filteredProjects = response.data.filter(project => {
-        const projectName = project.name.toLowerCase(); // Normalize project name to lowercase
-        const projectDescription = project.description.toLowerCase(); // Normalize project description to lowercase
-  
-        // Check if the search term is anywhere in the project name or description
-        return projectName.includes(searchTerm) || projectDescription.includes(searchTerm);
+        // Check if search term matches name or description
+        return matchesSearch(project.name, searchTerm) || 
+               matchesSearch(project.description, searchTerm);
       });
   
       setProjects(filteredProjects);
@@ -54,43 +60,85 @@ const ProjectPages = () => {
     }
   };
 
-  // Fetch tasks relevant to the user's skills for a selected project
+  // Updated fetchTasks to include assigned_user_ids and debug logging
   const fetchTasks = async (projectId) => {
     try {
+      const token = await getAccessTokenSilently();
+      
+      const skillNames = userProfile.skills.map(skill => 
+        typeof skill === 'object' ? skill.name : skill
+      );
+  
       const response = await axios.get('http://localhost:4000/tasks/prelevant', {
-        params: { skills: userProfile.skills, projectId },
+        params: { 
+          skills: skillNames,
+          projectId: projectId,
+          returnAssignedUserIds: true // Add this flag to ensure backend returns assigned_user_ids
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        paramsSerializer: {
+          indexes: null
+        }
       });
+    
+      // Debug logging
+      console.log('Fetched Tasks:', response.data);
+      console.log('Current User Profile ID:', userProfile.id);
+    
       setTasks(response.data);
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
+      if (error.response) {
+        console.error('Server response:', error.response.data);
+        console.error('Server status:', error.response.status);
+      }
+      console.error('Error config:', error.config);
     }
   };
 
-   // Accept a task
-   const acceptTask = async (taskId) => {
+  // Updated handleTaskAction to provide more detailed logging
+  const handleTaskAction = async (taskId, action) => {
     try {
       const token = await getAccessTokenSilently();
-      await axios.put(`http://localhost:4000/tasks/${taskId}/accept`, 
-      { userId: userProfile.id }, 
-      { headers: { Authorization: `Bearer ${token}` } });
+      
+      // Determine the appropriate endpoint based on the action
+      const endpoint = action === 'accept' 
+        ? `http://localhost:4000/tasks/${taskId}/accept`
+        : `http://localhost:4000/tasks/${taskId}/drop`;
+
+      const response = await axios.put(endpoint, 
+        { userId: userProfile.id }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Debug logging
+      console.log(`${action} task response:`, response.data);
 
       // Refresh the tasks to show updated assignment status
       if (selectedProject) {
-        fetchRelevantTasks(selectedProject);
+        fetchTasks(selectedProject.id);
       }
     } catch (error) {
-      console.error('Failed to accept task:', error);
+      console.error(`Failed to ${action} task:`, error);
+      if (error.response) {
+        console.error('Server response:', error.response.data);
+      }
     }
   };
 
-
   useEffect(() => {
-    fetchUserProfile();
+    if (user) {
+      fetchUserProfile();
+    }
   }, [user]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [user, page, search]);
+    if (userProfile) {
+      fetchProjects();
+    }
+  }, [userProfile, page, search]);
 
   return (
     <div className="project-pages-container">
@@ -147,7 +195,7 @@ const ProjectPages = () => {
         >
           Previous
         </button>
-        <span>Page {page}</span>
+        <span className="page-text">Page {page}</span>
         <button
           className="pagination-button"
           onClick={() => setPage((prev) => prev + 1)}
@@ -161,19 +209,32 @@ const ProjectPages = () => {
         <div className="task-popup">
           <h2>Tasks for {selectedProject.name}</h2>
           <div className="task-list">
-            {tasks.length > 0 ? tasks.map((task) => (
-              <div key={task.id} className="task-card">
-                <h3>{task.name}</h3>
-                <p>{task.description}</p>
-                <button
-                  className="accept-button"
-                  //disabled={!userProfile.skills.includes(task.skill_name)}
-                  onClick={() => acceptTask(task.id)}
-                >
-                  Accept
-                </button>
-              </div>
-            )) : <p>No tasks available</p>}
+            {tasks.length > 0 ? tasks.map((task) => {
+              // Robust check for task assignment
+              const isAssigned = task.assigned_user_ids && 
+                task.assigned_user_ids.some(
+                  // Convert both to strings to ensure type-safe comparison
+                  (userId) => String(userId) === String(userProfile.id)
+                );
+
+              // Debug logging for each task
+              console.log(`Task ${task.id} assigned_user_ids:`, task.assigned_user_ids);
+              console.log(`Current user ID:`, userProfile.id);
+              console.log(`Is Assigned:`, isAssigned);
+
+              return (
+                <div key={task.id} className="task-card">
+                  <h3>{task.name}</h3>
+                  <p>{task.description}</p>
+                  <button
+                    className={`accept-button ${isAssigned ? 'drop-button' : ''}`}
+                    onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
+                  >
+                    {isAssigned ? 'Drop' : 'Accept'}
+                  </button>
+                </div>
+              );
+            }) : <p>No tasks available</p>}
           </div>
           <button
             className="close-popup-button"
@@ -185,7 +246,6 @@ const ProjectPages = () => {
         </div>
       )}
     </div>
-    
   );
 };
 

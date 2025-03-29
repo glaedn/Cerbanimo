@@ -1,8 +1,13 @@
 import express from 'express';
 import taskController from '../controllers/taskController.js';  // Import the controller
+import pg from 'pg';
 
+const { Pool } = pg;
 const router = express.Router();
 
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+});
 // Fetch all tasks
 router.get('/', async (req, res) => {
   try {
@@ -17,19 +22,34 @@ router.get('/', async (req, res) => {
 // Fetch relevant tasks based on skills
 router.get('/relevant', async (req, res) => {
   try {
-    const userSkills = req.query.skills || [];
+    // Parse skills from query parameters
+    const userSkills = Array.isArray(req.query.skills) 
+      ? req.query.skills 
+      : [req.query.skills].filter(Boolean);
+
+    if (userSkills.length === 0) {
+      return res.status(400).json({ error: "No skills provided" });
+    }
+
     const tasks = await taskController.getRelevantTasks(userSkills);
     res.json(tasks);
   } catch (err) {
     console.error("🔥 Error fetching relevant tasks:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
 
 // Fetch relevant tasks for a specific project based on user's skills
 router.get('/prelevant', async (req, res) => {
   try {
-    const { skills, projectId } = req.query;
+    console.log('Received skills:', req.query.skills);
+    console.log('Received projectId:', req.query.projectId);
+
+    const skills = Array.isArray(req.query.skills) 
+      ? req.query.skills 
+      : [req.query.skills];
+    const projectId = req.query.projectId;
+
     if (!skills || !projectId) {
       return res.status(400).json({ error: 'Skills and Project ID are required' });
     }
@@ -58,8 +78,84 @@ router.get("/planetTasks", async (req, res) => {
   }
 });
 
+router.get("/accepted", async (req, res) => {
+  console.log("Received accepted tasks request with query:", req.query);
+
+  // Explicitly parse userId and log the parsing
+  const rawUserId = req.query.userId;
+  console.log("Raw userId:", rawUserId, "Type:", typeof rawUserId);
+
+  // More robust userId parsing
+  let userId = Number(rawUserId);
+  if (isNaN(userId)) {
+    console.error("Invalid or missing user ID");
+    return res.status(400).json({ 
+      message: "Invalid User ID", 
+      details: { rawUserId, parsedUserId: userId }
+    });
+  }
+
+  try {
+    // Log userId before query
+    console.log("Fetching accepted tasks for userId:", userId);
+
+    const result = await pool.query(
+      `SELECT t.id AS task_id, t.*, p.name AS project_name, p.id AS project_id
+      FROM tasks t 
+      LEFT JOIN projects p ON t.project_id = p.id
+      WHERE $1 = ANY(t.assigned_user_ids::int[])`, 
+      [userId]
+    );
+
+    console.log(`Query executed successfully. Found ${result.rows.length} tasks for user ${userId}`);
+
+    // Log results for debugging (limit to first few results for clarity)
+    console.log("Sample result:", result.rows.slice(0, 3));
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching accepted tasks:", err);
+    res.status(500).json({ 
+      message: "Failed to fetch accepted tasks", 
+      error: err.message,
+      details: { userId }
+    });
+  }
+});
+
+router.get('/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    const query = `
+      SELECT 
+        t.id, 
+        t.name, 
+        t.description, 
+        t.project_id, 
+        p.name as project_name,
+        t.active_ind,
+        t.submitted
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+      WHERE t.id = $1
+    `;
+
+    const result = await pool.query(query, [taskId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching task details:', error);
+    res.status(500).json({ error: 'Failed to fetch task details' });
+  }
+});
+
 // Fetch tasks by project ID
-router.get('/:projectId', async (req, res) => {
+router.get('/p/:projectId', async (req, res) => {
   try {
       const { projectId } = req.params;
       const parsedProjectId = parseInt(projectId, 10);
@@ -130,8 +226,6 @@ router.get('/skillid', async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
 
 // Accept a task by updating the assigned_user_ids
 router.put('/:taskId/accept', async (req, res) => {
@@ -210,13 +304,80 @@ router.put("/:taskId/approve", async (req, res) => {
   const { taskId } = req.params;
 
   try {
-    const result = await taskController.approveTask(taskId);
-    res.status(200).json(result);
+    // Fetch the task with assigned users and skill_id using pool query
+    const taskResult = await pool.query('SELECT * FROM tasks WHERE id = $1', [taskId]);
+    if (taskResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const task = taskResult.rows[0];
+    const { assigned_user_ids, skill_id } = task;
+
+    // Ensure assigned_user_ids and skill_id are present
+    if (!assigned_user_ids || !skill_id || assigned_user_ids.length === 0) {
+      console.error('Missing assigned user IDs or skill ID:', task);
+      return res.status(400).json({ message: 'Task must have assigned users and belong to a skill' });
+    }
+
+    // Assuming 'completed_by' is derived from the first user in the assigned_user_ids array
+    const completedByUserId = assigned_user_ids[0];  // Modify this logic as needed
+
+    // Fetch the skill associated with the task
+    const skillResult = await pool.query('SELECT * FROM skills WHERE id = $1', [skill_id]);
+    if (skillResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Skill not found' });
+    }
+
+    const skill = skillResult.rows[0];
+    let unlocked_users = skill.unlocked_users || [];
+
+    // Find the user in the unlocked_users array
+    let userSkill = unlocked_users.find(u => u.user_id === completedByUserId);
+
+    if (!userSkill) {
+      // User gets Level 1 for their first task
+      unlocked_users.push({ user_id: completedByUserId, level: 1, exp: 1 });
+    } else {
+      // Increase EXP
+      userSkill.exp += 1;
+
+      // Check if user should level up
+      const requiredExp = 3 * userSkill.level;
+      if (userSkill.exp >= requiredExp) {
+        userSkill.level += 1;
+      }
+
+      // Update the user entry in unlocked_users
+      unlocked_users = unlocked_users.map(u => (u.user_id === completedByUserId ? userSkill : u));
+    }
+
+    // Ensure unlocked_users is a valid JSONB array
+    const updatedUnlockedUsers = unlocked_users;
+
+    // Update unlocked_users in the database as a proper jsonb[] array
+    await pool.query('UPDATE skills SET unlocked_users = $1 WHERE id = $2', [
+      updatedUnlockedUsers,  // Pass the array directly
+      skill_id
+    ]);
+
+    // Add task to user's experience
+    await pool.query(
+      'UPDATE users SET experience = array_append(experience, $1) WHERE id = $2',
+      [taskId, completedByUserId]
+    );
+
+    // Approve the task
+    await pool.query('UPDATE tasks SET submitted = TRUE, active_ind = TRUE WHERE id = $1;', [taskId]);
+
+    res.json({ message: 'Task approved, experience and skill level updated' });
+
   } catch (error) {
-    console.error("Failed to approve task:", error);
-    res.status(500).json({ error: "Failed to approve task" });
+    console.error('Error approving task:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+
 
 router.put("/:taskId/reject", taskController.rejectTask);
 

@@ -4,19 +4,23 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import StarsIcon from '@mui/icons-material/Stars';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import axios from 'axios';
-import { useAuth0 } from '@auth0/auth0-react';  // ✅ Import Auth0
+import { useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
+import TaskBrowser from './TaskBrowser.jsx';
 
 import './RewardDashboard.css';
 
 const RewardDashboard = () => {
-    const { user, isAuthenticated, getAccessTokenSilently } = useAuth0(); // ✅ Auth0 hooks
+    const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const [tokens, setTokens] = useState(0);
     const [badges, setBadges] = useState([]);
     const [leaderboard, setLeaderboard] = useState([]);
 
+    const navigate = useNavigate();
+    
     useEffect(() => {
         const fetchRewards = async () => {
-            if (!isAuthenticated || !user) return; // ✅ Ensure user is authenticated
+            if (!isAuthenticated || !user) return;
 
             try {
                 const token = await getAccessTokenSilently({
@@ -24,12 +28,25 @@ const RewardDashboard = () => {
                     scope: 'openid profile email',
                 });
 
-                const response = await axios.get(`http://localhost:4000/rewards/user/15`, {  // ✅ Use Auth0 user ID
+                const profileResponse = await axios.get('http://localhost:4000/profile', {
+                    params: { 
+                        sub: user.sub, 
+                        email: user.email, 
+                        name: user.name 
+                    },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const response = await axios.get(`http://localhost:4000/rewards/user/${profileResponse.data.id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
                 setTokens(response.data.tokens);
                 setBadges(response.data.badges);
+                console.log(response.data.badges);
             } catch (error) {
                 console.error('Failed to fetch rewards:', error);
             }
@@ -76,9 +93,21 @@ const RewardDashboard = () => {
                         <CardContent>
                             <StarsIcon className="reward-icon" />
                             <Typography variant="h5">Badges</Typography>
-                            <div className="badges-container">
+                            <div className="badge-container">
                                 {badges.map((badge, index) => (
-                                    <Avatar key={index} src={badge.icon} alt={badge.name} className="badge-avatar" />
+                                    <div key={index} className="badge-item">
+                                      <Avatar 
+                                        src={`http://localhost:4000${badge.icon}`} 
+                                        alt={badge.name} 
+                                        className="badge-avatar"
+                                      />
+                                      <Typography variant="body2" className="badge-name">
+                                        {badge.name}
+                                      </Typography>
+                                      {badge.description && (
+                                        <div className="badge-description">{badge.description}</div>
+                                     )}
+                                    </div>
                                 ))}
                             </div>
                         </CardContent>
@@ -92,7 +121,12 @@ const RewardDashboard = () => {
                             <Typography variant="h5">Leaderboard</Typography>
                             <List>
                                 {leaderboard.map((user, index) => (
-                                    <ListItem key={index} className="leaderboard-entry">
+                                    <ListItem 
+                                        key={index} 
+                                        className="leaderboard-entry"
+                                        sx={{ cursor: 'pointer' }} // Add cursor style to indicate clickability
+                                        onClick={() => navigate(`/profile/public/${user.id}`)}
+                                    >
                                         <ListItemAvatar>
                                             <Avatar src={user.avatar} alt={user.username} />
                                         </ListItemAvatar>
@@ -102,6 +136,8 @@ const RewardDashboard = () => {
                             </List>
                         </CardContent>
                     </Card>
+                </div>
+                <div className="task-browser-wrapper"><TaskBrowser />
                 </div>
             </div>
         </div>

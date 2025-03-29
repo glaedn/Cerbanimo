@@ -1,11 +1,37 @@
 /* Task Browser - Space Game Theme */
 
+.task-browser {
+    display: flex;
+    flex-wrap: wrap; /* This allows the columns to wrap */
+    overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+.task-browser::-webkit-scrollbar {
+    width: 5px;
+}
+
+.task-browser::-webkit-scrollbar-track {
+    background: rgba(13, 136, 161, 0.2); /* Subtle blue */
+    border-radius: 5px;
+}
+
+.task-browser::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6dd5ed, #2193b0); /* Cyan gradient */
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+}
+
+.task-browser::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+}
+
 .task-browser-container {
     padding: 0px;
     color: rgb(255, 255, 255);
     font-family: 'Orbitron', sans-serif; /* Sci-Fi Font */
     text-align: center;
-    background: radial-gradient(circle, #0a0a1a, #000000);
+    background: radial-gradient(circle, #104d60, #011214);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -16,7 +42,7 @@
 .task-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #e8fafb;
     text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
 }
 
@@ -24,7 +50,7 @@
 .task-list {
     max-height: 70vh;  /* Scrollable */
     overflow-y: auto;
-    background: rgba(26, 9, 57, 0.9) !important; /* Dark translucent for contrast */
+    background: rgba(1, 53, 61, 0.9) !important; /* Dark translucent for contrast */
     border-radius: 10px;
     padding: 10px;
     box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
@@ -73,7 +99,7 @@
 /* Task Description */
 .task-description {
     font-size: 0.9rem;
-    color: #e0e0e0;
+    color: #040404 !important;
 }
 
 /* Shared Interest Tags */
@@ -89,6 +115,7 @@
     color: #6dd5ed;
     text-decoration: none;
     transition: color 0.2s;
+    text-shadow: 0 0 10px #103e54, 0 0 20px #6dd5ed;
 }
 
 .task-link:hover {
@@ -102,4 +129,9 @@
     color: #ff3d00;
     text-shadow: 0 0 10px #ff3d00, 0 0 20px #ff6d00;
     margin-top: 20px;
+}
+
+.task-status {
+    font-size: 0.85rem;
+    color: #ffab00;
 }

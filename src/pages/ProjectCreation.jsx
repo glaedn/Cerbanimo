@@ -41,11 +41,17 @@ const ProjectCreation = () => {
 
   const handleCreateProject = async () => {
     try {
+      const token = await getAccessTokenSilently();
+
       const response = await axios.post('http://localhost:4000/projects/create', {
         name: name,
         description: description,
         tags: selectedTags,
         auth0_id: user?.sub, // Use Auth0 ID here
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
   
       if (response.status === 201) {
