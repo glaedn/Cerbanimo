@@ -336,13 +336,13 @@ router.put("/:taskId/approve", async (req, res) => {
 
     if (!userSkill) {
       // User gets Level 1 for their first task
-      unlocked_users.push({ user_id: completedByUserId, level: 1, exp: 1 });
+      unlocked_users.push({ user_id: completedByUserId, level: 1, exp: task.reward_tokens });
     } else {
       // Increase EXP
       userSkill.exp += 1;
 
       // Check if user should level up
-      const requiredExp = 3 * userSkill.level;
+      const requiredExp = 30 * userSkill.level;
       if (userSkill.exp >= requiredExp) {
         userSkill.level += 1;
       }
@@ -367,7 +367,7 @@ router.put("/:taskId/approve", async (req, res) => {
     );
 
     // Approve the task
-    await pool.query('UPDATE tasks SET submitted = TRUE, active_ind = TRUE WHERE id = $1;', [taskId]);
+    await pool.query('UPDATE tasks SET submitted = FALSE, active_ind = FALSE, assigned_user_ids = NULL WHERE id = $1;', [taskId]);
 
     res.json({ message: 'Task approved, experience and skill level updated' });
 

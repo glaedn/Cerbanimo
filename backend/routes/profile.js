@@ -48,8 +48,12 @@ router.get("/public/:userId",
 // Endpoint to fetch skills and interests pool
 router.get('/options', async (req, res) => {
   try {
-    const skillsResult = await pool.query('SELECT id, name FROM skills'); 
-    const interestsResult = await pool.query('SELECT name FROM interests');
+    // Modified query to only return skills with a non-null parent_skill_id
+    // and order them alphabetically by name
+    const skillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
+    
+    // Added ORDER BY to sort interests alphabetically
+    const interestsResult = await pool.query('SELECT name FROM interests ORDER BY name ASC');
 
     const skillsPool = skillsResult.rows.map((row) => ({
       id: row.id,
