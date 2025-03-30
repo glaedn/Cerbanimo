@@ -374,6 +374,7 @@ const handleTaskFormChange = (e) => {
               <h3>{task.name || 'Untitled Task'}</h3>
               <p>{task.description || 'No description provided.'}</p>
               <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
+              <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
               {task.submitted && isProjectCreator && (
                 <button 
                   className="approve-task-button" 
@@ -432,14 +433,7 @@ const handleTaskFormChange = (e) => {
       <div className="project-controls">
         <button 
           className="save-project-button" 
-          onClick={async () => {
-            try {
-              await axios.put(`http://localhost:4000/projects/${projectId}`, project);
-              alert('Project saved successfully!');
-            } catch (error) {
-              console.error('Failed to save project:', error);
-            }
-          }}
+          onClick={() => saveProject()}
         >
           Save Project
         </button>
