@@ -168,3 +168,36 @@ body {
     background-color: #ff5252;
     text-shadow: 0 0 20px #ff5252;
 }
+
+.login-button {
+    margin-top: auto;
+    margin-bottom: 30px;
+    background-color: rgba(23, 212, 255, 0.8);
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(255, 23, 68, 1);
+    border: none;
+    width: 100%;
+}
+
+.login-button:hover {
+    background-color: #52d1ff;
+    text-shadow: 0 0 20px #ff5252;
+}
+
+.notification-container {
+    position: absolute;
+    right: 80px;
+    top: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    .notification-container {
+      right: 60px; /* Adjust to avoid overlapping with hamburger menu */
+    }
+  }
