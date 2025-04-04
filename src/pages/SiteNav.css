@@ -1,13 +1,10 @@
 /* Site Navigation Bar - Sci-Fi Theme */
 
-body {
-    padding-top: 0px; /* Add padding to push content below the fixed nav bar */
-}
 
 .title-container {
     position: absolute;
     top: 20px;
-    left: 50px;
+    left: 30px;
 }
 
 .site-title {
@@ -25,7 +22,7 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    padding: 10px 20px;
+    padding: 10px 0px;
     background: radial-gradient(circle, #0a0a1a, #000000);
     z-index: 1000;
     border-bottom: 2px solid rgba(109, 213, 237, 0.5);
@@ -38,7 +35,8 @@ body {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    width: 60px;  /* Increased width for better space */
+    margin-right: 10px;
+    width: 30px;  /* Increased width for better space */
     height: 40px;  /* Same for height, to keep it a square */
     z-index: 1001; /* Ensure hamburger is always visible above sidebar */
 }
@@ -82,7 +80,7 @@ body {
 .sidebar {
     position: fixed;
     top: 0;
-    right: -270px;  /* Sidebar is hidden off-screen by default */
+    right: -290px;  /* Sidebar is hidden off-screen by default */
     width: 250px;
     height: 100%;
     background: radial-gradient(circle, #0a0a1a, #000000);
@@ -191,13 +189,13 @@ body {
 }
 
 .notification-container {
-    position: absolute;
-    right: 80px;
-    top: 10px;
+    position: relative;
+    padding-right: 0px;
   }
   
   @media (max-width: 768px) {
     .notification-container {
-      right: 60px; /* Adjust to avoid overlapping with hamburger menu */
+      right: 0px; /* Adjust to avoid overlapping with hamburger menu */
+      
     }
   }
