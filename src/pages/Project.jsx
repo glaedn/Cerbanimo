@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+// At the top of your Project.jsx file
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { Chip, Autocomplete, TextField } from '@mui/material';
-
+import { useNotifications } from "./NotificationProvider.jsx"; 
 import './Project.css';
 
 // Updated axios interceptor to handle errors more comprehensively
@@ -38,6 +39,12 @@ const Project = () => {
     skills: [],
     id: "",
   });
+  
+  // Safely access the notification context
+  const notificationContext = useNotifications();
+  // Use optional chaining to avoid the TypeError
+  const setUnreadCount = notificationContext?.setUnreadCount;
+  
 
   const [taskForm, setTaskForm] = useState({
     id: null,
@@ -45,7 +52,8 @@ const Project = () => {
     description: '',
     skill_id: '',
     active_ind: true,
-    assigned_user_ids: []
+    assigned_user_ids: [],
+    reward_tokens: 10 // Add default value of 10
   });
 
   // Existing color palette and utility functions...
@@ -57,6 +65,7 @@ const Project = () => {
   const getRandomColorFromPalette = () => {
     return colorPalette[Math.floor(Math.random() * colorPalette.length)];
   };
+  
 
   // Centralized token retrieval method
   const getToken = async () => {
@@ -110,6 +119,7 @@ const Project = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProject(response.data);
+      console.log('Project data:', response.data);
     } catch (error) {
       console.error('Failed to fetch project:', error);
     }
@@ -143,11 +153,22 @@ const Project = () => {
       console.error('Failed to fetch tasks for project:', error);
     }
   };
-
-  // Unified method for task actions
+  
+  // Updated task action handler with notification support
   const handleTaskAction = async (taskId, action) => {
     try {
+      const task = tasks.find(t => t.id === taskId);
+      
+      // Prevent submission/approval/rejection of inactive tasks
+      if (!task.active_ind && ['approve', 'reject'].includes(action)) {
+        alert('This task is inactive and cannot be acted upon');
+        return;
+      }
+    
       const token = await getToken();
+      console.log(taskId);
+      
+      // Make sure we're using the correct paths
       const actionEndpoints = {
         'submit': `/tasks/${taskId}/submit`,
         'approve': `/tasks/${taskId}/approve`,
@@ -155,26 +176,39 @@ const Project = () => {
         'accept': `/tasks/${taskId}/accept`,
         'drop': `/tasks/${taskId}/drop`
       };
-
+  
       const endpoint = actionEndpoints[action];
       if (!endpoint) {
         throw new Error(`Invalid action: ${action}`);
       }
-
+  
       const method = action === 'submit' ? 'post' : 'put';
-      const payload = action === 'accept' || action === 'drop' 
-        ? { userId: profileData.id } 
-        : {};
-
-      await axios[method](`http://localhost:4000${endpoint}`, payload, {
+      const payload = ['approve', 'reject', 'accept', 'drop'].includes(action)
+            ? { userId: profileData.id }
+            : {};
+  
+      // Add logging to see exactly what's being sent
+      console.log(`Sending ${method.toUpperCase()} request to: ${endpoint}`, payload);
+  
+      const response = await axios[method](`http://localhost:4000${endpoint}`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-
+  
+      console.log(`Response from ${action} action:`, response.data);
+      
+      // Notify users - safely increment unread count if the function exists
+      if (setUnreadCount) {
+        setUnreadCount((prev) => prev + 1);
+      }
+      
       alert(`Task ${action}ed successfully!`);
-      fetchTasks();
+      
+      // Refresh tasks and project data
+      await fetchTasks();
+      await fetchProject();
     } catch (error) {
       console.error(`Failed to ${action} task:`, error);
       alert(`Failed to ${action} task: ${error.response?.data?.message || error.message}`);
@@ -216,64 +250,88 @@ const Project = () => {
     }
   }, [project, profileData]);
 
-
- 
-
-
-const handleTaskFormChange = (e) => {
-  const { name, value, type, checked } = e.target;
-
-  if (name === "skill") {
-    const selectedSkill = skills.find(skill => String(skill.id) === String(value));
-    setTaskForm(prev => ({
-      ...prev,
-      skill_id: selectedSkill ? selectedSkill.id : '' // Directly set skill_id
-    }));
-  } else {
-    setTaskForm(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  }
-};
+  const handleTaskFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+  
+    if (name === "skill") {
+      const selectedSkill = skills.find(skill => String(skill.id) === String(value));
+      setTaskForm(prev => ({
+        ...prev,
+        skill_id: selectedSkill ? selectedSkill.id : ''
+      }));
+    } else if (name === "reward_tokens") {
+      // Ensure reward tokens is at least 5
+      const tokens = Math.max(5, parseInt(value) || 5);
+      setTaskForm(prev => ({
+        ...prev,
+        [name]: tokens
+      }));
+    } else {
+      setTaskForm(prev => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value
+      }));
+    }
+  };
 
   // ✅ Submit Task (Create or Update)
   const handleSubmitTask = async () => {
     if (!taskForm.name || !taskForm.description || !taskForm.skill_id) {
-        alert('All fields are required');
-        return;
+      alert('All fields are required');
+      return;
     }
   
-    console.log("Matching skill for:", taskForm.skill_id); // 🔍 Debugging
+    // Ensure reward tokens is at least 5
+    const rewardTokens = Math.max(5, parseInt(taskForm.reward_tokens) || 10);
   
-    // Find the skill object from the skills list
+    // Only validate token pool for active tasks
+    if (taskForm.active_ind && isProjectCreator) {
+      const currentPool = project.token_pool || 250;
+      const existingTask = tasks.find(t => t.id === taskForm.id);
+      
+      if (existingTask) {
+        // For updates, calculate the difference
+        const previousTokens = existingTask.active_ind ? (existingTask.reward_tokens || 0) : 0;
+        const tokensToDeduct = rewardTokens - previousTokens;
+        
+        if (tokensToDeduct > 0 && tokensToDeduct > currentPool) {
+          alert(`Not enough tokens in pool. Available: ${currentPool}, Needed: ${tokensToDeduct}`);
+          return;
+        }
+      } else {
+        // For new tasks, check full amount
+        if (rewardTokens > currentPool) {
+          alert(`Not enough tokens in pool. Available: ${currentPool}, Needed: ${rewardTokens}`);
+          return;
+        }
+      }
+    }
+  
     const skillObj = skills.find(s => s.id === taskForm.skill_id);
   
     if (!skillObj) {
-        alert(`Invalid skill selected: ${taskForm.skill_id}`);
-        console.error("Skill not found. Available skills:", skills);
-        return;
+      alert(`Invalid skill selected: ${taskForm.skill_id}`);
+      console.error("Skill not found. Available skills:", skills);
+      return;
     }
   
     const parsedProjectId = parseInt(projectId, 10);
     if (isNaN(parsedProjectId)) {
-        alert('Invalid project ID');
-        return;
+      alert('Invalid project ID');
+      return;
     }
   
     const taskPayload = {
-      title: taskForm.name, // ✅ Ensure "title" is sent
+      name: taskForm.name,
       description: taskForm.description,
-      skill_id: taskForm.skill_id, // ✅ Use skill_id, not skill name
+      skill_id: taskForm.skill_id,
       projectId,
       active: taskForm.active_ind,
-      user: profileData.id
+      user: profileData.id,
+      reward_tokens: rewardTokens
     };
   
-    console.log('Submitting Task Payload:', taskPayload); // 🔍 Debugging
-  
     try {
-      // Get access token before making the request
       const token = await getAccessTokenSilently({
         audience: 'http://localhost:4000',
         scope: 'openid profile email write:profile'
@@ -295,9 +353,24 @@ const handleTaskFormChange = (e) => {
         });
       }
   
+      // Notify users when a task is created or updated - safely
+      if (setUnreadCount) {
+        setUnreadCount((prev) => prev + 1);
+      }
+      
+      // Refresh project data to get updated token pool
+      await fetchProject();
       setShowTaskPopup(false);
       fetchTasks();
-      setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [] });
+      setTaskForm({ 
+        id: null, 
+        name: '', 
+        description: '', 
+        skill_id: '', 
+        active_ind: true, 
+        assigned_user_ids: [],
+        reward_tokens: 10
+      });
     } catch (error) {
       console.error('Failed to save task:', error.response?.data || error.message);
       alert(`Failed to save task: ${error.response?.data?.message || error.message}`);
@@ -311,7 +384,7 @@ const handleTaskFormChange = (e) => {
       setTaskForm(task);
     } else {
       // Creating a new task, clear the form
-      setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [] });
+      setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [], reward_tokens: 10 });
     }
     setShowTaskPopup(true);
   };
@@ -332,6 +405,14 @@ const handleTaskFormChange = (e) => {
             onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
             readOnly={!isProjectCreator}
           />
+          {isProjectCreator && (
+            <div className="token-display">
+              <div><strong>Total Token Pool:</strong> {project.token_pool || 250}</div>
+              <div><strong>Tokens Allocated:</strong> {project.reserved_tokens}</div>
+              <div><strong>Tokens Spent:</strong> {project.used_tokens || 0}</div>
+              <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
+            </div>
+          )}
           {isProjectCreator && (
             <Autocomplete
               className="profile-textfield profile-field"
@@ -372,10 +453,13 @@ const handleTaskFormChange = (e) => {
           {tasks.map((task) => (
             <div key={task.id} className="task-card">
               <h3>{task.name || 'Untitled Task'}</h3>
+              <span className={`status-indicator ${task.active_ind ? 'active' : 'inactive'}`}>
+                {task.active_ind ? 'Active' : 'Inactive'}
+              </span>
               <p>{task.description || 'No description provided.'}</p>
               <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
               <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
-              {task.submitted && isProjectCreator && (
+              {task.submitted && isProjectCreator && task.active_ind && (
                 <button 
                   className="approve-task-button" 
                   onClick={() => handleTaskAction(task.id, 'approve')}
@@ -390,14 +474,14 @@ const handleTaskFormChange = (e) => {
                     name: task.name,
                     description: task.description,
                     skill_id: task.skill_id,
-                    active_ind: task.active,
+                    active_ind: task.active_ind,
                     assigned_user_ids: task.assigned_user_ids
                   });
                   handleTaskPopupOpen(task);                   
                   setShowTaskPopup(true);
                 }}>Edit</button>
               )}
-              {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && (
+              { task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
                 <button
                   className="submit-task-button"
                   onClick={() => handleTaskAction(task.id, 'submit')}
@@ -413,8 +497,8 @@ const handleTaskFormChange = (e) => {
                 task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
                 )}
               >
-      {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
-    </button>
+                {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
+              </button>
 
 
               {/* Reject button (Project Owner can reject a submitted task) */}
@@ -472,6 +556,16 @@ const handleTaskFormChange = (e) => {
                 <option key={skill.id} value={skill.id}>{skill.name}</option>
               ))}
             </select>
+            <div className="reward-tokens-container">
+              <label htmlFor="reward_tokens">Reward Tokens:</label>
+              <input
+                type="number"
+                name="reward_tokens"
+                min="1"
+                value={taskForm.reward_tokens}
+                onChange={handleTaskFormChange}
+              />
+            </div>
             <div className="checkbox-container">
               <input
                 type="checkbox"

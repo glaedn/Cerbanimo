@@ -50,14 +50,15 @@ router.get('/options', async (req, res) => {
   try {
     // Modified query to only return skills with a non-null parent_skill_id
     // and order them alphabetically by name
-    const skillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
+    const skillsResult = await pool.query('SELECT id, name, unlocked_users FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
     
     // Added ORDER BY to sort interests alphabetically
     const interestsResult = await pool.query('SELECT name FROM interests ORDER BY name ASC');
 
     const skillsPool = skillsResult.rows.map((row) => ({
       id: row.id,
-      name: row.name
+      name: row.name,
+      unlocked_users: row.unlocked_users || [], // Ensure unlocked_users is an array
     }));
 
     // Extract all names properly into an array

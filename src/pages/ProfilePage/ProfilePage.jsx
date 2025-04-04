@@ -229,7 +229,6 @@ const ProfilePage = () => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
-
   return (
     <Box className="profile-container">
       <Typography className="profile-title" variant="h4" gutterBottom>
@@ -261,6 +260,7 @@ const ProfilePage = () => {
         margin="normal"
       />
       <Box mb={2} >
+      
       <Autocomplete
         className="profile-textfield profile-field"
         multiple
@@ -275,37 +275,46 @@ const ProfilePage = () => {
         renderTags={(value, getTagProps) =>
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
-            
-            // Attempt to parse the option if it's a string that looks like JSON
-            let label = '';
-            
-            if (typeof option === 'string') {
-              try {
-                // Check if it's a stringified JSON
-                if (option.startsWith('{') && option.includes('"name"')) {
-                  const parsed = JSON.parse(option);
-                  label = parsed.name || '';
-                } else {
-                  label = option;
-                }
-              } catch (e) {
-                label = option;
+        
+            // Ensure we have a full skill object
+            let fullSkill = skillsPool.find(skill => skill.name === option.name) || option;
+        
+            console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
+        
+            let label = fullSkill.name || '';
+            let skillLevel = 0;
+        
+            if (Array.isArray(fullSkill.unlocked_users)) {
+              console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
+        
+              const userEntry = fullSkill.unlocked_users.find(u => u.user_id == profileData.id);
+        
+              if (userEntry) {
+                skillLevel = userEntry.level || 0;
               }
-            } else if (option && typeof option === 'object') {
-              // It's an object, get the name property
-              label = option.name || '';
             }
-            
+        
             return (
               <Chip
                 key={key}
-                label={label}
+                label={`${label} (Lvl ${skillLevel})`}
                 {...otherProps}
-                style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color: 'white' }}
+                style={{
+                  backgroundColor: getRandomColorFromPalette(),
+                  margin: '2px',
+                  color: 'white',
+                }}
               />
             );
           })
         }
+        
+        
+        
+        
+        
+        
+        
       />
       </Box>
       <Button variant="contained" className="tree-button"  onClick={goToSkillTree}>

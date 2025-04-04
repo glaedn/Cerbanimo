@@ -42,21 +42,9 @@ const createUserTable = async () => {
   }
 };
 
-const mongoose = require('mongoose');
-
-// MongoDB user schema with tasks relationship
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
-  passwordHash: { type: String, required: true },
-  tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }], // Reference to Task schema
-  createdAt: { type: Date, default: Date.now },
-});
-
 // Export the model
 const User = mongoose.model('User', userSchema);
 module.exports = User;
 module.exports = {
     createUserTable, // PostgreSQL
-    User, // MongoDB
   };

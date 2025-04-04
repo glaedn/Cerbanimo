@@ -396,3 +396,57 @@ html, body {
     margin-top: 0px;
     padding: 0px;
 }
+
+.reward-tokens-container {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+  }
+  
+  .reward-tokens-container label {
+    margin-right: 10px;
+  }
+  
+  .reward-tokens-container input {
+    width: 60px;
+    padding: 8px;
+    border: 1px solid #6dd5ed;
+    border-radius: 4px;
+  }
+
+  .token-display {
+    margin: 10px 0;
+    padding: 8px;
+    background-color: #002955;
+    border-radius: 4px;
+    font-size: 16px;
+    max-width: 300px;
+  }
+
+  .token-display div {
+    margin: 4px 0;
+  }
+  
+  .reward-tokens-container input {
+    min-width: 60px;
+    width: 60px;
+  }
+
+  .task-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    font-weight: bold;
+  }
+  
+  .task-status.active {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .task-status.inactive {
+    background-color: #f44336;
+    color: white;
+  }
+
+  

@@ -126,31 +126,16 @@ router.get("/accepted", async (req, res) => {
 router.get('/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
+    const task = await taskController.findById(taskId);
 
-    const query = `
-      SELECT 
-        t.id, 
-        t.name, 
-        t.description, 
-        t.project_id, 
-        p.name as project_name,
-        t.active_ind,
-        t.submitted
-      FROM tasks t
-      LEFT JOIN projects p ON t.project_id = p.id
-      WHERE t.id = $1
-    `;
-
-    const result = await pool.query(query, [taskId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
+    if (task.error) {
+      return res.status(task.status).json({ error: task.error });
     }
 
-    res.json(result.rows[0]);
+    res.json(task);
   } catch (error) {
-    console.error('Error fetching task details:', error);
-    res.status(500).json({ error: 'Failed to fetch task details' });
+    console.error('Error fetching task:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -247,35 +232,66 @@ router.put('/:taskId/accept', async (req, res) => {
 
 // POST route to create a new task
 router.post('/newtask', async (req, res) => {
-  const { title, description, skill_id, active, projectId } = req.body;
+  const { name, description, skill_id, active, projectId, reward_tokens = 10 } = req.body;
 
-  if (!title || !description || !skill_id || !projectId) {
-    return res.status(400).json({ error: 'Title, description, skill, and project ID are required' });
+  if (!name || !description || !skill_id || !projectId) {
+    return res.status(400).json({ error: 'Name, description, skill, and project ID are required' });
   }
 
   try {
-    const newTask = await taskController.createNewTask(title, description, skill_id, active, projectId);
-    res.status(201).json(newTask);
+    const result = await taskController.createNewTask(
+      name, description, skill_id, active, projectId, reward_tokens
+    );
+    
+    if (result.error) {
+      return res.status(result.status || 500).json({ error: result.error });
+    }
+    
+    return res.status(201).json(result);
   } catch (error) {
-    console.error('Failed to create task:', error);
-    res.status(500).json({ error: 'Failed to create task' });
+    console.error('Error in create task route:', error);
+    return res.status(500).json({ error: 'Server error creating task' });
   }
 });
 
 // PUT route to update an existing task
 router.put('/update/:taskId', async (req, res) => {
-  const { title, description, skill_id, active, projectId } = req.body;
-  const { taskId } = req.params;
-  if (!title || !description || !skill_id || !projectId ) {
-    return res.status(400).json({ error: 'Title, description, skill, and project ID are required' });
-  }
+  console.log("Received request body:", req.body);  // Debugging
+  
+  
 
+  const body = req.body;
+  const taskId = req.params.taskId;
+ 
+  if (!body.name) {
+    return res.status(400).json({ message: "Title is required but missing" });
+  }
+  
+  if (!body || !body.name || !body.description || !body.skill_id || !body.projectId) {
+    return res.status(400).json({ error: 'Required fields missing' });
+  }
+ 
   try {
-    const updateTask = await taskController.updateTask(title, description, skill_id, active, projectId, taskId);
-    res.status(201).json(updateTask);
+    // Call the controller function with individual parameters
+    const result = await taskController.updateTask(
+      body.name, 
+      body.description, 
+      body.skill_id, 
+      body.active, // Make sure this matches what your form is sending
+      body.projectId,
+      taskId, // Use the taskId from params, not from body
+      body.reward_tokens
+    );
+    
+    // Check if result contains an error
+    if (result.error) {
+      return res.status(result.status || 500).json({ error: result.error });
+    }
+    
+    return res.status(200).json(result);
   } catch (error) {
-    console.error('Failed to create task:', error);
-    res.status(500).json({ error: 'Failed to create task' });
+    console.error('Failed to update task:', error);
+    return res.status(500).json({ error: 'Failed to update task' });
   }
 });
 
@@ -300,80 +316,30 @@ router.put('/:taskId/drop', async (req, res) => {
 
 router.post("/:taskId/submit", taskController.submitTask);
 
-router.put("/:taskId/approve", async (req, res) => {
+// Approve task route with spent_points tracking
+router.put('/:taskId/approve', async (req, res) => {
   const { taskId } = req.params;
 
   try {
-    // Fetch the task with assigned users and skill_id using pool query
-    const taskResult = await pool.query('SELECT * FROM tasks WHERE id = $1', [taskId]);
-    if (taskResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Task not found' });
+    const task = await taskController.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const assignedUserIds = task.assigned_user_ids; // Extract the assigned users
+
+    if (!assignedUserIds || assignedUserIds.length === 0) {
+      return res.status(400).json({ error: 'No assigned users for this task' });
     }
 
-    const task = taskResult.rows[0];
-    const { assigned_user_ids, skill_id } = task;
-
-    // Ensure assigned_user_ids and skill_id are present
-    if (!assigned_user_ids || !skill_id || assigned_user_ids.length === 0) {
-      console.error('Missing assigned user IDs or skill ID:', task);
-      return res.status(400).json({ message: 'Task must have assigned users and belong to a skill' });
+    const result = await taskController.approveTask(taskId, assignedUserIds);
+    
+    if (result.error) {
+      return res.status(result.status || 500).json({ error: result.error });
     }
 
-    // Assuming 'completed_by' is derived from the first user in the assigned_user_ids array
-    const completedByUserId = assigned_user_ids[0];  // Modify this logic as needed
-
-    // Fetch the skill associated with the task
-    const skillResult = await pool.query('SELECT * FROM skills WHERE id = $1', [skill_id]);
-    if (skillResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Skill not found' });
-    }
-
-    const skill = skillResult.rows[0];
-    let unlocked_users = skill.unlocked_users || [];
-
-    // Find the user in the unlocked_users array
-    let userSkill = unlocked_users.find(u => u.user_id === completedByUserId);
-
-    if (!userSkill) {
-      // User gets Level 1 for their first task
-      unlocked_users.push({ user_id: completedByUserId, level: 1, exp: task.reward_tokens });
-    } else {
-      // Increase EXP
-      userSkill.exp += 1;
-
-      // Check if user should level up
-      const requiredExp = 30 * userSkill.level;
-      if (userSkill.exp >= requiredExp) {
-        userSkill.level += 1;
-      }
-
-      // Update the user entry in unlocked_users
-      unlocked_users = unlocked_users.map(u => (u.user_id === completedByUserId ? userSkill : u));
-    }
-
-    // Ensure unlocked_users is a valid JSONB array
-    const updatedUnlockedUsers = unlocked_users;
-
-    // Update unlocked_users in the database as a proper jsonb[] array
-    await pool.query('UPDATE skills SET unlocked_users = $1 WHERE id = $2', [
-      updatedUnlockedUsers,  // Pass the array directly
-      skill_id
-    ]);
-
-    // Add task to user's experience
-    await pool.query(
-      'UPDATE users SET experience = array_append(experience, $1) WHERE id = $2',
-      [taskId, completedByUserId]
-    );
-
-    // Approve the task
-    await pool.query('UPDATE tasks SET submitted = FALSE, active_ind = FALSE, assigned_user_ids = NULL WHERE id = $1;', [taskId]);
-
-    res.json({ message: 'Task approved, experience and skill level updated' });
-
+    return res.status(200).json(result);
   } catch (error) {
-    console.error('Error approving task:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in approve task route:', error);
+    return res.status(500).json({ error: 'Server error approving task' });
   }
 });
 

@@ -13,6 +13,7 @@ import SkillTree from './pages/SkillTree.jsx';
 import RewardDashboard from './pages/RewardDashboard.jsx';
 import PublicProfile from './pages/PublicProfile.jsx';
 import BadgeCreation from './pages/BadgeCreation.jsx';
+import HomePage from './pages/HomePage.jsx';
 
 const App = () => {
   return (
@@ -81,7 +82,7 @@ const App = () => {
           }
         />
         {/* Default Route */}
-        <Route path="*" element={<LoginPage />} />
+        <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>
   );

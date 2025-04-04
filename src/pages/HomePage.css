@@ -1,0 +1,270 @@
+/* Homepage.css - Improved Version */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .homepage {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0e0e2c, #1a1a40);
+    color: #f4f4f9;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Custom Scrollbar Styling */
+  .homepage::-webkit-scrollbar {
+    width: 2px;
+  }
+  
+  .homepage::-webkit-scrollbar-track {
+    background: rgba(13, 71, 161, 0.2);
+    border-radius: 2px;
+  }
+  
+  .homepage::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+  }
+  
+  .homepage::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+  }
+  
+  .section {
+    padding: 80px max(5vw, 40px);
+    text-align: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  .section:nth-child(odd) {
+    background: radial-gradient(ellipse at top, rgba(31, 31, 71, 0.6), transparent 70%);
+  }
+  
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px max(8vw, 40px);
+    background: radial-gradient(circle at center, #1f1f47, #0e0e2c);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Add subtle animated background elements */
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%232b2b5e' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    z-index: 0;
+    opacity: 0.5;
+  }
+  
+  .hero h1 {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(108, 99, 255, 0.5);
+    position: relative;
+    z-index: 1;
+  }
+  
+  .hero p {
+    font-size: 1.4rem;
+    max-width: 700px;
+    color: #d8d8f0;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+    line-height: 1.5;
+  }
+  
+  .cta-button {
+    margin-top: 2rem;
+    padding: 14px 32px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #6c63ff, #4e46e8);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4);
+  }
+  
+  .cta-button:hover {
+    background: linear-gradient(135deg, #817cff, #6c63ff);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(108, 99, 255, 0.6);
+  }
+  
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    margin-top: 60px;
+    padding: 0 max(5vw, 20px);
+  }
+  
+  .feature-card {
+    background: linear-gradient(145deg, #2c2c54, #252547);
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #6c63ff, #6dd5ed);
+    opacity: 0.8;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  
+  .feature-card h3 {
+    color: #ffffff;
+    margin-bottom: 16px;
+    font-size: 1.5rem;
+    width: 100%;
+  }
+  
+  .feature-card p {
+    color: #b9b9d3;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  .mission {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: #ddddf5;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 max(5vw, 20px);
+  }
+
+  .vision {
+    background: linear-gradient(to bottom, rgba(20, 20, 43, 0.7), rgba(14, 14, 44, 0.7));
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin: 40px auto;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Make the mission section more visually distinct */
+  .mission-section {
+    background: linear-gradient(to bottom, rgba(20, 20, 43, 0.7), rgba(14, 14, 44, 0.7));
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin: 40px auto;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .mission-section::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(108, 99, 255, 0.15), transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+  }
+  
+  /* Main content container to allow for footer positioning */
+  .main-content {
+    flex: 1 0 auto;
+  }
+  
+  .footer {
+    flex-shrink: 0;
+    padding: 40px 20px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #b9b9d3;
+    background-color: #0a0a20;
+    position: relative;
+    margin-top: auto;
+    width: 100%;
+    border-top: 1px solid rgba(108, 99, 255, 0.2);
+  }
+  
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+  
+    .hero p {
+      font-size: 1.2rem;
+    }
+  
+    .section {
+      padding: 60px max(4vw, 20px);
+    }
+    
+    .features {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    
+    .mission-section {
+      padding: 30px 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .hero h1 {
+      font-size: 2rem;
+    }
+  
+    .hero p {
+      font-size: 1.1rem;
+    }
+  
+    .cta-button {
+      padding: 12px 24px;
+      font-size: 1rem;
+    }
+    
+    .feature-card {
+      padding: 25px 20px;
+    }
+  }

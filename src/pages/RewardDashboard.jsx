@@ -46,7 +46,6 @@ const RewardDashboard = () => {
 
                 setTokens(response.data.tokens);
                 setBadges(response.data.badges);
-                console.log(response.data.badges);
             } catch (error) {
                 console.error('Failed to fetch rewards:', error);
             }
@@ -77,7 +76,7 @@ const RewardDashboard = () => {
         <div className="reward-dashboard">
             <Typography variant="h4" className="dashboard-title">Reward Dashboard</Typography>
             <div className="dashboard-grid">
-                {/* Tokens Card */}
+                {/* Tokens Card with Top Levels */}
                 <div className="dashboard-grid-item">
                     <Card className="reward-card token-card">
                         <CardContent>
@@ -96,24 +95,24 @@ const RewardDashboard = () => {
                             <div className="badge-container">
                                 {badges.map((badge, index) => (
                                     <div key={index} className="badge-item">
-                                      <Avatar 
-                                        src={`http://localhost:4000${badge.icon}`} 
-                                        alt={badge.name} 
-                                        className="badge-avatar"
-                                      />
-                                      <Typography variant="body2" className="badge-name">
-                                        {badge.name}
-                                      </Typography>
-                                      {badge.description && (
-                                        <div className="badge-description">{badge.description}</div>
-                                     )}
+                                        <Avatar 
+                                            src={`http://localhost:4000${badge.icon}`} 
+                                            alt={badge.name} 
+                                            className="badge-avatar"
+                                        />
+                                        <Typography variant="body2" className="badge-name">
+                                            {badge.name}
+                                        </Typography>
+                                        {badge.description && (
+                                            <div className="badge-description">{badge.description}</div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-                {/* Leaderboard Card */}
+                {/* Leaderboard Card with Numbering */}
                 <div className="dashboard-grid-item">
                     <Card className="reward-card leaderboard-card">
                         <CardContent>
@@ -127,8 +126,11 @@ const RewardDashboard = () => {
                                         sx={{ cursor: 'pointer' }} // Add cursor style to indicate clickability
                                         onClick={() => navigate(`/profile/public/${user.id}`)}
                                     >
+                                        <Typography variant="body1" sx={{ marginRight: '10px' }}>
+                                            {index + 1}.
+                                        </Typography>
                                         <ListItemAvatar>
-                                            <Avatar src={user.avatar} alt={user.username} />
+                                            <Avatar src={`http://localhost:4000${user.avatar}`} alt={user.username} />
                                         </ListItemAvatar>
                                         <ListItemText primary={user.username} secondary={`Score: ${user.cotokens}`} />
                                     </ListItem>
@@ -137,8 +139,7 @@ const RewardDashboard = () => {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="task-browser-wrapper"><TaskBrowser />
-                </div>
+                <div className="task-browser-wrapper"><TaskBrowser /></div>
             </div>
         </div>
     );

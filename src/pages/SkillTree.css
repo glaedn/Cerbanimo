@@ -1,9 +1,9 @@
-body {
+.treepage {
     padding-top: 50px; /* Add padding to push content below the fixed nav bar */
-    margin-left: 10px;
+    margin-left: 30px;
     font-size: 1rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #ffffff;
     text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
     margin-bottom: 20px;
 }
@@ -14,7 +14,3 @@ body {
     font-weight: bold;
   }
   
-  .node circle {
-    stroke: #fff;
-    stroke-width: 1.5px;
-  }
