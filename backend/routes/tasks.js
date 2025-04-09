@@ -314,7 +314,11 @@ router.put('/:taskId/drop', async (req, res) => {
 
 
 
-router.post("/:taskId/submit", taskController.submitTask);
+router.post('/:taskId/submit', (req, res) => {
+  // Get io from req.app.get('io')
+  const io = req.app.get('io');
+  taskController.submitTask(req, res, io);
+});
 
 // Approve task route with spent_points tracking
 router.put('/:taskId/approve', async (req, res) => {

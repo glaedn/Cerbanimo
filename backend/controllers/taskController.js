@@ -12,7 +12,7 @@ const getAllTasks = async () => {
       tasks.name AS task_name,
       tasks.id,
       skills.category AS skill_category
-    FROM tasks
+    FROM tasksa
     JOIN skills ON tasks.skill_id = skills.id;
   `;
   const result = await pool.query(query);
@@ -568,24 +568,67 @@ const resetAllSpentPoints = async () => {
   }
 };
 
-const submitTask = async (req, res) => {
+const submitTask = async (req, res, io) => {
   const { taskId } = req.params;
+
   try {
-      const result = await pool.query(
-          `UPDATE tasks 
-           SET submitted = TRUE, submitted_at = NOW() 
-           WHERE id = $1 RETURNING *`, 
-           [taskId]
-      );
+    // Step 1: Update the task and get project owner in a single query
+    const result = await pool.query(
+      `UPDATE tasks t
+       SET submitted = TRUE, submitted_at = NOW() 
+       FROM projects p
+       WHERE t.id = $1 AND p.id = t.project_id
+       RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id`, 
+       [taskId]
+    );
 
-      if (result.rowCount === 0) {
-          return res.status(404).json({ error: "Task not found" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    const task = result.rows[0];
+
+    // Step 2: Notify the project creator if we have an owner
+    if (task.project_owner_id) {
+      const notificationText = `A task was submitted for approval in your project "${task.project_name || 'Untitled'}".`;
+      const notificationQuery = `
+        INSERT INTO notifications (user_id, message, type, created_at, read) 
+        VALUES ($1, $2, $3, NOW(), false)
+      `;
+
+      await pool.query(notificationQuery, [
+        task.project_owner_id,
+        notificationText,
+        'task'
+      ]);
+
+      // Step 3 (Optional): Emit Socket.IO notification event
+      if (io) {
+        // Check if io.to exists before calling it
+        if (typeof io.to === 'function') {
+          console.log(`Emitting notification to user_${task.project_owner_id}`);
+          io.to(`user_${task.project_owner_id}`).emit('notification', {
+            message: notificationText,
+            type: 'task'
+          });
+        } else if (typeof io.emit === 'function') {
+          // Fallback to broadcast if to() is not available
+          io.emit('notification', {
+            userId: task.project_owner_id,
+            message: notificationText,
+            type: 'task'
+          });
+        } else {
+          console.warn('Socket.IO instance passed to submitTask is not properly configured');
+        }
       }
+    }
 
-      res.json({ message: "Task submitted for approval", task: result.rows[0] });
+    res.json({ message: "Task submitted for approval", task });
+
   } catch (error) {
-      console.error("Error submitting task:", error);
-      res.status(500).json({ error: "Failed to submit task" });
+    console.error("Error submitting task:", error);
+    res.status(500).json({ error: "Failed to submit task" });
   }
 };
 

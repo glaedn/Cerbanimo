@@ -126,22 +126,22 @@ html, body {
 }
 
 /* Custom Scrollbar */
-.task-list::-webkit-scrollbar {
+.tasks-section::-webkit-scrollbar {
     width: 10px;
 }
 
-.task-list::-webkit-scrollbar-track {
+.tasks-section::-webkit-scrollbar-track {
     background: rgba(13, 71, 161, 0.2);
     border-radius: 5px;
 }
 
-.task-list::-webkit-scrollbar-thumb {
+.tasks-section::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #6dd5ed, #2193b0);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
 }
 
-.task-list::-webkit-scrollbar-thumb:hover {
+.tasks-section::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #29b6f6, #0d47a1);
 }
 
@@ -364,7 +364,7 @@ html, body {
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 10px 10px;
-    margin-bottom: 60px;
+    margin-bottom: 0px;
     border-radius: 5px;
     cursor: pointer;
     transition: 0.3s;

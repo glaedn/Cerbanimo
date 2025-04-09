@@ -54,26 +54,35 @@
     position: relative;
 }
 
-.hamburger.open::before {
+.hamburger::before,
+.hamburger::after {
     content: '';
     position: absolute;
     width: 30px;
     height: 3px;
     background-color: white;
-    top: -10px;
-    left: 0;
-    transform: rotate(90deg);
+    transition: all 0.3s ease-in-out;
+}
+
+.hamburger::before {
+    transform: translateY(-10px);
+}
+
+.hamburger::after {
+    transform: translateY(10px);
+    
+}
+
+.hamburger.open {
+    background-color: transparent;
+}
+
+.hamburger.open::before {
+    transform: rotate(180deg);
 }
 
 .hamburger.open::after {
-    content: '';
-    position: absolute;
-    width: 30px;
-    height: 3px;
-    background-color: white;
-    top: 10px;
-    left: 0;
-    transform: rotate(90deg);
+    transform: rotate(-90deg);
 }
 
 /* Sidebar styles */
@@ -188,14 +197,32 @@
     text-shadow: 0 0 20px #ff5252;
 }
 
+
 .notification-container {
     position: relative;
     padding-right: 0px;
-  }
+}
   
-  @media (max-width: 768px) {
+@media (max-width: 768px) {
     .notification-container {
       right: 0px; /* Adjust to avoid overlapping with hamburger menu */
       
     }
-  }
+}
+
+/* Style for unread notifications */
+.notification-item.unread {
+    font-weight: bold;  /* Bold font for unread notifications */
+    background-color: #f0f0f0;  /* Light background for unread */
+}
+
+/* Style for read notifications */
+.notification-item.read {
+    font-weight: normal;  /* Regular font for read notifications */
+    background-color: #e0e0e0;  /* Darker background for read */
+}
+
+/* Optional: Add hover effect */
+.notification-item:hover {
+    background-color: #d3d3d3;  /* Slightly darker on hover */
+}

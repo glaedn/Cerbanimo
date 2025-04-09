@@ -1,0 +1,184 @@
+/* Project Hierarchy Visualization Styles */
+  
+  .skill-hierarchy-container {
+    font-family: 'Inter', sans-serif;
+    margin: 20px;
+    position: relative;
+  }
+  
+  .category-tabs {
+    display: flex;
+    border-bottom: 2px solid #333;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+  
+  .tab {
+    padding: 10px 20px;
+    background: #222;
+    border: none;
+    cursor: pointer;
+    border-radius: 12px 12px 0 0;
+    font-size: 14px;
+    color: white;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+  }
+  
+  .tab:hover {
+    background-color: #333;
+    transform: translateY(-2px);
+  }
+  
+  /* Specific category colors */
+  .tab.pink {
+    background-color: #ff5ca2!important;
+  }
+  .tab.green {
+    background-color: #00d787;
+  }
+  .tab.blue {
+    background-color: #4dabf7;
+  }
+  .tab.orange {
+    background-color: #ff9f40;
+  }
+  
+  .more-tab {
+    background-color: #555;
+    color: #ccc;
+  }
+  
+  .visualization-container {
+    border: 1px solid #444;
+    border-radius: 12px;
+    margin-right: 50px;
+    position: relative;
+    min-height: 300px;
+    min-width: 98%;
+    max-width: 98%;
+    background-color: #1c1c1e;
+  }
+  
+  .node text {
+    font-family: 'Inter', sans-serif;
+    fill: white;
+    font-size: 12px;
+  }
+  
+  .link {
+    fill: none;
+    stroke: #666;
+    stroke-width: 1.5px;
+  }
+  
+  .new-task-button {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background-color: #4dabf7;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(77, 171, 247, 0.3);
+  }
+  
+  .edit-mode-button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #222;
+    border: 1px solid #555;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s ease;
+  }
+  
+  .edit-mode-button:hover {
+    background-color: #333;
+  }
+  
+  .project-info {
+    margin-top: 20px;
+    max-width: 98%;
+    padding: 15px;
+    border: 1px solid #444;
+    border-radius: 12px;
+    background-color: #1a1a1a;
+  }
+  
+  .project-info h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #fff;
+  }
+  
+  .project-info p {
+    margin: 5px 0;
+    color: #ccc;
+  }
+  
+  .legend {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #aaa;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .legend div {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* For responsive design */
+  @media (max-width: 768px) {
+    .legend {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .tab-arrow {
+    padding: 10px 15px;
+    background: #222;
+    border: none;
+    cursor: pointer;
+    border-radius: 12px 12px 0 0;
+    font-size: 14px;
+    color: white;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 5px;
+  }
+  
+  .tab-arrow:hover {
+    background-color: #333;
+    transform: translateY(-2px);
+  }
+  
+  .tab-arrow:active {
+    transform: translateY(0);
+  }
+  
+  .node-tooltip {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    max-width: 300px;
+    transform: translate(20px, 20px);
+  }

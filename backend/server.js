@@ -27,34 +27,71 @@ const io = new Server(server, {
   }
 });
 
-// Store active user connections
-const connectedUsers = new Map();
-
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  socket.on('register', (userId) => {
-    connectedUsers.set(userId, socket.id);
+  socket.on('join', (userId) => {
+    console.log(`User ${userId} joined the room`);
+    socket.join(`user_${userId}`); // So you can emit to specific users
+    console.log(`User ${userId} joined their notification room`);
   });
 
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
-    for (let [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        connectedUsers.delete(userId);
-        break;
-      }
-    }
+  });
+  socket.onAny((event, ...args) => {
+    console.log(`Received event: ${event}`, args);
   });
 });
 
+app.set('io', io);
+
 // Function to send notifications
-export const sendNotification = (userId, notification) => {
-  const socketId = connectedUsers.get(userId);
-  if (socketId) {
-    io.to(socketId).emit('notification', notification);
+export const sendNotification = async (userId, notification) => {
+  const { taskId, message } = notification;
+
+  // Check if notification for the same task already exists for the user
+  const checkQuery = `
+      SELECT * FROM notifications
+      WHERE user_id = $1 AND task_id = $2 AND read = false
+  `;
+
+  try {
+      const existingNotification = await pool.query(checkQuery, [userId, taskId]);
+
+      // If notification exists, skip sending
+      if (existingNotification.rows.length > 0) {
+          console.log(`Notification for task ${taskId} already exists for user ${userId}. Skipping.`);
+          return;  // Skip sending the notification
+      }
+
+      // Store notification in database
+      const notificationQuery = `
+          INSERT INTO notifications (user_id, task_id, message, type, created_at, read) 
+          VALUES ($1, $2, $3, $4, NOW(), false)
+          RETURNING *
+      `;
+      
+      const result = await pool.query(notificationQuery, [
+          userId,
+          taskId,
+          message,
+          notification.type || 'general'
+      ]);
+      
+      const storedNotification = result.rows[0];
+      
+      // Emit to specific user's room
+      io.to(`user_${userId}`).emit('notification', storedNotification);
+      console.log("Rooms:", io.sockets.adapter.rooms);
+      console.log(`Notification sent to user ${userId}`);
+      return storedNotification;
+  } catch (error) {
+      console.error('Error sending notification:', error);
+      throw error;
   }
 };
+
 
 // JWT middleware for secured routes
 const jwtCheck = auth({

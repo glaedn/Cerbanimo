@@ -14,6 +14,7 @@ import RewardDashboard from './pages/RewardDashboard.jsx';
 import PublicProfile from './pages/PublicProfile.jsx';
 import BadgeCreation from './pages/BadgeCreation.jsx';
 import HomePage from './pages/HomePage.jsx';
+import ProjectVisualizer from './pages/ProjectVisualizer.jsx';
 
 const App = () => {
   return (
@@ -78,6 +79,14 @@ const App = () => {
           element={
             <PrivateRoute>
               <BadgeCreation />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/Visualizer/:projectId"
+          element={
+            <PrivateRoute>
+              <ProjectVisualizer />
             </PrivateRoute>
           }
         />
