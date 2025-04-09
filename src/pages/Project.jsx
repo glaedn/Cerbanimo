@@ -51,8 +51,10 @@ const Project = () => {
     name: '',
     description: '',
     skill_id: '',
-    active_ind: true,
+    active_ind: false,
+    status: 'inactive-unassigned',
     assigned_user_ids: [],
+    dependencies: [],
     reward_tokens: 10 // Add default value of 10
   });
 

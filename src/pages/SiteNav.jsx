@@ -4,22 +4,18 @@ import { Link, useLocation } from 'react-router-dom';
 import './SiteNav.css';
 import { Badge, IconButton, Menu, MenuItem } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import { useNotifications } from "./NotificationProvider";
+import { useNotifications } from "./NotificationProvider";  // Import the useNotifications hook
 
 const SiteNav = () => {
     const { logout, loginWithRedirect, isAuthenticated } = useAuth0();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const { user } = useAuth0();
-    
-    // Get notifications context - handle the case when it might be undefined
-    const notificationsContext = useNotifications();
-    const notifications = notificationsContext?.notifications || [];
-    const unreadCount = notificationsContext?.unreadCount || 0;
-    const setUnreadCount = notificationsContext?.setUnreadCount || (() => {});
+
+    // Get notifications context
+    const { notifications, unreadCount, markAsRead } = useNotifications(); // Destructure markAsRead here
     
     const [anchorEl, setAnchorEl] = useState(null);
-    
+
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
@@ -27,13 +23,27 @@ const SiteNav = () => {
     const closeSidebar = () => {
         setIsSidebarOpen(false);
     };
-    
+
     // Notification handlers
-    const handleOpen = (event) => setAnchorEl(event.currentTarget);
+    const handleOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+
+        
+    };
+
     const handleClose = () => {
-        setUnreadCount(0);
+        // Mark notifications as read when user opens the dropdown
+        const unreadNotifications = notifications.filter(n => !n.read);
+        const unreadNotificationIds = unreadNotifications.map(n => n.id);
+        
+        if (unreadNotificationIds.length > 0) {
+          markAsRead(unreadNotificationIds);  // Call markAsRead here
+        }
         setAnchorEl(null);
     };
+
+    // Get the most recent 5 notifications
+    const recentNotifications = notifications.slice(0, 5);
 
     return (
         <nav className={`site-nav ${isSidebarOpen ? 'open' : ''}`}>
@@ -50,11 +60,16 @@ const SiteNav = () => {
                         </Badge>
                     </IconButton>
                     <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-                        {notifications.length === 0 ? (
-                            <MenuItem>No new notifications</MenuItem>
+                        {recentNotifications.length === 0 ? (
+                            <MenuItem className="notification-menu">No new notifications</MenuItem>
                         ) : (
-                            notifications.map((notif, index) => (
-                                <MenuItem key={index}>{notif.message}</MenuItem>
+                            recentNotifications.map((notif, index) => (
+                                <MenuItem
+                                    key={index}
+                                    className={`notification-item ${notif.read ? 'read' : 'unread'}`}
+                                >
+                                    {notif.message}
+                                </MenuItem>
                             ))
                         )}
                     </Menu>

@@ -7,15 +7,18 @@ const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 // PostgreSQL Project Table Schema
 const createProjectTable = async () => {
   const query = `
-    CREATE TABLE IF NOT EXISTS projects (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      description TEXT,
-      task_group_ids INT[] DEFAULT '{}',
-      user_ids INT[] DEFAULT '{}',
-      creator_id INT REFERENCES users(id) ON DELETE CASCADE,
-      tags TEXT[] DEFAULT '{}',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS public.projects (
+      id integer NOT NULL GENERATED ALWAYS AS IDENTITY,
+      name character varying(100) NOT NULL,
+      description text,
+      task_group_ids integer[] DEFAULT '{}',
+      user_ids integer[] DEFAULT '{}',
+      creator_id integer,
+      tags text[] DEFAULT '{}',
+      created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+      token_pool integer DEFAULT 250,
+      used_tokens integer DEFAULT 0,
+      reserved_tokens integer DEFAULT 0
     );
   `;
   try {
