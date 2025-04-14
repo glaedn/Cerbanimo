@@ -24,7 +24,7 @@
     align-items: center;
     padding: 10px 0px;
     background: radial-gradient(circle, #0a0a1a, #000000);
-    z-index: 1000;
+    z-index: 1001;
     border-bottom: 2px solid rgba(109, 213, 237, 0.5);
     box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
 }
@@ -226,3 +226,84 @@
 .notification-item:hover {
     background-color: #d3d3d3;  /* Slightly darker on hover */
 }
+
+
+/* Game tab toggle on center-left */
+.game-tray-toggle {
+    position: fixed;
+    top: 15%;
+    left: 0;
+    transform: translateY(-50%);
+    background-color: #222;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    z-index: 1000;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    user-select: none;
+    transition: background-color 0.3s ease;
+    transition: transform 0.3s ease-in-out;
+}
+
+.game-tray-toggle:hover {
+    background-color: #444;
+}
+
+.game-tab-text {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Tray container */
+.game-tray {
+    position: fixed;
+    top: 0;
+    left: -200px;
+    width: 200px;
+    height: 100%;
+    background: #0a0a0a;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+    z-index: 999;
+    transition: left 0.4s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-tray.open {
+    left: 0;
+}
+
+.game-tab-icons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .game-tab {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-90%); /* mostly hidden */
+    background: rgba(0, 0, 0, 0.7);
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding: 6px 8px;
+    z-index: 999;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .game-tray-toggle.open {
+    transform: translateX(200px); /* hides with tray, adjust based on tray width */
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .emoji-icon {
+    font-size: 22px;
+    line-height: 1;
+  }

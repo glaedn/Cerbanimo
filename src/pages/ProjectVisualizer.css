@@ -8,9 +8,30 @@
   
   .category-tabs {
     display: flex;
+    overflow-x: auto;
+    -ms-overflow-style: none;
     border-bottom: 2px solid #333;
     margin-bottom: 20px;
+    position: relative;
+    cursor: grab;
+    user-select: none;
     gap: 10px;
+    z-index: 1;
+  }
+
+  .category-tabs::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
+  }
+
+  .category-tabs.grabbing {
+    cursor: grabbing;
+    user-select: none;
+  }
+  
+  .tab.active {
+    font-weight: bold;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
   
   .tab {
@@ -23,6 +44,55 @@
     color: white;
     transition: all 0.2s ease-in-out;
     font-weight: 500;
+  }
+
+  .active-indicator {
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
+    background: #fff;
+    border-radius: 2px;
+  }
+
+  /* Scroll shadows */
+  .scroll-shadow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.1s;
+    z-index: 10
+  }
+  
+  .left-shadow {
+    left: 0;
+    background: linear-gradient(to right, rgba(0,0,0,0.4) 0%, transparent 100%);
+  }
+  
+  .right-shadow {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.4) 0%, transparent 100%);
+  }
+  
+  .category-tabs.scrollable-left .left-shadow,
+  .category-tabs.scrollable-right .right-shadow {
+    opacity: 1;
+  }
+  
+  .category-tabs {
+    position: relative;
+    z-index: 1;
+  }
+
+  .tabs-container-wrapper {
+    position: relative;
+    overflow: hidden; /* Contain the absolutely positioned shadows */
   }
   
   .tab:hover {
@@ -172,13 +242,47 @@
   
   .node-tooltip {
     position: absolute;
-    background: white;
+    background: rgb(0, 0, 0);
     border: 1px solid #ccc;
     padding: 8px;
     border-radius: 4px;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 1000;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     max-width: 300px;
     transform: translate(20px, 20px);
+    transition: 
+    opacity 0.2s ease 0.1s,
+    transform 0.2s ease 0.1s;
+  }
+
+  .node-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #000 transparent transparent;
+  }
+
+  .node-tooltip-enter {
+    opacity: 0;
+    transform: translate(20px, 10px);
+  }
+  
+  .node-tooltip-enter-active {
+    opacity: 1;
+    transform: translate(20px, 20px);
+  }
+
+  .tooltip-container {
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 0.15s ease;
+  }
+
+  .node, .add-button {
+    pointer-events: all !important;
   }

@@ -1,0 +1,772 @@
+html, body {
+  overflow: hidden;
+}
+
+.space-game-container {
+    width: 100%;
+    height: 100vh;
+    background-color: #000;
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .holographic-container {
+    background-color: rgba(0, 30, 60, 0.3);
+    border: 1px solid rgba(0, 195, 255, 0.3);
+    border-radius: 8px;
+    padding-top: 10px;
+    box-shadow: 
+      0 0 10px rgba(0, 195, 255, 0.2),
+      inset 0 0 20px rgba(0, 195, 255, 0.1);
+    backdrop-filter: blur(4px);
+    position: relative;
+    overflow: hidden;
+    margin-top: 40px;
+    margin-left: 10px;
+    width: 180px;
+    padding-left: 10px;
+    margin-right: 10px;
+    z-index: 1000;
+  }
+
+  .holographic-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+      rgba(0, 195, 255, 0), 
+      rgba(0, 195, 255, 0.5), 
+      rgba(0, 195, 255, 0));
+    z-index: 1;
+  }
+
+  .holographic-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 195, 255, 0.03) 0px,
+      rgba(0, 195, 255, 0.03) 1px,
+      rgba(0, 195, 255, 0) 1px,
+      rgba(0, 195, 255, 0) 2px
+    );
+    pointer-events: none;
+  }
+
+  .holo-text {
+    text-shadow: 0 0 5px rgba(0, 195, 255, 0.7);
+    letter-spacing: 0.5px;
+  }
+
+  .holo-glow {
+    text-shadow: 
+      0 0 5px rgba(0, 195, 255, 0.7),
+      0 0 10px rgba(0, 195, 255, 0.5);
+  }
+
+  .holo-pulse {
+    animation: holo-pulse 2s infinite;
+  }
+
+  .upgrade-menu-container {
+    background-color: rgba(0, 30, 60, 0.3);
+    border: 1px solid rgba(0, 195, 255, 0.3);
+    border-radius: 8px;
+    box-shadow: 
+      0 0 10px rgba(0, 195, 255, 0.2),
+      inset 0 0 20px rgba(0, 195, 255, 0.1);
+    backdrop-filter: blur(4px);
+    position: absolute;
+    max-height: 35vh; /* You can tweak this as needed for spacing */
+    overflow-y: auto;
+    overscroll-behavior: contain; /* Prevents bounce/scroll chaining on mobile */
+    -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS */
+    padding-right: 8px; /* Space for custom scrollbar if desired */
+    margin-left: 10px;
+    margin-top: 10px;
+    width: 180px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+    margin-right: 10px;
+    z-index: 1000;
+  }
+
+  .upgrade-menu-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .upgrade-menu-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .upgrade-menu-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 195, 255, 0.3);
+    border-radius: 3px;
+    box-shadow: 0 0 6px rgba(0, 195, 255, 0.5);
+  }
+
+  .upgrade-menu-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+      rgba(0, 195, 255, 0), 
+      rgba(0, 195, 255, 0.5), 
+      rgba(0, 195, 255, 0));
+    z-index: 1;
+  }
+
+  .upgrade-menu-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 195, 255, 0.03) 0px,
+      rgba(0, 195, 255, 0.03) 1px,
+      rgba(0, 195, 255, 0) 1px,
+      rgba(0, 195, 255, 0) 2px
+    );
+    pointer-events: none;
+  }
+
+  @keyframes holo-pulse {
+    0%, 100% {
+      opacity: 0.7;
+      text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+    }
+    50% {
+      opacity: 1;
+      text-shadow: 
+        0 0 5px rgba(0, 195, 255, 0.7),
+        0 0 10px rgba(0, 195, 255, 0.5);
+    }
+  }
+
+.holo-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    background: rgba(0, 195, 255, 0.1);
+    border: 1px solid rgba(0, 195, 255, 0.3);
+    border-radius: 4px;
+    padding: 8px 16px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    color: rgba(0, 195, 255, 0.8);
+    text-shadow: 0 0 5px rgba(0, 195, 255, 0.5);
+    box-shadow: 
+        0 0 10px rgba(0, 195, 255, 0.2),
+        inset 0 0 15px rgba(0, 195, 255, 0.1);
+    cursor: pointer;
+}
+
+.holo-button:hover {
+    background: rgba(0, 195, 255, 0.2);
+    box-shadow: 
+        0 0 15px rgba(0, 195, 255, 0.3),
+        inset 0 0 20px rgba(0, 195, 255, 0.2);
+    color: rgba(0, 195, 255, 1);
+    text-shadow: 0 0 8px rgba(0, 195, 255, 0.7);
+}
+
+.token-display {
+    max-width: 200px;
+}
+
+  .holo-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg, 
+      transparent, 
+      rgba(0, 195, 255, 0.2), 
+      transparent
+    );
+    animation: holo-button-shine 3s infinite;
+  }
+
+  @keyframes holo-button-shine {
+    0% { left: -100%; }
+    20%, 100% { left: 100%; }
+  }
+
+  .animate-warp-progress {
+    animation: warp-progress 3s linear infinite;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 195, 255, 0.3),
+      rgba(0, 195, 255, 0.7),
+      rgba(0, 195, 255, 0.3)
+    );
+    background-size: 200% 100%;
+  }
+
+  @keyframes warp-progress {
+    0% { width: 0%; background-position: 100% 0; }
+    100% { width: 100%; background-position: -100% 0; }
+  }
+
+  .planet-animation {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .planet::before {
+    content: '';
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    background: radial-gradient(circle, rgba(0,0,0,0.3) 40%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .planet-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  .planet {
+    margin-top: 20px;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #3cf, #024);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    transition: transform 0.8s ease-out;
+    transform: scale(1);
+    position: relative;
+  }
+  
+  .planet.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.7), 0 0 10px rgba(0, 255, 255, 0.3) inset;
+  }
+
+  .planet.hidden {
+    transform: scale(0);
+  }
+
+  .planet-enter {
+    animation: enterFromTop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  
+  .planet-exit {
+    animation: exitToBottom 1.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+  }
+  
+  /* Moon base styles */
+  .moon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+    will-change: transform;
+    border-radius: 50%;
+    transition: transform 0.2s ease-out;
+    box-shadow: 
+      0 0 8px rgba(255, 255, 255, 0.4), 
+      0 0 2px 2px rgba(255, 255, 255, 0.1) inset;
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  
+  /* Consistent elliptical orbit animations */
+  @keyframes orbit {
+    0% {
+      transform: 
+        translateX(calc(var(--distance) * 1.5))
+        translateY(calc(var(--distance) * var(--y-offset, 0)))
+        scale(var(--scale-front, 1));
+      z-index: 6; /* In front of planet */
+    }
+    24.9% {
+      transform: 
+        translateX(calc(var(--distance) * 0.2))
+        translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
+        scale(var(--scale-side, 0.85));
+      z-index: 6; /* Still in front of planet */
+    }
+    25% {
+      transform: 
+        translateX(0)
+        translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
+        scale(var(--scale-side, 0.85));
+      z-index: 4; /* Just switched to behind planet */
+    }
+    49.9% {
+      transform: 
+        translateX(calc(var(--distance) * -1.5))
+        translateY(calc(var(--distance) * var(--y-offset, 0)))
+        scale(var(--scale-back, 0.7));
+      z-index: 4; /* Behind planet */
+    }
+    50% {
+      transform: 
+        translateX(calc(var(--distance) * -1.5))
+        translateY(calc(var(--distance) * var(--y-offset, 0)))
+        scale(var(--scale-back, 0.7));
+      z-index: 4; /* Still behind planet */
+    }
+    74.9% {
+      transform: 
+        translateX(calc(var(--distance) * -0.2))
+        translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
+        scale(var(--scale-side, 0.85));
+      z-index: 4; /* Still behind planet */
+    }
+    75% {
+      transform: 
+        translateX(0)
+        translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
+        scale(var(--scale-side, 0.85));
+      z-index: 6; /* Just switched to in front of planet */
+    }
+    100% {
+      transform: 
+        translateX(calc(var(--distance) * 1.5))
+        translateY(calc(var(--distance) * var(--y-offset, 0)))
+        scale(var(--scale-front, 1));
+      z-index: 6; /* In front of planet */
+    }
+  }
+
+ @keyframes enterFromTop {
+  from {
+    transform: translateY(-250%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+}
+
+@keyframes exitToBottom {
+  from {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(350%);
+    opacity: 0;
+  }
+}
+
+.planet-enter {
+  animation: enterFromTop 1s ease-out forwards;
+}
+
+.planet-exit {
+  animation: exitToBottom 1s ease-in forwards;
+}
+
+.spaceship {
+  position: absolute;
+  margin-bottom: 100px;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: transform 1s ease;
+  z-index: 11;
+  width: 120px;
+  height: 60px;
+}
+
+/* Hover animation when idle */
+@keyframes hover {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-8px);
+  }
+}
+
+.spaceship-container:not(.warp) .spaceship {
+  animation: hover 3s ease-in-out infinite;
+}
+
+/* Warp zoom effect when activating warp */
+@keyframes warp-zoom {
+  0% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.3) translateY(-10px);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.spaceship-container.warp .spaceship {
+  animation: warp-zoom 1s ease-in-out forwards;
+}
+
+
+/* Main fuselage */
+.spaceship-body {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0ff, #004);
+  border-radius: 40% 40% 60% 60%;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  overflow: hidden;
+}
+
+/* Central spine strip */
+.body-core {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  width: 10px;
+  height: 80%;
+  background: linear-gradient(to bottom, #0ff, #033);
+  transform: translateX(-50%);
+  border-radius: 5px;
+  opacity: 0.5;
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+  z-index: 3;
+}
+
+/* Cockpit dome */
+.cockpit {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 30px;
+  height: 20px;
+  background: radial-gradient(circle at center, #ccf, #00a);
+  border-radius: 50% / 60%;
+  transform: translateX(-50%);
+  z-index: 4;
+  box-shadow: 0 0 8px rgba(100, 255, 255, 0.7);
+  border: 1px solid rgba(0, 255, 255, 0.5);
+}
+
+/* Wings */
+.spaceship-wing {
+  position: absolute;
+  top: 50%;
+  width: 45px;
+  height: 25px;
+  background: rgba(0, 255, 255, 0.25);
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  border-radius: 50% 50% 10% 10%;
+  transform: translateY(-50%);
+  z-index: 1;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+}
+
+.spaceship-wing.left {
+  left: -35px;
+  transform: translateY(-50%) rotate(-20deg);
+}
+
+.spaceship-wing.right {
+  right: -35px;
+  transform: translateY(-50%) rotate(20deg);
+}
+
+
+.spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(0, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: spark-flicker 1.2s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes spark-flicker {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-20px, 30px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+
+.warp-ring {
+  position: absolute;
+  top: 85%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  border: 2px solid rgba(0, 195, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: warp-ring-pulse 2.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes warp-ring-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+/* Plasma thruster flame */
+.thruster {
+  position: absolute;
+  bottom: -85px;
+  left: 50%;
+  width: 80px;
+  height: 228px;
+  background: linear-gradient(to bottom, #0ff, #00f, #0033ff);
+  opacity: 0;
+  transform: translateX(-50%) scaleY(0.5);
+  transition: opacity 0.3s, transform 0.3s;
+  border-radius: 50% 50% 30% 30%;
+  filter: blur(3px) brightness(1.2);
+}
+
+.thruster.active {
+  opacity: 1;
+  transform: translateX(-50%) scaleY(1.3);
+  animation: flicker 0.2s infinite alternate;
+}
+
+@keyframes flicker {
+  from {
+    opacity: 0.7;
+    transform: translateX(-50%) scaleY(1.1);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1.3);
+  }
+}
+
+
+
+@keyframes warp-flare {
+  0% {
+    transform: scaleY(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scaleY(1.5);
+    opacity: 1;
+  }
+}
+
+
+  /* Keep original star and twinkle styling */
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 190px;
+    border-radius: 50%;
+    background: white;
+    opacity: 0.7;
+    animation: flyby linear infinite;
+    filter: blur(1px);
+    will-change: transform;
+    transform-origin: top center;
+    transition:
+      height 0.6s ease,
+      opacity 0.6s ease;
+  }
+  
+  @keyframes flyby {
+    from {
+      transform: translateY(0) scale(var(--scale, 1));
+      opacity: 0.8;
+    }
+    to {
+      transform: translateY(100vh) scale(var(--scale, 1));
+      opacity: 0;
+    }
+  }
+
+  .starfield.paused .star {
+    animation-play-state: paused;
+    height: 0;
+    opacity: 0;
+  }
+
+  .twinkle-star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: twinkle 3s infinite ease-in-out;
+    filter: blur(0.8px) drop-shadow(0 0 2px white);
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .twinkle-field.fade-in {
+    opacity: 1;
+  }
+  
+  .twinkle-field.fade-out {
+    opacity: 0;
+  }
+
+    /* Multicolor variation and random placement */
+    .star:nth-child(odd) {
+        background: #00e0ff;
+      }
+      .star:nth-child(3n) {
+        height: 210px;
+        opacity: 0.9;
+        filter: blur(1.2px);
+      }
+      .star:nth-child(4n) {
+        background: #ff00f7;
+        height: 175px;
+        opacity: 0.6;
+        filter: blur(0.6px);
+      }
+      .star:nth-child(5n) {
+        background: #fff700;
+        transform: scale(0.7);
+        filter: blur(1px);
+        opacity: 0.6;
+      }
+.star:nth-child(1)  { left: 10%; animation-duration: 3s; top: -10%; }
+.star:nth-child(2)  { left: 25%; animation-duration: 4s; top: -20%; }
+.star:nth-child(3)  { left: 40%; animation-duration: 2.5s; top: -15%; }
+.star:nth-child(4)  { left: 60%; animation-duration: 3.5s; top: -30%; }
+.star:nth-child(5)  { left: 80%; animation-duration: 4.5s; top: -5%; }
+.star:nth-child(6)  { left: 15%; animation-duration: 3.2s; top: -25%; }
+.star:nth-child(7)  { left: 35%; animation-duration: 2.8s; top: -8%; }
+.star:nth-child(8)  { left: 55%; animation-duration: 4.2s; top: -12%; }
+.star:nth-child(9)  { left: 75%; animation-duration: 3.7s; top: -18%; }
+.star:nth-child(10) { left: 90%; animation-duration: 2.9s; top: -22%; }
+.star:nth-child(11) { left: 8%; animation-duration: 3.3s; top: -15%; }
+.star:nth-child(12) { left: 22%; animation-duration: 4.1s; top: -28%; }
+.star:nth-child(13) { left: 38%; animation-duration: 2.7s; top: -7%; }
+.star:nth-child(14) { left: 58%; animation-duration: 3.9s; top: -19%; }
+.star:nth-child(15) { left: 82%; animation-duration: 4.4s; top: -11%; }
+.star:nth-child(16) { left: 12%; animation-duration: 3.1s; top: -24%; }
+.star:nth-child(17) { left: 32%; animation-duration: 2.6s; top: -9%; }
+.star:nth-child(18) { left: 52%; animation-duration: 4.3s; top: -16%; }
+.star:nth-child(19) { left: 72%; animation-duration: 3.6s; top: -21%; }
+.star:nth-child(20) { left: 88%; animation-duration: 2.8s; top: -26%; }
+.star:nth-child(21) { left: 5%; animation-duration: 3.4s; top: -13%; }
+.star:nth-child(22) { left: 28%; animation-duration: 4.2s; top: -23%; }
+.star:nth-child(23) { left: 45%; animation-duration: 2.9s; top: -6%; }
+.star:nth-child(24) { left: 65%; animation-duration: 3.8s; top: -17%; }
+.star:nth-child(25) { left: 85%; animation-duration: 4.6s; top: -14%; }
+.star:nth-child(26) { left: 15%; animation-duration: 3.2s; top: -22%; }
+.star:nth-child(27) { left: 35%; animation-duration: 2.8s; top: -9%; }
+.star:nth-child(28) { left: 55%; animation-duration: 4.0s; top: -18%; }
+.star:nth-child(29) { left: 75%; animation-duration: 3.5s; top: -25%; }
+.star:nth-child(30) { left: 92%; animation-duration: 2.9s; top: -11%; }
+.star:nth-child(31) { left: 7%; animation-duration: 3.3s; top: -16%; }
+.star:nth-child(32) { left: 23%; animation-duration: 4.2s; top: -21%; }
+.star:nth-child(33) { left: 43%; animation-duration: 2.7s; top: -8%; }
+.star:nth-child(34) { left: 63%; animation-duration: 3.9s; top: -19%; }
+.star:nth-child(35) { left: 83%; animation-duration: 4.5s; top: -12%; }
+.star:nth-child(36) { left: 13%; animation-duration: 3.1s; top: -24%; }
+.star:nth-child(37) { left: 33%; animation-duration: 2.6s; top: -7%; }
+.star:nth-child(38) { left: 53%; animation-duration: 4.3s; top: -15%; }
+.star:nth-child(39) { left: 73%; animation-duration: 3.6s; top: -23%; }
+.star:nth-child(40) { left: 89%; animation-duration: 2.8s; top: -28%; }
+.star:nth-child(41) { left: 6%; animation-duration: 3.4s; top: -14%; }
+.star:nth-child(42) { left: 26%; animation-duration: 4.1s; top: -22%; }
+.star:nth-child(43) { left: 46%; animation-duration: 2.9s; top: -9%; }
+.star:nth-child(44) { left: 66%; animation-duration: 3.8s; top: -17%; }
+.star:nth-child(45) { left: 86%; animation-duration: 4.4s; top: -13%; }
+.star:nth-child(46) { left: 16%; animation-duration: 3.2s; top: -25%; }
+.star:nth-child(47) { left: 36%; animation-duration: 2.7s; top: -8%; }
+.star:nth-child(48) { left: 56%; animation-duration: 4.2s; top: -16%; }
+.star:nth-child(49) { left: 76%; animation-duration: 3.5s; top: -24%; }
+.star:nth-child(50) { left: 93%; animation-duration: 2.8s; top: -12%; }
+.star:nth-child(51) { left: 8%; animation-duration: 3.3s; top: -15%; }
+.star:nth-child(52) { left: 24%; animation-duration: 4.0s; top: -20%; }
+.star:nth-child(53) { left: 44%; animation-duration: 2.8s; top: -7%; }
+.star:nth-child(54) { left: 64%; animation-duration: 3.7s; top: -18%; }
+.star:nth-child(55) { left: 84%; animation-duration: 4.3s; top: -11%; }
+.star:nth-child(56) { left: 14%; animation-duration: 3.0s; top: -23%; }
+.star:nth-child(57) { left: 34%; animation-duration: 2.5s; top: -6%; }
+.star:nth-child(58) { left: 54%; animation-duration: 4.1s; top: -14%; }
+.star:nth-child(59) { left: 74%; animation-duration: 3.4s; top: -22%; }
+.star:nth-child(60) { left: 90%; animation-duration: 2.7s; top: -27%; }
+.star:nth-child(61) { left: 9%; animation-duration: 3.2s; top: -13%; }
+.star:nth-child(62) { left: 27%; animation-duration: 3.9s; top: -21%; }
+.star:nth-child(63) { left: 47%; animation-duration: 2.8s; top: -8%; }
+.star:nth-child(64) { left: 67%; animation-duration: 3.6s; top: -16%; }
+.star:nth-child(65) { left: 87%; animation-duration: 4.2s; top: -12%; }
+.star:nth-child(66) { left: 17%; animation-duration: 3.1s; top: -24%; }
+.star:nth-child(67) { left: 37%; animation-duration: 2.6s; top: -7%; }
+.star:nth-child(68) { left: 57%; animation-duration: 4.0s; top: -15%; }
+.star:nth-child(69) { left: 77%; animation-duration: 3.3s; top: -23%; }
+.star:nth-child(70) { left: 94%; animation-duration: 2.7s; top: -11%; }
+.star:nth-child(71) { left: 4%; animation-duration: 3.4s; top: -14%; }
+.star:nth-child(72) { left: 25%; animation-duration: 3.8s; top: -19%; }
+.star:nth-child(73) { left: 45%; animation-duration: 2.7s; top: -6%; }
+.star:nth-child(74) { left: 65%; animation-duration: 3.5s; top: -15%; }
+.star:nth-child(75) { left: 85%; animation-duration: 4.1s; top: -10%; }
+.star:nth-child(76) { left: 18%; animation-duration: 3.0s; top: -22%; }
+.star:nth-child(77) { left: 38%; animation-duration: 2.5s; top: -5%; }
+.star:nth-child(78) { left: 58%; animation-duration: 3.9s; top: -13%; }
+.star:nth-child(79) { left: 78%; animation-duration: 3.2s; top: -21%; }
+.star:nth-child(80) { left: 95%; animation-duration: 2.6s; top: -26%; }
+.star:nth-child(81) { left: 11%; animation-duration: 3.3s; top: -12%; }
+.star:nth-child(82) { left: 29%; animation-duration: 3.7s; top: -18%; }
+.star:nth-child(83) { left: 48%; animation-duration: 2.6s; top: -7%; }
+.star:nth-child(84) { left: 68%; animation-duration: 3.4s; top: -14%; }
+.star:nth-child(85) { left: 88%; animation-duration: 4.0s; top: -9%; }
+.star:nth-child(86) { left: 19%; animation-duration: 2.9s; top: -20%; }
+.star:nth-child(87) { left: 39%; animation-duration: 2.4s; top: -4%; }
+.star:nth-child(88) { left: 59%; animation-duration: 3.8s; top: -12%; }
+.star:nth-child(89) { left: 79%; animation-duration: 3.1s; top: -19%; }
+.star:nth-child(90) { left: 96%; animation-duration: 2.5s; top: -25%; }
+.star:nth-child(91) { left: 3%; animation-duration: 3.2s; top: -11%; }
+.star:nth-child(92) { left: 21%; animation-duration: 3.6s; top: -17%; }
+.star:nth-child(93) { left: 41%; animation-duration: 2.5s; top: -6%; }
+.star:nth-child(94) { left: 61%; animation-duration: 3.3s; top: -13%; }
+.star:nth-child(95) { left: 81%; animation-duration: 3.9s; top: -8%; }
+.star:nth-child(96) { left: 18%; animation-duration: 3.5s; top: -20%; }
+.star:nth-child(97) { left: 42%; animation-duration: 2.7s; top: -12%; }
+.star:nth-child(98) { left: 68%; animation-duration: 4.1s; top: -25%; }
+.star:nth-child(99) { left: 78%; animation-duration: 3.3s; top: -8%; }
+.star:nth-child(100) { left: 95%; animation-duration: 2.8s; top: -16%; }
