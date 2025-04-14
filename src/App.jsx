@@ -15,6 +15,7 @@ import PublicProfile from './pages/PublicProfile.jsx';
 import BadgeCreation from './pages/BadgeCreation.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ProjectVisualizer from './pages/ProjectVisualizer.jsx';
+import IdleSpaceGame from './pages/IdleSpaceGame.jsx';
 
 const App = () => {
   return (
@@ -87,6 +88,14 @@ const App = () => {
           element={
             <PrivateRoute>
               <ProjectVisualizer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/idlespacegame"
+          element={
+            <PrivateRoute>
+              <IdleSpaceGame />
             </PrivateRoute>
           }
         />

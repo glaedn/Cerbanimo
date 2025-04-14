@@ -5,13 +5,16 @@ import './SiteNav.css';
 import { Badge, IconButton, Menu, MenuItem } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useNotifications } from "./NotificationProvider";  // Import the useNotifications hook
+import IdleSpaceGame from './IdleSpaceGame';
 
 const SiteNav = () => {
     const { logout, loginWithRedirect, isAuthenticated } = useAuth0();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-    // Get notifications context
+    const [isGameOpen, setIsGameOpen] = useState(false);
+    const toggleGameTray = () => {
+        setIsGameOpen(prev => !prev);
+    };
     const { notifications, unreadCount, markAsRead } = useNotifications(); // Destructure markAsRead here
     
     const [anchorEl, setAnchorEl] = useState(null);
@@ -135,6 +138,16 @@ const SiteNav = () => {
                     </button>
                 )}
             </div>
+          {/* Idle Space Game Tray */}
+          <div className={`game-tray-toggle ${isGameOpen ? 'open' : ''}`} onClick={toggleGameTray}>
+    <div className="game-tab-icons">
+  <div className="emoji-icon">🪐</div>
+</div>
+</div>
+
+<div className={`game-tray ${isGameOpen ? 'open' : ''}`}>
+    <IdleSpaceGame />
+</div> 
         </nav>
     );
 };

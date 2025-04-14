@@ -15,11 +15,25 @@ const ProjectVisualizer = () => {
   const { tasks, skills, project, handleTaskAction, fetchTasks } = useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState(skills[0]?.name || '');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [hoveredNode, setHoveredNode] = useState(null);
-  const [visibleSkillsStart, setVisibleSkillsStart] = useState(0);
-  const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
+  const [hoveredNode, setHoveredNode] = useState(null);  const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
   const [activeSkillId, setActiveSkillId] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const tabsContainerRef = useRef(null);
+  const hoverTimeout = useRef(null);
+  const hoverIntentRef = useRef(null);
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      // Clean up timeout on unmount
+      if (hoverTimeout.current) {
+        clearTimeout(hoverTimeout.current);
+      }
+    };
+  }, []);
 
   const categorizedTasks = useMemo(() => {
     const filteredSkills = skills.filter(skill =>
@@ -50,7 +64,63 @@ const ProjectVisualizer = () => {
   const [taskForm, setTaskForm] = useState(initialForm);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
 
+  const getScreenPosition = (event) => {
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const pt = new DOMPoint(event.clientX, event.clientY);
+    return {
+      x: pt.x - svgRect.left,
+      y: pt.y - svgRect.top
+    };
+  };
+  
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - tabsContainerRef.current.offsetLeft);
+    setScrollLeft(tabsContainerRef.current.scrollLeft);
+  };
+
+  const handleTabsLeave = () => {
+    setIsDragging(false);
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseOver = (event, d) => {
+    clearTimeout(hoverIntentRef.current);
+    const pos = getScreenPosition(event);
+    
+    setHoveredNode({
+      ...d,
+      x: pos.x + 20, // Offset from cursor
+      y: pos.y + 20,
+      element: event.currentTarget
+    });
+  };
+  
+  const handleMouseOut = () => {
+    hoverIntentRef.current = setTimeout(() => {
+      if (!tooltipRef.current?.matches(':hover')) {
+        setHoveredNode(null);
+      }
+    }, 200);
+  };
+  
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - tabsContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Adjust scroll speed
+    tabsContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   const handleEditTask = (task) => {
+    setTaskForm(task);        // Fill in form with task values
+    setShowTaskPopup(true);   // Show the TaskEditor modal
+  };
+
+  const handleViewTask = (task) => {
     setTaskForm(task);        // Fill in form with task values
     setShowTaskPopup(true);   // Show the TaskEditor modal
   };
@@ -65,7 +135,6 @@ const ProjectVisualizer = () => {
     setShowTaskPopup(true);
   };
 
-  const MAX_VISIBLE_TABS = 5;
   const FIXED_LEVEL_HEIGHT = 120; 
   const MAX_EXTERNAL_DEPS = 3; 
 
@@ -106,19 +175,8 @@ const ProjectVisualizer = () => {
     return text.substring(0, maxLength) + '...';
   };
 
-  const navigateTabs = (direction) => {
-    const newStart = direction === 'next' 
-      ? Math.min(visibleSkillsStart + 1, skills.length - MAX_VISIBLE_TABS)
-      : Math.max(visibleSkillsStart - 1, 0);
-    setVisibleSkillsStart(newStart);
-  };
-
   const usedSkills = skills.filter(skill => tasks.some(task => task.skill_id === skill.id));
-  const visibleSkills = usedSkills.slice(visibleSkillsStart, visibleSkillsStart + MAX_VISIBLE_TABS);
 
-  const showRightArrow = visibleSkillsStart + MAX_VISIBLE_TABS < usedSkills.length;
-  const showLeftArrow = visibleSkillsStart > 0;
-  
   // Handle mouse leave for the entire visualization container
   const handleMouseLeave = () => {
     setHoveredNode(null);
@@ -179,6 +237,30 @@ const ProjectVisualizer = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+  
+    const leftShadow = document.querySelector('.left-shadow');
+    const rightShadow = document.querySelector('.right-shadow');
+  
+    const updateShadows = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      const showLeft = scrollLeft > 10;
+      const showRight = scrollLeft < scrollWidth - clientWidth - 10;
+  
+      leftShadow.style.opacity = showLeft ? '1' : '0';
+      rightShadow.style.opacity = showRight ? '1' : '0';
+    };
+  
+    updateShadows();
+    container.addEventListener('scroll', updateShadows);
+  
+    return () => {
+      container.removeEventListener('scroll', updateShadows);
+    };
+  }, [usedSkills]);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -504,29 +586,15 @@ const ProjectVisualizer = () => {
       .attr('class', 'node')
       .attr('transform', d => `translate(${d.x}, ${d.y})`)
       .style('pointer-events', 'all')
-      .on('mouseover', (event, d) => {
-        const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
-        // Find tasks depending on this one and tasks this one depends on
-        const dependents = Object.values(allTasks).filter(task => 
-          task.dependencies.includes(d.id)
-        );
-        
-        const dependencies = d.dependencies.map(depId => allTasks[depId]).filter(Boolean);
-        
-        setHoveredNode({
-          id: d.id,
-          name: d.name,
-          status: d.status,
-          dependencies: dependencies.map(dep => ({ id: dep.id, skill: dep.skill_id, name: dep.name, category: dep.category })),
-          dependents: dependents.map(dep => ({ id: dep.id, skill: dep.skill_id, name: dep.name, category: dep.category })),
-          x: x + zoomTransform.x, // Account for zoom/pan
-          y: y + zoomTransform.y  // Account for zoom/pan
-        });
-      })
-      .on('mouseout', () => setHoveredNode(null))
-      .on('mouseleave', () => setHoveredNode(null)) // Additional check
-      .on('click', (event, d) => {
-        if (isEditMode) handleEditTask(d);
+      .on('mouseover', handleMouseOver)
+      .on('mouseout', handleMouseOut)
+      .on('click', function(event, d) {
+        event.stopPropagation(); // Prevent event bubbling
+        if (isEditMode) {
+          handleEditTask(d);
+        } else {
+          handleViewTask(d);
+        }
       });
     nodeGroups.append('circle')
       .attr('r', 15)
@@ -554,23 +622,25 @@ const ProjectVisualizer = () => {
 
     // Add the orange "+" nodes in edit mode
     if (isEditMode) {
-      Object.values(graph).forEach(node => {
-        const addButtonGroup = addButtonsGroup.append('g')
-          .attr('class', 'add-button')
-          .attr('transform', `translate(${node.x + 35}, ${node.y})`) // Position to the right of the node
-          .attr('cursor', 'pointer')
-          .on('mouseover', (event) => {
-            setHoveredNode({
-              name: "Create New Task",
-              x: event.pageX,
-              y: event.pageY,
-              isAddButton: true,
-              connectedToNodeId: node.id
+        Object.values(graph).forEach(node => {
+          const addButtonGroup = addButtonsGroup.append('g')
+            .attr('class', 'add-button')
+            .attr('transform', `translate(${node.x + 35}, ${node.y})`)
+            .attr('cursor', 'pointer')
+            .on('mouseover', (event) => {
+              setHoveredNode({
+                name: "Create New Task",
+                x: event.pageX,
+                y: event.pageY,
+                isAddButton: true,
+                connectedToNodeId: node.id
+              });
+            })
+            .on('mouseout', () => setHoveredNode(null))
+            .on('click', function(event) {
+              event.stopPropagation(); // Prevent event bubbling
+              handleAddTask(node.id); // Pass dependency ID
             });
-          })
-          .on('mouseout', () => setHoveredNode(null))
-          .on('mouseleave', () => setHoveredNode(null))
-          .on('click', () => handleAddTask(node.id))
           
         addButtonGroup.append('circle')
           .attr('r', 10) // Size between task nodes and external dependencies
@@ -589,7 +659,7 @@ const ProjectVisualizer = () => {
 
     
       
-  }, [activeCategory, allTasks, skills, isEditMode, zoomTransform, svgDimensions]);
+  }, [activeCategory, allTasks, skills, isEditMode, zoomTransform, svgDimensions, tasks]);
 
   const colorClasses = ['pink', 'green', 'blue', 'orange'];
   
@@ -599,38 +669,40 @@ const ProjectVisualizer = () => {
       ref={containerRef}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="category-tabs">
-        {showLeftArrow && (
-          <button 
-            className="tab-arrow" 
-            onClick={() => navigateTabs('prev')}
-          >
-            &larr;
-          </button>
+
+<div className="tabs-container-wrapper" style={{ position: 'relative' }}>
+  {/* Left shadow - fixed position */}
+  <div className="scroll-shadow left-shadow" />
+      <div 
+        ref={tabsContainerRef}
+        className="category-tabs"
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleTabsLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+      >
+    {usedSkills.map((category, index) => {
+    const colorClass = colorClasses[index % colorClasses.length];
+    return (
+      <button 
+        key={category.id}
+        className={`tab ${colorClass} ${activeCategory === category.name ? 'active' : ''}`}
+        onClick={() => {
+          setActiveCategory(category.name);
+          setActiveSkillId(category.id);
+        }}
+        style={{ flex: '0 0 auto' }}
+      >
+        {category.name}
+        {activeCategory === category.name && (
+          <span className="active-indicator" />
         )}
-        
-        {visibleSkills.map((category, index) => {
-          const colorClass = colorClasses[index % colorClasses.length];
-          return (
-            <button 
-              key={category.id}
-              className={`tab ${colorClass} ${activeCategory === category.name ? 'active' : ''}`}
-              onClick={() => setActiveCategory(category.name)}
-            >
-              {category.name}
-            </button>
-          );
-        })}
-        
-        {showRightArrow && (
-          <button 
-            className="tab-arrow" 
-            onClick={() => navigateTabs('next')}
-          >
-            &rarr;
-          </button>
-        )}
-      </div>
+      </button>
+    );
+  })}
+</div>
+<div className="scroll-shadow right-shadow" />
+</div>
 
       <div 
         className="visualization-container" 
@@ -655,19 +727,19 @@ const ProjectVisualizer = () => {
       </div>
 
       {hoveredNode && (
-        <div 
-          className="node-tooltip"
-          style={{
-            position: 'absolute',
-            left: hoveredNode.x,
-            top: hoveredNode.y,
-            transform: 'translate(20px, 20px)',
-            background: '#000',
-            border: '1px solid #ccc',
-            padding: '5px',
-            borderRadius: '4px',
-            zIndex: 100
-          }}>
+  <div 
+    ref={tooltipRef}
+    className="tooltip-container"
+    style={{
+      left: hoveredNode.x,
+      top: hoveredNode.y,
+      opacity: hoveredNode ? 1 : 0,
+      transform: `translate(20px, 20px)`
+    }}
+    onMouseEnter={() => clearTimeout(hoverIntentRef.current)}
+    onMouseLeave={() => setHoveredNode(null)}
+  >
+    <div className="node-tooltip">
           <h4>{hoveredNode.name}</h4>
           {hoveredNode.isAddButton ? (
             <p>Creates a new task connected to node {hoveredNode.connectedToNodeId}</p>
@@ -704,6 +776,7 @@ const ProjectVisualizer = () => {
               )}
             </>
           )}
+        </div>
         </div>
       )}
       
