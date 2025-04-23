@@ -1,13 +1,8 @@
 import express from 'express';
 import taskController from '../controllers/taskController.js';  // Import the controller
-import pg from 'pg';
-
-const { Pool } = pg;
+import pool from '../db.js';
 const router = express.Router();
 
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
 // Fetch all tasks
 router.get('/', async (req, res) => {
   try {
@@ -218,21 +213,27 @@ router.put('/:taskId/accept', async (req, res) => {
   const { userId } = req.body;
 
   if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
+    return res.status(400).json({ error: 'User ID is required', success: false });
   }
 
   try {
-    await taskController.acceptTask(taskId, userId);
-    res.status(200).json({ message: 'Task accepted successfully' });
+    const task = await taskController.acceptTask(taskId, userId);
+    res.json({ 
+      message: 'Task accepted successfully',
+      task,
+      success: true
+    });
   } catch (error) {
-    console.error('Failed to accept task:', error);
-    res.status(500).json({ error: 'Failed to accept task' });
+    res.status(500).json({ 
+      error: error.message,
+      success: false
+    });
   }
 });
 
 // POST route to create a new task
 router.post('/newtask', async (req, res) => {
-  const { name, description, skill_id, active, projectId, reward_tokens = 10 } = req.body;
+  const { name, description, skill_id, status, projectId, reward_tokens = 10, dependencies = [] } = req.body;
 
   if (!name || !description || !skill_id || !projectId) {
     return res.status(400).json({ error: 'Name, description, skill, and project ID are required' });
@@ -240,7 +241,7 @@ router.post('/newtask', async (req, res) => {
 
   try {
     const result = await taskController.createNewTask(
-      name, description, skill_id, active, projectId, reward_tokens
+      name, description, skill_id, status, projectId, reward_tokens, dependencies
     );
     
     if (result.error) {
@@ -256,42 +257,26 @@ router.post('/newtask', async (req, res) => {
 
 // PUT route to update an existing task
 router.put('/update/:taskId', async (req, res) => {
-  console.log("Received request body:", req.body);  // Debugging
-  
-  
-
-  const body = req.body;
-  const taskId = req.params.taskId;
- 
-  if (!body.name) {
-    return res.status(400).json({ message: "Title is required but missing" });
-  }
-  
-  if (!body || !body.name || !body.description || !body.skill_id || !body.projectId) {
-    return res.status(400).json({ error: 'Required fields missing' });
-  }
- 
   try {
-    // Call the controller function with individual parameters
+    const { name, description, skill_id, status, reward_tokens, dependencies, assigned_user_ids } = req.body;
+    const active = status.startsWith('active') || status.startsWith('urgent');
+    
     const result = await taskController.updateTask(
-      body.name, 
-      body.description, 
-      body.skill_id, 
-      body.active, // Make sure this matches what your form is sending
-      body.projectId,
-      taskId, // Use the taskId from params, not from body
-      body.reward_tokens
+      name,
+      description,
+      skill_id,
+      status,
+      req.body.projectId, // Ensure this is coming from the body
+      req.params.taskId,
+      reward_tokens,
+      dependencies,
+      assigned_user_ids
     );
-    
-    // Check if result contains an error
-    if (result.error) {
-      return res.status(result.status || 500).json({ error: result.error });
-    }
-    
-    return res.status(200).json(result);
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('Failed to update task:', error);
-    return res.status(500).json({ error: 'Failed to update task' });
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 
@@ -300,15 +285,21 @@ router.put('/:taskId/drop', async (req, res) => {
   const { userId } = req.body;
 
   if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
+    return res.status(400).json({ error: 'User ID is required', success: false });
   }
 
   try {
-    const updatedTask = await taskController.dropTask(taskId, userId);
-    res.status(200).json({ message: 'Task dropped successfully', task: updatedTask });
+    const task = await taskController.dropTask(taskId, userId);
+    res.json({ 
+      message: 'Task dropped successfully',
+      task,
+      success: true
+    });
   } catch (error) {
-    console.error('Failed to drop task:', error);
-    res.status(500).json({ error: 'Failed to drop task' });
+    res.status(500).json({ 
+      error: error.message,
+      success: false
+    });
   }
 });
 
@@ -323,18 +314,10 @@ router.post('/:taskId/submit', (req, res) => {
 // Approve task route with spent_points tracking
 router.put('/:taskId/approve', async (req, res) => {
   const { taskId } = req.params;
-
+  const io = req.app.get('io'); // Get io instance the same way as submit
+  
   try {
-    const task = await taskController.findById(taskId);
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    const assignedUserIds = task.assigned_user_ids; // Extract the assigned users
-
-    if (!assignedUserIds || assignedUserIds.length === 0) {
-      return res.status(400).json({ error: 'No assigned users for this task' });
-    }
-
-    const result = await taskController.approveTask(taskId, assignedUserIds);
+    const result = await taskController.approveTask(taskId, io); // Just pass taskId and io
     
     if (result.error) {
       return res.status(result.status || 500).json({ error: result.error });

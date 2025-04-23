@@ -135,6 +135,11 @@
     fill: white;
     font-size: 12px;
   }
+
+  .node {
+    pointer-events: all;
+    cursor: pointer;
+  }
   
   .link {
     fill: none;
@@ -151,8 +156,10 @@
     color: white;
     border: none;
     border-radius: 8px;
+    pointer-events: all !important;
     cursor: pointer;
     font-weight: bold;
+    z-index: 3;
     box-shadow: 0 4px 12px rgba(77, 171, 247, 0.3);
   }
   
@@ -168,6 +175,7 @@
     cursor: pointer;
     font-weight: bold;
     transition: background 0.2s ease;
+    z-index: 10;
   }
   
   .edit-mode-button:hover {
@@ -246,7 +254,7 @@
     border: 1px solid #ccc;
     padding: 8px;
     border-radius: 4px;
-    pointer-events: auto;
+    pointer-events: none !important;
     z-index: 1000;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     max-width: 300px;
@@ -278,7 +286,7 @@
   }
 
   .tooltip-container {
-    pointer-events: none;
+    pointer-events: auto;
     position: fixed;
     transition: opacity 0.15s ease;
   }
@@ -286,3 +294,50 @@
   .node, .add-button {
     pointer-events: all !important;
   }
+  
+  .visualization-container {
+    z-index: 0; /* or a low value */
+  }
+
+  svg {
+    position: relative;
+    z-index: 2;
+    pointer-events: all;
+  }
+
+  /* Easter additions */
+  /* Add to ProjectVisualizer.css */
+.token-pool {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.token-metric {
+  background: #222;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #00f3ff;
+}
+
+.project-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+/* Add to TaskEditor.css */
+.assigned-users {
+  margin: 1rem 0;
+}
+
+.cyber-button.approve {
+  background: #32cd32;
+  &:hover { background: #228b22; }
+}
+
+.cyber-button.reject {
+  background: #ff003c;
+  &:hover { background: #cc002f; }
+}

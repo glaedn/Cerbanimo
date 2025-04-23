@@ -12,28 +12,33 @@ const NotificationProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [userId, setUserId] = useState(null);
 
-  useEffect(() => {
-    if (!socket) return;
-  
-    // This should receive the actual notification object, not just increment blindly
-    const handleNewNotification = (notification) => {
-      // Check if we already have this notification in state
-      if (notifications.some(n => n.id === notification.id)) {
-        console.log('Duplicate notification received:', notification.id);
-        return; // Skip processing for duplicates
-      }
-  
-      // Add the notification to state
-      setNotifications(prev => [...prev, notification]);
+  // Replace both handlers with this single version
+useEffect(() => {
+  if (!socket) return;
+
+  const handleNotification = (notification) => {
+    console.log("Received notification:", notification);
+    
+    setNotifications(prev => {
+      // Prevent duplicates
+      if (prev.some(n => n.id === notification.id)) return prev;
       
-    };
-  
-    socket.on('notification', handleNewNotification);
-  
-    return () => {
-      socket.off('notification', handleNewNotification);
-    };
-  }, [socket, notifications]);
+      // Add to beginning of array
+      return [notification, ...prev];
+    });
+    
+    // Only increment if not read
+    if (!notification.read) {
+      setUnreadCount(prev => prev + 1);
+    }
+  };
+
+  socket.on('notification', handleNotification);
+
+  return () => {
+    socket.off('notification', handleNotification);
+  };
+}, [socket]); // Only socket as dependency
 
   // Fetch user ID and store it
   useEffect(() => {
@@ -120,12 +125,6 @@ const NotificationProvider = ({ children }) => {
         newSocket.on("connect", () => {
           console.log("Socket connected:", newSocket.id);
           newSocket.emit("join", userId);
-        });
-        
-        newSocket.on("notification", (notification) => {
-          console.log("New notification received:", notification);
-          setNotifications((prev) => [notification, ...prev]);
-          setUnreadCount((prev) => prev + 1);
         });
       } catch (err) {
         console.error("Error setting up socket:", err);
