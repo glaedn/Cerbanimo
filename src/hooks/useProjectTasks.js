@@ -9,64 +9,126 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   const [tasks, setTasks] = useState([]);
   const [project, setProject] = useState(null);
   const [profileData, setProfileData] = useState({ id: '', username: '', skills: [] });
+  const [loading, setLoading] = useState(false);
 
-  const getToken = async () => await getAccessTokenSilently({ audience: 'http://localhost:4000' });
+  const getToken = async () => await getAccessTokenSilently({ 
+    audience: 'http://localhost:4000',
+    scope: 'openid profile email'
+  });
 
   const fetchSkillsAndProfile = async () => {
-    const token = await getToken();
-    const options = await axios.get('http://localhost:4000/profile/options', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setSkills(options.data.skillsPool || []);
-    const profile = await axios.get('http://localhost:4000/profile', {
-      params: { sub: user.sub, email: user.email, name: user.name },
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setProfileData({
-      id: profile.data.id,
-      username: profile.data.username,
-      skills: profile.data.skills,
-    });
+    try {
+      const token = await getToken();
+      const [options, profile] = await Promise.all([
+        axios.get('http://localhost:4000/profile/options', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get('http://localhost:4000/profile', {
+          params: { sub: user.sub, email: user.email, name: user.name },
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ]);
+      
+      setSkills(options.data.skillsPool || []);
+      setProfileData({
+        id: profile.data.id,
+        username: profile.data.username,
+        skills: profile.data.skills,
+      });
+    } catch (error) {
+      console.error('Error fetching skills and profile:', error);
+    }
   };
 
   const fetchTasks = async () => {
-    const token = await getToken();
-    const res = await axios.get(`http://localhost:4000/tasks/p/${projectId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const updated = res.data.map(task => ({
-      ...task,
-      skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
-    }));
-    setTasks(updated);
+    try {
+      setLoading(true);
+      const token = await getToken();
+      const res = await axios.get(`http://localhost:4000/tasks/p/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      const updated = res.data.map(task => ({
+        ...task,
+        skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
+      }));
+      
+      setTasks(updated);
+      return updated; // Return the tasks for chaining
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchProject = async () => {
-    const token = await getToken();
-    const res = await axios.get(`http://localhost:4000/projects/${projectId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setProject(res.data);
+    try {
+      const token = await getToken();
+      const res = await axios.get(`http://localhost:4000/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProject(res.data);
+      return res.data; // Return project data for chaining
+    } catch (error) {
+      console.error('Error fetching project:', error);
+      throw error;
+    }
   };
 
-  const handleTaskAction = async (taskId, action) => {
-    const token = await getToken();
-    const payload = ['approve', 'reject', 'accept', 'drop'].includes(action)
-      ? { userId: profileData.id }
-      : {};
-    const endpointMap = {
-      submit: `/tasks/${taskId}/submit`,
-      approve: `/tasks/${taskId}/approve`,
-      reject: `/tasks/${taskId}/reject`,
-      accept: `/tasks/${taskId}/accept`,
-      drop: `/tasks/${taskId}/drop`,
-    };
-    await axios[action === 'submit' ? 'post' : 'put'](`http://localhost:4000${endpointMap[action]}`, payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (setUnreadCount) setUnreadCount(prev => prev + 1);
-    await fetchTasks();
-    await fetchProject();
+  const handleTaskAction = async (formData, action) => {
+    try {
+      setLoading(true);
+      const token = await getToken();
+      
+      // Simplify the payload - only send what's needed
+      const payload = {
+        userId: profileData.id, // Only include user ID for accept/drop
+        ...(action === 'accept' || action === 'drop' ? {} : formData)
+      };
+  
+      let endpoint;
+      let method = 'put';
+      
+      switch(action) {
+        case 'accept':
+          endpoint = `/tasks/${formData.id}/accept`;
+          break;
+        case 'drop':
+          endpoint = `/tasks/${formData.id}/drop`;
+          break;
+        case 'submit':
+          endpoint = `/tasks/${formData.id}/submit`;
+          break;
+        case 'create':
+          endpoint = `/tasks/newtask`;
+          method = 'post';
+          break;
+        default: // update
+          endpoint = `/tasks/update/${formData.id}`;
+      }
+      const response = await axios[method](`http://localhost:4000${endpoint}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+  
+      // Only refresh if successful
+      await fetchTasks();
+      await fetchProject();
+      
+      return {
+        ...response.data,
+        success: true
+      };
+    } catch (error) {
+      console.error('Task action failed:', error.response?.data || error.message);
+      return {
+        error: error.response?.data?.error || 'Failed to update task',
+        success: false
+      };
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -85,6 +147,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     tasks,
     project,
     profileData,
+    loading,
     fetchTasks,
     fetchProject,
     handleTaskAction,
