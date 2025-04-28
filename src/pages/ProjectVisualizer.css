@@ -36,7 +36,7 @@
   
   .tab {
     padding: 10px 20px;
-    background: #222;
+    background: #254258;
     border: none;
     cursor: pointer;
     border-radius: 12px 12px 0 0;
@@ -113,11 +113,7 @@
   .tab.orange {
     background-color: #ff9f40;
   }
-  
-  .more-tab {
-    background-color: #555;
-    color: #ccc;
-  }
+
 
   .tab.new-skill-tab {
     background-color: #555;
@@ -332,7 +328,7 @@
   border: 1px solid #00f3ff;
 }
 
-.project-tags {
+.vproject-tags {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -359,49 +355,49 @@
   z-index: 9999 !important; /* Ensure dropdown appears above other elements */
 }
 
-.project-tags .MuiAutocomplete-root {
+.vproject-tags .MuiAutocomplete-root {
   width: 100%;
-  background: #222;
+  background: #222222;
   border-radius: 4px;
   padding: 4px;
 }
 
-.project-tags .MuiOutlinedInput-root {
+.vproject-tags .MuiOutlinedInput-root {
   padding: 0 !important;
 }
 
-.project-tags .MuiOutlinedInput-notchedOutline {
+.vproject-tags .MuiOutlinedInput-notchedOutline {
   border: none !important;
 }
 
-.project-tags .MuiAutocomplete-inputRoot {
+.vproject-tags .MuiAutocomplete-inputRoot {
   color: white !important;
   padding: 4px !important;
 }
 
-.project-tags .MuiAutocomplete-popupIndicator {
+.vproject-tags .MuiAutocomplete-popupIndicator {
   color: white !important;
 }
 
-.project-tags .MuiAutocomplete-clearIndicator {
+.vproject-tags .MuiAutocomplete-clearIndicator {
   color: white !important;
 }
 
-.project-tags .MuiAutocomplete-listbox {
+.vproject-tags .MuiAutocomplete-listbox {
   background: #222;
   color: white;
 }
 
-.project-tags .MuiAutocomplete-option {
+.vproject-tags .MuiAutocomplete-option {
   color: white;
 }
 
-.project-tags .MuiAutocomplete-option[data-focus="true"] {
+.vproject-tags .MuiAutocomplete-option[data-focus="true"] {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Add to your CSS */
-.project-tags {
+.vproject-tags {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -409,14 +405,13 @@
   min-height: 42px; /* Ensure consistent height */
   align-items: center;
   padding: 4px;
-  background: #222;
   border-radius: 4px;
   max-width: 600px;
   border: 1px solid transparent;
   transition: border 0.2s ease;
 }
 
-.project-tags:focus-within {
+.vproject-tags:focus-within {
   border-color: #4dabf7;
 }
 

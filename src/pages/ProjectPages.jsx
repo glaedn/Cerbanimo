@@ -166,6 +166,7 @@ const ProjectPages = () => {
           <div key={project.id} className="project-card">
             <h2 className="project-title">{project.name}</h2>
             <p className="project-description">{project.description}</p>
+            <p className="project-tags">Tags: {project.tags.join(', ')}</p>
             <button
               className="contribute-button"
               onClick={() => {

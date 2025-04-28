@@ -22,7 +22,6 @@
 .task-list::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #6dd5ed, #2193b0);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
 }
 
 .task-browser::-webkit-scrollbar-thumb:hover,
@@ -35,7 +34,7 @@
     color: #ffffff;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
-    background: radial-gradient(circle at center, #0a0a1a, #000000); /* Updated to match navbar gradient */
+    background: radial-gradient(circle at center, #11112d, #000000); /* Updated to match navbar gradient */
     background-size: cover;
     background-attachment: fixed;
     width: 100%;
@@ -43,7 +42,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-bottom: 2px solid rgba(109, 213, 237, 0.5); /* Added border like navbar */
+    border: 1px solid rgba(109, 213, 237, 0.919); /* Added border like navbar */
     /*box-shadow: 0 0 15px rgba(109, 213, 237, 0.6); /* Added box shadow like navbar */
 }
 

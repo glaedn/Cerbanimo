@@ -34,6 +34,7 @@ const ProjectVisualizer = () => {
   const hoverTimeout = useRef(null);
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
+  
 
   const [interests, setInterests] = useState([]);
 
@@ -907,12 +908,15 @@ useEffect(() => {
             + New Task
           </button>
         )}
-        <button
+        {project?.creator_id === user.id && (
+          <button
           className="edit-mode-button"
           onClick={() => setIsEditMode(!isEditMode)}
         >
           {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
         </button>
+        )}
+        
       </div>
 
       {hoveredNode && (
@@ -1005,6 +1009,8 @@ useEffect(() => {
       <div className="project-info">
         <h3>{project?.name}</h3>
         <p className="project-description">{project?.description}</p>
+        <br />
+        <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">
           <div className="token-metric">
             <span className="token-label">Allocated:</span>
@@ -1023,7 +1029,7 @@ useEffect(() => {
             </span>
           </div>
         </div>
-        <div className="project-tags">
+        <div className="vproject-tags">
   {isEditMode ? (
     <Autocomplete
       multiple
