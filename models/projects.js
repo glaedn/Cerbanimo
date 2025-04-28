@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const mongoose = require('mongoose');
+//const mongoose = require('mongoose');
 
 // PostgreSQL connection
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
@@ -16,9 +16,11 @@ const createProjectTable = async () => {
       creator_id integer,
       tags text[] DEFAULT '{}',
       created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-      token_pool integer DEFAULT 250,
+      token_pool integer DEFAULT 80,
       used_tokens integer DEFAULT 0,
-      reserved_tokens integer DEFAULT 0
+      reserved_tokens integer DEFAULT 0,
+      community_id integer REFERENCES communities(id) ON DELETE SET NULL,
+      community_votes JSONB DEFAULT '{}' -- stores { "user_id": true/false }
     );
   `;
   try {
@@ -29,16 +31,17 @@ const createProjectTable = async () => {
   }
 };
 
+
 // MongoDB Project Schema
-const projectSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String },
-  taskGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'TaskGroup' }], // Reference to Task Groups
-  users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Reference to Users
-  creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to Creator
-  tags: [{ type: String }], // Array of tags
-  createdAt: { type: Date, default: Date.now },
-});
+//const projectSchema = new mongoose.Schema({
+//  name: { type: String, required: true },
+//  description: { type: String },
+//  taskGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'TaskGroup' }], // Reference to Task Groups
+//  users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Reference to Users
+//  creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to Creator
+//  tags: [{ type: String }], // Array of tags
+//  createdAt: { type: Date, default: Date.now },
+//});
 
 // MongoDB Project Model
 const Project = mongoose.model('Project', projectSchema);
@@ -46,5 +49,5 @@ const Project = mongoose.model('Project', projectSchema);
 // Consolidated Exports
 module.exports = {
   createProjectTable, // PostgreSQL
-  Project, // MongoDB
+  //Project, // MongoDB
 };

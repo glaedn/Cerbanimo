@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Auth0Provider } from '@auth0/auth0-react';
 import App from './App.jsx';
 import NotificationProvider from './pages/NotificationProvider.jsx';
+import AuthWrapper from './AuthWrapper.jsx';  // Import the new component
 
 const onRedirectCallback = (appState) => {
   window.history.replaceState(
@@ -26,9 +27,10 @@ root.render(
     onRedirectCallback={onRedirectCallback}
     cacheLocation="localstorage"
   >
-    <NotificationProvider>
-      <App />
-    </NotificationProvider>
+    <AuthWrapper>
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
+    </AuthWrapper>
   </Auth0Provider>
-  
 );

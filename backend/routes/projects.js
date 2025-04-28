@@ -87,6 +87,26 @@ router.get('/:projectId', async (req, res) => {
   }
 });
 
+// Update project tags
+router.patch('/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  const { tags } = req.body;
+
+  try {
+    const query = 'UPDATE projects SET tags = $1 WHERE id = $2 RETURNING *';
+    const result = await pool.query(query, [tags, projectId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating project tags:', error);
+    res.status(500).json({ message: 'Failed to update project tags' });
+  }
+});
+
 // Create a new project
 router.post('/create', async (req, res) => {
   try {

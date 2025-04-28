@@ -164,7 +164,7 @@ const TaskBrowser = () => {
                             : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        <Link href={`/project/${task.project_id}`} className="task-link">
+                        <Link href={`/visualizer/${task.project_id}`} className="task-link">
                           🚀 View Project
                         </Link>
                       </>
@@ -199,7 +199,7 @@ const TaskBrowser = () => {
                           {task.submitted ? `✅ Submitted` : `⌛ In Progress`}
                         </Typography>
                         <br />
-                        <Link href={`/project/${task.project_id}`} className="task-link">
+                        <Link href={`/visualizer/${task.project_id}`} className="task-link">
                           🚀 View Project
                         </Link>
                       </>

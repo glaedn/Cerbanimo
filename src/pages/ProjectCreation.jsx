@@ -56,7 +56,7 @@ const ProjectCreation = () => {
   
       if (response.status === 201) {
         alert('Project created successfully!');
-        navigate(`/project/${response.data.id}`);
+        navigate(`/visualizer/${response.data.id}`);
       }
     } catch (error) {
       console.error('Failed to create project:', error);

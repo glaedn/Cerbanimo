@@ -1,0 +1,201 @@
+/* Community Creation Page - Space Game Theme */
+.community-creation-container {
+    padding: 20px;
+    color: rgb(255, 255, 255);
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+    background: radial-gradient(circle, #0a0a1a, #000000);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Title Styling */
+.form-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #6dd5ed;
+    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    margin-bottom: 30px;
+    animation: pulsate 3s infinite ease-in-out;
+}
+
+@keyframes pulsate {
+    0% { text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; }
+    50% { text-shadow: 0 0 15px #6dd5ed, 0 0 30px #2193b0, 0 0 40px rgba(109, 213, 237, 0.5); }
+    100% { text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; }
+}
+
+/* Cosmic Field Container */
+.cosmic-field-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 20px 0;
+}
+
+.cosmic-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.7);
+    transition: opacity 0.3s ease;
+}
+
+.cosmic-field-container:hover .cosmic-glow {
+    opacity: 1;
+    animation: cosmicPulse 2s infinite alternate;
+}
+
+@keyframes cosmicPulse {
+    0% { box-shadow: 0 0 15px rgba(109, 213, 237, 0.7); }
+    100% { box-shadow: 0 0 25px rgba(109, 213, 237, 0.9), 0 0 40px rgba(33, 147, 176, 0.5); }
+}
+
+/* Input Fields */
+.form-input {
+    width: 100%;
+    max-width: 600px;
+    margin: 10px 0;
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+}
+
+.form-input:focus-within {
+    transform: scale(1.02);
+}
+
+.form-input label {
+    color: #6dd5ed;
+}
+
+.form-input .MuiOutlinedInput-root {
+    color: white;
+    background: rgba(26, 9, 57, 0.9);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.form-input .MuiOutlinedInput-notchedOutline {
+    border-color: #6dd5ed;
+}
+
+.form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: #29b6f6;
+    border-width: 2px;
+}
+
+.MuiAutocomplete-root {
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Create Button */
+.create-button {
+    background: linear-gradient(45deg, rgba(109, 213, 237, 0.8), rgba(41, 182, 246, 0.9));
+    color: black;
+    font-weight: bold;
+    padding: 12px 24px;
+    border-radius: 10px;
+    margin-top: 30px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    width: 100%;
+    max-width: 300px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+}
+
+.create-button:hover {
+    background: linear-gradient(45deg, rgba(41, 182, 246, 0.9), rgba(109, 213, 237, 0.8));
+    transform: translateY(-3px);
+    box-shadow: 0 0 25px rgba(109, 213, 237, 0.8);
+}
+
+.create-button:active {
+    transform: translateY(1px);
+}
+
+.create-button:disabled {
+    background: rgba(109, 213, 237, 0.4);
+    cursor: not-allowed;
+}
+
+/* Space Particles */
+.space-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background-color: white;
+    border-radius: 50%;
+    opacity: 0.7;
+    animation: float 15s linear infinite;
+}
+
+.particle:nth-child(odd) {
+    background-color: #6dd5ed;
+    box-shadow: 0 0 10px #6dd5ed;
+}
+
+.particle:nth-child(3n) {
+    width: 3px;
+    height: 3px;
+}
+
+.particle:nth-child(4n) {
+    width: 1px;
+    height: 1px;
+    opacity: 0.5;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(100vh) translateX(0);
+    }
+    100% {
+        transform: translateY(-100px) translateX(20px);
+    }
+}
+
+/* Position each particle randomly */
+.particle:nth-child(1) { left: 10%; animation-duration: 25s; }
+.particle:nth-child(2) { left: 20%; animation-duration: 30s; }
+.particle:nth-child(3) { left: 30%; animation-duration: 15s; animation-delay: 2s; }
+.particle:nth-child(4) { left: 40%; animation-duration: 20s; animation-delay: 5s; }
+.particle:nth-child(5) { left: 50%; animation-duration: 25s; animation-delay: 1s; }
+.particle:nth-child(6) { left: 60%; animation-duration: 30s; animation-delay: 3s; }
+.particle:nth-child(7) { left: 70%; animation-duration: 35s; }
+.particle:nth-child(8) { left: 80%; animation-duration: 18s; animation-delay: 4s; }
+.particle:nth-child(9) { left: 90%; animation-duration: 22s; animation-delay: 2s; }
+.particle:nth-child(10) { left: 5%; animation-duration: 28s; animation-delay: 1s; }
+.particle:nth-child(11) { left: 15%; animation-duration: 19s; animation-delay: 3s; }
+.particle:nth-child(12) { left: 25%; animation-duration: 27s; }
+.particle:nth-child(13) { left: 35%; animation-duration: 21s; animation-delay: 2s; }
+.particle:nth-child(14) { left: 45%; animation-duration: 24s; animation-delay: 1s; }
+.particle:nth-child(15) { left: 55%; animation-duration: 32s; animation-delay: 4s; }
+.particle:nth-child(16) { left: 65%; animation-duration: 17s; }
+.particle:nth-child(17) { left: 75%; animation-duration: 29s; animation-delay: 3s; }
+.particle:nth-child(18) { left: 85%; animation-duration: 26s; animation-delay: 2s; }
+.particle:nth-child(19) { left: 95%; animation-duration: 23s; animation-delay: 1s; }
+.particle:nth-child(20) { left: 2%; animation-duration: 31s; animation-delay: 5s; }

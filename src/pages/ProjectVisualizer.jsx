@@ -7,6 +7,7 @@ import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip } from "@mui/material";
+import { Autocomplete, TextField } from "@mui/material";
 
 const ProjectVisualizer = () => {
   const svgRef = useRef(null);
@@ -14,7 +15,7 @@ const ProjectVisualizer = () => {
   const { projectId } = useParams();
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
-  const { tasks, skills, project, handleTaskAction, fetchTasks } =
+  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
     useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState(skills[0]?.name || "");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -34,6 +35,68 @@ const ProjectVisualizer = () => {
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
 
+  const [interests, setInterests] = useState([]);
+
+  const handleUpdateTags = async (newTags) => {
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
+  
+      const response = await fetch(`http://localhost:4000/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tags: newTags }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to update tags');
+      }
+  
+      // Update the UI immediately without waiting for a refresh
+      updateProject({ tags: newTags });
+      
+      // No need to call fetchProject() since we've already updated the UI
+    } catch (error) {
+      console.error('Error updating tags:', error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchInterests = async () => {
+      try {
+        const token = await getAccessTokenSilently({
+          audience: "http://localhost:4000",
+          scope: "openid profile email",
+        });
+
+        const response = await fetch('http://localhost:4000/profile/options', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch interests');
+        }
+
+        const data = await response.json();
+        console.log(data);
+        setInterests(data.interestsPool || []);
+        console.log('Fetched interests:', data.interestsPool);
+      } catch (error) {
+        console.error('Error fetching interests:', error);
+      }
+    };
+
+    fetchInterests();
+  }, [getAccessTokenSilently]);
+
+  
   // Modify your fetchTasks call to preserve the category
 const refreshTasks = async () => {
   const currentCategory = activeCategory; // Save before refresh
@@ -48,33 +111,7 @@ const refreshTasks = async () => {
   }
 };
 
-  const handleTaskSubmit = async (formData) => {
-    try {
-      const token = await getAccessTokenSilently();
-      let response;
-  
-      if (formData.id) {
-        response = await axios.put(
-          `http://localhost:4000/tasks/${formData.id}`,
-          formData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        response = await axios.post(
-          "http://localhost:4000/tasks",
-          formData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-  
-      // Refresh data while preserving active tab
-      await refreshTasks();
-      return response.data;
-    } catch (error) {
-      console.error("Error saving task:", error);
-      return { error: error.message };
-    }
-  };
+
 
   useEffect(() => {
     return () => {
@@ -113,14 +150,14 @@ const refreshTasks = async () => {
   const [taskForm, setTaskForm] = useState(initialForm);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
 
-  const getScreenPosition = (event) => {
-    const svgRect = svgRef.current.getBoundingClientRect();
-    const pt = new DOMPoint(event.clientX, event.clientY);
-    return {
-      x: pt.x - svgRect.left,
-      y: pt.y - svgRect.top,
-    };
-  };
+//  const getScreenPosition = (event) => {
+//    const svgRect = svgRef.current.getBoundingClientRect();
+//    const pt = new DOMPoint(event.clientX, event.clientY);
+//    return {
+//      x: pt.x - svgRect.left,
+//      y: pt.y - svgRect.top,
+//    };
+//  };
 
   //window.addEventListener('click', (e) => {
   //  console.log('Global click target:', e.target);
@@ -830,6 +867,22 @@ useEffect(() => {
               </button>
             );
           })}
+          {isEditMode && (
+          <button
+      className="tab new-skill-tab"
+      onClick={() => {
+        setTaskForm({
+          ...initialForm,
+          project_id: projectId,
+          skill_id: "" // No skill pre-selected
+        });
+        setShowTaskPopup(true);
+      }}
+      style={{ flex: "0 0 auto" }}
+    >
+      + New Skill
+    </button>
+  )}
         </div>
         <div className="scroll-shadow right-shadow" />
       </div>
@@ -971,23 +1024,109 @@ useEffect(() => {
           </div>
         </div>
         <div className="project-tags">
-          {project?.tags?.map((tag, index) => (
-            <Chip
-              key={index}
-              label={tag}
-              className="tag-chip"
-              variant="outlined"
-              style={{
-                backgroundColor: "#000000",
-                color: "#FFF",
-                margin: "2px",
-                fontSize: "12px",
-                borderRadius: "4px",
-                padding: "5px 10px",
-              }}
-            />
-          ))}
-        </div>
+  {isEditMode ? (
+    <Autocomplete
+      multiple
+      freeSolo
+      options={interests || []}
+      value={project?.tags || []}
+      onChange={(event, newValue) => {
+        handleUpdateTags(newValue);
+      }}
+      renderTags={(value, getTagProps) =>
+        value.map((option, index) => (
+          <Chip
+            {...getTagProps({ index })}
+            key={index}
+            label={option}
+            className="tag-chip"
+            variant="outlined"
+            style={{
+              backgroundColor: "#000000",
+              color: "#FFF",
+              margin: "2px",
+              fontSize: "12px",
+              borderRadius: "4px",
+              padding: "5px 10px",
+            }}
+            onDelete={() => {
+              const newTags = [...(project?.tags || [])];
+              newTags.splice(index, 1);
+              handleUpdateTags(newTags);
+            }}
+          />
+        ))
+      }
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="outlined"
+          placeholder="Add tags..."
+          size="small"
+          InputProps={{
+            ...params.InputProps,
+            style: {
+              color: 'white',
+              backgroundColor: '#222',
+              borderRadius: '4px',
+              padding: '4px',
+            },
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: 'transparent',
+              },
+              '&:hover fieldset': {
+                borderColor: '#555',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#4dabf7',
+              },
+            },
+          }}
+        />
+      )}
+      sx={{
+        '& .MuiAutocomplete-popupIndicator': { color: 'white' },
+        '& .MuiAutocomplete-clearIndicator': { color: 'white' },
+      }}
+      componentsProps={{
+        paper: {
+          sx: {
+            backgroundColor: '#222',
+            color: 'white',
+            '& .MuiAutocomplete-option': {
+              '&[aria-selected="true"]': {
+                backgroundColor: 'rgba(77, 171, 247, 0.3)',
+              },
+              '&[aria-selected="true"].Mui-focused': {
+                backgroundColor: 'rgba(77, 171, 247, 0.3)',
+              },
+            },
+          },
+        },
+      }}
+    />
+  ) : (
+    project?.tags?.map((tag, index) => (
+      <Chip
+        key={index}
+        label={tag}
+        className="tag-chip"
+        variant="outlined"
+        style={{
+          backgroundColor: "#000000",
+          color: "#FFF",
+          margin: "2px",
+          fontSize: "12px",
+          borderRadius: "4px",
+          padding: "5px 10px",
+        }}
+      />
+    ))
+  )}
+</div>
       </div>
 
       <TaskEditor
@@ -1037,6 +1176,10 @@ useEffect(() => {
         <div>
           <span style={{ color: "#00FF00" }}>○ </span>Green circle with gray
           interior indicates active unassigned
+        </div>
+        <div>
+          <span style={{ color: "#FFA500" }}>● </span>Orange filled indicates
+          submitted
         </div>
         <div>
           <span
