@@ -71,7 +71,27 @@ router.get('/options', async (req, res) => {
   }
 });
 
+// Endpoint to fetch user ID
+router.get('/userId', async (req, res) => {
+  try {
+    const userId = req.auth.payload.sub; // Access user ID from the decoded token
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID missing in token' });
+    }
+    
+    const query = 'SELECT id FROM users WHERE auth0_id = $1';
+    const result = await pool.query(query, [userId]);
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const dbUserId = result.rows[0].id; // Extract the user ID from the result
+    res.status(200).json({ id: dbUserId }); // Send the user ID as a response
+  } catch (err) {
+    console.error('Error fetching user ID:', err);
+    res.status(500).json({ message: 'Failed to fetch user ID' });
+  }
+});
 
 // Endpoint to fetch user profile
 router.get('/', async (req, res) => {

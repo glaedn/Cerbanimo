@@ -15,7 +15,9 @@ import PublicProfile from './pages/PublicProfile.jsx';
 import BadgeCreation from './pages/BadgeCreation.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ProjectVisualizer from './pages/ProjectVisualizer.jsx';
+import CommunityCreation from './pages/CommunityCreation.jsx';
 import IdleSpaceGame from './pages/IdleSpaceGame.jsx';
+import CommunityHub from './pages/CommunityHub.jsx';
 
 const App = () => {
   return (
@@ -72,6 +74,22 @@ const App = () => {
           element={
             <PrivateRoute>
               <SkillTree />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/communitycreation"
+          element={
+            <PrivateRoute>
+              <CommunityCreation />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/communityhub/:communityId"
+          element={
+            <PrivateRoute>
+              <CommunityHub />
             </PrivateRoute>
           }
         />

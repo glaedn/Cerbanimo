@@ -16,6 +16,7 @@ import projectRoutes from './routes/projects.js';
 import rewardsRoutes from './routes/rewards.js';
 import notificationRoutes from './routes/notifications.js';
 import taskController from './controllers/taskController.js';
+import communitiesRoutes from './routes/communities.js';
 
 // Initialize app
 const app = express();
@@ -131,6 +132,8 @@ app.use('/projects', (req, res, next) => {
   if (req.path.match(/^\/\d+$/)) return next();
   return jwtCheck(req, res, next);
 }, projectRoutes);
+
+app.use('/communities', jwtCheck, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 

@@ -182,7 +182,8 @@ const createNewTask = async (
   status,
   projectId,
   reward_tokens = 10,
-  dependencies = []
+  dependencies = [],
+  skill_level = 0
 ) => {
   console.log("Creating task with:", {
     name,
@@ -191,6 +192,8 @@ const createNewTask = async (
     status,
     projectId,
     reward_tokens,
+    dependencies,
+    skill_level,
   });
 
   const client = await pool.connect();
@@ -251,8 +254,8 @@ const createNewTask = async (
 
     // Create the task
     const createQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *;
     `;
 
@@ -264,6 +267,7 @@ const createNewTask = async (
       projectId,
       rewardTokens,
       dependencies,
+      skill_level,
     ]);
 
     await client.query("COMMIT");
@@ -287,7 +291,8 @@ const updateTask = async (
   taskId,
   reward_tokens = 10,
   dependencies = [],
-  assigned_user_ids
+  assigned_user_ids,
+  skill_level = 0
 ) => {
   console.log("Controller received:", {
     name,
@@ -300,6 +305,7 @@ const updateTask = async (
     dependencies,
     status,
     assigned_user_ids,
+    skill_level,
   });
 
   const client = await pool.connect();
@@ -342,44 +348,27 @@ const updateTask = async (
     });
 
     // Ensure values are properly typed
-    const activeBoolean =
-      status.startsWith("active") || status.startsWith("urgent");
     const rewardTokens = parseInt(reward_tokens, 10);
-
     let reservationAdjustment = 0;
-
     // Calculate token reservation adjustment
-    if (
-      (status.startsWith("active") || status.startsWith("urgent")) &&
-      !(task_status.startsWith("active") || task_status.startsWith("urgent"))
-    ) {
-      // Deactivating task - release reserved tokens
-      reservationAdjustment = -task_reward;
-      console.log(
-        "Deactivating task, reservation adjustment:",
-        reservationAdjustment
-      );
-    } else if (
-      !status.startsWith("active") ||
-      (!status.startsWith("urgent") && activeBoolean)
-    ) {
-      // Activating task - reserve tokens
-      reservationAdjustment = rewardTokens;
-      console.log(
-        "Activating task, reservation adjustment:",
-        reservationAdjustment
-      );
-    } else if (
-      !status.startsWith("active") ||
-      (!status.startsWith("urgent") && activeBoolean)
-    ) {
-      // Task remains active but reward amount changed
-      reservationAdjustment = rewardTokens - task_reward;
-      console.log(
-        "Changing active task reward, reservation adjustment:",
-        reservationAdjustment
-      );
-    }
+const wasActive = task_status.startsWith("active") || task_status.startsWith("urgent");
+const isActive = status.startsWith("active") || status.startsWith("urgent");
+
+console.log(`Status change: wasActive=${wasActive}, isActive=${isActive}`);
+
+if (isActive && !wasActive) {
+  // Activating task - reserve tokens
+  reservationAdjustment = rewardTokens;
+  console.log("Activating task, reservation adjustment:", reservationAdjustment);
+} else if (!isActive && wasActive) {
+  // Deactivating task - release reserved tokens
+  reservationAdjustment = -task_reward;
+  console.log("Deactivating task, reservation adjustment:", reservationAdjustment);
+} else if (isActive && wasActive && (rewardTokens !== task_reward)) {
+  // Task remains active but reward amount changed
+  reservationAdjustment = rewardTokens - task_reward;
+  console.log("Changing active task reward, reservation adjustment:", reservationAdjustment);
+}
 
     // Check if we have enough tokens for a positive adjustment
     const availableTokens = token_pool - (used_tokens + reserved_tokens);
@@ -394,8 +383,8 @@ const updateTask = async (
     // Update task
     const updateQuery = `
       UPDATE tasks 
-      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7
-      WHERE id = $8 RETURNING *;
+      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8
+      WHERE id = $9 RETURNING *;
     `;
 
     console.log("Executing update with params:", [
@@ -406,7 +395,8 @@ const updateTask = async (
       rewardTokens,
       dependencies,
       assigned_user_ids,
-      taskId,
+      skill_level,
+      taskId      
     ]);
 
     const taskResult = await client.query(updateQuery, [
@@ -417,6 +407,7 @@ const updateTask = async (
       rewardTokens,
       dependencies,
       assigned_user_ids,
+      skill_level,
       taskId,
     ]);
 
@@ -453,6 +444,8 @@ const createTaskRoute = async (req, res) => {
     status,
     projectId,
     reward_tokens = 10,
+    assigned_user_ids = [],
+    skill_level = 0,
   } = req.body;
 
   if (!name || !description || !skill_id || !projectId) {
@@ -489,8 +482,8 @@ const createTaskRoute = async (req, res) => {
 
     // Insert task and update project in a single transaction
     const insertTaskQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids)
-      VALUES ($1, $2, $3, $4, $5, $6, COALESCE(used_tokens, 0) + $6, $7)
+      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids, skill_level)
+      VALUES ($1, $2, $3, $4, $5, $6, COALESCE(used_tokens, 0) + $6, $7, $8)
       RETURNING *;
     `;
 
@@ -502,6 +495,7 @@ const createTaskRoute = async (req, res) => {
       projectId,
       reward_tokens,
       assigned_user_ids,
+      skill_level,
     ]);
 
     // Update project tokens if task is active
@@ -700,7 +694,7 @@ const approveTask = async (taskId, io) => {
     `;
     const taskProjectResult = await client.query(taskProjectQuery, [taskId]);
 
-    // Update the task's spent_points field
+    // Update the projects' token fields
     const updateSpentTokensQuery = `
       UPDATE projects
       SET used_tokens = used_tokens + $1, reserved_tokens = GREATEST(0, reserved_tokens - $1)
@@ -750,36 +744,22 @@ const approveTask = async (taskId, io) => {
 
 // Function to reset spent points (to be called by a nightly cron job)
 const resetAllSpentPoints = async () => {
+  const client = await pool.connect();
   try {
-    // Get sum of all spent points grouped by project
-    const spentPointsQuery = await pool.query(`
-      SELECT project_id, SUM(
-        CASE WHEN spent_points IS NULL THEN 0
-        ELSE (SELECT SUM(p) FROM UNNEST(spent_points) AS p)
-        END
-      ) as total_spent
-      FROM tasks
-      GROUP BY project_id
+    await client.query("BEGIN");
+
+    // Reset all project tokens
+    await client.query(`
+      UPDATE projects 
+      SET used_tokens = 0
     `);
 
-    await pool.query("BEGIN");
-
-    // Reset each project's used_tokens
-    for (const row of spentPointsQuery.rows) {
-      await pool.query("UPDATE projects SET used_tokens = 0 WHERE id = $1", [
-        row.project_id,
-      ]);
-    }
-
-    // Reset all spent_points arrays to empty
-    await pool.query("UPDATE tasks SET spent_points = $1", [[]]);
-
-    await pool.query("COMMIT");
+    await client.query("COMMIT");
     return { success: true, message: "All spent points have been reset" };
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Failed to approve task:', error);
-    return { error: `Failed to approve task: ${error.message}`, status: 500 };
+    console.error('Failed to reset spent points:', error);
+    return { error: `Failed to reset spent points: ${error.message}`, status: 500 };
   } finally {
     client.release();
   }

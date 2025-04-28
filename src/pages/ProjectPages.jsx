@@ -178,7 +178,7 @@ const ProjectPages = () => {
             <button
               className="open-project-button"
               onClick={() => {
-                navigate(`/project/${project.id}`);
+                navigate(`/visualizer/${project.id}`);
               }}
             >
               Open Project

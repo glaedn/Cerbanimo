@@ -1,0 +1,281 @@
+/* CommunityHub Styling */
+.community-hub {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    align-items: center;
+    padding: 20px;
+    background-color: #121212;
+    color: #ffffff;
+}
+
+.hub-title {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 10px;
+    padding: 20px;
+}
+
+.community-info {
+    max-width: 900px;
+    text-align: center;
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.1);
+}
+
+.community-description {
+    margin-bottom: 15px;
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.interest-tag {
+    background: linear-gradient(145deg, #3a3240, #4c4350) !important;
+    color: #ffffff !important;
+}
+
+.small-tags .MuiChip-root {
+    height: 24px;
+    font-size: 0.75rem;
+}
+
+/* Hub Grid Layout */
+.hub-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+}
+
+.hub-grid-item {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    justify-content: center;
+}
+
+.wide-item {
+    flex-basis: 100%;
+    max-width: 900px;
+}
+
+/* Card Styling */
+.hub-card {
+    background: linear-gradient(145deg, #282728, #4c4350);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
+    text-align: center;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    color: #e0e0e0;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hub-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0px 0px 25px rgba(0, 255, 255, 0.5);
+}
+
+/* Icons */
+.hub-icon {
+    font-size: 40px;
+    color: #e0e0e0;
+    margin-bottom: 10px;
+}
+
+/* Members Card */
+.members-card .member-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.member-entry {
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+    border-radius: 6px;
+    transition: background 0.3s ease;
+}
+
+.member-entry:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.delegation-info {
+    background: rgba(76, 175, 80, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+    margin: 10px 0;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.revoke-button {
+    margin-top: 8px !important;
+}
+
+/* Voting Cards */
+.voting-card .proposal-list,
+.membership-card .request-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.proposal-entry,
+.request-entry {
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+    border-radius: 6px;
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.proposal-content {
+    width: 100%;
+}
+
+.vote-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    gap: 10px;
+}
+
+.vote-info {
+    margin: 8px 0;
+    font-style: italic;
+    color: #b0b0b0;
+}
+
+.clickable-title {
+    cursor: pointer;
+    color: #90caf9;
+    transition: color 0.3s ease;
+}
+
+.clickable-title:hover {
+    color: #42a5f5;
+    text-decoration: underline;
+}
+
+.clickable-name {
+    cursor: pointer;
+    color: #90caf9;
+}
+
+.clickable-name:hover {
+    text-decoration: underline;
+    color: #42a5f5;
+}
+
+.clickable-avatar {
+    cursor: pointer;
+}
+
+.proposal-description,
+.project-description {
+    color: #b0b0b0;
+    margin: 6px 0;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+/* Projects Grid */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.project-card {
+    background: rgba(255, 255, 255, 0.08) !important;
+    transition: transform 0.3s ease;
+    height: 100%;
+}
+
+.project-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.project-tag {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #e0e0e0 !important;
+}
+
+.view-project-btn {
+    margin-top: 12px !important;
+}
+
+.no-items {
+    padding: 20px;
+    font-style: italic;
+    color: #b0b0b0;
+}
+
+/* Custom scrollbars for all containers */
+.hub-card::-webkit-scrollbar,
+.member-list::-webkit-scrollbar,
+.proposal-list::-webkit-scrollbar,
+.request-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.hub-card::-webkit-scrollbar-thumb,
+.member-list::-webkit-scrollbar-thumb,
+.proposal-list::-webkit-scrollbar-thumb,
+.request-list::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.hub-card::-webkit-scrollbar-track,
+.member-list::-webkit-scrollbar-track,
+.proposal-list::-webkit-scrollbar-track,
+.request-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Loading and Error States */
+.loading-container,
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+    width: 100%;
+    color: #e0e0e0;
+    font-size: 1.2rem;
+}
+
+.error-container {
+    color: #f44336;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .hub-grid-item {
+        min-width: 100%;
+    }
+    
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
+}

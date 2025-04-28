@@ -77,6 +77,13 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     }
   };
 
+  // New function to update project locally
+  const updateProject = (updates) => {
+    if (project) {
+      setProject(prevProject => ({ ...prevProject, ...updates }));
+    }
+  };
+
   const handleTaskAction = async (formData, action) => {
     try {
       setLoading(true);
@@ -130,6 +137,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     if (user) fetchSkillsAndProfile();
@@ -151,5 +159,6 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     fetchTasks,
     fetchProject,
     handleTaskAction,
+    updateProject, // Export the new function
   };
 };

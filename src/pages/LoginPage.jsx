@@ -57,7 +57,7 @@ const LoginPage = () => {
                 Join the Collaborative Universe
               </Typography>
               
-              <Typography variant="body1" paragraph align="center" sx={{ mb: 3 }}>
+              <Typography variant="body1" component="p" align="center" sx={{ mb: 3 }}>
                 Sign in to start contributing, earning tokens, and building communities in a decentralized ecosystem.
               </Typography>
               

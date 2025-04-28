@@ -233,7 +233,7 @@ router.put('/:taskId/accept', async (req, res) => {
 
 // POST route to create a new task
 router.post('/newtask', async (req, res) => {
-  const { name, description, skill_id, status, projectId, reward_tokens = 10, dependencies = [] } = req.body;
+  const { name, description, skill_id, status, projectId, reward_tokens = 10, dependencies = [], skill_level = 0 } = req.body;
 
   if (!name || !description || !skill_id || !projectId) {
     return res.status(400).json({ error: 'Name, description, skill, and project ID are required' });
@@ -241,7 +241,7 @@ router.post('/newtask', async (req, res) => {
 
   try {
     const result = await taskController.createNewTask(
-      name, description, skill_id, status, projectId, reward_tokens, dependencies
+      name, description, skill_id, status, projectId, reward_tokens, dependencies, skill_level
     );
     
     if (result.error) {
@@ -258,7 +258,7 @@ router.post('/newtask', async (req, res) => {
 // PUT route to update an existing task
 router.put('/update/:taskId', async (req, res) => {
   try {
-    const { name, description, skill_id, status, reward_tokens, dependencies, assigned_user_ids } = req.body;
+    const { name, description, skill_id, status, reward_tokens, dependencies, assigned_user_ids, skill_level = 0 } = req.body;
     const active = status.startsWith('active') || status.startsWith('urgent');
     
     const result = await taskController.updateTask(
@@ -270,7 +270,8 @@ router.put('/update/:taskId', async (req, res) => {
       req.params.taskId,
       reward_tokens,
       dependencies,
-      assigned_user_ids
+      assigned_user_ids,
+      skill_level,
     );
 
     res.status(200).json(result);
