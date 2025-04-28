@@ -4,7 +4,7 @@ import { TextField, Autocomplete, Button, Box, Typography, Avatar, Chip } from '
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
-import TaskBrowser from '../TaskBrowser.jsx';
+//import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 
@@ -107,7 +107,8 @@ const ProfilePage = () => {
             },
           });
           setSkillsPool(optionsResponse.data.skillsPool);
-          setInterestsPool(optionsResponse.data.interestsPool);
+          // Transform interest strings into objects with name property
+          setInterestsPool(optionsResponse.data.interestsPool.map(interest => ({ name: interest })));
           console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);
@@ -363,7 +364,7 @@ const ProfilePage = () => {
             {task.description || 'No description available'}
           </Typography>
             <Link 
-              to={`/project/${task.project_id}`} 
+              to={`/visualizer/${task.project_id}`} 
               className="view-project-link"
             >
               🚀 View Project

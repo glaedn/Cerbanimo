@@ -62,6 +62,7 @@
 
 .profile-textfield {
     max-width: 500px;
+    min-width: 200px;
     margin-left: 10px;
 }
 
