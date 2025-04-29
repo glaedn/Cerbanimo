@@ -7,28 +7,99 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-// Create a new community
+// Get all communities with optional search and pagination
+router.get('/', async (req, res) => {
+  const { search, page = 1 } = req.query;
+  const client = await pool.connect();
+  try {
+    const limit = 10; // Number of communities per page
+    const offset = (page - 1) * limit;
+    const query = `
+      WITH community_data AS (
+        SELECT id, name, description, members, interest_tags, proposals, 
+             approved_projects, vote_delegations
+        FROM communities
+        WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
+        ORDER BY name
+        LIMIT $2 OFFSET $3
+      )
+      SELECT 
+  c.*,
+  COALESCE(
+    (
+      SELECT jsonb_agg(i.name)
+      FROM interests i
+      WHERE i.id = ANY(c.interest_tags)
+    ),
+    '[]'::jsonb
+  ) as interest_names
+      FROM community_data c
+    `;
+    const values = [search || null, limit, offset];
+    const result = await client.query(query, values);
+    console.log('Query result:', result.rows);
+    
+    // Transform the results to replace interest_tags with interest_names
+    const communities = result.rows.map(row => ({
+      ...row,
+      interest_tags: row.interest_names,
+      interest_names: undefined // Remove the extra field
+    }));
+
+    const totalCountQuery = `
+      SELECT COUNT(*) FROM communities
+      WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
+    `;
+    const totalCountResult = await client.query(totalCountQuery, [search || null]);
+    const totalCount = parseInt(totalCountResult.rows[0].count, 10);
+    
+    res.status(200).json({
+      communities,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: parseInt(page, 10),
+    });
+  } catch (err) {
+    console.error('Error fetching communities:', err);
+    res.status(500).json({ error: 'Failed to fetch communities' });
+  } finally {
+    client.release();
+  }
+});
+
+//Create a new community
 router.post('/', async (req, res) => {
-    const { name, id, description, tags = [] } = req.body;
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const query = `
-            INSERT INTO communities (name, description, members, interest_tags)
-            VALUES ($1, $2, $3, $4) RETURNING id
-        `;
-        const values = [name, description, [id], tags || []];
-        const result = await client.query(query, values);
-        const communityId = result.rows[0].id;
-        await client.query('COMMIT');
-        res.status(201).json({ message: 'Community created', communityId });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error creating community:', err);
-        res.status(500).json({ error: 'Failed to create community' });
-    } finally {
-        client.release();
-    }
+  const { name, id, description, tags = [] } = req.body;
+  const client = await pool.connect();
+  try {
+      await client.query('BEGIN');
+      
+      // Convert tags to array if it's not already
+      const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
+      
+      const query = `
+          INSERT INTO communities (name, description, members, interest_tags)
+          VALUES ($1, $2, $3, $4) RETURNING id
+      `;
+      const values = [
+          name, 
+          description, 
+          [id], 
+          tagArray.length > 0 ? tagArray : null  // Use null if empty array
+      ];
+      
+      const result = await client.query(query, values);
+      const communityId = result.rows[0].id;
+      
+      await client.query('COMMIT');
+      res.status(201).json({ message: 'Community created', communityId });
+  } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error creating community:', err);
+      res.status(500).json({ error: 'Failed to create community' });
+  } finally {
+      client.release();
+  }
 });
 
 // Get a community by ID
@@ -36,15 +107,36 @@ router.get('/:communityId', async (req, res) => {
     const { communityId } = req.params;
     const client = await pool.connect();
     try {
-        const query = `
-            SELECT id, name, description, members, interest_tags, proposals, approved_projects
-            FROM communities WHERE id = $1
-        `;
+  const query = `
+      WITH community_data AS (
+          SELECT id, name, description, members, interest_tags, proposals, 
+                 approved_projects, vote_delegations
+          FROM communities 
+          WHERE id = $1
+      )
+      SELECT 
+          c.*,
+          COALESCE(
+              (
+                  SELECT jsonb_agg(i.name)
+                  FROM interests i
+                  WHERE i.id = ANY(c.interest_tags)
+              ),
+              '[]'::jsonb
+          ) as interest_names
+      FROM community_data c
+  `;
         const result = await client.query(query, [communityId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Community not found' });
         }
-        res.status(200).json(result.rows[0]);
+        // Transform the result to replace interest_tags with interest_names
+        const community = {
+            ...result.rows[0],
+            interest_tags: result.rows[0].interest_names,
+            interest_names: undefined
+        };
+        res.status(200).json(community);
     } catch (err) {
         console.error('Error fetching community:', err);
         res.status(500).json({ error: 'Failed to fetch community' });
@@ -104,56 +196,75 @@ router.post('/:communityId/submit/:projectId', async (req, res) => {
 });
 
 // Vote on adding a new member (vote = true/false)
-router.post('/:communityId/vote/member/:userId', async (req, res) => {
-    const { communityId, userId } = req.params;
-    const { vote } = req.body;
+router.post('/:communityId/vote/member/:requestUserId', async (req, res) => {
+    const { communityId, requestUserId } = req.params;
+    const { userId, vote } = req.body;
     
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
     
-        // Fetch members
+        // Fetch members and delegations
         const { rows } = await client.query(
-        `SELECT members FROM communities WHERE id = $1`,
+        `SELECT members, vote_delegations FROM communities WHERE id = $1`,
         [communityId]
         );
         const community = rows[0];
         const members = community.members || [];
-    
-        if (!members.includes(userId)) {
-        return res.status(403).json({ error: 'User is not a member of this community' });
+        const delegations = community.vote_delegations || {};
+
+        if (!members.includes(Number(userId))) {
+            return res.status(403).json({ error: 'User is not a member of this community' });
+        }
+
+        // Find all users who delegated their vote to this user
+        const delegatedVoters = Object.entries(delegations)
+            .filter(([_, delegateTo]) => delegateTo === userId.toString())
+            .map(([delegator]) => delegator);
+
+        // Record vote for the user and all delegated votes
+        const allVoters = [userId.toString(), ...delegatedVoters];
+        console.log('All voters:', allVoters);
+        for (const voter of allVoters) {
+            await client.query(
+            `UPDATE membership_requests SET votes = jsonb_set(
+          COALESCE(votes, '{}'),
+          $1::text[],
+          to_jsonb($2::boolean),
+          true
+            ) WHERE community_id = $3 AND user_id = $4`,
+            [[voter], vote, communityId, requestUserId]
+            );
         }
     
-        // Record vote
-        await client.query(
-        `UPDATE membership_requests SET votes = jsonb_set(
-            COALESCE(votes, '{}'),
-            $1::text[],
-            to_jsonb($2::boolean),
-            true
-        ) WHERE community_id = $3`,
-        [[userId.toString()], vote, communityId]
-        );
-    
         // Tally votes
+        console.log('Tallying votes for user:', requestUserId, 'in community:', communityId);
         const voteRes = await client.query(
         `SELECT votes FROM membership_requests WHERE community_id = $1 and user_id = $2`,
-        [communityId, userId]
+        [communityId, requestUserId]
         );
-        const votes = voteRes.rows[0]?.member_votes || {};
+        const votes = voteRes.rows[0]?.votes || {};
         const voteValues = Object.values(votes);
         const yesVotes = voteValues.filter(v => v === true).length;
-        const voteRatio = voteValues.length > 0 ? yesVotes / voteValues.length : 0;
-    
-        const majorityReached = voteRatio > 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
-    
+        const totalMembers = members.length;
+        const voteRatio = totalMembers > 0 ? yesVotes / totalMembers : 0;
+          
+        const majorityReached = voteRatio > 0.5;
+          
         // Approve if passed
         if (majorityReached) {
-        // Add user to members list
-        await client.query(
-            `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
-            [userId, communityId]
-        );
+            // Add user to members list
+            console.log('Adding user to community members:', requestUserId, communityId);
+            await client.query(
+          `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
+          [requestUserId, communityId]
+            );
+            
+            // Remove membership request
+            await client.query(
+          `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
+          [communityId, requestUserId]
+            );
         }
     
         await client.query('COMMIT');
@@ -181,28 +292,38 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Fetch members
+    // Fetch members and delegations
     const { rows } = await client.query(
-      `SELECT members, proposals, approved_projects FROM communities WHERE id = $1`,
+      `SELECT members, proposals, approved_projects, vote_delegations FROM communities WHERE id = $1`,
       [communityId]
     );
     const community = rows[0];
     const members = community.members || [];
+    const delegations = community.vote_delegations || {};
 
     if (!members.includes(userId)) {
       return res.status(403).json({ error: 'User is not a member of this community' });
     }
 
-    // Record vote
-    await client.query(
+    // Find all users who delegated their vote to this user
+    const delegatedVoters = Object.entries(delegations)
+      .filter(([_, delegateTo]) => delegateTo === userId.toString())
+      .map(([delegator]) => delegator);
+
+    // Record vote for the user and all delegated votes
+    const allVoters = [userId.toString(), ...delegatedVoters];
+    
+    for (const voter of allVoters) {
+      await client.query(
       `UPDATE projects SET community_votes = jsonb_set(
         COALESCE(community_votes, '{}'),
         $1::text[],
         to_jsonb($2::boolean),
         true
       ) WHERE id = $3`,
-      [[userId.toString()], vote, projectId]
-    );
+      [[voter], vote, projectId]
+      );
+    }
 
     // Tally votes
     const voteRes = await client.query(
@@ -260,20 +381,20 @@ router.post('/:communityId/delegate/:userId', async (req, res) => {
     const community = rows[0];
     const members = community.members || [];
 
-    if (!members.includes(userId)) {
+    if (!members.includes(Number(userId))) {
       return res.status(403).json({ error: 'User is not a member of this community' });
     }
 
-    // Set delegation
-    await client.query(
-      `UPDATE users SET vote_delegations = jsonb_set(
-        COALESCE(vote_delegations, '{}'),
-        $1::text[],
-        to_jsonb($2::text),
-        true
-      ) WHERE id = $3`,
-      [[userId.toString()], delegateTo, userId]
-    );
+      // Set delegation
+      await client.query(
+        `UPDATE communities SET vote_delegations = jsonb_set(
+          COALESCE(vote_delegations, '{}'),
+          $1::text[],
+          to_jsonb($2::text),
+          true
+        ) WHERE id = $3`,
+        [[userId.toString()], delegateTo, communityId]
+      );
 
     await client.query('COMMIT');
     res.status(200).json({ message: 'Vote delegation set.' });
@@ -301,20 +422,16 @@ router.post('/:communityId/revoke/:userId', async (req, res) => {
     );
     const community = rows[0];
     const members = community.members || [];
-
-    if (!members.includes(userId)) {
+  
+    if (!members.includes(Number(userId))) {
       return res.status(403).json({ error: 'User is not a member of this community' });
     }
 
     // Revoke delegation
     await client.query(
-      `UPDATE users SET vote_delegations = jsonb_set(
-        COALESCE(vote_delegations, '{}'),
-        $1::text[],
-        to_jsonb(NULL),
-        true
-      ) WHERE id = $2`,
-      [[userId.toString()], userId]
+      `UPDATE communities SET vote_delegations = vote_delegations - $1
+       WHERE id = $2`,
+      [userId.toString(), communityId]
     );
 
     await client.query('COMMIT');
@@ -323,6 +440,46 @@ router.post('/:communityId/revoke/:userId', async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Revoke error:', err);
     res.status(500).json({ error: 'Failed to revoke vote delegation' });
+  } finally {
+    client.release();
+  }
+});
+
+// Request to join a community
+router.post('/:communityId/request', async (req, res) => {
+  const { communityId } = req.params;
+  const { userId } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Check for existing request
+    const checkQuery = `
+      SELECT id FROM membership_requests 
+      WHERE community_id = $1 AND user_id = $2
+    `;
+    const checkResult = await client.query(checkQuery, [communityId, userId]);
+    
+    if (checkResult.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Membership request already exists' });
+    }
+
+    // Insert new request
+    const insertQuery = `
+      INSERT INTO membership_requests (community_id, user_id)
+      VALUES ($1, $2) RETURNING id
+    `;
+    const result = await client.query(insertQuery, [communityId, userId]);
+    const requestId = result.rows[0].id;
+    
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Membership request submitted', requestId });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error requesting membership:', err);
+    res.status(500).json({ error: 'Failed to request membership' });
   } finally {
     client.release();
   }

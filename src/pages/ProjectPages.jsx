@@ -209,7 +209,7 @@ const ProjectPages = () => {
         <div className="task-popup-overlay">
         <div className="task-popup">
           <h2>Tasks for {selectedProject.name}</h2>
-          <div className="task-list">
+          <div className="ptask-list">
             {tasks.length > 0 ? tasks.map((task) => {
               // Robust check for task assignment
               const isAssigned = task.assigned_user_ids && 

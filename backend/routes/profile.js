@@ -29,7 +29,7 @@ router.get("/public/:userId",
 
       // Ensure the query fetches only public data
       const result = await pool.query(
-        `SELECT username, profile_picture, skills, interests, badges FROM users WHERE id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges FROM users WHERE id = $1`,
         [userId]
       );
 
@@ -53,7 +53,7 @@ router.get('/options', async (req, res) => {
     const skillsResult = await pool.query('SELECT id, name, unlocked_users FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
     
     // Added ORDER BY to sort interests alphabetically
-    const interestsResult = await pool.query('SELECT name FROM interests ORDER BY name ASC');
+    const interestsResult = await pool.query('SELECT id, name FROM interests ORDER BY name ASC');
 
     const skillsPool = skillsResult.rows.map((row) => ({
       id: row.id,
@@ -62,7 +62,10 @@ router.get('/options', async (req, res) => {
     }));
 
     // Extract all names properly into an array
-    const interestsPool = interestsResult.rows.map((row) => row.name); 
+    const interestsPool = interestsResult.rows.map((row) => ({
+      id: row.id,
+      name: row.name
+    }));
 
     res.json({ skillsPool, interestsPool });
   } catch (err) {
