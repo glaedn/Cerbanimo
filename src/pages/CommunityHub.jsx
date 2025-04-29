@@ -12,7 +12,9 @@ import {
   Chip,
   Divider,
   IconButton,
-  Tooltip
+  Tooltip,
+  Box,
+  Paper
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -41,6 +43,10 @@ const CommunityHub = () => {
     const [voteDelegations, setVoteDelegations] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isMember, setIsMember] = useState(false);
+    const [hasRequestedJoin, setHasRequestedJoin] = useState(false);
+    const [isDelegating, setIsDelegating] = useState(false);
+    const [delegatedTo, setDelegatedTo] = useState(null);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -95,8 +101,16 @@ const CommunityHub = () => {
                 const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                
+                console.log('Community Data:', communityResponse.data);
                 setCommunity(communityResponse.data);
+                
+                
+                // Check if current user is a member
+                if (userId && communityResponse.data.members) {
+                    setIsMember(communityResponse.data.members.some(memberId => 
+                        String(memberId) === String(userId)
+                    ));
+                }
                 
                 // Fetch member details
                 const memberPromises = communityResponse.data.members.map(memberId => 
@@ -104,7 +118,7 @@ const CommunityHub = () => {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
-                
+                console.log('Member Promises:', memberPromises);
                 const memberResults = await Promise.all(memberPromises);
                 setMembers(memberResults.map(result => result.data));
                 
@@ -112,6 +126,14 @@ const CommunityHub = () => {
                 const requestsResponse = await axios.get(`http://localhost:4000/communities/${communityId}/membership-requests`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
+                console.log('Membership Requests:', requestsResponse.data);
+                console.log('User ID:', userId);
+                // Check if current user has already requested to join
+                if (userId) {
+                    setHasRequestedJoin(requestsResponse.data.some(request => 
+                        String(request.user_id) === String(userId)
+                    ));
+                }
                 
                 // Fetch user data for each request
                 const requestUserPromises = requestsResponse.data.map(request => 
@@ -159,9 +181,60 @@ const CommunityHub = () => {
         };
 
         fetchCommunityData();
-    }, [communityId, getAccessTokenSilently]);
+    }, [communityId, getAccessTokenSilently, userId]);
+
+    // This is the updated useEffect for delegation status
+    useEffect(() => {
+        // Check if we have all the necessary data
+        if (community && userId && members.length > 0) {
+            // Check if community has vote_delegations property and if user has delegated their vote
+            if (community.vote_delegations) {
+                const userIdStr = String(userId);
+                const isDelegatingNow = Object.keys(community.vote_delegations).includes(userIdStr);
+                setIsDelegating(isDelegatingNow);
+                
+                if (isDelegatingNow) {
+                    const delegatedToId = community.vote_delegations[userIdStr];
+                    const delegatedMember = members.find(member => 
+                        String(member.id) === String(delegatedToId)
+                    );
+                    setDelegatedTo(delegatedMember);
+                } else {
+                    setDelegatedTo(null);
+                }
+            } else {
+                // Reset delegation state if no delegations exist
+                setIsDelegating(false);
+                setDelegatedTo(null);
+            }
+        }
+    }, [community, userId, members]); // Dependencies ensure it runs when any of these change
+
+
+    const handleRequestJoin = async () => {
+        try {
+            const token = await getAccessTokenSilently({
+                audience: 'http://localhost:4000',
+                scope: 'openid profile email',
+            });
+
+            await axios.post(`http://localhost:4000/communities/${communityId}/request`, 
+                { userId },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setHasRequestedJoin(true);
+            alert('Your request to join has been submitted!');
+            
+        } catch (error) {
+            console.error('Failed to submit join request:', error);
+            alert('Failed to submit your join request. Please try again.');
+        }
+    };
 
     const handleVoteProject = async (projectId, vote) => {
+        if (!isMember) return;
+        
         try {
             const token = await getAccessTokenSilently({
                 audience: 'http://localhost:4000',
@@ -191,6 +264,8 @@ const CommunityHub = () => {
     };
 
     const handleVoteMember = async (requestUserId, vote) => {
+        if (!isMember) return;
+        
         try {
             const token = await getAccessTokenSilently({
                 audience: 'http://localhost:4000',
@@ -198,7 +273,8 @@ const CommunityHub = () => {
             });
 
             await axios.post(`http://localhost:4000/communities/${communityId}/vote/member/${requestUserId}`, 
-                { vote },
+                { userId,                  
+                 vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -234,6 +310,8 @@ const CommunityHub = () => {
     };
 
     const handleDelegateVote = async (delegateToUserId) => {
+        if (!isMember) return;
+        
         try {
             const token = await getAccessTokenSilently({
                 audience: 'http://localhost:4000',
@@ -245,11 +323,18 @@ const CommunityHub = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Update local state
+            // Update local state with delegation
             setVoteDelegations({
                 ...voteDelegations,
                 [communityId]: delegateToUserId
             });
+            
+            // Refresh community data to get updated vote delegations
+            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            setCommunity(communityResponse.data);
             
             alert('Vote delegation successful!');
             
@@ -260,6 +345,8 @@ const CommunityHub = () => {
     };
 
     const handleRevokeVote = async () => {
+        if (!isMember) return;
+        
         try {
             const token = await getAccessTokenSilently({
                 audience: 'http://localhost:4000',
@@ -275,6 +362,13 @@ const CommunityHub = () => {
             const newDelegations = { ...voteDelegations };
             delete newDelegations[communityId];
             setVoteDelegations(newDelegations);
+            
+            // Refresh community data to get updated vote delegations
+            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            setCommunity(communityResponse.data);
             
             alert('Vote delegation revoked!');
             
@@ -296,9 +390,6 @@ const CommunityHub = () => {
         return <div className="error-container">Community not found</div>;
     }
 
-    const isDelegating = voteDelegations && voteDelegations[communityId];
-    const delegatedTo = members.find(member => member.id === voteDelegations[communityId]);
-
     return (
         <div className="community-hub">
             <Typography variant="h4" className="hub-title">{community.name}</Typography>
@@ -311,6 +402,41 @@ const CommunityHub = () => {
                         <Chip key={index} label={tag} className="interest-tag" />
                     ))}
                 </div>
+                
+                {/* Join Request Button for non-members */}
+                {!isMember && (
+                    <Box mt={3} display="flex" justifyContent="center">
+                        <Paper elevation={3} className="join-request-container" sx={{ padding: 3, maxWidth: 500 }}>
+                            <Typography variant="h6" align="center" gutterBottom>
+                                You're not a member of this community yet
+                            </Typography>
+                            <Typography variant="body2" align="center" paragraph>
+                                Join this community to participate in voting, propose projects, and connect with other members.
+                            </Typography>
+                            <Box display="flex" justifyContent="center">
+                                {hasRequestedJoin ? (
+                                    <Button 
+                                        variant="contained" 
+                                        color="primary" 
+                                        disabled 
+                                        startIcon={<PersonAddIcon />}
+                                    >
+                                        Join Request Pending
+                                    </Button>
+                                ) : (
+                                    <Button 
+                                        variant="contained" 
+                                        color="primary" 
+                                        onClick={handleRequestJoin}
+                                        startIcon={<PersonAddIcon />}
+                                    >
+                                        Request to Join
+                                    </Button>
+                                )}
+                            </Box>
+                        </Paper>
+                    </Box>
+                )}
             </div>
             
             {/* Main Content Grid */}
@@ -322,10 +448,10 @@ const CommunityHub = () => {
                             <GroupIcon className="hub-icon" />
                             <Typography variant="h5">Members</Typography>
                             
-                            {isDelegating && (
+                            {isMember && isDelegating && (
                                 <div className="delegation-info">
                                     <Typography variant="body2">
-                                        You've delegated your vote to: <strong>{delegatedTo?.name || "Unknown member"}</strong>
+                                        You've delegated your vote to: <strong>{delegatedTo?.username || "Unknown member"}</strong>
                                     </Typography>
                                     <Button 
                                         variant="outlined" 
@@ -348,13 +474,13 @@ const CommunityHub = () => {
                                         onClick={() => navigate(`/profile/public/${member.id}`)}
                                     >
                                         <ListItemAvatar>
-                                            <Avatar src={`http://localhost:4000${member.avatar}`} alt={member.name} />
+                                            <Avatar src={`http://localhost:4000${member.profile_picture}`} alt={member.name} />
                                         </ListItemAvatar>
                                         <ListItemText 
-                                            primary={member.name} 
+                                            primary={member.username} 
                                             secondary={`ID: ${member.id}`} 
                                         />
-                                        {!isDelegating && userId !== member.id && (
+                                        {isMember && !isDelegating && userId !== member.id && (
                                             <Button 
                                                 variant="contained" 
                                                 color="primary" 
@@ -375,51 +501,112 @@ const CommunityHub = () => {
                 </div>
                 
                 {/* Voting Card - Projects */}
-                <div className="hub-grid-item">
-                    <Card className="hub-card voting-card">
-                        <CardContent>
-                            <HowToVoteIcon className="hub-icon" />
-                            <Typography variant="h5">Project Proposals</Typography>
-                            {proposals.length === 0 ? (
-                                <Typography variant="body2" className="no-items">No active proposals</Typography>
-                            ) : (
-                                <List className="proposal-list">
-                                    {proposals.map((proposal) => (
-                                        <ListItem key={proposal.id} className="proposal-entry">
-                                            <div className="proposal-content">
-                                                <Typography 
-                                                    variant="h6" 
-                                                    className="clickable-title"
-                                                    onClick={() => navigate(`/visualizer/${proposal.id}`)}
-                                                >
-                                                    {proposal.name}
-                                                </Typography>
-                                                <Typography variant="body2" className="proposal-description">
-                                                    {proposal.description}
-                                                </Typography>
-                                                <div className="tag-container small-tags">
-                                                    {proposal.tags && proposal.tags.map((tag, idx) => (
-                                                        <Chip key={idx} label={tag} size="small" className="project-tag" />
-                                                    ))}
-                                                </div>
-                                                
-                                                <div className="vote-info">
-                                                    <Typography variant="body2">
-                                                        Current Votes: {
-                                                            proposal.community_votes ? 
-                                                            Object.values(proposal.community_votes).filter(v => v === true).length : 0
-                                                        } Yes / {
-                                                            proposal.community_votes ? 
-                                                            Object.values(proposal.community_votes).filter(v => v === false).length : 0
-                                                        } No
+                {isMember && (
+                    <div className="hub-grid-item">
+                        <Card className="hub-card voting-card">
+                            <CardContent>
+                                <HowToVoteIcon className="hub-icon" />
+                                <Typography variant="h5">Project Proposals</Typography>
+                                {proposals.length === 0 ? (
+                                    <Typography variant="body2" className="no-items">No active proposals</Typography>
+                                ) : (
+                                    <List className="proposal-list">
+                                        {proposals.map((proposal) => (
+                                            <ListItem key={proposal.id} className="proposal-entry">
+                                                <div className="proposal-content">
+                                                    <Typography 
+                                                        variant="h6" 
+                                                        className="clickable-title"
+                                                        onClick={() => navigate(`/visualizer/${proposal.id}`)}
+                                                    >
+                                                        {proposal.name}
                                                     </Typography>
+                                                    <Typography variant="body2" className="proposal-description">
+                                                        {proposal.description}
+                                                    </Typography>
+                                                    <div className="tag-container small-tags">
+                                                        {proposal.tags && proposal.tags.map((tag, idx) => (
+                                                            <Chip key={idx} label={tag} size="small" className="project-tag" />
+                                                        ))}
+                                                    </div>
+                                                    
+                                                    <div className="vote-info">
+                                                        <Typography variant="body2">
+                                                            Current Votes: {
+                                                                proposal.community_votes ? 
+                                                                Object.values(proposal.community_votes).filter(v => v === true).length : 0
+                                                            } Yes / {
+                                                                proposal.community_votes ? 
+                                                                Object.values(proposal.community_votes).filter(v => v === false).length : 0
+                                                            } No
+                                                        </Typography>
+                                                    </div>
+                                                    
+                                                    <div className="vote-actions">
+                                                        <Tooltip title="Approve">
+                                                            <IconButton 
+                                                                color="success" 
+                                                                onClick={() => handleVoteProject(proposal.id, true)}
+                                                            >
+                                                                <CheckCircleIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Reject">
+                                                            <IconButton 
+                                                                color="error" 
+                                                                onClick={() => handleVoteProject(proposal.id, false)}
+                                                            >
+                                                                <CancelIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </div>
                                                 </div>
-                                                
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+                
+                {/* Membership Requests Card - Only for members */}
+                {isMember && (
+                    <div className="hub-grid-item">
+                        <Card className="hub-card membership-card">
+                            <CardContent>
+                                <PersonAddIcon className="hub-icon" />
+                                <Typography variant="h5">Membership Requests</Typography>
+                                {membershipRequests.length === 0 ? (
+                                    <Typography variant="body2" className="no-items">No pending requests</Typography>
+                                ) : (
+                                    <List className="request-list">
+                                        {membershipRequests.map((request) => (
+                                            <ListItem key={request.user_id} className="request-entry">
+                                                <ListItemAvatar>
+                                                    <Avatar 
+                                                        src={`http://localhost:4000${request.userData.profile_picture}`} 
+                                                        alt={request.userData.name} 
+                                                        onClick={() => navigate(`/profile/public/${request.user_id}`)}
+                                                        className="clickable-avatar"
+                                                    />
+                                                </ListItemAvatar>
+                                                <ListItemText 
+                                                    primary={
+                                                        <span 
+                                                            className="clickable-name"
+                                                            onClick={() => navigate(`/profile/public/${request.user_id}`)}
+                                                        >
+                                                            {request.userData.username}
+                                                        </span>
+                                                    } 
+                                                    secondary={`ID: ${request.user_id}`} 
+                                                />
                                                 <div className="vote-actions">
                                                     <Tooltip title="Approve">
                                                         <IconButton 
                                                             color="success" 
-                                                            onClick={() => handleVoteProject(proposal.id, true)}
+                                                            onClick={() => handleVoteMember(request.user_id, true)}
                                                         >
                                                             <CheckCircleIcon />
                                                         </IconButton>
@@ -427,80 +614,23 @@ const CommunityHub = () => {
                                                     <Tooltip title="Reject">
                                                         <IconButton 
                                                             color="error" 
-                                                            onClick={() => handleVoteProject(proposal.id, false)}
+                                                            onClick={() => handleVoteMember(request.user_id, false)}
                                                         >
                                                             <CancelIcon />
                                                         </IconButton>
                                                     </Tooltip>
                                                 </div>
-                                            </div>
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
                 
-                {/* Membership Requests Card */}
-                <div className="hub-grid-item">
-                    <Card className="hub-card membership-card">
-                        <CardContent>
-                            <PersonAddIcon className="hub-icon" />
-                            <Typography variant="h5">Membership Requests</Typography>
-                            {membershipRequests.length === 0 ? (
-                                <Typography variant="body2" className="no-items">No pending requests</Typography>
-                            ) : (
-                                <List className="request-list">
-                                    {membershipRequests.map((request) => (
-                                        <ListItem key={request.user_id} className="request-entry">
-                                            <ListItemAvatar>
-                                                <Avatar 
-                                                    src={`http://localhost:4000${request.userData.avatar}`} 
-                                                    alt={request.userData.name} 
-                                                    onClick={() => navigate(`/profile/public/${request.user_id}`)}
-                                                    className="clickable-avatar"
-                                                />
-                                            </ListItemAvatar>
-                                            <ListItemText 
-                                                primary={
-                                                    <span 
-                                                        className="clickable-name"
-                                                        onClick={() => navigate(`/profile/public/${request.user_id}`)}
-                                                    >
-                                                        {request.userData.name}
-                                                    </span>
-                                                } 
-                                                secondary={`ID: ${request.user_id}`} 
-                                            />
-                                            <div className="vote-actions">
-                                                <Tooltip title="Approve">
-                                                    <IconButton 
-                                                        color="success" 
-                                                        onClick={() => handleVoteMember(request.user_id, true)}
-                                                    >
-                                                        <CheckCircleIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Reject">
-                                                    <IconButton 
-                                                        color="error" 
-                                                        onClick={() => handleVoteMember(request.user_id, false)}
-                                                    >
-                                                        <CancelIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </div>
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-                
-                {/* Active Projects Card */}
-                <div className="hub-grid-item wide-item">
+                {/* Active Projects Card - Visible to all */}
+                <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
                     <Card className="hub-card projects-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />

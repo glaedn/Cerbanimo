@@ -117,6 +117,13 @@ const SiteNav = () => {
                                 Projects
                             </Link>
                             <Link
+                                className={`nav-link ${location.pathname.startsWith('/communities') ? 'active' : ''}`}
+                                to="/communities"
+                                onClick={closeSidebar}
+                            >
+                                Communities
+                            </Link>
+                            <Link
                                 className={`nav-link ${location.pathname.startsWith('/projectcreation') ? 'active' : ''}`}
                                 to="/projectcreation"
                                 onClick={closeSidebar}

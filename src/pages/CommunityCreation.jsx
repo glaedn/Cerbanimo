@@ -62,45 +62,48 @@ const CommunityCreation = () => {
         fetchUserId();
     }, [getAccessTokenSilently]);
 
-  const handleCreateCommunity = async () => {
-    if (!name.trim()) {
-      alert('Please enter a community name');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const token = await getAccessTokenSilently();
-
-    const response = await axios.post('http://localhost:4000/communities/', {
-      name: name,
-      description: description,
-      id: userId,
-      tags: selectedTags.map(tag => {
-        const tagObj = availableTags.find(t => t.label === tag);
-        return tagObj ? tagObj.id : null;
-      }).filter(id => id !== null),
-    }, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    const handleCreateCommunity = async () => {
+      if (!name.trim()) {
+        alert('Please enter a community name');
+        return;
       }
-    });
-  
-      if (response.status === 201) {
-        alert('Community created successfully!');
-        navigate(`/communityhub/${response.data.communityId}`);
-      } else {
-        setName('');
-        setDescription('');
-        setSelectedTags([]);
-      }   
-    } catch (error) {
-      console.error('Failed to create community:', error);
-      alert('Error creating community. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    
+      setIsLoading(true);
+      try {
+        const token = await getAccessTokenSilently();
+    
+        // Extract tag IDs - handles both strings and objects
+        const tagIds = selectedTags.map(tag => {
+          if (typeof tag === 'string') {
+            // Find matching tag object
+            const foundTag = availableTags.find(t => t.name === tag);
+            return foundTag ? foundTag.id : null;
+          }
+          return tag.id; // If it's already an object
+        }).filter(id => id !== null);
+    
+        const response = await axios.post('http://localhost:4000/communities/', {
+          name: name,
+          description: description,
+          id: userId,
+          tags: tagIds,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      
+        if (response.status === 201) {
+          alert('Community created successfully!');
+          navigate(`/communityhub/${response.data.communityId}`);
+        }
+      } catch (error) {
+        console.error('Failed to create community:', error);
+        alert('Error creating community. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   return (
     <Box className="community-creation-container">
@@ -143,6 +146,9 @@ const CommunityCreation = () => {
         <Autocomplete
           multiple
           options={availableTags}
+          getOptionLabel={(option) => 
+            typeof option === 'string' ? option : option.name || ''
+          }
           value={selectedTags}
           onChange={(event, newValue) => setSelectedTags(newValue)}
           freeSolo
@@ -151,12 +157,12 @@ const CommunityCreation = () => {
           )}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
-              const { key, ...otherProps } = getTagProps({ index });
+              const label = typeof option === 'string' ? option : option.name;
               return (
                 <Chip
-                  key={key}
-                  label={option}
-                  {...otherProps}
+                {...getTagProps({ index })}
+                  key={index}
+                  label={label}
                   style={{
                     backgroundColor: getRandomColorFromPalette(),
                     color: 'white',

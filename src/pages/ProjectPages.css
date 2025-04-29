@@ -254,12 +254,34 @@ html, body {
     margin-bottom: 20px;
 }
 
-.task-list {
+.ptask-list {
     flex-wrap: wrap;
     justify-content: center;
     overflow-y: auto;
     max-height: 40vh;
+    overflow-x: hidden;
+    padding: 10px;
 }
+
+.ptask-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ptask-list::-webkit-scrollbar-track {
+    background: rgba(13, 71, 161, 0.2);
+    border-radius: 5px;
+}
+
+.ptask-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+}
+
+.ptask-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+}
+
 
 .task-card {
     margin: 10px 0;

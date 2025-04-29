@@ -18,6 +18,7 @@ import ProjectVisualizer from './pages/ProjectVisualizer.jsx';
 import CommunityCreation from './pages/CommunityCreation.jsx';
 import IdleSpaceGame from './pages/IdleSpaceGame.jsx';
 import CommunityHub from './pages/CommunityHub.jsx';
+import Communities from './pages/Communities.jsx';
 
 const App = () => {
   return (
@@ -90,6 +91,14 @@ const App = () => {
           element={
             <PrivateRoute>
               <CommunityHub />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/communities"
+          element={
+            <PrivateRoute>
+              <Communities />
             </PrivateRoute>
           }
         />

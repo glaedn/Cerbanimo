@@ -20,8 +20,8 @@
     max-width: 900px;
     text-align: center;
     margin-bottom: 30px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 20px;
+    background: rgba(212, 206, 255, 0.104);
+    padding: 10px;
     border-radius: 10px;
     box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.1);
 }
@@ -30,6 +30,7 @@
     margin-bottom: 15px;
     color: #e0e0e0;
     line-height: 1.6;
+    min-width: 200px;
 }
 
 .tag-container {
@@ -62,7 +63,7 @@
 
 .hub-grid-item {
     flex: 1;
-    min-width: 280px;
+    min-width: 300px;
     display: flex;
     justify-content: center;
 }
@@ -76,16 +77,16 @@
 .hub-card {
     background: linear-gradient(145deg, #282728, #4c4350);
     border-radius: 12px;
-    padding: 20px;
+    padding: 5px;
     width: 100%;
     box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
     text-align: center;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    color: #e0e0e0;
+    color: #e0e0e0!important;
     max-height: 400px;
     overflow-y: auto;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(34, 27, 54, 0.985)!important;
 }
 
 .hub-card:hover {
@@ -111,6 +112,14 @@
     margin-bottom: 8px;
     border-radius: 6px;
     transition: background 0.3s ease;
+    color: white;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.member-entry .MuiListItemText-secondary {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .member-entry:hover {
@@ -176,7 +185,11 @@
 
 .clickable-name {
     cursor: pointer;
-    color: #90caf9;
+    color: #d1eaff;
+}
+
+.MuiListItemText-secondary {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 .clickable-name:hover {
@@ -279,3 +292,15 @@
         grid-template-columns: 1fr;
     }
 }
+
+.join-request-container {
+    background-color: #2f2e35!important;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    text-align: center;
+    color: white!important;
+  }
+  
+  .full-width-item {
+    grid-column: 1 / -1;
+  }
