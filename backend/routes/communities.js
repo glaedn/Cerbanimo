@@ -67,6 +67,33 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get all communities a user is a member of 
+// (userId is passed in the request body)
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const client = await pool.connect();
+  try {
+    const query = `
+        SELECT id, name, description, members, interest_tags, proposals,
+              approved_projects, vote_delegations
+        FROM communities
+        WHERE $1::integer = ANY(members)
+        ORDER BY name
+      `;
+    const values = [userId];
+    const result = await client.query(query, values);
+    console.log('Query result:', result.rows);
+    res.json(result.rows); // This line was missing
+  } catch (err) {
+    console.error('Error fetching communities:', err);
+    res.status(500).json({ error: 'Failed to fetch communities' });
+  }
+  finally {
+    client.release();
+  }
+});
+
+
 //Create a new community
 router.post('/', async (req, res) => {
   const { name, id, description, tags = [] } = req.body;
@@ -104,45 +131,51 @@ router.post('/', async (req, res) => {
 
 // Get a community by ID
 router.get('/:communityId', async (req, res) => {
-    const { communityId } = req.params;
-    const client = await pool.connect();
-    try {
-  const query = `
-      WITH community_data AS (
-          SELECT id, name, description, members, interest_tags, proposals, 
-                 approved_projects, vote_delegations
-          FROM communities 
-          WHERE id = $1
-      )
-      SELECT 
-          c.*,
-          COALESCE(
-              (
-                  SELECT jsonb_agg(i.name)
-                  FROM interests i
-                  WHERE i.id = ANY(c.interest_tags)
-              ),
-              '[]'::jsonb
-          ) as interest_names
-      FROM community_data c
-  `;
-        const result = await client.query(query, [communityId]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Community not found' });
-        }
-        // Transform the result to replace interest_tags with interest_names
-        const community = {
-            ...result.rows[0],
-            interest_tags: result.rows[0].interest_names,
-            interest_names: undefined
-        };
-        res.status(200).json(community);
-    } catch (err) {
-        console.error('Error fetching community:', err);
-        res.status(500).json({ error: 'Failed to fetch community' });
-    } finally {
-        client.release();
-    }
+  const { communityId } = req.params;
+  const client = await pool.connect();
+  console.log('Fetching community with ID:', communityId); // Debug log
+  try {
+      const query = `
+          WITH community_data AS (
+              SELECT id, name, description, 
+                     COALESCE(members, ARRAY[]::integer[]) as members, 
+                     interest_tags, proposals, 
+                     approved_projects, vote_delegations
+              FROM communities 
+              WHERE id = $1
+          )
+          SELECT 
+              c.*,
+              COALESCE(
+                  (
+                      SELECT jsonb_agg(i.name)
+                      FROM interests i
+                      WHERE i.id = ANY(c.interest_tags)
+                  ),
+                  '[]'::jsonb
+              ) as interest_names
+          FROM community_data c
+      `;
+      const result = await client.query(query, [communityId]);
+      if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Community not found' });
+      }
+      
+      console.log('Community data:', result.rows[0]); // Debug log
+      
+      const community = {
+          ...result.rows[0],
+          interest_tags: result.rows[0].interest_names,
+          interest_names: undefined
+      };
+      
+      res.status(200).json(community);
+  } catch (err) {
+      console.error('Error fetching community:', err);
+      res.status(500).json({ error: 'Failed to fetch community' });
+  } finally {
+      client.release();
+  }
 });
 
 // Get the list of membership requests for a community
@@ -301,7 +334,7 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
     const members = community.members || [];
     const delegations = community.vote_delegations || {};
 
-    if (!members.includes(userId)) {
+    if (!members.includes(Number(userId))) {
       return res.status(403).json({ error: 'User is not a member of this community' });
     }
 
@@ -340,6 +373,7 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
     // Approve if passed
     if (majorityReached) {
       // Remove from proposals and add to approved_projects
+      console.log('Majority reached, updating community:', projectId, communityId);
       await client.query(
         `UPDATE communities
          SET proposals = array_remove(proposals, $1),
