@@ -1028,6 +1028,7 @@ useEffect(() => {
             + New Task
           </button>
         )}
+        {project?.community_id === null && (
           <button
           className="community-proposal-button"
           onClick={() => {
@@ -1038,6 +1039,8 @@ useEffect(() => {
         >
           Propose to Community
         </button>
+          )}
+          
           <button
           className="edit-mode-button"
           onClick={() => setIsEditMode(!isEditMode)}

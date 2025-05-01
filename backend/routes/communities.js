@@ -204,9 +204,9 @@ router.post('/:communityId/submit/:projectId', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Set community_id on project
+    // Set community_id and token_pool on project
     await client.query(
-      `UPDATE projects SET community_id = $1 WHERE id = $2`,
+      `UPDATE projects SET community_id = $1, token_pool = 0 WHERE id = $2`,
       [communityId, projectId]
     );
 
@@ -368,10 +368,10 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
     const yesVotes = voteValues.filter(v => v === true).length;
     const voteRatio = voteValues.length > 0 ? yesVotes / voteValues.length : 0;
 
-    const majorityReached = voteRatio > 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
-
+    const majorityPassed = voteRatio > 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
+    const majorityRejected = voteRatio < 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
     // Approve if passed
-    if (majorityReached) {
+    if (majorityPassed) {
       // Remove from proposals and add to approved_projects
       console.log('Majority reached, updating community:', projectId, communityId);
       await client.query(
@@ -381,12 +381,35 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
          WHERE id = $2`,
         [projectId, communityId]
       );
+      // update the token_pool on the project table to 250
+      await client.query(
+        `UPDATE projects SET token_pool = 250 WHERE id = $1`,
+        [projectId]
+      );
+    }
+
+    // Reject if majority rejected
+    if (majorityRejected) {
+      // Remove from proposals
+      console.log('Majority rejected, updating community:', projectId, communityId);
+      await client.query(
+        `UPDATE communities
+         SET proposals = array_remove(proposals, $1)
+         WHERE id = $2`,
+        [projectId, communityId]
+      );
+      // update the token_pool on the project table to 40, blank out the community_id field
+      await client.query(
+        `UPDATE projects SET token_pool = 80, community_id = NULL, community_votes = NULL WHERE id = $1`,
+        [projectId]
+      );
     }
 
     await client.query('COMMIT');
     res.status(200).json({
       message: 'Vote recorded.',
-      approved: majorityReached,
+      passed: majorityPassed,
+      failed: majorityRejected,
       currentVotes: votes,
     });
   } catch (err) {

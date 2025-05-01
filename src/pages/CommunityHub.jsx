@@ -26,6 +26,8 @@ import LoyaltyIcon from '@mui/icons-material/Loyalty';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
 
 import './CommunityHub.css';
 
@@ -33,7 +35,9 @@ const CommunityHub = () => {
     const { communityId } = useParams();
     const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
-    
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [community, setCommunity] = useState(null);
     const [members, setMembers] = useState([]);
     const [membershipRequests, setMembershipRequests] = useState([]);
@@ -47,6 +51,20 @@ const CommunityHub = () => {
     const [hasRequestedJoin, setHasRequestedJoin] = useState(false);
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
+
+    const showNotification = (message, severity = 'success') => {
+        setSnackbarMessage(message);
+        setSnackbarSeverity(severity);
+        setSnackbarOpen(true);
+      };
+
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setSnackbarOpen(false);
+    };
+    
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -242,7 +260,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             );
 
             setHasRequestedJoin(true);
-            alert('Your request to join has been submitted!');
+            showNotification('Your request to join has been submitted!');
             
         } catch (error) {
             console.error('Failed to submit join request:', error);
@@ -259,10 +277,28 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
     
-            await axios.post(`http://localhost:4000/communities/${communityId}/vote/${projectId}`, 
+            // Get the project name before voting for potential notification
+            const projectBeforeVote = proposals.find(p => p.id === projectId);
+            const projectName = projectBeforeVote?.name || "Project";
+    
+            // Send vote to server
+            const voteResponse = await axios.post(`http://localhost:4000/communities/${communityId}/vote/${projectId}`, 
                 { userId, vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+    
+            // Check if the vote led to consensus (server should return this info)
+            const wasRejected = voteResponse.data?.failed;
+            const wasApproved = voteResponse.data?.passed;
+            
+            // Show appropriate message if consensus was reached
+            
+            if (wasApproved) {
+                showNotification(`${projectName} has been approved by the community and moved to active projects!`, 'success');
+            } else if (wasRejected) {
+                showNotification(`${projectName} has been rejected by the community.`);
+            }
+            
     
             // Refresh the entire community data after voting
             const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
@@ -271,16 +307,36 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             setCommunity(communityResponse.data);
     
-            // Also refresh the specific proposal data
-            const updatedProposalResponse = await axios.get(`http://localhost:4000/projects/${projectId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            // After voting, we need to fully refresh both proposals and approved projects
+            // First, get all current proposals from the API
+            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
+                const proposalPromises = communityResponse.data.proposals.map(propId => 
+                    axios.get(`http://localhost:4000/projects/${propId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    })
+                );
+                
+                const proposalResults = await Promise.all(proposalPromises);
+                setProposals(proposalResults.map(result => result.data));
+            } else {
+                // If no proposals are left, set to empty array
+                setProposals([]);
+            }
             
-            setProposals(prevProposals => 
-                prevProposals.map(proposal => 
-                    proposal.id === projectId ? updatedProposalResponse.data : proposal
-                )
-            );
+            // Then get all approved projects from the API
+            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
+                const projectPromises = communityResponse.data.approved_projects.map(projId => 
+                    axios.get(`http://localhost:4000/projects/${projId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    })
+                );
+                
+                const projectResults = await Promise.all(projectPromises);
+                setApprovedProjects(projectResults.map(result => result.data));
+            } else {
+                // If no approved projects, set to empty array
+                setApprovedProjects([]);
+            }
             
         } catch (error) {
             console.error('Failed to vote on project:', error);
@@ -361,7 +417,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             setCommunity(communityResponse.data);
             
-            alert('Vote delegation successful!');
+            showNotification('Vote delegation successful!');
             
         } catch (error) {
             console.error('Failed to delegate vote:', error);
@@ -395,7 +451,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             setCommunity(communityResponse.data);
             
-            alert('Vote delegation revoked!');
+            showNotification('Vote delegation revoked!');
             
         } catch (error) {
             console.error('Failed to revoke vote delegation:', error);
@@ -699,6 +755,21 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
+            <Snackbar 
+  open={snackbarOpen} 
+  autoHideDuration={6000} 
+  onClose={handleCloseSnackbar}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <MuiAlert 
+    elevation={6} 
+    variant="filled" 
+    onClose={handleCloseSnackbar} 
+    severity={snackbarSeverity}
+  >
+    {snackbarMessage}
+  </MuiAlert>
+</Snackbar>
         </div>
     );
 };
