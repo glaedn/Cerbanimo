@@ -35,10 +35,93 @@ const ProjectVisualizer = () => {
   const hoverTimeout = useRef(null);
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
+  const [showCommunityProposalPopup, setShowCommunityProposalPopup] = useState(false);
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
   
 
   const [interests, setInterests] = useState([]);
 
+  const fetchUserCommunities = async () => {
+    if (!userId) {
+      console.log('No userId available');
+      return;
+    }
+    
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
+  
+      console.log('Fetching communities for user:', userId);
+      const response = await fetch(`http://localhost:4000/communities/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch communities: ${errorText}`);
+      }
+  
+      const data = await response.json();
+      console.log('Got response from server:', data);
+      
+      if (Array.isArray(data)) {
+        setUserCommunities(data);
+        console.log('Set user communities:', data);
+      } else {
+        console.error('Received non-array data:', data);
+        setUserCommunities([]);
+      }
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+      setUserCommunities([]);
+    }
+  };
+
+  // Add useEffect to handle initial communities fetch
+  useEffect(() => {
+    if (userId) {
+      fetchUserCommunities();
+    }
+  }, [userId]);
+
+  const handleSubmitCommunityProposal = async () => {
+    if (!selectedCommunity) return;
+  
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
+  
+      const response = await fetch(
+        `http://localhost:4000/communities/${selectedCommunity.id}/submit/${projectId}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error('Failed to submit proposal');
+      }
+  
+      // Update the project to mark it as a community project
+      updateProject({ community_id: selectedCommunity.id });
+      
+      // Close the popup and navigate to the community hub
+      setShowCommunityProposalPopup(false);
+      window.location.href = `/communityhub/${selectedCommunity.id}`;
+    } catch (error) {
+      console.error('Error submitting proposal:', error);
+    }
+  };
 
   const handleUpdateTags = async (newTags) => {
     try {
@@ -943,13 +1026,25 @@ useEffect(() => {
             + New Task
           </button>
         )}
-        {project?.creator_id === Number(userId) && (
+        {project?.creator_id === Number(userId) && !project?.community_id && (
+          <div className= "edit-buttons">
+          <button
+          className="community-proposal-button"
+          onClick={() => {
+            fetchUserCommunities();
+            setShowCommunityProposalPopup(true);
+            console.log("community proposal popup: ", showCommunityProposalPopup);
+          }}
+        >
+          Propose to Community
+        </button>
           <button
           className="edit-mode-button"
           onClick={() => setIsEditMode(!isEditMode)}
         >
           {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
         </button>
+        </div>
         )}
         
       </div>
@@ -1235,6 +1330,54 @@ useEffect(() => {
           Dashed circles indicate external dependencies
         </div>
       </div>
+      {showCommunityProposalPopup && (
+  <div className="cyber-modal-overlay">
+    <div className="cyber-modal">
+      <div className="cyber-border">
+        <h3 className="cyber-title">Submit to Community</h3>
+        <div className="cyber-content">
+          <p>Select a community to submit this project to:</p>
+          
+          <Autocomplete
+            options={userCommunities}
+            getOptionLabel={(option) => option.name}
+            onChange={(event, newValue) => setSelectedCommunity(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Community"
+                variant="outlined"
+                fullWidth
+                className="cyber-input"
+              />
+            )}
+            sx={{
+              margin: '20px 0',
+              '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+              '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
+            }}
+          />
+          
+          <div className="cyber-button-group">
+            <button
+              onClick={() => setShowCommunityProposalPopup(false)}
+              className="cyber-button cancel"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitCommunityProposal}
+              className="cyber-button"
+              disabled={!selectedCommunity}
+            >
+              Submit Proposal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

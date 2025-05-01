@@ -83,8 +83,8 @@
     text-align: center;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     color: #e0e0e0!important;
-    max-height: 400px;
-    overflow-y: auto;
+    max-height: 300px;
+    overflow-y: auto!important;
     border-radius: 10px;
     background: rgba(34, 27, 54, 0.985)!important;
 }

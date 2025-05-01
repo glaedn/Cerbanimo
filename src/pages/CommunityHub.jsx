@@ -98,29 +98,37 @@ const CommunityHub = () => {
                 });
 
                 // Fetch community details
-                const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                console.log('Community Data:', communityResponse.data);
-                setCommunity(communityResponse.data);
-                
-                
-                // Check if current user is a member
-                if (userId && communityResponse.data.members) {
-                    setIsMember(communityResponse.data.members.some(memberId => 
-                        String(memberId) === String(userId)
-                    ));
-                }
-                
-                // Fetch member details
-                const memberPromises = communityResponse.data.members.map(memberId => 
-                    axios.get(`http://localhost:4000/profile/public/${memberId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    })
-                );
-                console.log('Member Promises:', memberPromises);
-                const memberResults = await Promise.all(memberPromises);
-                setMembers(memberResults.map(result => result.data));
+                console.log('Fetching community data for ID:', communityId);
+const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+});
+console.log('Community Data:', communityResponse.data);
+setCommunity(communityResponse.data);
+
+// Debug members array
+console.log('Members array:', communityResponse.data.members);
+console.log('Members array type:', typeof communityResponse.data.members);
+
+// Fetch member details
+if (communityResponse.data.members && communityResponse.data.members.length > 0) {
+    const memberPromises = communityResponse.data.members.map(memberId => {
+        console.log('Fetching member:', memberId);
+        return axios.get(`http://localhost:4000/profile/public/${memberId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).catch(error => {
+            console.error(`Failed to fetch member ${memberId}:`, error);
+            return null;
+        });
+    });
+    
+    const memberResults = await Promise.all(memberPromises);
+    const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
+    console.log('Fetched members:', validMembers);
+    setMembers(validMembers);
+} else {
+    console.log('No members in this community');
+    setMembers([]);
+}
                 
                 // Fetch membership requests
                 const requestsResponse = await axios.get(`http://localhost:4000/communities/${communityId}/membership-requests`, {
@@ -210,6 +218,16 @@ const CommunityHub = () => {
         }
     }, [community, userId, members]); // Dependencies ensure it runs when any of these change
 
+    useEffect(() => {
+        if (community && userId) {
+            // Check if userId exists in community.members array
+            // Note: We use String() to ensure type consistency in comparison
+            const memberCheck = community.members.some(memberId => 
+                String(memberId) === String(userId)
+            );
+            setIsMember(memberCheck);
+        }
+    }, [community, userId]);
 
     const handleRequestJoin = async () => {
         try {
