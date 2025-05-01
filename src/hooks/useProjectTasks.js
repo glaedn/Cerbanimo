@@ -70,6 +70,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProject(res.data);
+      console.log('Project data:', res.data);
       return res.data; // Return project data for chaining
     } catch (error) {
       console.error('Error fetching project:', error);
