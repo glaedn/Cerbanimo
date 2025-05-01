@@ -29,7 +29,8 @@ const TaskEditor = ({
 }) => {
   const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
   const isUrgent = statusParts[0] === "urgent";
-  const isActive = statusParts[0] !== "inactive" && statusParts[0] !== "completed";
+  const isActive =
+    statusParts[0] !== "inactive" && statusParts[0] !== "completed";
   const [availableTasks, setAvailableTasks] = useState([]);
   const [dependencyOptions, setDependencyOptions] = useState([]);
   const [selectedDependency, setSelectedDependency] = useState("");
@@ -40,8 +41,8 @@ const TaskEditor = ({
   );
   const [platformUserId, setPlatformUserId] = useState(null);
   const isAssigned = taskForm.assigned_user_ids?.length > 0;
-  const userIsAssigned = taskForm.assigned_user_ids?.some(id => 
-    Number(id) === Number(platformUserId)  // Ensure both are numbers
+  const userIsAssigned = taskForm.assigned_user_ids?.some(
+    (id) => Number(id) === Number(platformUserId) // Ensure both are numbers
   );
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -152,19 +153,23 @@ const TaskEditor = ({
   const handleRemoveAssignee = (userId) => {
     setTaskForm({
       ...taskForm,
-      assigned_user_ids: taskForm.assigned_user_ids.filter(id => id !== userId),
-      status: taskForm.status.includes('assigned') && taskForm.assigned_user_ids.length <= 1 
-        ? taskForm.status.replace('-assigned', '-unassigned')
-        : taskForm.status
+      assigned_user_ids: taskForm.assigned_user_ids.filter(
+        (id) => id !== userId
+      ),
+      status:
+        taskForm.status.includes("assigned") &&
+        taskForm.assigned_user_ids.length <= 1
+          ? taskForm.status.replace("-assigned", "-unassigned")
+          : taskForm.status,
     });
   };
 
   const handleUrgentChange = (e) => {
     const isChecked = e.target.checked;
     const isAssigned = taskForm.assigned_user_ids?.length > 0;
-    
+
     let newStatus;
-    
+
     if (isChecked) {
       // When making urgent, force it to be active
       newStatus = `urgent-${isAssigned ? "assigned" : "unassigned"}`;
@@ -172,7 +177,7 @@ const TaskEditor = ({
       // When removing urgent, revert to active (not inactive)
       newStatus = `active-${isAssigned ? "assigned" : "unassigned"}`;
     }
-  
+
     setTaskForm({ ...taskForm, status: newStatus });
   };
 
@@ -232,9 +237,9 @@ const TaskEditor = ({
         dependencies: (taskForm.dependencies || []).map((id) =>
           parseInt(id, 10)
         ),
-        status: taskForm.status || "inactive-unassigned"
+        status: taskForm.status || "inactive-unassigned",
       };
-      console.log("assigned users: ", taskForm.assigned_user_ids)
+      console.log("assigned users: ", taskForm.assigned_user_ids);
 
       // Clean up before submission
       delete formData.project_id;
@@ -243,10 +248,10 @@ const TaskEditor = ({
 
       const result = await onSubmit(formData);
       // Only show success if no error returned
-    if (!result.error) {
-      alert(`Task "${taskForm.name}" saved successfully`);
-      onClose();
-    }
+      if (!result.error) {
+        alert(`Task "${taskForm.name}" saved successfully`);
+        onClose();
+      }
     } catch (error) {
       alert("Failed to save task. Please try again.");
       console.error("Save failed:", error);
@@ -259,7 +264,7 @@ const TaskEditor = ({
       alert("User ID not found");
       return;
     }
-  
+
     try {
       const action = userIsAssigned ? "drop" : "accept";
       const token = await getAccessTokenSilently();
@@ -270,13 +275,15 @@ const TaskEditor = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       if (!response.data.success) {
         alert(response.data.error || "Failed to update task");
         return;
       }
-  
-      alert(`Task ${action === 'accept' ? 'accepted' : 'dropped'} successfully`);
+
+      alert(
+        `Task ${action === "accept" ? "accepted" : "dropped"} successfully`
+      );
       onClose();
     } catch (error) {
       console.error("Task action failed:", error);
@@ -312,7 +319,9 @@ const TaskEditor = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      alert(`Task ${endpoint === 'approve' ? 'approved' : 'rejected'} successfully`);
+      alert(
+        `Task ${endpoint === "approve" ? "approved" : "rejected"} successfully`
+      );
       onClose();
       // Add notification logic here
     } catch (error) {
@@ -480,22 +489,34 @@ const TaskEditor = ({
                 <FormControlLabel
                   control={
                     <Checkbox
-  checked={isActive || isUrgent}
-  onChange={(e) => {
-    const newActiveState = e.target.checked;
-    const newStatus = newActiveState 
-      ? `active-${isAssigned ? "assigned" : "unassigned"}`
-      : `inactive-${isAssigned ? "assigned" : "unassigned"}`;
-    
-    // If currently urgent and being deactivated, remove urgent status
-    const finalStatus = isUrgent && !newActiveState 
-      ? newStatus.replace('urgent', 'inactive')
-      : newStatus;
-    
-    setTaskForm({ ...taskForm, status: finalStatus });
-  }}
-  disabled={!isEdit || isUrgent}
-/>
+                      checked={isActive || isUrgent}
+                      onChange={(e) => {
+                        const newActiveState = e.target.checked;
+                        const newStatus = newActiveState
+                          ? `active-${isAssigned ? "assigned" : "unassigned"}`
+                          : `inactive-${
+                              isAssigned ? "assigned" : "unassigned"
+                            }`;
+
+                        // If currently urgent and being deactivated, remove urgent status
+                        const finalStatus =
+                          isUrgent && !newActiveState
+                            ? newStatus.replace("urgent", "inactive")
+                            : newStatus;
+
+                        setTaskForm({ ...taskForm, status: finalStatus });
+                      }}
+                      disabled={!isEdit || isUrgent}
+                      sx={{
+                        color: "#00f3ff", // Color when unchecked
+                        "&.Mui-checked": {
+                          color: "#00f3ff", // Color when checked
+                        },
+                        "&.Mui-disabled": {
+                          color: "rgba(0, 243, 255, 0.5)", // Color when disabled
+                        },
+                      }}
+                    />
                   }
                   label="ACTIVE STATUS"
                 />
@@ -548,44 +569,50 @@ const TaskEditor = ({
                 ) : (
                   <>
                     {!isEdit && (
-    <>
-      <Button
-        className={`cyber-button ${userIsAssigned ? "cancel" : ""}`}
-        onClick={handleTaskAction}
-        variant="contained"
-        disabled={isSubmitted || taskForm.status?.includes('completed')}
-      >
-        {userIsAssigned ? "DROP TASK" : "ACCEPT TASK"}
-      </Button>
-
-      {userIsAssigned && !isSubmitted && (
-        <Button
-          className="cyber-button"
-          onClick={handleTaskSubmission}
-          variant="contained"
-        >
-          SUBMIT TASK
-        </Button>
-      )}
-    </>
-  )}
-
-                    {Number(projectCreatorId) === Number(platformUserId) && isSubmitted && (
                       <>
                         <Button
-                          className="cyber-button approve"
-                          onClick={() => handleApproval(true)}
+                          className={`cyber-button ${
+                            userIsAssigned ? "cancel" : ""
+                          }`}
+                          onClick={handleTaskAction}
+                          variant="contained"
+                          disabled={
+                            isSubmitted ||
+                            taskForm.status?.includes("completed")
+                          }
                         >
-                          APPROVE
+                          {userIsAssigned ? "DROP TASK" : "ACCEPT TASK"}
                         </Button>
-                        <Button
-                          className="cyber-button reject"
-                          onClick={() => handleApproval(false)}
-                        >
-                          REJECT
-                        </Button>
+
+                        {userIsAssigned && !isSubmitted && (
+                          <Button
+                            className="cyber-button"
+                            onClick={handleTaskSubmission}
+                            variant="contained"
+                          >
+                            SUBMIT TASK
+                          </Button>
+                        )}
                       </>
                     )}
+
+                    {Number(projectCreatorId) === Number(platformUserId) &&
+                      isSubmitted && (
+                        <>
+                          <Button
+                            className="cyber-button approve"
+                            onClick={() => handleApproval(true)}
+                          >
+                            APPROVE
+                          </Button>
+                          <Button
+                            className="cyber-button reject"
+                            onClick={() => handleApproval(false)}
+                          >
+                            REJECT
+                          </Button>
+                        </>
+                      )}
 
                     <Button className="cyber-button neutral" onClick={onClose}>
                       CLOSE

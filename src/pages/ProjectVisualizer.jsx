@@ -15,6 +15,7 @@ const ProjectVisualizer = () => {
   const { projectId } = useParams();
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
+  const [userId, setUserId] = useState(null);
   const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
     useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState(skills[0]?.name || "");
@@ -38,13 +39,14 @@ const ProjectVisualizer = () => {
 
   const [interests, setInterests] = useState([]);
 
+
   const handleUpdateTags = async (newTags) => {
     try {
       const token = await getAccessTokenSilently({
         audience: "http://localhost:4000",
         scope: "openid profile email",
-      });
-  
+      });// Use the token for authorized request
+
       const response = await fetch(`http://localhost:4000/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
@@ -95,6 +97,7 @@ const ProjectVisualizer = () => {
     };
 
     fetchInterests();
+    
   }, [getAccessTokenSilently]);
 
   
@@ -111,6 +114,38 @@ const refreshTasks = async () => {
     setActiveSkillId(currentSkillId);
   }
 };
+
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
+
+      const response = await fetch('http://localhost:4000/profile/userId', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+
+      const data = await response.json();
+      setUserId(data.id);
+      
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  if (user) {
+    fetchProfile();
+  }
+}, [user, getAccessTokenSilently]);
 
 
 
@@ -908,7 +943,7 @@ useEffect(() => {
             + New Task
           </button>
         )}
-        {project?.creator_id === user.id && (
+        {project?.creator_id === Number(userId) && (
           <button
           className="edit-mode-button"
           onClick={() => setIsEditMode(!isEditMode)}
