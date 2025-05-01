@@ -258,13 +258,20 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 audience: 'http://localhost:4000',
                 scope: 'openid profile email',
             });
-
+    
             await axios.post(`http://localhost:4000/communities/${communityId}/vote/${projectId}`, 
                 { userId, vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-
-            // Refresh proposals after voting
+    
+            // Refresh the entire community data after voting
+            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            setCommunity(communityResponse.data);
+    
+            // Also refresh the specific proposal data
             const updatedProposalResponse = await axios.get(`http://localhost:4000/projects/${projectId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });

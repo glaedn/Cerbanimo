@@ -1015,7 +1015,9 @@ useEffect(() => {
           width={svgDimensions.width}
           height={svgDimensions.height}
         ></svg>
-        {isEditMode && (
+        {project?.creator_id === Number(userId) && (
+          <div className= "edit-buttons">
+            {isEditMode && (
           <button
             className="new-task-button"
             onClick={() => {
@@ -1026,8 +1028,6 @@ useEffect(() => {
             + New Task
           </button>
         )}
-        {project?.creator_id === Number(userId) && !project?.community_id && (
-          <div className= "edit-buttons">
           <button
           className="community-proposal-button"
           onClick={() => {
