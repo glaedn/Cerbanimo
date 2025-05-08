@@ -445,30 +445,16 @@
     }
   }
 
-  .tab-arrow {
-    padding: 10px 15px;
-    background: #222;
-    border: none;
-    cursor: pointer;
-    border-radius: 12px 12px 0 0;
-    font-size: 14px;
-    color: white;
-    transition: all 0.2s ease-in-out;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 5px;
+  .tab.all-tasks {
+    background-color: #9c27b0 !important; /* Purple color for All Tasks */
+    position: relative;  
   }
+
   
-  .tab-arrow:hover {
-    background-color: #333;
-    transform: translateY(-2px);
+  .tab.all-tasks:hover {
+    background-color: #7b1fa2 !important;
   }
-  
-  .tab-arrow:active {
-    transform: translateY(0);
-  }
+
   
   .node-tooltip {
     position: absolute;

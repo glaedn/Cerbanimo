@@ -1,4 +1,5 @@
 import pool from "../db.js";
+import { autoGenerateTasks } from "../services/taskGenerator.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -99,7 +100,7 @@ const getPlanetSpecificTasks = async (skillName) => {
 // Fetch tasks for a specific project
 const getTasksByProjectId = async (projectId) => {
   const parsedProjectId = parseInt(projectId, 10);
-
+  console.log("Parsed projectId:", parsedProjectId);
   if (isNaN(parsedProjectId)) {
     throw new Error(`Invalid projectId: ${projectId}`);
   }
@@ -108,7 +109,7 @@ const getTasksByProjectId = async (projectId) => {
 
   const query = `SELECT * FROM tasks WHERE project_id = $1`;
   const { rows } = await pool.query(query, [parsedProjectId]);
-
+  console.log("Fetched tasks:", rows);
   return rows;
 };
 
@@ -265,7 +266,7 @@ const createNewTask = async (
       skill_id,
       status,
       projectId,
-      rewardTokens,
+      reward_tokens,
       dependencies,
       skill_level,
     ]);
@@ -948,7 +949,24 @@ const findById = async (taskId) => {
   }
 };
 
+const generateTasks = async (req, res) => {
+  const { projectName, projectDescription, interest_tags, creator_id } = req.body;
+
+  if (!projectName || !projectDescription || !interest_tags || !creator_id) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const generatedData = await autoGenerateTasks(projectName, projectDescription, interest_tags, creator_id);
+    res.status(200).json(generatedData);
+  } catch (error) {
+    console.error('Task generation error:', error);
+    res.status(500).json({ error: 'Failed to generate tasks' });
+  }
+};
+
 export default {
+  generateTasks,
   getAllTasks,
   getRelevantTasks,
   getProjectRelevantTasks,
