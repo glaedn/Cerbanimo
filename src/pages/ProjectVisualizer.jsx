@@ -1,3 +1,4 @@
+// Fix for the issue where no tasks display in any tab
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import TaskEditor from "./TaskEditor";
@@ -18,7 +19,7 @@ const ProjectVisualizer = () => {
   const [userId, setUserId] = useState(null);
   const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
     useProjectTasks(projectId, user);
-  const [activeCategory, setActiveCategory] = useState(skills[0]?.name || "");
+  const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeNode, setActiveNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -242,15 +243,20 @@ useEffect(() => {
   }, []);
 
   const categorizedTasks = useMemo(() => {
+    // First create the all-tasks entry
+    const taskMap = {
+      "All Tasks": [...tasks] // Include all tasks
+    };
+  
+    // Then add the skill-specific categories
     const filteredSkills = skills.filter((skill) =>
       tasks.some((task) => task.skill_id === skill.id)
     );
-
-    const taskMap = filteredSkills.reduce((acc, skill) => {
-      acc[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
-      return acc;
-    }, {});
-
+  
+    filteredSkills.forEach((skill) => {
+      taskMap[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
+    });
+  
     return taskMap;
   }, [tasks, skills]);
 
@@ -268,19 +274,6 @@ useEffect(() => {
   // local modal control here
   const [taskForm, setTaskForm] = useState(initialForm);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
-
-//  const getScreenPosition = (event) => {
-//    const svgRect = svgRef.current.getBoundingClientRect();
-//    const pt = new DOMPoint(event.clientX, event.clientY);
-//    return {
-//      x: pt.x - svgRect.left,
-//      y: pt.y - svgRect.top,
-//    };
-//  };
-
-  //window.addEventListener('click', (e) => {
-  //  console.log('Global click target:', e.target);
-  //});
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -423,14 +416,9 @@ useEffect(() => {
 // Modify this useEffect to only set initial values when there are no current values
 useEffect(() => {
   // Only set initial values if both activeCategory and activeSkillId are not set
-  if (!activeCategory && !activeSkillId) {
-    const firstUsedSkill = skills.find((skill) =>
-      tasks.some((task) => task.skill_id === skill.id)
-    );
-    if (firstUsedSkill) {
-      setActiveCategory(firstUsedSkill.name);
-      setActiveSkillId(firstUsedSkill.id);
-    }
+  if (!activeCategory) {
+    setActiveCategory("All Tasks");
+    setActiveSkillId(null);
   }
 }, [skills, tasks]); // Dependencies remain the same
 
@@ -504,7 +492,14 @@ useEffect(() => {
 
   useEffect(() => {
     if (!svgRef.current) return;
+    
+    // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
+    
+    // Debug: Check if the category has tasks
+    console.log(`Drawing ${activeCategory} with ${data.length} tasks`);
+    
+    // Exit early if no data
     if (data.length === 0) return;
 
     const { width, height } = svgDimensions;
@@ -566,17 +561,22 @@ useEffect(() => {
       });
     });
 
-    // Find root nodes (those with no dependencies within the category)
+    // Find root nodes - different logic for All Tasks view vs skill-specific views
     const rootNodes = data
-      .filter((node) => {
-        // Check if all dependencies are from external skills
+    .filter((node) => {
+      if (activeCategory === "All Tasks") {
+        // For All Tasks view, a root node has no dependencies at all
+        return node.dependencies.length === 0;
+      } else {
+        // For skill-specific views
         const internalDeps = node.dependencies.filter((depId) => {
           const depTask = allTasks[depId];
           return depTask && depTask.skill_id === activeSkillId;
         });
         return internalDeps.length === 0;
-      })
-      .map((node) => node.id);
+      }
+    })
+    .map((node) => node.id);
 
     const handleNodeClick = (event, d) => {
       event.stopPropagation(); // Prevent click bubbling
@@ -670,22 +670,36 @@ useEffect(() => {
       const sourceNode = graph[source.id];
       if (!sourceNode) return;
 
-      // Internal dependencies
-      const internalDeps = source.dependencies.filter((depId) => {
-        const depTask = allTasks[depId];
-        return depTask && depTask.skill_id === activeSkillId;
-      });
+      // For All Tasks view, include all dependencies
+      if (activeCategory === "All Tasks") {
+        source.dependencies.forEach((depId) => {
+          const targetNode = graph[depId];
+          if (targetNode) {
+            links.push({
+              source: { x: sourceNode.x, y: sourceNode.y },
+              target: { x: targetNode.x, y: targetNode.y },
+              type: "internal",
+            });
+          }
+        });
+      } else {
+        // Original logic for skill-specific views
+        const internalDeps = source.dependencies.filter((depId) => {
+          const depTask = allTasks[depId];
+          return depTask && depTask.skill_id === activeSkillId;
+        });
 
-      internalDeps.forEach((depId) => {
-        const targetNode = graph[depId];
-        if (targetNode) {
-          links.push({
-            source: { x: sourceNode.x, y: sourceNode.y },
-            target: { x: targetNode.x, y: targetNode.y },
-            type: "internal",
-          });
-        }
-      });
+        internalDeps.forEach((depId) => {
+          const targetNode = graph[depId];
+          if (targetNode) {
+            links.push({
+              source: { x: sourceNode.x, y: sourceNode.y },
+              target: { x: targetNode.x, y: targetNode.y },
+              type: "internal",
+            });
+          }
+        });
+      }
     });
 
     // Draw links first (so they appear under nodes)
@@ -707,155 +721,157 @@ useEffect(() => {
         }`;
       });
 
-    // Process external dependencies for each node
-    Object.values(graph).forEach((node) => {
-      // Get external dependencies (things this node depends on)
-      const externalDeps = node.dependencies
-        .filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id !== activeSkillId;
-        })
-        .map((depId) => ({
-          id: depId,
-          sourceNode: node,
-          type: "depends-on", // This node depends on the external node
-          taskInfo: allTasks[depId],
-        }));
-
-      // Get external dependents (things that depend on this node)
-      const externalDependents = Object.values(allTasks)
-        .filter(
-          (task) =>
-            task.skill_id !== activeSkillId &&
-            task.dependencies.includes(node.id)
-        )
-        .map((task) => ({
-          id: task.id,
-          sourceNode: node,
-          type: "depended-by", // The external node depends on this node
-          taskInfo: task,
-        }));
-
-      // Limit to MAX_EXTERNAL_DEPS dependencies of each type
-      const limitedDeps = externalDeps.slice(0, MAX_EXTERNAL_DEPS);
-      const limitedDependents = externalDependents.slice(0, MAX_EXTERNAL_DEPS);
-
-      // Draw external dependency links first (under nodes)
-      // Position external dependencies in a row above the node
-      limitedDeps.forEach((dep, index) => {
-        const totalDeps = limitedDeps.length;
-        const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
-
-        const x2 = node.x + offset;
-        const y2 = node.y - 30; // Fixed distance above
-
-        // Draw link
-        linksGroup
-          .append("line")
-          .attr("class", "external-link")
-          .attr("stroke", "#666")
-          .attr("stroke-width", 1)
-          .attr("stroke-dasharray", "2,2")
-          .attr("x1", node.x)
-          .attr("y1", node.y)
-          .attr("x2", x2)
-          .attr("y2", y2);
-
-        // Draw external node
-        const externalNodeGroup = nodesGroup
-          .append("g")
-          .attr("class", "external-node")
-          .attr("transform", `translate(${x2}, ${y2})`)
-          .style("pointer-events", "visible")
-          .on("mouseover", (event) => {
-            if (dep.taskInfo) {
-              setHoveredNode({
-                id: dep.id,
-                name: dep.taskInfo.name,
-                status: dep.taskInfo.status,
-                category: dep.taskInfo.category,
-                type: dep.type,
-                x: event.pageX,
-                y: event.pageY,
-              });
-            }
+    // Only process external dependencies if we're not in All Tasks view
+    if (activeCategory !== "All Tasks") {
+      Object.values(graph).forEach((node) => {
+        // Get external dependencies (things this node depends on)
+        const externalDeps = node.dependencies
+          .filter((depId) => {
+            const depTask = allTasks[depId];
+            return depTask && depTask.skill_id !== activeSkillId;
           })
-          .on("mouseout", () => setHoveredNode(null))
-          .on("mouseleave", () => setHoveredNode(null)) // Additional check to ensure tooltip disappears
-          .on("click", () => handleEditTask(dep.taskInfo.id));
+          .map((depId) => ({
+            id: depId,
+            sourceNode: node,
+            type: "depends-on",
+            taskInfo: allTasks[depId],
+          }));
+    
+        // Get external dependents (things that depend on this node)
+        const externalDependents = Object.values(allTasks)
+          .filter(
+            (task) =>
+              task.skill_id !== activeSkillId &&
+              task.dependencies.includes(node.id)
+          )
+          .map((task) => ({
+            id: task.id,
+            sourceNode: node,
+            type: "depended-by",
+            taskInfo: task,
+          }));
+    
+        // Limit to MAX_EXTERNAL_DEPS dependencies of each type
+        const limitedDeps = externalDeps.slice(0, MAX_EXTERNAL_DEPS);
+        const limitedDependents = externalDependents.slice(0, MAX_EXTERNAL_DEPS);
+        
+        // Draw external dependency links first (under nodes)
+        // Position external dependencies in a row above the node
+        limitedDeps.forEach((dep, index) => {
+          const totalDeps = limitedDeps.length;
+          const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
 
-        externalNodeGroup
-          .append("circle")
-          .attr("r", 7)
-          .attr(
-            "fill",
-            dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
-          )
-          .attr(
-            "stroke",
-            dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
-          )
-          .attr("stroke-width", 1.5)
-          .attr("stroke-dasharray", "2,1");
+          const x2 = node.x + offset;
+          const y2 = node.y - 30; // Fixed distance above
+
+          // Draw link
+          linksGroup
+            .append("line")
+            .attr("class", "external-link")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "2,2")
+            .attr("x1", node.x)
+            .attr("y1", node.y)
+            .attr("x2", x2)
+            .attr("y2", y2);
+
+          // Draw external node
+          const externalNodeGroup = nodesGroup
+            .append("g")
+            .attr("class", "external-node")
+            .attr("transform", `translate(${x2}, ${y2})`)
+            .style("pointer-events", "visible")
+            .on("mouseover", (event) => {
+              if (dep.taskInfo) {
+                setHoveredNode({
+                  id: dep.id,
+                  name: dep.taskInfo.name,
+                  status: dep.taskInfo.status,
+                  category: dep.taskInfo.category,
+                  type: dep.type,
+                  x: event.pageX,
+                  y: event.pageY,
+                });
+              }
+            })
+            .on("mouseout", () => setHoveredNode(null))
+            .on("mouseleave", () => setHoveredNode(null)) // Additional check to ensure tooltip disappears
+            .on("click", () => handleEditTask(dep.taskInfo.id));
+
+          externalNodeGroup
+            .append("circle")
+            .attr("r", 7)
+            .attr(
+              "fill",
+              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+            )
+            .attr(
+              "stroke",
+              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+            )
+            .attr("stroke-width", 1.5)
+            .attr("stroke-dasharray", "2,1");
+        });
+
+        // Position external dependents in a row below the node
+        limitedDependents.forEach((dep, index) => {
+          const totalDeps = limitedDependents.length;
+          const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
+
+          const x2 = node.x + offset;
+          const y2 = node.y + 40; // Fixed distance below
+
+          // Draw link
+          linksGroup
+            .append("line")
+            .attr("class", "external-link")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "2,2")
+            .attr("x1", node.x)
+            .attr("y1", node.y)
+            .attr("x2", x2)
+            .attr("y2", y2);
+
+          // Draw external node
+          const externalNodeGroup = nodesGroup
+            .append("g")
+            .attr("class", "external-node")
+            .attr("transform", `translate(${x2}, ${y2})`)
+            .on("mouseover", (event) => {
+              const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
+              if (dep.taskInfo) {
+                setHoveredNode({
+                  id: dep.id,
+                  name: dep.taskInfo.name,
+                  status: dep.taskInfo.status,
+                  category: dep.taskInfo.category,
+                  type: dep.type,
+                  x: event.pageX,
+                  y: event.pageY,
+                });
+              }
+            })
+            .on("mouseout", () => setHoveredNode(null))
+            .on("mouseleave", () => setHoveredNode(null)); // Additional check
+
+          externalNodeGroup
+            .append("circle")
+            .attr("r", 7)
+            .attr(
+              "fill",
+              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+            )
+            .attr(
+              "stroke",
+              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+            )
+            .attr("stroke-width", 1.5)
+            .attr("stroke-dasharray", "2,1");
+        });
       });
-
-      // Position external dependents in a row below the node
-      limitedDependents.forEach((dep, index) => {
-        const totalDeps = limitedDependents.length;
-        const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
-
-        const x2 = node.x + offset;
-        const y2 = node.y + 40; // Fixed distance below
-
-        // Draw link
-        linksGroup
-          .append("line")
-          .attr("class", "external-link")
-          .attr("stroke", "#666")
-          .attr("stroke-width", 1)
-          .attr("stroke-dasharray", "2,2")
-          .attr("x1", node.x)
-          .attr("y1", node.y)
-          .attr("x2", x2)
-          .attr("y2", y2);
-
-        // Draw external node
-        const externalNodeGroup = nodesGroup
-          .append("g")
-          .attr("class", "external-node")
-          .attr("transform", `translate(${x2}, ${y2})`)
-          .on("mouseover", (event) => {
-            const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
-            if (dep.taskInfo) {
-              setHoveredNode({
-                id: dep.id,
-                name: dep.taskInfo.name,
-                status: dep.taskInfo.status,
-                category: dep.taskInfo.category,
-                type: dep.type,
-                x: x + zoomTransform.x, // Account for zoom/pan
-                y: y + zoomTransform.y, // Account for zoom/pan
-              });
-            }
-          })
-          .on("mouseout", () => setHoveredNode(null))
-          .on("mouseleave", () => setHoveredNode(null)); // Additional check
-
-        externalNodeGroup
-          .append("circle")
-          .attr("r", 7)
-          .attr(
-            "fill",
-            dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
-          )
-          .attr(
-            "stroke",
-            dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
-          )
-          .attr("stroke-width", 1.5)
-          .attr("stroke-dasharray", "2,1");
-      });
-    });
+    }
 
     // Draw the main nodes last (on top)
     const nodeGroups = nodesGroup
@@ -904,6 +920,7 @@ useEffect(() => {
       .attr("fill", (d) =>
         d.status.includes("unassigned") ? "#000000" : "#FFFFFF"
       );
+    
 
     // Add the orange "+" nodes in edit mode
     if (isEditMode) {
@@ -945,7 +962,6 @@ useEffect(() => {
     svgDimensions,
     tasks,
   ]);
-
   const colorClasses = ["pink", "green", "blue", "orange"];
 
   return (
@@ -958,36 +974,54 @@ useEffect(() => {
         {/* Left shadow - fixed position */}
         <div className="scroll-shadow left-shadow" />
         <div
-          ref={tabsContainerRef}
-          className="category-tabs"
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleTabsLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-        >
-          {usedSkills.map((category, index) => {
-            const colorClass = colorClasses[index % colorClasses.length];
-            return (
-              <button
-                key={category.id}
-                className={`tab ${colorClass} ${
-                  activeCategory === category.name ? "active" : ""
-                }`}
-                onClick={() => {
-                  setActiveCategory(category.name);
-                  setActiveSkillId(category.id);
-                }}
-                style={{ flex: "0 0 auto" }}
-              >
-                {category.name}
-                {activeCategory === category.name && (
-                  <span className="active-indicator" />
-                )}
-              </button>
-            );
-          })}
-          {isEditMode && (
-          <button
+  ref={tabsContainerRef}
+  className="category-tabs"
+  onMouseDown={handleMouseDown}
+  onMouseLeave={handleTabsLeave}
+  onMouseUp={handleMouseUp}
+  onMouseMove={handleMouseMove}
+>
+  {/* Add the All Tasks tab first */}
+  <button
+    key="all-tasks"
+    className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
+    onClick={() => {
+      setActiveCategory("All Tasks");
+      setActiveSkillId(null); // No specific skill for All Tasks view
+    }}
+    style={{ flex: "0 0 auto" }}
+  >
+    All Tasks
+    {activeCategory === "All Tasks" && (
+      <span className="active-indicator" />
+    )}
+  </button>
+
+{usedSkills.map((category, index) => {
+  const colorClass = colorClasses[index % colorClasses.length];
+  return (
+    <button
+      key={category.id}
+      className={`tab ${colorClass} ${
+        activeCategory === category.name ? "active" : ""
+      }`}
+      onClick={() => {
+        const skillId = skills.find(s => s.name === category.name)?.id;
+        console.log(`Selected tab: ${category.name}, Skill ID: ${skillId}`); // Debug log
+        setActiveCategory(category.name);
+        setActiveSkillId(skillId);
+      }}
+      style={{ flex: "0 0 auto" }}
+    >
+      {category.name}
+      {activeCategory === category.name && (
+        <span className="active-indicator" />
+      )}
+    </button>
+  );
+})}
+  {isEditMode && (
+    <button
       className="tab new-skill-tab"
       onClick={() => {
         setTaskForm({
@@ -1002,7 +1036,7 @@ useEffect(() => {
       + New Skill
     </button>
   )}
-        </div>
+</div>
         <div className="scroll-shadow right-shadow" />
       </div>
 

@@ -54,6 +54,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       }));
       
       setTasks(updated);
+      console.log('Tasks data:', updated);
       return updated; // Return the tasks for chaining
     } catch (error) {
       console.error('Error fetching tasks:', error);

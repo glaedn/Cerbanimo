@@ -1,6 +1,7 @@
 import express from 'express';
 import taskController from '../controllers/taskController.js';  // Import the controller
 import pool from '../db.js';
+
 const router = express.Router();
 
 // Fetch all tasks
@@ -331,7 +332,7 @@ router.put('/:taskId/approve', async (req, res) => {
   }
 });
 
-
+router.post('/generate-tasks', taskController.generateTasks);
 
 router.put("/:taskId/reject", taskController.rejectTask);
 
