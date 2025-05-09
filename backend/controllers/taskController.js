@@ -1,5 +1,5 @@
 import pool from "../db.js";
-import { autoGenerateTasks } from "../services/taskGenerator.js";
+import { autoGenerateTasks, autoGenerateSubtasks } from "../services/taskGenerator.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -965,7 +965,64 @@ const generateTasks = async (req, res) => {
   }
 };
 
+const granularizeTask = async (req, res) => {
+  const { taskId } = req.params;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Fetch original task
+    const taskResult = await client.query(
+      'SELECT id, project_id, name, description, skill_id, dependencies FROM tasks WHERE id = $1',
+      [taskId]
+    );
+    const task = taskResult.rows[0];
+
+    if (!task) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+
+    // Generate subtasks
+    const subtasks = await autoGenerateSubtasks(task.name, task.description, task.skill_id);
+
+    // Delete original task
+    await client.query('DELETE FROM tasks WHERE id = $1', [taskId]);
+
+    // Insert new smaller tasks
+    const insertPromises = subtasks.map(subtask =>
+      client.query(
+        `INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies) 
+         VALUES ($1, $2, $3, $4, $5, $6::int[]) RETURNING *`,
+        [
+          task.project_id,
+          subtask.name,
+          subtask.description,
+          subtask.skill_id || task.skill_id,
+          'inactive-unassigned',
+          Array.isArray(subtask.dependencies) ? subtask.dependencies : []
+        ]
+      )
+    );
+
+    const insertedResults = await Promise.all(insertPromises);
+    const insertedSubtasks = insertedResults.map(result => result.rows[0]);
+
+    await client.query('COMMIT');
+
+    res.json({ success: true, deletedTask: task, newTasks: insertedSubtasks });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Granularize task failed:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+};
+
 export default {
+  granularizeTask,
   generateTasks,
   getAllTasks,
   getRelevantTasks,
