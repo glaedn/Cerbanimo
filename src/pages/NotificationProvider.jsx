@@ -142,11 +142,14 @@ useEffect(() => {
   const markAsRead = async (notificationIds) => {
     if (!isAuthenticated || !userId) return;
     
+    // Convert IDs to strings to avoid integer overflow issues with backend
+    const notificationIdsAsStrings = notificationIds.map(id => id.toString());
+
     try {
         const token = await getAccessTokenSilently();
         await axios.post(
             'http://localhost:4000/notifications/read',
-            { notificationIds },
+            { notificationIds: notificationIdsAsStrings },
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -157,7 +160,7 @@ useEffect(() => {
         // Update local state AFTER the API call completes
         setNotifications(prev => 
             prev.map(notification => 
-                notificationIds.includes(notification.id) 
+                notificationIdsAsStrings.includes(notification.id.toString()) 
                     ? { ...notification, read: true } 
                     : notification
             )
@@ -165,7 +168,7 @@ useEffect(() => {
         
         // Set the exact count instead of decrementing to avoid race conditions
         const newUnreadCount = (prev => {
-            const remainingUnread = prev.filter(n => !n.read && !notificationIds.includes(n.id));
+            const remainingUnread = prev.filter(n => !n.read && !notificationIdsAsStrings.includes(n.id.toString()));
             return remainingUnread.length;
         })(notifications);
         

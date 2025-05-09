@@ -380,6 +380,11 @@ useEffect(() => {
     }
   };
 
+  const updateLinkColors = () =>{
+    linksGroup.selectAll(".link")
+      .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
+  }
+
   const getNodeStroke = (status) => {
     if (status === "active-unassigned" || status === "active-assigned")
       return "#32CD32";
@@ -663,64 +668,87 @@ useEffect(() => {
       });
     });
 
-    // Create links array from dependencies
-    const links = [];
+    // 1. First create your links array with IDs for reference
+const links = [];
+let linkId = 0; // Give each link a unique ID
 
-    data.forEach((source) => {
-      const sourceNode = graph[source.id];
-      if (!sourceNode) return;
+data.forEach((source) => {
+  const sourceNode = graph[source.id];
+  if (!sourceNode) return;
 
-      // For All Tasks view, include all dependencies
-      if (activeCategory === "All Tasks") {
-        source.dependencies.forEach((depId) => {
-          const targetNode = graph[depId];
-          if (targetNode) {
-            links.push({
-              source: { x: sourceNode.x, y: sourceNode.y },
-              target: { x: targetNode.x, y: targetNode.y },
-              type: "internal",
-            });
-          }
-        });
-      } else {
-        // Original logic for skill-specific views
-        const internalDeps = source.dependencies.filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id === activeSkillId;
-        });
-
-        internalDeps.forEach((depId) => {
-          const targetNode = graph[depId];
-          if (targetNode) {
-            links.push({
-              source: { x: sourceNode.x, y: sourceNode.y },
-              target: { x: targetNode.x, y: targetNode.y },
-              type: "internal",
-            });
-          }
+  // For All Tasks view, include all dependencies
+  if (activeCategory === "All Tasks") {
+    source.dependencies.forEach((depId) => {
+      const targetNode = graph[depId];
+      if (targetNode) {
+        links.push({
+          id: `link-${linkId++}`, // Unique ID for reference
+          source: sourceNode,
+          target: targetNode,
+          type: "internal",
+          targetStatus: targetNode.status // Store the actual status string
         });
       }
     });
+  } else {
+    // For skill-specific views
+    const internalDeps = source.dependencies.filter((depId) => {
+      const depTask = allTasks[depId];
+      return depTask && depTask.skill_id === activeSkillId;
+    });
 
-    // Draw links first (so they appear under nodes)
-    linksGroup
-      .selectAll(".link")
-      .data(links)
-      .enter()
-      .append("path")
-      .attr("class", "link")
-      .attr("fill", "none")
-      .attr("stroke", (d) => (d.type === "internal" ? "#999" : "#666"))
-      .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
-      .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
-      .attr("d", (d) => {
-        return `M${d.source.x},${d.source.y} C${d.source.x},${
-          (d.source.y + d.target.y) / 2
-        } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
-          d.target.y
-        }`;
-      });
+    internalDeps.forEach((depId) => {
+      const targetNode = graph[depId];
+      if (targetNode) {
+        links.push({
+          id: `link-${linkId++}`, // Unique ID for reference  
+          source: sourceNode,
+          target: targetNode,
+          type: "internal",
+          targetStatus: targetNode.status // Store the actual status string
+        });
+      }
+    });
+  }
+});
 
+// 2. Now create the link elements
+const linkElements = linksGroup
+  .selectAll(".link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("id", d => d.id) // Set the unique ID
+  .attr("class", "link")
+  .attr("fill", "none")
+  .attr("stroke", "#999") // Default color - we'll update specific ones in the next step
+  .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
+  .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
+  .attr("d", (d) => {
+    return `M${d.source.x},${d.source.y} C${d.source.x},${
+      (d.source.y + d.target.y) / 2
+    } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
+      d.target.y
+    }`;
+  });
+
+// 3. Now go through and update the colors for completed tasks directly
+links.forEach(link => {
+  if (link.targetStatus === "completed") {
+    d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
+  }
+});
+
+// 4. For debugging, log links that should be pink
+console.log("Links that should be pink:", 
+  links.filter(link => link.targetStatus === "completed")
+    .map(link => ({
+      id: link.id,
+      sourceId: link.source.id,
+      targetId: link.target.id,
+      targetStatus: link.targetStatus
+    }))
+);
     // Only process external dependencies if we're not in All Tasks view
     if (activeCategory !== "All Tasks") {
       Object.values(graph).forEach((node) => {
@@ -1316,6 +1344,7 @@ useEffect(() => {
           const result = await handleTaskAction(formData, action);
           if (!result.error) {
             await refreshTasks(); // Refresh after successful submit
+            updateLinkColors();
           }
           return result;
         }}

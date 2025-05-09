@@ -332,8 +332,12 @@ router.put('/:taskId/approve', async (req, res) => {
   }
 });
 
+router.put("/:taskId/reject", taskController.rejectTask);
+
 router.post('/generate-tasks', taskController.generateTasks);
 
-router.put("/:taskId/reject", taskController.rejectTask);
+router.post('/:taskId/granularize', taskController.granularizeTask);
+
+
 
 export default router;
