@@ -336,7 +336,7 @@ router.put("/:taskId/reject", taskController.rejectTask);
 
 router.post('/generate-tasks', taskController.generateTasks);
 
-router.post('/:taskId/granularize', taskController.granularizeTask);
+router.post('/:taskId/granularize', taskController.granularizeTasks);
 
 
 

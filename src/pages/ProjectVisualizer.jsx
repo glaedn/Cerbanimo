@@ -1,4 +1,3 @@
-// Fix for the issue where no tasks display in any tab
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import TaskEditor from "./TaskEditor";
@@ -39,7 +38,7 @@ const ProjectVisualizer = () => {
   const [showCommunityProposalPopup, setShowCommunityProposalPopup] = useState(false);
   const [userCommunities, setUserCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
-  
+  const [loading, setLoading] = useState(false);
 
   const [interests, setInterests] = useState([]);
 
@@ -82,6 +81,52 @@ const ProjectVisualizer = () => {
       setUserCommunities([]);
     }
   };
+
+  // Function to handle granularization of tasks
+  const handleGranularizeTasks = async (projectId) => {
+    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the project.');
+    if (!confirm) return;
+
+    setLoading(true);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
+
+      const response = await fetch(`http://localhost:4000/tasks/${projectId}/granularize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ projectId }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to granularize task: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Granularization response:', data);
+
+      if (data.success) {
+        // Refresh tasks after successful granularization
+        await fetchTasks();
+        alert('Task granularization successful!');
+      } else {
+        alert('Task granularization failed: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error granularizing task:', error);
+      alert('Error granularizing task: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  
+  };
+
 
   // Add useEffect to handle initial communities fetch
   useEffect(() => {
@@ -1089,7 +1134,18 @@ console.log("Links that should be pink:",
           >
             + New Task
           </button>
+          
         )}
+        <button
+            className={`new-task-button ${loading ? 'disabled' : ''}`}
+            onClick={() => {
+              console.log("Button clicked");
+              handleGranularizeTasks(projectId);
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Granularizing...' : 'Granularize all project tasks'}
+          </button>
         {project?.community_id === null && (
           <button
           className="community-proposal-button"
