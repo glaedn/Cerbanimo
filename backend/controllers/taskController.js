@@ -965,64 +965,192 @@ const generateTasks = async (req, res) => {
   }
 };
 
-const granularizeTask = async (req, res) => {
-  const { taskId } = req.params;
+const granularizeTasks = async (req, res) => {
+  const { projectId } = req.body;
+
+  // Define sanitizeSubtasks first
+  const sanitizeSubtasks = (tasks, projectId) => {
+    let nextId = 1;
+    const taskIdToName = {};
+    const taskNameToTempId = {};
+  
+    tasks.forEach(task => {
+      if (!task.id) {
+        task.tempId = nextId++; // Store temp ID separately
+      } else {
+        task.tempId = task.id;
+        nextId = Math.max(nextId, task.id + 1);
+      }
+      task.project_id = projectId;
+      task.reward_tokens = task.reward_tokens ?? 100;
+      task.skill_id = task.skill_id ?? null;
+  
+      taskIdToName[task.tempId] = task.name;
+      taskNameToTempId[task.name] = task.tempId;
+    });
+  
+    tasks.forEach(task => {
+      if (!Array.isArray(task.dependencies)) {
+        task.dependencies = [];
+      } else {
+        task.dependencies = task.dependencies.map(dep => {
+          if (typeof dep === 'string') return taskNameToTempId[dep] || null;
+          return typeof dep === 'number' ? dep : null;
+        }).filter(dep => dep !== null);
+      }
+    });
+  
+    return {
+      tasks,
+      taskIdToName
+    };
+  };
+
+  if (!projectId) {
+    return res.status(400).json({ success: false, error: 'Missing projectId' });
+  }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Fetch original task
+    // Fetch all tasks in the project
     const taskResult = await client.query(
-      'SELECT id, project_id, name, description, skill_id, dependencies FROM tasks WHERE id = $1',
-      [taskId]
+      `SELECT id, project_id, name, description, skill_id, dependencies 
+       FROM tasks WHERE project_id = $1`,
+      [projectId]
     );
-    const task = taskResult.rows[0];
+    const tasks = taskResult.rows;
 
-    if (!task) {
+    if (tasks.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ success: false, error: 'Task not found' });
+      return res.status(404).json({ success: false, error: 'No tasks found for this project' });
     }
 
-    // Generate subtasks
-    const subtasks = await autoGenerateSubtasks(task.name, task.description, task.skill_id);
+    // Optionally fetch project metadata (optional but helpful for LLM context)
+    const projectResult = await client.query(
+      `SELECT id, name, description, tags, creator_id FROM projects WHERE id = $1`,
+      [projectId]
+    );
+    const project = projectResult.rows[0];
 
-    // Delete original task
-    await client.query('DELETE FROM tasks WHERE id = $1', [taskId]);
+    // Generate new granular subtasks for ALL tasks at once (batch)
+    const inputs = tasks.map(task => ({
+      name: task.name,
+      description: task.description,
+      skill_id: task.skill_id
+    }));
 
-    // Insert new smaller tasks
-    const insertPromises = subtasks.map(subtask =>
+    const subtasks = await autoGenerateSubtasks(
+      inputs,
+      project.name,
+      project.description,
+      project.tags || [],
+      project.creator_id
+    );
+
+    // Now we can call sanitizeSubtasks since it's defined and we have subtasks
+    const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(subtasks, projectId);
+
+    // Delete all original tasks
+    await client.query(
+      'DELETE FROM tasks WHERE project_id = $1',
+      [projectId]
+    );
+
+    // Step 1: Insert all subtasks without dependencies
+    const subtaskMetadata = []; // store name + original dependencies + other info
+
+    sanitizedSubtasks.forEach(subtask => {
+      subtaskMetadata.push({
+        projectId: subtask.project_id,
+        name: subtask.name,
+        description: subtask.description,
+        skill_id: subtask.skill_id || null,
+        reward_tokens: subtask.reward_tokens ?? 100,
+        status: 'inactive-unassigned',
+        originalDependencies: subtask.dependencies || [],
+        dependencyNames: subtask.dependencies.map(id => taskIdToName[id]).filter(Boolean)
+      });
+    });
+
+    // Insert subtasks (no dependencies yet)
+    const insertPromises = subtaskMetadata.map(meta =>
       client.query(
-        `INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies) 
-         VALUES ($1, $2, $3, $4, $5, $6::int[]) RETURNING *`,
+        `INSERT INTO tasks (project_id, name, description, skill_id, status, reward_tokens, dependencies)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id, name`,
         [
-          task.project_id,
-          subtask.name,
-          subtask.description,
-          subtask.skill_id || task.skill_id,
-          'inactive-unassigned',
-          Array.isArray(subtask.dependencies) ? subtask.dependencies : []
+          meta.projectId,
+          meta.name,
+          meta.description,
+          meta.skill_id,
+          meta.status,
+          meta.reward_tokens,
+          [] // empty dependencies for now
         ]
       )
     );
 
     const insertedResults = await Promise.all(insertPromises);
-    const insertedSubtasks = insertedResults.map(result => result.rows[0]);
 
-    await client.query('COMMIT');
+    const nameToRealId = {};
+    insertedResults.forEach(result => {
+      const row = result.rows[0];
+      nameToRealId[row.name] = row.id;
+    });
 
-    res.json({ success: true, deletedTask: task, newTasks: insertedSubtasks });
+    // Debug: Log name to real ID mapping
+    console.log("Name to Real ID mapping:", nameToRealId);
+
+    const updatePromises = [];
+subtaskMetadata.forEach((meta, index) => {
+  const realTaskId = insertedResults[index].rows[0].id;
+  
+  // Convert temp IDs to names, then names to real IDs
+  const resolvedDeps = meta.originalDependencies
+    .map(tempId => {
+      const depName = taskIdToName[tempId];
+      return nameToRealId[depName];
+    })
+    .filter(depId => depId !== undefined);
+
+  console.log(`Resolved dependencies for task "${meta.name}" (ID: ${realTaskId}):`, resolvedDeps);
+
+  updatePromises.push(
+    client.query(
+      `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
+      [resolvedDeps, realTaskId]
+    )
+  );
+});
+
+await Promise.all(updatePromises);
+
+// Log the results of the subtasks inserted
+const insertedSubtasks = insertedResults.map(result => result.rows[0]);
+
+await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      project: project || { id: projectId },
+      deletedTasks: tasks,
+      newTasks: insertedSubtasks
+    });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Granularize task failed:', error);
+    console.error('Granularize project tasks failed:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   } finally {
     client.release();
   }
 };
 
+
+
+
 export default {
-  granularizeTask,
+  granularizeTasks,
   generateTasks,
   getAllTasks,
   getRelevantTasks,

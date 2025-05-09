@@ -19,25 +19,32 @@ const parseLLMResponse = (text) => {
   return data.tasks;
 };
 
-export const autoGenerateSubtasks = async (taskName, taskDescription, skillId) => {
+export const autoGenerateSubtasks = async (tasks,projectName, projectDescription, tags, creator_id) => {
+  const formattedTasks = tasks.map((task, index) => {
+    return `Task ${index + 1}:
+Name: ${task.name}
+Description: ${task.description}
+Related Skill ID: ${task.skill_id || 'None'}`
+  }).join('\n\n');
+
   const prompt = `
-You are an expert project manager. Your job is to break complex tasks into smaller, manageable subtasks.
+You are an expert project manager and task engineer. Your job is to break complex tasks into smaller, manageable subtasks that can be independently assigned.
 
-Task to granularize:
-Name: ${taskName}
-Description: ${taskDescription}
-Related Skill ID: ${skillId}
-
-Return a list of subtasks in this JSON format:
-
+For each task below, return a **JSON array** of objects like this format:
 [
   {
     "name": "Subtask name",
-    "description": "Subtask description",
-    "skill_id": (required, number),
-    "dependencies": [array of subtask names that are dependencies, optional]
-  }
+    "description": "Brief description",
+    "skill_id": "Optional related skill ID or null",
+    "dependencies": [Optional array of subtask names this subtask depends on]
+  },
+  ...
 ]
+
+Tasks to granularize:
+
+${formattedTasks}
+
 Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
 - Maintain **relationships**: 
