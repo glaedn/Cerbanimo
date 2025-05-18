@@ -152,16 +152,6 @@ const SiteNav = () => {
                     </button>
                 )}
             </div>
-          {/* Idle Space Game Tray */}
-          <div className={`game-tray-toggle ${isGameOpen ? 'open' : ''}`} onClick={toggleGameTray}>
-    <div className="game-tab-icons">
-  <div className="emoji-icon">🪐</div>
-</div>
-</div>
-
-<div className={`game-tray ${isGameOpen ? 'open' : ''}`}>
-    <IdleSpaceGame />
-</div> 
         </nav>
     );
 };

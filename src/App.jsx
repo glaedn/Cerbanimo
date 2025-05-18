@@ -118,6 +118,14 @@ const App = () => {
             </PrivateRoute>
           }
         />
+         <Route
+          path="/Visualizer/:projectId/:taskId"
+          element={
+            <PrivateRoute>
+              <ProjectVisualizer />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/idlespacegame"
           element={
