@@ -338,6 +338,36 @@ router.post('/generate-tasks', taskController.generateTasks);
 
 router.post('/:taskId/granularize', taskController.granularizeTasks);
 
+router.put('/:taskId/review', async (req, res) => {
+  const { taskId } = req.params;
+  const { userId, action } = req.body; // 'approve' or 'reject'
+  const io = req.app.get('io');
 
+  try {
+    const result = await taskController.processReview(taskId, userId, action, io);
+    
+    if (result.error) {
+      return res.status(result.status || 500).json({ error: result.error });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error in review route:', error);
+    return res.status(500).json({ error: 'Server error processing review' });
+  }
+});
+
+// Route to get tasks the user is a reviewer for
+router.get('/reviewer/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const tasks = await taskController.getReviewerTasks(userId);
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error('Error fetching reviewer tasks:', error);
+    res.status(500).json({ error: 'Failed to fetch reviewer tasks' });
+  }
+});
 
 export default router;

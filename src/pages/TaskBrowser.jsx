@@ -9,6 +9,7 @@ const TaskBrowser = () => {
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [tasks, setTasks] = useState([]);
   const [acceptedTasks, setAcceptedTasks] = useState([]);
+  const [approvalTasks, setApprovalTasks] = useState([]);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
 
@@ -76,8 +77,8 @@ const TaskBrowser = () => {
           // Sort tasks based on shared project tags and user interests
           const sortedTasks = tasksResponse.data.sort((a, b) => {
             // Count shared tags for Task A and Task B, normalized for comparison
-            const sharedA = a.projectTags?.filter(tag => usersInterests.includes(tag.toLowerCase().trim())).length || 0;
-            const sharedB = b.projectTags?.filter(tag => usersInterests.includes(tag.toLowerCase().trim())).length || 0;
+            const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
+            const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
       
             console.log(`Shared Tags for Task A: ${sharedA}, Shared Tags for Task B: ${sharedB}`);
       
@@ -87,8 +88,12 @@ const TaskBrowser = () => {
           // Add shared tags to each task for display purposes
           const tasksWithSharedTags = sortedTasks.map(task => ({
             ...task,
-            sharedTags: task.projectTags?.filter(tag => usersInterests.includes(tag.toLowerCase().trim())) || [],
-            sharedTagsCount: task.projectTags?.filter(tag => usersInterests.includes(tag.toLowerCase().trim())).length || 0,
+            sharedTags: Array.isArray(task.projectTags)
+              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim()))
+              : [],
+            sharedTagsCount: Array.isArray(task.projectTags)
+              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length
+              : 0,
           }));
       
           // Log the tasks with shared tags
@@ -132,8 +137,36 @@ const TaskBrowser = () => {
         }
       };
 
+      const fetchApprovalTasks = async () => {
+        try {
+          const token = await getAccessTokenSilently({
+            audience: 'http://localhost:4000',
+            scope: 'openid profile email read:profile',
+          });
+
+          const userIdString = userId ? userId.toString() : null;
+          console.log("Fetching review tasks for userId:", userIdString);
+
+          if (userIdString) {
+            const approvalResponse = await axios.get(`http://localhost:4000/tasks/reviewer/${userIdString}`, {
+              params: { userId: userIdString },
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            console.log("Review Tasks Response:", approvalResponse.data);
+            setApprovalTasks(approvalResponse.data);
+          } else {
+            console.warn("No user ID available to fetch review tasks");
+          }
+        } catch (err) {
+          console.error('Error fetching review tasks:', err);
+          setError(`Failed to fetch review tasks: ${err.response?.data?.message || err.message}`);
+        }
+      };
+
       fetchProfileAndTasks();
       fetchAcceptedTasks();
+      fetchApprovalTasks();
     }
   }, [isAuthenticated, getAccessTokenSilently, user, userId]);
 
@@ -178,6 +211,7 @@ const TaskBrowser = () => {
           </List>
         </Paper>
       </Box>
+      
       <Box flex={1} className="task-browser-container">
         <Typography variant="h4" gutterBottom className="task-title">
           Accepted Tasks
@@ -209,6 +243,46 @@ const TaskBrowser = () => {
               ))
             ) : (
               <Typography className="no-tasks">No accepted tasks yet.</Typography>
+            )}
+          </List>
+        </Paper>
+      </Box>
+      
+      <Box flex={1} className="task-browser-container">
+        <Typography variant="h4" gutterBottom className="task-title">
+          Review Tasks
+        </Typography>
+        <Paper elevation={5} className="task-list">
+          <List>
+            {approvalTasks.length > 0 ? (
+              approvalTasks.map((task) => (
+                <ListItem key={task.id} divider className="task-item">
+                  <ListItemText
+                    primary={<span className="task-name">{task.name}</span>}
+                    secondary={
+                      <>
+                        <Typography component="span" variant="body2" className="task-description">
+                          {task.description}
+                        </Typography>
+                        <br />
+                        <Typography component="span" variant="body2" className="task-status">
+                          {`📝 Needs Review (${task.approvals || 0} approvals, ${task.rejections || 0} rejections)`}
+                        </Typography>
+                        <br />
+                        <Link href={`/visualizer/`} className="task-link">
+                          🚀 View Project
+                        </Link>
+                        <br />
+                        <Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">
+                          ✏️ Review Task
+                        </Link>
+                      </>
+                    }
+                  />
+                </ListItem>
+              ))
+            ) : (
+              <Typography className="no-tasks">No tasks to review.</Typography>
             )}
           </List>
         </Paper>

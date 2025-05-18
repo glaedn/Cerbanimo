@@ -12,7 +12,7 @@ import { Autocomplete, TextField } from "@mui/material";
 const ProjectVisualizer = () => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
-  const { projectId } = useParams();
+  const { projectId, taskId } = useParams();
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
@@ -39,8 +39,9 @@ const ProjectVisualizer = () => {
   const [userCommunities, setUserCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const [popupLaunched, setPopupLaunched] = useState(false);
   const [interests, setInterests] = useState([]);
+  const linksGroupRef = useRef(null);
 
   const fetchUserCommunities = async () => {
     if (!userId) {
@@ -197,6 +198,7 @@ const ProjectVisualizer = () => {
       console.error('Error updating tags:', error);
     }
   };
+
 
   useEffect(() => {
     const fetchInterests = async () => {
@@ -425,9 +427,12 @@ useEffect(() => {
     }
   };
 
-  const updateLinkColors = () =>{
-    linksGroup.selectAll(".link")
-      .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
+  const updateLinkColors = () => {
+    if (linksGroupRef.current) {
+      linksGroupRef.current
+        .selectAll(".link")
+        .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
+    }
   }
 
   const getNodeStroke = (status) => {
@@ -587,6 +592,7 @@ useEffect(() => {
     // Create separate groups for links and nodes to control layering
     // Links should be drawn first (below nodes)
     const linksGroup = mainGroup.append("g").attr("class", "links-group");
+    linksGroupRef.current = linksGroup; // Store the D3 selection
     const nodesGroup = mainGroup.append("g").attr("class", "nodes-group");
     const addButtonsGroup = mainGroup
       .append("g")
@@ -1037,6 +1043,26 @@ console.log("Links that should be pink:",
   ]);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
+
+    useEffect(() => {
+    if (taskId && !popupLaunched) {
+      // Find the task in the tasks array
+      const task = tasks.find(t => t.id === parseInt(taskId, 10));
+      if (task) {
+        // Set the current task and skill
+        setTaskForm(task);
+        setPopupLaunched(true);
+        setActiveSkillId(task.skill_id);
+        setShowTaskPopup(true);
+        // Find and set the active category (skill name)
+        const skill = skills.find(s => s.id === task.skill_id);
+        if (skill) {
+          setActiveCategory(skill.name);
+        }
+      }
+    }
+  }, [taskId, tasks, skills]);
+
   return (
     <div
       className="skill-hierarchy-container"
@@ -1047,69 +1073,69 @@ console.log("Links that should be pink:",
         {/* Left shadow - fixed position */}
         <div className="scroll-shadow left-shadow" />
         <div
-  ref={tabsContainerRef}
-  className="category-tabs"
-  onMouseDown={handleMouseDown}
-  onMouseLeave={handleTabsLeave}
-  onMouseUp={handleMouseUp}
-  onMouseMove={handleMouseMove}
->
-  {/* Add the All Tasks tab first */}
-  <button
-    key="all-tasks"
-    className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
-    onClick={() => {
-      setActiveCategory("All Tasks");
-      setActiveSkillId(null); // No specific skill for All Tasks view
-    }}
-    style={{ flex: "0 0 auto" }}
-  >
-    All Tasks
-    {activeCategory === "All Tasks" && (
-      <span className="active-indicator" />
-    )}
-  </button>
+          ref={tabsContainerRef}
+          className="category-tabs"
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleTabsLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+        >
+          {/* Add the All Tasks tab first */}
+          <button
+            key="all-tasks"
+            className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
+            onClick={() => {
+              setActiveCategory("All Tasks");
+              setActiveSkillId(null); // No specific skill for All Tasks view
+            }}
+            style={{ flex: "0 0 auto" }}
+          >
+            All Tasks
+            {activeCategory === "All Tasks" && (
+              <span className="active-indicator" />
+            )}
+          </button>
 
-{usedSkills.map((category, index) => {
-  const colorClass = colorClasses[index % colorClasses.length];
-  return (
-    <button
-      key={category.id}
-      className={`tab ${colorClass} ${
-        activeCategory === category.name ? "active" : ""
-      }`}
-      onClick={() => {
-        const skillId = skills.find(s => s.name === category.name)?.id;
-        console.log(`Selected tab: ${category.name}, Skill ID: ${skillId}`); // Debug log
-        setActiveCategory(category.name);
-        setActiveSkillId(skillId);
-      }}
-      style={{ flex: "0 0 auto" }}
-    >
-      {category.name}
-      {activeCategory === category.name && (
-        <span className="active-indicator" />
-      )}
-    </button>
-  );
-})}
-  {isEditMode && (
-    <button
-      className="tab new-skill-tab"
-      onClick={() => {
-        setTaskForm({
-          ...initialForm,
-          project_id: projectId,
-          skill_id: "" // No skill pre-selected
-        });
-        setShowTaskPopup(true);
-      }}
-      style={{ flex: "0 0 auto" }}
-    >
-      + New Skill
-    </button>
-  )}
-</div>
+          {usedSkills.map((category, index) => {
+            const colorClass = colorClasses[index % colorClasses.length];
+            return (
+              <button
+                key={category.id}
+                className={`tab ${colorClass} ${
+                  activeCategory === category.name ? "active" : ""
+                }`}
+                onClick={() => {
+                  const skillId = skills.find(s => s.name === category.name)?.id;
+                  console.log(`Selected tab: ${category.name}, Skill ID: ${skillId}`); // Debug log
+                  setActiveCategory(category.name);
+                  setActiveSkillId(skillId);
+                }}
+                style={{ flex: "0 0 auto" }}
+              >
+                {category.name}
+                {activeCategory === category.name && (
+                  <span className="active-indicator" />
+                )}
+              </button>
+            );
+          })}
+          {isEditMode && (
+            <button
+              className="tab new-skill-tab"
+              onClick={() => {
+                setTaskForm({
+                  ...initialForm,
+                  project_id: projectId,
+                  skill_id: "" // No skill pre-selected
+                });
+                setShowTaskPopup(true);
+              }}
+              style={{ flex: "0 0 auto" }}
+            >
+              + New Skill
+            </button>
+          )}
+        </div>
         <div className="scroll-shadow right-shadow" />
       </div>
 
@@ -1123,51 +1149,50 @@ console.log("Links that should be pink:",
           height={svgDimensions.height}
         ></svg>
         {project?.creator_id === Number(userId) && (
-          <div className= "edit-buttons">
+          <div className="edit-buttons">
             {isEditMode && (
-          <button
-            className="new-task-button"
-            onClick={() => {
-              console.log("Button clicked");
-              handleAddTask();
-            }}
-          >
-            + New Task
-          </button>
-          
+              <button
+                className="new-task-button"
+                onClick={() => {
+                  console.log("Button clicked");
+                  handleAddTask();
+                }}
+              >
+                + New Task
+              </button>
+            )}
+            <button
+              className={`new-task-button ${loading ? 'disabled' : ''}`}
+              onClick={() => {
+                console.log("Button clicked");
+                handleGranularizeTasks(projectId);
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Granularizing...' : 'Granularize all project tasks'}
+            </button>
+            {project?.community_id === null && (
+              <button
+                className="community-proposal-button"
+                onClick={() => {
+                  fetchUserCommunities();
+                  setShowCommunityProposalPopup(true);
+                  console.log("community proposal popup: ", showCommunityProposalPopup);
+                }}
+              >
+                Propose to Community
+              </button>
+            )}
+
+            <button
+              className="edit-mode-button"
+              onClick={() => setIsEditMode(!isEditMode)}
+            >
+              {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
+            </button>
+          </div>
         )}
-        <button
-            className={`new-task-button ${loading ? 'disabled' : ''}`}
-            onClick={() => {
-              console.log("Button clicked");
-              handleGranularizeTasks(projectId);
-            }}
-            disabled={loading}
-          >
-            {loading ? 'Granularizing...' : 'Granularize all project tasks'}
-          </button>
-        {project?.community_id === null && (
-          <button
-          className="community-proposal-button"
-          onClick={() => {
-            fetchUserCommunities();
-            setShowCommunityProposalPopup(true);
-            console.log("community proposal popup: ", showCommunityProposalPopup);
-          }}
-        >
-          Propose to Community
-        </button>
-          )}
-          
-          <button
-          className="edit-mode-button"
-          onClick={() => setIsEditMode(!isEditMode)}
-        >
-          {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
-        </button>
-        </div>
-        )}
-        
+
       </div>
 
       {hoveredNode && (
@@ -1251,6 +1276,18 @@ console.log("Links that should be pink:",
                       </ul>
                     </div>
                   )}
+
+                {/* Reviewer info for this specific task */}
+                {allTasks[hoveredNode.id]?.reviewer_ids && (
+                  <div>
+                    <p>Reviewers:</p>
+                    <ul>
+                      {allTasks[hoveredNode.id].reviewer_ids.map((rid, idx) => (
+                        <li key={idx}>{rid}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1281,116 +1318,116 @@ console.log("Links that should be pink:",
           </div>
         </div>
         <div className="vproject-tags">
-  {isEditMode ? (
-    <Autocomplete
-      multiple
-      freeSolo
-      options={interests || []}
-      value={project?.tags || []}
-      onChange={(event, newValue) => {
-        handleUpdateTags(newValue);
-      }}
-      renderTags={(value, getTagProps) =>
-        value.map((option, index) => (
-          <Chip
-            {...getTagProps({ index })}
-            key={index}
-            label={option}
-            className="tag-chip"
-            variant="outlined"
-            style={{
-              backgroundColor: "#000000",
-              color: "#FFF",
-              margin: "2px",
-              fontSize: "12px",
-              borderRadius: "4px",
-              padding: "5px 10px",
-            }}
-            onDelete={() => {
-              const newTags = [...(project?.tags || [])];
-              newTags.splice(index, 1);
-              handleUpdateTags(newTags);
-            }}
-          />
-        ))
-      }
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          variant="outlined"
-          placeholder="Add tags..."
-          size="small"
-          InputProps={{
-            ...params.InputProps,
-            style: {
-              color: 'white',
-              backgroundColor: '#222',
-              borderRadius: '4px',
-              padding: '4px',
-            },
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: 'transparent',
-              },
-              '&:hover fieldset': {
-                borderColor: '#555',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#4dabf7',
-              },
-            },
-          }}
-        />
-      )}
-      sx={{
-        '& .MuiAutocomplete-popupIndicator': { color: 'white' },
-        '& .MuiAutocomplete-clearIndicator': { color: 'white' },
-      }}
-      componentsProps={{
-        paper: {
-          sx: {
-            backgroundColor: '#222',
-            color: 'white',
-            '& .MuiAutocomplete-option': {
-              '&[aria-selected="true"]': {
-                backgroundColor: 'rgba(77, 171, 247, 0.3)',
-              },
-              '&[aria-selected="true"].Mui-focused': {
-                backgroundColor: 'rgba(77, 171, 247, 0.3)',
-              },
-            },
-          },
-        },
-      }}
-    />
-  ) : (
-    project?.tags?.map((tag, index) => (
-      <Chip
-        key={index}
-        label={tag}
-        className="tag-chip"
-        variant="outlined"
-        style={{
-          backgroundColor: "#000000",
-          color: "#FFF",
-          margin: "2px",
-          fontSize: "12px",
-          borderRadius: "4px",
-          padding: "5px 10px",
-        }}
-      />
-    ))
-  )}
-</div>
+          {isEditMode ? (
+            <Autocomplete
+              multiple
+              freeSolo
+              options={interests || []}
+              value={project?.tags || []}
+              onChange={(event, newValue) => {
+                handleUpdateTags(newValue);
+              }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={index}
+                    label={option}
+                    className="tag-chip"
+                    variant="outlined"
+                    style={{
+                      backgroundColor: "#000000",
+                      color: "#FFF",
+                      margin: "2px",
+                      fontSize: "12px",
+                      borderRadius: "4px",
+                      padding: "5px 10px",
+                    }}
+                    onDelete={() => {
+                      const newTags = [...(project?.tags || [])];
+                      newTags.splice(index, 1);
+                      handleUpdateTags(newTags);
+                    }}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="Add tags..."
+                  size="small"
+                  InputProps={{
+                    ...params.InputProps,
+                    style: {
+                      color: 'white',
+                      backgroundColor: '#222',
+                      borderRadius: '4px',
+                      padding: '4px',
+                    },
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: 'transparent',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#555',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#4dabf7',
+                      },
+                    },
+                  }}
+                />
+              )}
+              sx={{
+                '& .MuiAutocomplete-popupIndicator': { color: 'white' },
+                '& .MuiAutocomplete-clearIndicator': { color: 'white' },
+              }}
+              componentsProps={{
+                paper: {
+                  sx: {
+                    backgroundColor: '#222',
+                    color: 'white',
+                    '& .MuiAutocomplete-option': {
+                      '&[aria-selected="true"]': {
+                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
+                      },
+                      '&[aria-selected="true"].Mui-focused': {
+                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
+                      },
+                    },
+                  },
+                },
+              }}
+            />
+          ) : (
+            project?.tags?.map((tag, index) => (
+              <Chip
+                key={index}
+                label={tag}
+                className="tag-chip"
+                variant="outlined"
+                style={{
+                  backgroundColor: "#000000",
+                  color: "#FFF",
+                  margin: "2px",
+                  fontSize: "12px",
+                  borderRadius: "4px",
+                  padding: "5px 10px",
+                }}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <TaskEditor
         open={showTaskPopup}
         onClose={() => {
           setShowTaskPopup(false);
-          refreshTasks(); // Refresh when closing
+          refreshTasks();
         }}
         projectId={projectId}
         taskForm={taskForm}
@@ -1399,7 +1436,7 @@ console.log("Links that should be pink:",
           const action = formData.id ? 'update' : 'create'; 
           const result = await handleTaskAction(formData, action);
           if (!result.error) {
-            await refreshTasks(); // Refresh after successful submit
+            await refreshTasks();
             updateLinkColors();
           }
           return result;
@@ -1408,6 +1445,7 @@ console.log("Links that should be pink:",
         isEdit={isEditMode}
         currentUser={user}
         projectCreatorId={project?.creator_id}
+        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
       />
 
       <div className="legend">
@@ -1453,53 +1491,53 @@ console.log("Links that should be pink:",
         </div>
       </div>
       {showCommunityProposalPopup && (
-  <div className="cyber-modal-overlay">
-    <div className="cyber-modal">
-      <div className="cyber-border">
-        <h3 className="cyber-title">Submit to Community</h3>
-        <div className="cyber-content">
-          <p>Select a community to submit this project to:</p>
-          
-          <Autocomplete
-            options={userCommunities}
-            getOptionLabel={(option) => option.name}
-            onChange={(event, newValue) => setSelectedCommunity(newValue)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Community"
-                variant="outlined"
-                fullWidth
-                className="cyber-input"
-              />
-            )}
-            sx={{
-              margin: '20px 0',
-              '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
-              '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
-            }}
-          />
-          
-          <div className="cyber-button-group">
-            <button
-              onClick={() => setShowCommunityProposalPopup(false)}
-              className="cyber-button cancel"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmitCommunityProposal}
-              className="cyber-button"
-              disabled={!selectedCommunity}
-            >
-              Submit Proposal
-            </button>
+        <div className="cyber-modal-overlay">
+          <div className="cyber-modal">
+            <div className="cyber-border">
+              <h3 className="cyber-title">Submit to Community</h3>
+              <div className="cyber-content">
+                <p>Select a community to submit this project to:</p>
+
+                <Autocomplete
+                  options={userCommunities}
+                  getOptionLabel={(option) => option.name}
+                  onChange={(event, newValue) => setSelectedCommunity(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Community"
+                      variant="outlined"
+                      fullWidth
+                      className="cyber-input"
+                    />
+                  )}
+                  sx={{
+                    margin: '20px 0',
+                    '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+                    '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
+                  }}
+                />
+
+                <div className="cyber-button-group">
+                  <button
+                    onClick={() => setShowCommunityProposalPopup(false)}
+                    className="cyber-button cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitCommunityProposal}
+                    className="cyber-button"
+                    disabled={!selectedCommunity}
+                  >
+                    Submit Proposal
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 };

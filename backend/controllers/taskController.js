@@ -525,17 +525,19 @@ const approveTask = async (taskId, io) => {
   try {
     await client.query('BEGIN');
 
-    // Fetch task details - including assigned_user_ids
+    // Fetch task details including project and community info
     const taskQuery = `
-      SELECT reward_tokens, 
-             COALESCE(assigned_user_ids, ARRAY[]::integer[]) as assigned_user_ids,
-             skill_id, 
-             status,
-             project_id
-      FROM tasks
-      WHERE id = $1 FOR UPDATE;
+      SELECT t.reward_tokens, 
+             t.assigned_user_ids,
+             t.skill_id, 
+             t.status,
+             t.project_id,
+             p.community_id,
+             p.creator_id
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      WHERE t.id = $1 FOR UPDATE;
     `;
-
     const taskResult = await client.query(taskQuery, [taskId]);
 
     if (taskResult.rows.length === 0) {
@@ -543,8 +545,7 @@ const approveTask = async (taskId, io) => {
       throw new Error('Task not found');
     }
 
-    const { reward_tokens, assigned_user_ids, skill_id, status, project_id } = taskResult.rows[0];
-
+    const { reward_tokens, assigned_user_ids, skill_id, status, project_id, community_id, creator_id } = taskResult.rows[0];
 
     // Debug: Log the assigned users
     console.log(
@@ -597,7 +598,10 @@ const approveTask = async (taskId, io) => {
       return { error: "Cannot complete an unsubmitted task", status: 400 };
     }
 
-    const rewardPerUser = Math.floor(reward_tokens / assigned_user_ids.length);
+    // For now, each use is expected to have worked the same amount so each assigned user gets the full token amount
+    // below is code to calculate the reward per user if we need to split the tokens instead
+    //const rewardPerUser = Math.floor(reward_tokens / assigned_user_ids.length);
+    const rewardPerUser = reward_tokens;
 
     // Fetch the current unlocked_users field from the skills table
     const skillsQuery = `
@@ -687,31 +691,7 @@ const approveTask = async (taskId, io) => {
 
     await client.query(updateSkillsQuery, [updatedUsers, skill_id]);
 
-    //Query the task to get the project ID
-    const taskProjectQuery = `
-      SELECT project_id 
-      FROM tasks 
-      WHERE id = $1;
-    `;
-    const taskProjectResult = await client.query(taskProjectQuery, [taskId]);
-
-    // Update the projects' token fields
-    const updateSpentTokensQuery = `
-      UPDATE projects
-      SET used_tokens = used_tokens + $1, reserved_tokens = GREATEST(0, reserved_tokens - $1)
-      WHERE id = $2;
-    `;
-    console.log(
-      "Updating project with spent tokens:",
-      reward_tokens,
-      taskProjectResult.rows[0].project_id
-    );
-    await client.query(updateSpentTokensQuery, [
-      reward_tokens,
-      taskProjectResult.rows[0].project_id,
-    ]);
-
-    // Update cotokens and experience in users table
+    // First update cotokens and experience
     const updateUserTokensQuery = `
       UPDATE users 
       SET 
@@ -719,24 +699,100 @@ const approveTask = async (taskId, io) => {
         experience = array_append(experience, $2) 
       WHERE id = ANY($3);
     `;
-
     await client.query(updateUserTokensQuery, [
       rewardPerUser,
       taskId.toString(),
       assigned_user_ids,
     ]);
 
-    // Mark task as completed
+    // Now update token ledgers
+    if (community_id) {
+      // Distribute to community, project, and users
+      const ledgerUpdates = [
+        { type: 'community', id: community_id, tokens: reward_tokens },
+        { type: 'project', id: project_id, tokens: reward_tokens }
+      ];
+      
+      // Update creator's ledger
+      await client.query(`
+        UPDATE users
+        SET token_ledger = token_ledger || $1::jsonb
+        WHERE id = $2;
+      `, [JSON.stringify(ledgerUpdates), creator_id]);
+      
+    // In case we wanted to merge cotokens into the token ledger
+    //  // Update each assigned user's ledger with their share
+    //  for (const userId of assigned_user_ids) {
+    //    const userLedgerUpdate = {
+    //      type: 'cotokens',
+    //      id: taskId,
+    //      tokens: rewardPerUser
+    //    };
+    //    await client.query(`
+    //      UPDATE users
+    //      SET token_ledger = token_ledger || $1::jsonb
+    //      WHERE id = $2;
+    //    `, [JSON.stringify(userLedgerUpdate), userId]);
+    //  }
+    } else {
+      // Just project and users
+      const ledgerUpdate = {
+        type: 'project',
+        id: project_id,
+        tokens: reward_tokens
+      };
+      
+      // Update creator's ledger
+      await client.query(`
+        UPDATE users
+        SET token_ledger = token_ledger || $1::jsonb
+        WHERE id = $2;
+      `, [JSON.stringify(ledgerUpdate), creator_id]);
+      
+      // Update each assigned user's ledger with their share
+      for (const userId of assigned_user_ids) {
+        const userLedgerUpdate = {
+          type: 'task',
+          id: taskId,
+          tokens: rewardPerUser
+        };
+        await client.query(`
+          UPDATE users
+          SET token_ledger = token_ledger || $1::jsonb
+          WHERE id = $2;
+        `, [JSON.stringify(userLedgerUpdate), userId]);
+      }
+    }
+
+    // Update the projects' token fields (existing code remains)
+    const updateSpentTokensQuery = `
+      UPDATE projects
+      SET used_tokens = used_tokens + $1, reserved_tokens = GREATEST(0, reserved_tokens - $1)
+      WHERE id = $2;
+    `;
+    await client.query(updateSpentTokensQuery, [reward_tokens, project_id]);
+
+    // Potiential functionality to track community total rather than querying for it
+    // If community exists, update community tokens
+    //if (community_id) {
+    //  await client.query(`
+    //    UPDATE communities
+    //    SET total_tokens = total_tokens + ($1 * assigned_user_ids.length)
+    //    WHERE id = $2;
+    //  `, [reward_tokens, community_id]);
+    //}
+
+    // Mark task as completed (existing code remains)
     await client.query(
       `UPDATE tasks SET submitted = false, status = 'completed', assigned_user_ids = ARRAY[]::integer[] WHERE id = $1`,
       [taskId]
     );
 
-    await client.query("COMMIT");
-    return { success: true, message: "Task approved, rewards distributed" };
+    await client.query('COMMIT');
+    return { success: true, message: 'Task approved, rewards distributed' };
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Failed to approve task:", error);
+    await client.query('ROLLBACK');
+    console.error('Failed to approve task:', error);
     return { error: `Failed to complete task: ${error.message}`, status: 500 };
   } finally {
     client.release();
@@ -766,69 +822,175 @@ const resetAllSpentPoints = async () => {
   }
 };
 
+
 const submitTask = async (req, res, io) => {
   const { taskId } = req.params;
+  const { proofOfWorkLinks } = req.body;
+
+  const client = await pool.connect();
 
   try {
-    // Step 1: Update the task and get project owner in a single query
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    // Helper function to parse the unlocked_users array
+    const parseUnlockedUsers = (unlockedUsers) => {
+      if (!unlockedUsers || unlockedUsers.length === 0) return [];
+      
+      return unlockedUsers.map(entry => {
+        try {
+          // Handle various JSON formats
+          let parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+          if (typeof parsed === 'string') {
+            // Handle double-encoded JSON
+            parsed = JSON.parse(parsed.replace(/\\"/g, '"').replace(/^"{|}"$/g, ''));
+          }
+          return parsed;
+        } catch (e) {
+          console.error('Error parsing unlocked user entry:', e);
+          return null;
+        }
+      }).filter(Boolean);
+    };
+
+    // Step 1: Update the task and get project/community info in a single query
+    const result = await client.query(
       `UPDATE tasks t
-       SET submitted = TRUE, submitted_at = NOW(), status = 'submitted'
+       SET submitted = TRUE, 
+       submitted_at = NOW(), 
+       status = 'submitted',
+       proof_of_work_links = $2
        FROM projects p
        WHERE t.id = $1 AND p.id = t.project_id
-       RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id`,
-      [taskId]
+       RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id, 
+                 p.community_id, t.assigned_user_ids, t.skill_id`,
+      [taskId, proofOfWorkLinks || []]
     );
 
     if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: "Task not found" });
     }
 
     const task = result.rows[0];
 
+    // Get skill info including unlocked users
+    const skillsQuery = `
+      SELECT unlocked_users 
+      FROM skills 
+      WHERE id = $1;
+    `;
+    const skillsResult = await client.query(skillsQuery, [task.skill_id]);
+    
+    if (skillsResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: "Skill not found for this task" });
+    }
+
+    const unlockedUsers = parseUnlockedUsers(skillsResult.rows[0].unlocked_users);
+    
+    // Filter out submitting users and find eligible reviewers
+    const submittingUserIds = task.assigned_user_ids || [];
+    const eligibleReviewers = unlockedUsers.filter(user => 
+      !submittingUserIds.includes(user.user_id) && 
+      user.user_id !== task.project_owner_id
+    );
+
+    // Find level 2+ reviewers
+    const highLevelReviewers = eligibleReviewers.filter(user => user.level >= 2);
+    
+    let reviewerIds = [];
+    
+    // Determine which pool to select from
+    if (highLevelReviewers.length >= 3) {
+      // Select 3 random from high level reviewers
+      reviewerIds = [...highLevelReviewers]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3)
+        .map(user => user.user_id);
+    } else if (eligibleReviewers.length >= 3) {
+      // Select 3 random from all eligible reviewers
+      reviewerIds = [...eligibleReviewers]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3)
+        .map(user => user.user_id);
+    } else {
+      // Get 3 random platform users (excluding creator and submitting users)
+      const randomUsersQuery = `
+        SELECT id FROM users
+        WHERE id NOT IN (
+          SELECT unnest($1::integer[]) UNION SELECT $2
+        )
+        ORDER BY random()
+        LIMIT 3;
+      `;
+      const randomUsersResult = await client.query(randomUsersQuery, [
+        submittingUserIds,
+        task.project_owner_id
+      ]);
+      reviewerIds = randomUsersResult.rows.map(row => row.id);
+    }
+
+    // Update task with reviewer IDs
+    await client.query(
+      `UPDATE tasks SET reviewer_ids = $1 WHERE id = $2`,
+      [reviewerIds, taskId]
+    );
+
     // Step 2: Notify the project creator if we have an owner
-    if (task.project_owner_id) {
+    if (task.project_owner_id && reviewerIds.length === 0) {
+      // Only notify project owner if no reviewers were found (fallback)
       const notificationText = `A task was submitted for approval in your project "${
         task.project_name || "Untitled"
       }".`;
-      const notificationQuery = `
-        INSERT INTO notifications (user_id, message, type, created_at, read) 
-        VALUES ($1, $2, $3, NOW(), false)
-      `;
+      
+      await client.query(
+        `INSERT INTO notifications (user_id, message, type, created_at, read) 
+         VALUES ($1, $2, $3, NOW(), false)`,
+        [task.project_owner_id, notificationText, "task"]
+      );
 
-      await pool.query(notificationQuery, [
-        task.project_owner_id,
-        notificationText,
-        "task",
-      ]);
-
-      if (io) {
-        // Check if io.to exists before calling it
-        if (typeof io.to === "function") {
-          console.log(`Emitting notification to user_${task.project_owner_id}`);
-          io.to(`user_${task.project_owner_id}`).emit("notification", {
-            message: notificationText,
-            type: "task",
-          });
-        } else if (typeof io.emit === "function") {
-          // Fallback to broadcast if to() is not available
-          io.emit("notification", {
-            userId: task.project_owner_id,
-            message: notificationText,
-            type: "task",
-          });
-        } else {
-          console.warn(
-            "Socket.IO instance passed to submitTask is not properly configured"
-          );
-        }
+      if (io && typeof io.to === "function") {
+        io.to(`user_${task.project_owner_id}`).emit("notification", {
+          message: notificationText,
+          type: "task",
+        });
       }
     }
 
-    res.json({ message: "Task submitted for approval", task });
+    // Notify reviewers if we found any
+    if (reviewerIds.length > 0) {
+      const notificationText = `You've been assigned to review a task in project "${
+        task.project_name || "Untitled"
+      }"`;
+      
+      await client.query(
+        `INSERT INTO notifications (user_id, message, type, created_at, read) 
+         SELECT unnest($1::int[]), $2, $3, NOW(), false`,
+        [reviewerIds, notificationText, "task"]
+      );
+
+      if (io && typeof io.to === "function") {
+        reviewerIds.forEach(reviewerId => {
+          io.to(`user_${reviewerId}`).emit("notification", {
+            message: notificationText,
+            type: "task",
+          });
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ 
+      message: "Task submitted for approval", 
+      task,
+      reviewerIds: reviewerIds.length > 0 ? reviewerIds : null
+    });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error("Error submitting task:", error);
     res.status(500).json({ error: "Failed to submit task" });
+  } finally {
+    client.release();
   }
 };
 
@@ -925,6 +1087,11 @@ const findById = async (taskId) => {
   const client = await pool.connect();
 
   try {
+    const parsedTaskId = parseInt(taskId, 10);
+    if (isNaN(parsedTaskId)) {
+      return { error: "Invalid task ID", status: 400 };
+    }
+
     const query = `
       SELECT 
         t.*,
@@ -934,7 +1101,7 @@ const findById = async (taskId) => {
       WHERE t.id = $1
     `;
 
-    const result = await client.query(query, [taskId]);
+    const result = await client.query(query, [parsedTaskId]);
 
     if (result.rows.length === 0) {
       return { error: "Task not found", status: 404 };
@@ -1146,10 +1313,147 @@ await client.query('COMMIT');
   }
 };
 
+// Process review function
+const processReview = async (taskId, userId, action, io) => {
+  const client = await pool.connect();
 
+  try {
+    await client.query('BEGIN');
 
+    // Get task details including current approvals/rejections
+    const taskQuery = `
+      SELECT reviewer_ids, approvals, rejections, status, reward_tokens, project_id
+      FROM tasks
+      WHERE id = $1 FOR UPDATE;
+    `;
+    const taskResult = await client.query(taskQuery, [taskId]);
+
+    if (taskResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { error: 'Task not found', status: 404 };
+    }
+
+    const { reviewer_ids, approvals, rejections, status, reward_tokens, project_id } = taskResult.rows[0];
+
+    // Check if user is a reviewer
+    if (!reviewer_ids.includes(userId)) {
+      await client.query('ROLLBACK');
+      return { error: 'User not authorized to review this task', status: 403 };
+    }
+
+    // Check if task is still in submitted status
+    if (status !== 'submitted') {
+      await client.query('ROLLBACK');
+      return { error: 'Task is not in review status', status: 400 };
+    }
+
+    // Update reviewer arrays based on action
+    const updateQuery = `
+      UPDATE tasks
+      SET ${action === 'approve' 
+      ? 'approvals = array_append(approvals, $2)' 
+      : 'rejections = array_append(rejections, $2)'}
+      WHERE id = $1
+      RETURNING approvals, rejections;
+    `;
+    // Pass userId as $2 so the user's id is appended
+    const updateResult = await client.query(updateQuery, [taskId, userId]);
+    const newApprovals = updateResult.rows[0].approvals;
+    const newRejections = updateResult.rows[0].rejections;
+
+    // Check if we've reached consensus (2 or more approvals/rejections)
+    if (newApprovals >= 2 || newRejections >= 2) {
+      const finalAction = newApprovals >= 2 ? 'approve' : 'reject';
+      
+      if (finalAction === 'approve') {
+        // Approve the task
+        const approveResult = await approveTask(taskId, io);
+        if (approveResult.error) {
+          await client.query('ROLLBACK');
+          return approveResult;
+        }
+      } else {
+        // Reject the task - return to assigned users
+        const rejectQuery = `
+          UPDATE tasks
+          SET status = 'in_progress',
+              submitted = false,
+              reviewer_ids = ARRAY[]::integer[],
+              approvals = 0,
+              rejections = 0
+          WHERE id = $1
+          RETURNING assigned_user_ids;
+        `;
+        const rejectResult = await client.query(rejectQuery, [taskId]);
+        const assignedUserIds = rejectResult.rows[0].assigned_user_ids;
+
+        // Notify assigned users
+        if (assignedUserIds && assignedUserIds.length > 0) {
+          const notificationText = `Your submitted task was rejected and needs revisions.`;
+          await client.query(`
+            INSERT INTO notifications (user_id, message, type, created_at, read) 
+            SELECT unnest($1::int[]), $2, $3, NOW(), false
+          `, [assignedUserIds, notificationText, "task"]);
+
+          // Socket notifications
+          if (io) {
+            assignedUserIds.forEach(userId => {
+              io.to(`user_${userId}`).emit('notification', {
+                id: Date.now(),
+                type: 'task',
+                message: 'Your task was rejected and needs revisions',
+                read: false,
+                timestamp: new Date().toISOString()
+              });
+            });
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true, action, approvals: newApprovals, rejections: newRejections };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error processing review:', error);
+    return { error: error.message, status: 500 };
+  } finally {
+    client.release();
+  }
+};
+
+// Function to get tasks the user is a reviewer for
+const getReviewerTasks = async (userId) => {
+  const client = await pool.connect();
+  const userIdNumber = Number(userId);
+  try {
+    const query = `
+      SELECT t.*, p.name as project_name
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      WHERE $1::int = ANY(t.reviewer_ids)
+    `;
+
+    const result = await client.query(query, [userIdNumber]);
+
+    if (result.rows.length === 0) {
+      console.log("No tasks found for this reviewer");
+      return [];
+      
+    }
+
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching reviewer tasks:", error);
+    return { error: "Failed to fetch reviewer tasks", status: 500 };
+  } finally {
+    client.release();
+  }
+};
 
 export default {
+  getReviewerTasks,
+  processReview,
   granularizeTasks,
   generateTasks,
   getAllTasks,

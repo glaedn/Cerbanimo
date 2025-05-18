@@ -30,6 +30,7 @@ const createTaskTable = async () => {
       submitted boolean DEFAULT false,
       submitted_at timestamp without time zone,
       spent_points integer[],
+      proof_of_work_links TEXT[] DEFAULT '{}',
       
       -- New columns
       status task_status NOT NULL DEFAULT 'inactive-unassigned',   -- Add status column

@@ -26,6 +26,7 @@ const TaskEditor = ({
   projectId,
   currentUser,
   projectCreatorId,
+  isReviewer,
 }) => {
   const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
   const isUrgent = statusParts[0] === "urgent";
@@ -44,6 +45,8 @@ const TaskEditor = ({
   const userIsAssigned = taskForm.assigned_user_ids?.some(
     (id) => Number(id) === Number(platformUserId) // Ensure both are numbers
   );
+  const [proofLinks, setProofLinks] = useState(taskForm.proof_of_work_links || [""]);
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (currentUser?.sub) {
@@ -64,6 +67,10 @@ const TaskEditor = ({
 
     fetchUserProfile();
   }, [currentUser?.sub, getAccessTokenSilently]);
+
+  useEffect(() => {
+    setProofLinks(taskForm.proof_of_work_links || [""]);
+  }, [taskForm.proof_of_work_links]);
 
   // Fetch all tasks for the project when component mounts or projectId changes
   useEffect(() => {
@@ -149,6 +156,21 @@ const TaskEditor = ({
     getAccessTokenSilently,
     setTaskForm,
   ]);
+
+  const handleProofChange = (index, value) => {
+    const updatedLinks = [...proofLinks];
+    updatedLinks[index] = value;
+    setProofLinks(updatedLinks);
+  };
+  
+  const handleAddProofLink = () => {
+    setProofLinks([...proofLinks, ""]);
+  };
+  
+  const handleRemoveProofLink = (index) => {
+    const updatedLinks = proofLinks.filter((_, i) => i !== index);
+    setProofLinks(updatedLinks.length ? updatedLinks : [""]); // Ensure at least one
+  };
 
   const handleRemoveAssignee = (userId) => {
     setTaskForm({
@@ -238,6 +260,7 @@ const TaskEditor = ({
           parseInt(id, 10)
         ),
         status: taskForm.status || "inactive-unassigned",
+        proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
       };
       console.log("assigned users: ", taskForm.assigned_user_ids);
 
@@ -296,7 +319,9 @@ const TaskEditor = ({
       const token = await getAccessTokenSilently();
       await axios.post(
         `http://localhost:4000/tasks/${taskForm.id}/submit`,
-        {},
+        {
+          proofOfWorkLinks: taskForm.proofOfWorkLinks // Add this line
+        },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -307,20 +332,20 @@ const TaskEditor = ({
       console.error("Submission failed:", error);
     }
   };
+  
 
   const handleApproval = async (approved) => {
     try {
       const token = await getAccessTokenSilently();
-      const endpoint = approved ? "approve" : "reject";
       await axios.put(
-        `http://localhost:4000/tasks/${taskForm.id}/${endpoint}`,
-        {},
+        `http://localhost:4000/tasks/${taskForm.id}/review`,
+        { action: approved ? "approve" : "reject" },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       alert(
-        `Task ${endpoint === "approve" ? "approved" : "rejected"} successfully`
+        `Task ${approved ? "approved" : "rejected"} successfully`
       );
       onClose();
       // Add notification logic here
@@ -583,12 +608,39 @@ const TaskEditor = ({
                         >
                           {userIsAssigned ? "DROP TASK" : "ACCEPT TASK"}
                         </Button>
+                        
+                        {(taskForm.status !== "submitted" && userIsAssigned) && (
+  <Box mt={2}>
+    <h4>Proof of Work</h4>
+    {proofLinks.map((link, index) => (
+      <Box key={index} display="flex" alignItems="center" mb={1}>
+        <TextField
+          className ="cyber-input"
+          fullWidth
+          label={`Link ${index + 1}`}
+          value={link}
+          onChange={(e) => handleProofChange(index, e.target.value)}
+        />
+        {proofLinks.length > 1 && (
+          <Button onClick={() => handleRemoveProofLink(index)}>Remove</Button>
+        )}
+      </Box>
+    ))}
+    <Button variant="outlined" onClick={handleAddProofLink}>
+      Add Proof of Work
+    </Button>
+  </Box>
+)}
 
                         {userIsAssigned && !isSubmitted && (
                           <Button
                             className="cyber-button"
                             onClick={handleTaskSubmission}
                             variant="contained"
+                            disabled={
+                              proofLinks.length === 0 ||
+                              proofLinks.some((link) => link.trim() === "")
+                            }
                           >
                             SUBMIT TASK
                           </Button>
@@ -596,7 +648,7 @@ const TaskEditor = ({
                       </>
                     )}
 
-                    {Number(projectCreatorId) === Number(platformUserId) &&
+                    { isReviewer &&
                       isSubmitted && (
                         <>
                           <Button
