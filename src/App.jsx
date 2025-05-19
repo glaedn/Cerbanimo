@@ -16,9 +16,12 @@ import BadgeCreation from './pages/BadgeCreation.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ProjectVisualizer from './pages/ProjectVisualizer.jsx';
 import CommunityCreation from './pages/CommunityCreation.jsx';
-import IdleSpaceGame from './pages/IdleSpaceGame.jsx';
 import CommunityHub from './pages/CommunityHub.jsx';
 import Communities from './pages/Communities.jsx';
+import UserPortfolio from './pages/UserPortfolio.jsx';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+
 
 const App = () => {
   return (
@@ -127,10 +130,12 @@ const App = () => {
           }
         />
         <Route
-          path="/idlespacegame"
+          path="/userportfolio/:userId"
           element={
             <PrivateRoute>
-              <IdleSpaceGame />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <UserPortfolio />
+              </LocalizationProvider>
             </PrivateRoute>
           }
         />

@@ -1,0 +1,118 @@
+/* General layout */
+    body {
+        background-color: #0b0c1e; /* deep space navy */
+        color: #e0e0e0;
+        font-family: 'Orbitron', sans-serif;
+        margin-top: 50px; /* Adjusted for fixed header */
+    }
+    
+    /* User portfolio container */
+.user-portfolio {
+    background-color: #0b0c1e; /* deep space navy */
+    color: #e0e0e0;
+    padding: 2rem;
+    min-height: 100vh;
+    font-family: 'Orbitron', sans-serif;
+  }
+  
+  /* Section headers */
+  .user-portfolio h2 {
+    color: #00fff7;
+    border-bottom: 2px solid #00fff7;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  /* Timeline section */
+  .timeline-container {
+    margin-top: 2rem;
+    border-left: 3px solid #8338ec;
+    padding-left: 1rem;
+  }
+  
+  .timeline-entry {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #3a3a70;
+    border-radius: 12px;
+    background-color: #14162b;
+    box-shadow: 0 0 8px rgba(131, 56, 236, 0.6);
+    transition: transform 0.2s ease;
+  }
+  
+  .timeline-entry:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 12px rgba(255, 0, 255, 0.7);
+  }
+  
+  /* Filter module */
+  .filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    background: #1d1f33;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid #4a4a80;
+  }
+  
+  .filters-container label {
+    color: #b8f2e6;
+  }
+  
+  /* Token and skill summary */
+  .summary-module {
+    background-color: #14162b;
+    border: 1px solid #2c2c5d;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 8px rgba(0, 255, 163, 0.4);
+  }
+  
+  .summary-module h3 {
+    color: #00ff9f;
+    margin-bottom: 1rem;
+  }
+  
+  /* Mentor badge and stats */
+  .mentor-overlay {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ff70a6;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  .story-count {
+    font-size: 1rem;
+    color: #72f1b8;
+    margin-top: 0.5rem;
+  }
+  
+  /* Neon accent tags */
+  .neon-tag {
+    background-color: #8338ec;
+    color: #fff;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    box-shadow: 0 0 6px #8338ec;
+  }
+  
+  /* Links (media, etc.) */
+  a.media-link {
+    color: #00cfff;
+    text-decoration: none;
+  }
+  
+  a.media-link:hover {
+    color: #ff0;
+    text-decoration: underline;
+  }
+  
