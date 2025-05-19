@@ -79,5 +79,23 @@ router.get('/community/:id/chronicle-feed', async (req, res) => {
     }
   });
   
+  // GET /user/:id/summary
+router.get('/user/:id/summary', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query(`
+        SELECT 
+          COALESCE(SUM(tokens_earned), 0) AS total_tokens,
+          ARRAY_AGG(DISTINCT skill) AS skills
+        FROM user_chronicles
+        WHERE user_id = $1
+      `, [id]);
+  
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error fetching user summary:', err);
+      res.status(500).json({ error: 'Failed to fetch user summary' });
+    }
+  });
 
 export default router;

@@ -1,0 +1,9 @@
+/* set the border and text to neon blue */
+.filter-input {
+  border: 1px solid #82aaff;
+  color: #82aaff;
+  background-color: #14162b;
+  padding: 0.5rem;
+  border-radius: 5px;
+  width: 100%;
+}
