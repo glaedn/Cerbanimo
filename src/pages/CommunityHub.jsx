@@ -28,7 +28,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
-
+import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
 import './CommunityHub.css';
 
 const CommunityHub = () => {
@@ -755,6 +755,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
+            <CommunityChronicle communityId={communityId} />
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 

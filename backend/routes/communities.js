@@ -7,6 +7,62 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
+async function getUserAndDelegateWeight(client, userId, delegations, communityId) {
+  const userIdStr = userId.toString();
+
+  const delegators = Object.entries(delegations)
+    .filter(([, delegateTo]) => delegateTo === userIdStr)
+    .map(([delegator]) => parseInt(delegator));
+
+  const voterIds = [userId, ...delegators];
+
+  // Get token count per involved user for this community
+  const { rows: tokenRows } = await client.query(
+    `
+    SELECT users.id, COALESCE(SUM((entry->>'tokens')::numeric), 0) AS tokens
+    FROM users,
+         unnest(token_ledger) AS token_json,
+         jsonb_array_elements_text(token_json) AS token_str,
+         LATERAL token_str::jsonb AS entry
+    WHERE users.id = ANY($1::int[])
+      AND entry->>'type' = 'community'
+      AND (entry->>'id')::int = $2
+    GROUP BY users.id
+    `,
+    [voterIds, communityId]
+  );
+
+  const weightMap = {};
+  let userTokenSum = 0;
+
+  for (const row of tokenRows) {
+    const weight = parseFloat(row.tokens);
+    weightMap[row.id] = weight;
+    userTokenSum += weight;
+  }
+
+  // Get total tokens earned in the community (all users)
+  const { rows: totalRows } = await client.query(
+    `
+    SELECT COALESCE(SUM((entry->>'tokens')::numeric), 0) AS total_tokens
+    FROM users,
+         unnest(token_ledger) AS token_json,
+         jsonb_array_elements_text(token_json) AS token_str,
+         LATERAL token_str::jsonb AS entry
+    WHERE entry->>'type' = 'community'
+      AND (entry->>'id')::int = $1
+    `,
+    [communityId]
+  );
+
+  const totalTokens = parseFloat(totalRows[0].total_tokens) || 0;
+
+  const weightFraction = totalTokens > 0 ? userTokenSum / totalTokens : 0;
+
+  return { totalWeight: weightFraction, weightMap };
+}
+
+
 // Get all communities with optional search and pagination
 router.get('/', async (req, res) => {
   const { search, page = 1 } = req.query;
@@ -230,91 +286,68 @@ router.post('/:communityId/submit/:projectId', async (req, res) => {
 
 // Vote on adding a new member (vote = true/false)
 router.post('/:communityId/vote/member/:requestUserId', async (req, res) => {
-    const { communityId, requestUserId } = req.params;
-    const { userId, vote } = req.body;
-    
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-    
-        // Fetch members and delegations
-        const { rows } = await client.query(
-        `SELECT members, vote_delegations FROM communities WHERE id = $1`,
-        [communityId]
-        );
-        const community = rows[0];
-        const members = community.members || [];
-        const delegations = community.vote_delegations || {};
+  const { communityId, requestUserId } = req.params;
+  const { userId, vote } = req.body;
 
-        if (!members.includes(Number(userId))) {
-            return res.status(403).json({ error: 'User is not a member of this community' });
-        }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-        // Find all users who delegated their vote to this user
-        const delegatedVoters = Object.entries(delegations)
-            .filter(([_, delegateTo]) => delegateTo === userId.toString())
-            .map(([delegator]) => delegator);
+    // Cast the vote from this user
+    await client.query(
+      `UPDATE membership_requests SET votes = jsonb_set(
+        COALESCE(votes, '{}'), $1::text[], to_jsonb($2::boolean), true
+      ) WHERE community_id = $3 AND user_id = $4`,
+      [[userId], vote, communityId, requestUserId]
+    );
 
-        // Record vote for the user and all delegated votes
-        const allVoters = [userId.toString(), ...delegatedVoters];
-        console.log('All voters:', allVoters);
-        for (const voter of allVoters) {
-            await client.query(
-            `UPDATE membership_requests SET votes = jsonb_set(
-          COALESCE(votes, '{}'),
-          $1::text[],
-          to_jsonb($2::boolean),
-          true
-            ) WHERE community_id = $3 AND user_id = $4`,
-            [[voter], vote, communityId, requestUserId]
-            );
-        }
-    
-        // Tally votes
-        console.log('Tallying votes for user:', requestUserId, 'in community:', communityId);
-        const voteRes = await client.query(
-        `SELECT votes FROM membership_requests WHERE community_id = $1 and user_id = $2`,
+    // Fetch current votes
+    const voteRes = await client.query(
+      `SELECT votes FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
+      [communityId, requestUserId]
+    );
+    const votes = voteRes.rows[0]?.votes || {};
+
+    // Tally vote weights
+    let yesWeight = 0;
+    const { totalPossibleWeight } = await calculateVoteWeight(client, communityId, userId);
+
+    for (const [voterId, val] of Object.entries(votes)) {
+      if (val === true) {
+        const { weight: w } = await calculateVoteWeight(client, communityId, voterId);
+        yesWeight += w;
+      }
+    }
+
+    const majorityReached = yesWeight / totalPossibleWeight > 0.5;
+
+    if (majorityReached) {
+      await client.query(
+        `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
+        [requestUserId, communityId]
+      );
+      await client.query(
+        `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
         [communityId, requestUserId]
-        );
-        const votes = voteRes.rows[0]?.votes || {};
-        const voteValues = Object.values(votes);
-        const yesVotes = voteValues.filter(v => v === true).length;
-        const totalMembers = members.length;
-        const voteRatio = totalMembers > 0 ? yesVotes / totalMembers : 0;
-          
-        const majorityReached = voteRatio > 0.5;
-          
-        // Approve if passed
-        if (majorityReached) {
-            // Add user to members list
-            console.log('Adding user to community members:', requestUserId, communityId);
-            await client.query(
-          `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
-          [requestUserId, communityId]
-            );
-            
-            // Remove membership request
-            await client.query(
-          `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
-          [communityId, requestUserId]
-            );
-        }
-    
-        await client.query('COMMIT');
-        res.status(200).json({
-        message: 'Vote recorded.',
-        approved: majorityReached,
-        currentVotes: votes,
-        });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Vote error:', err);
-        res.status(500).json({ error: 'Failed to cast vote' });
-    } finally {
-        client.release();
+      );
     }
-    }
-);
+
+    await client.query('COMMIT');
+    res.status(200).json({
+      message: 'Vote recorded.',
+      approved: majorityReached,
+      currentVotes: votes,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Vote error:', err);
+    res.status(500).json({ error: 'Failed to cast vote' });
+  } finally {
+    client.release();
+  }
+});
+
+
 
 // Vote on a proposal (vote = true/false)
 router.post('/:communityId/vote/:projectId', async (req, res) => {
@@ -325,55 +358,38 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Fetch members and delegations
-    const { rows } = await client.query(
-      `SELECT members, proposals, approved_projects, vote_delegations FROM communities WHERE id = $1`,
-      [communityId]
-    );
-    const community = rows[0];
-    const members = community.members || [];
-    const delegations = community.vote_delegations || {};
-
-    if (!members.includes(Number(userId))) {
-      return res.status(403).json({ error: 'User is not a member of this community' });
-    }
-
-    // Find all users who delegated their vote to this user
-    const delegatedVoters = Object.entries(delegations)
-      .filter(([_, delegateTo]) => delegateTo === userId.toString())
-      .map(([delegator]) => delegator);
-
-    // Record vote for the user and all delegated votes
-    const allVoters = [userId.toString(), ...delegatedVoters];
-    
-    for (const voter of allVoters) {
-      await client.query(
+    // Cast the vote from this user
+    await client.query(
       `UPDATE projects SET community_votes = jsonb_set(
-        COALESCE(community_votes, '{}'),
-        $1::text[],
-        to_jsonb($2::boolean),
-        true
+        COALESCE(community_votes, '{}'), $1::text[], to_jsonb($2::boolean), true
       ) WHERE id = $3`,
-      [[voter], vote, projectId]
-      );
-    }
+      [[userId], vote, projectId]
+    );
 
-    // Tally votes
+    // Fetch current votes
     const voteRes = await client.query(
       `SELECT community_votes FROM projects WHERE id = $1`,
       [projectId]
     );
     const votes = voteRes.rows[0]?.community_votes || {};
-    const voteValues = Object.values(votes);
-    const yesVotes = voteValues.filter(v => v === true).length;
-    const voteRatio = voteValues.length > 0 ? yesVotes / voteValues.length : 0;
 
-    const majorityPassed = voteRatio > 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
-    const majorityRejected = voteRatio < 0.5 && voteValues.length >= Math.ceil(members.length * 0.5);
-    // Approve if passed
+    let yesWeight = 0;
+    let totalVoteWeight = 0;
+    const { totalPossibleWeight } = await calculateVoteWeight(client, communityId, userId);
+
+    for (const [voterId, val] of Object.entries(votes)) {
+      const { weight: w } = await calculateVoteWeight(client, communityId, voterId);
+      totalVoteWeight += w;
+      if (val === true) yesWeight += w;
+    }
+
+    const ratio = yesWeight / totalPossibleWeight;
+    const turnout = totalVoteWeight / totalPossibleWeight;
+
+    const majorityPassed = ratio > 0.5 && turnout >= 0.5;
+    const majorityRejected = ratio < 0.5 && turnout >= 0.5;
+
     if (majorityPassed) {
-      // Remove from proposals and add to approved_projects
-      console.log('Majority reached, updating community:', projectId, communityId);
       await client.query(
         `UPDATE communities
          SET proposals = array_remove(proposals, $1),
@@ -381,24 +397,14 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
          WHERE id = $2`,
         [projectId, communityId]
       );
-      // update the token_pool on the project table to 250
-      await client.query(
-        `UPDATE projects SET token_pool = 250 WHERE id = $1`,
-        [projectId]
-      );
+      await client.query(`UPDATE projects SET token_pool = 250 WHERE id = $1`, [projectId]);
     }
 
-    // Reject if majority rejected
     if (majorityRejected) {
-      // Remove from proposals
-      console.log('Majority rejected, updating community:', projectId, communityId);
       await client.query(
-        `UPDATE communities
-         SET proposals = array_remove(proposals, $1)
-         WHERE id = $2`,
+        `UPDATE communities SET proposals = array_remove(proposals, $1) WHERE id = $2`,
         [projectId, communityId]
       );
-      // update the token_pool on the project table to 40, blank out the community_id field
       await client.query(
         `UPDATE projects SET token_pool = 80, community_id = NULL, community_votes = NULL WHERE id = $1`,
         [projectId]
@@ -420,6 +426,8 @@ router.post('/:communityId/vote/:projectId', async (req, res) => {
     client.release();
   }
 });
+
+
 
 // Set a user's vote_delegations jsonb field
 router.post('/:communityId/delegate/:userId', async (req, res) => {

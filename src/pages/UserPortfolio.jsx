@@ -11,11 +11,10 @@ const UserPortfolio = ({ userId }) => {
   const [filters, setFilters] = useState({});
   const [chronicleData, setChronicleData] = useState([]);
   const [summaryData, setSummaryData] = useState({ tokens: 0, skills: [] });
-  const [mentorStatus, setMentorStatus] = useState(false);
   const [storyStats, setStoryStats] = useState({ total: 0, recent: 0 });
 
   useEffect(() => {
-    fetch(`/user/${userId}/chronicle`)
+    fetch(`/storyChronicles/user/${userId}/chronicle`)
       .then(res => res.json())
       .then(data => {
         setChronicleData(data);
@@ -25,13 +24,10 @@ const UserPortfolio = ({ userId }) => {
         });
       });
 
-    fetch(`/user/${userId}/summary`)
+    fetch(`/storyChronicles/user/${userId}/summary`)
       .then(res => res.json())
       .then(data => setSummaryData(data));
 
-    fetch(`/user/${userId}/mentor-status`)
-      .then(res => res.json())
-      .then(data => setMentorStatus(data.isMentor));
   }, [userId]);
 
   return (
