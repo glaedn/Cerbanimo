@@ -93,7 +93,6 @@ router.get('/', async (req, res) => {
     `;
     const values = [search || null, limit, offset];
     const result = await client.query(query, values);
-    console.log('Query result:', result.rows);
     
     // Transform the results to replace interest_tags with interest_names
     const communities = result.rows.map(row => ({
@@ -138,7 +137,6 @@ router.get('/user/:userId', async (req, res) => {
       `;
     const values = [userId];
     const result = await client.query(query, values);
-    console.log('Query result:', result.rows);
     res.json(result.rows); // This line was missing
   } catch (err) {
     console.error('Error fetching communities:', err);

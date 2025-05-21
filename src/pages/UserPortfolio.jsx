@@ -1,5 +1,5 @@
-// UserPortfolio.jsx
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom'; // ✅ Add this line
 import TokenAndSkillSummary from '../components/TokenAndSkillSummary';
 import FilterPanel from '../components/FilterPanel';
 import ChronicleTimeline from '../components/ChronicleTimeline';
@@ -7,27 +7,45 @@ import './UserPortfolio.css';
 import { Avatar, Tooltip, Typography } from '@mui/material';
 import { Stars, BookOpen } from 'lucide-react';
 
-const UserPortfolio = ({ userId }) => {
+const UserPortfolio = () => {
+  const { userId } = useParams(); // ✅ Extract userId from URL
   const [filters, setFilters] = useState({});
   const [chronicleData, setChronicleData] = useState([]);
   const [summaryData, setSummaryData] = useState({ tokens: 0, skills: [] });
   const [storyStats, setStoryStats] = useState({ total: 0, recent: 0 });
 
   useEffect(() => {
-    fetch(`/storyChronicles/user/${userId}/chronicle`)
-      .then(res => res.json())
-      .then(data => {
-        setChronicleData(data);
-        setStoryStats({
-          total: data.length,
-          recent: data.filter(entry => new Date(entry.created_at) > Date.now() - 2592000000).length // last 30 days
-        });
-      });
+    if (!userId) return;
 
-    fetch(`/storyChronicles/user/${userId}/summary`)
-      .then(res => res.json())
-      .then(data => setSummaryData(data));
+    const fetchData = async () => {
+      try {
+        const chronicleRes = await fetch(`http://localhost:4000/storyChronicles/user/${userId}/chronicle`);
+        const chronicleData = await chronicleRes.json();
 
+        if (!Array.isArray(chronicleData)) {
+          console.error("Expected chronicle data to be an array:", chronicleData);
+          setChronicleData([]);
+          setStoryStats({ total: 0, recent: 0 });
+        } else {
+          setChronicleData(chronicleData);
+          const recentCount = chronicleData.filter(
+            entry => new Date(entry.created_at) > Date.now() - 2592000000
+          ).length;
+          setStoryStats({
+            total: chronicleData.length,
+            recent: recentCount
+          });
+        }
+
+        const summaryRes = await fetch(`http://localhost:4000/storyChronicles/user/${userId}/summary`);
+        const summaryData = await summaryRes.json();
+        setSummaryData(summaryData);
+      } catch (err) {
+        console.error("Error fetching chronicle or summary data:", err);
+      }
+    };
+
+    fetchData();
   }, [userId]);
 
   return (

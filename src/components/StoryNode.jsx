@@ -73,7 +73,7 @@ const StoryNode = ({
         </Typography>
 
         <Stack direction="row" spacing={1} className="tag-container">
-          {tags?.split(',').map((tag, i) => (
+          {(typeof tags === 'string' ? tags.split(',') : Array.isArray(tags) ? tags : []).map((tag, i) => (
             <Chip
               key={i}
               label={tag.trim()}

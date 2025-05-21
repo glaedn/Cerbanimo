@@ -138,10 +138,7 @@ app.use('/communities', jwtCheck, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
-app.use('/storyChronicles', jwtCheck, (req, res, next) => {
-  if (req.path.match(/^\/\d+$/)) return next();
-  return jwtCheck(req, res, next);
-}, storyChronicleRoutes);
+app.use('/storyChronicles', storyChronicleRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
