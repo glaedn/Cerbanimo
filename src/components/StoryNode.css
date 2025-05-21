@@ -73,3 +73,37 @@
     margin-bottom: 0.25rem;
   }
   
+  .endorsement-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    background: rgba(10, 10, 20, 0.6);
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 1px solid #444;
+  }
+  
+  .endorse-input {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  
+  .neon-button {
+    color: white;
+    background-color: #222;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .neon-button:hover {
+    background-color: #6f00ff;
+    box-shadow: 0 0 6px #6f00ff88;
+  }
+  
+  .neon-input .MuiInputBase-root {
+    background-color: #111;
+    color: white;
+  }
+  

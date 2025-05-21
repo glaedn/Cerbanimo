@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Grid, Card, CardContent, Typography } from '@mui/material';
 import { useInView } from 'react-intersection-observer';
 
+
 const ChronicleGrid = ({ items, loadMore, hasMore }) => {
   const { ref, inView } = useInView({ triggerOnce: false });
 

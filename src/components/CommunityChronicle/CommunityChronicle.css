@@ -1,0 +1,96 @@
+/* Base container */
+.chronicle-container {
+    background-color: #0a0a1f;
+    padding: 2rem;
+    border-radius: 1rem;
+    color: #e0e0f0;
+    font-family: 'Orbitron', sans-serif;
+  }
+  
+  /* Controls section */
+  .chronicle-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    gap: 1rem;
+  }
+  
+  .chronicle-controls .MuiTextField-root {
+    flex: 1;
+    min-width: 240px;
+    background-color: #1a1a2f;
+    border-radius: 8px;
+  }
+  
+  .tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  /* Tag hover effects */
+  .tag-filters .MuiChip-root {
+    transition: all 0.3s ease;
+    border: 1px solid #444;
+    color: #bbb;
+    background-color: #121225;
+  }
+  
+  .tag-filters .MuiChip-root:hover {
+    background-color: #252547;
+    color: #00f0ff;
+    border-color: #00f0ff;
+    box-shadow: 0 0 8px #00f0ff77;
+  }
+  
+  /* Carousel card */
+  .MuiCard-root.carousel-card {
+    background: linear-gradient(135deg, #15152a, #1f1f3a);
+    border: 1px solid #30305a;
+    box-shadow: 0 0 15px #7e4fff66;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .carousel-card.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Chronicle card grid */
+  .MuiCard-root.chronicle-card {
+    background-color: #13132a;
+    color: #eee;
+    border-radius: 12px;
+    border: 1px solid #2c2c4c;
+    box-shadow: 0 0 8px rgba(128, 0, 255, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .MuiCard-root.chronicle-card.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .MuiCard-root.chronicle-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 12px rgba(0, 255, 170, 0.6);
+  }
+  
+  /* Media query for smaller screens */
+  @media (max-width: 600px) {
+    .chronicle-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .tag-filters {
+      justify-content: center;
+    }
+  }
+  
