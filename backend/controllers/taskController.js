@@ -1,5 +1,8 @@
 import pool from "../db.js";
-import { autoGenerateTasks, autoGenerateSubtasks } from "../services/taskGenerator.js";
+import {
+  autoGenerateTasks,
+  autoGenerateSubtasks,
+} from "../services/taskGenerator.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -109,7 +112,6 @@ const getTasksByProjectId = async (projectId) => {
 
   const query = `SELECT * FROM tasks WHERE project_id = $1`;
   const { rows } = await pool.query(query, [parsedProjectId]);
-  console.log("Fetched tasks:", rows);
   return rows;
 };
 
@@ -352,24 +354,34 @@ const updateTask = async (
     const rewardTokens = parseInt(reward_tokens, 10);
     let reservationAdjustment = 0;
     // Calculate token reservation adjustment
-const wasActive = task_status.startsWith("active") || task_status.startsWith("urgent");
-const isActive = status.startsWith("active") || status.startsWith("urgent");
+    const wasActive =
+      task_status.startsWith("active") || task_status.startsWith("urgent");
+    const isActive = status.startsWith("active") || status.startsWith("urgent");
 
-console.log(`Status change: wasActive=${wasActive}, isActive=${isActive}`);
+    console.log(`Status change: wasActive=${wasActive}, isActive=${isActive}`);
 
-if (isActive && !wasActive) {
-  // Activating task - reserve tokens
-  reservationAdjustment = rewardTokens;
-  console.log("Activating task, reservation adjustment:", reservationAdjustment);
-} else if (!isActive && wasActive) {
-  // Deactivating task - release reserved tokens
-  reservationAdjustment = -task_reward;
-  console.log("Deactivating task, reservation adjustment:", reservationAdjustment);
-} else if (isActive && wasActive && (rewardTokens !== task_reward)) {
-  // Task remains active but reward amount changed
-  reservationAdjustment = rewardTokens - task_reward;
-  console.log("Changing active task reward, reservation adjustment:", reservationAdjustment);
-}
+    if (isActive && !wasActive) {
+      // Activating task - reserve tokens
+      reservationAdjustment = rewardTokens;
+      console.log(
+        "Activating task, reservation adjustment:",
+        reservationAdjustment
+      );
+    } else if (!isActive && wasActive) {
+      // Deactivating task - release reserved tokens
+      reservationAdjustment = -task_reward;
+      console.log(
+        "Deactivating task, reservation adjustment:",
+        reservationAdjustment
+      );
+    } else if (isActive && wasActive && rewardTokens !== task_reward) {
+      // Task remains active but reward amount changed
+      reservationAdjustment = rewardTokens - task_reward;
+      console.log(
+        "Changing active task reward, reservation adjustment:",
+        reservationAdjustment
+      );
+    }
 
     // Check if we have enough tokens for a positive adjustment
     const availableTokens = token_pool - (used_tokens + reserved_tokens);
@@ -397,7 +409,7 @@ if (isActive && !wasActive) {
       dependencies,
       assigned_user_ids,
       skill_level,
-      taskId      
+      taskId,
     ]);
 
     const taskResult = await client.query(updateQuery, [
@@ -518,14 +530,96 @@ const createTaskRoute = async (req, res) => {
   }
 };
 
-// Approve task - efficient implementation
-const approveTask = async (taskId, io) => {
-  const client = await pool.connect();
-
+const approveTask = async (taskId, io, client) => {
+  const localClient = client || (await pool.connect());
+  let clientCreated = !client;
   try {
-    await client.query('BEGIN');
+    // Start transaction
+    await localClient.query("BEGIN");
 
-    // Fetch task details including project and community info
+    // Fetch task details first (remove FOR UPDATE to avoid deadlock)
+    const initialTaskDetails = await localClient.query(
+      `
+      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens
+      FROM tasks WHERE id = $1
+    `,
+      [taskId]
+    );
+
+    const initialTask = initialTaskDetails.rows[0];
+    if (!initialTask) {
+      await localClient.query("ROLLBACK");
+      return { error: "Task not found.", status: 404 };
+    }
+
+    if (initialTask.status === "completed") {
+      console.warn("Task already completed. Skipping redundant approve call.");
+      return { success: true, message: "Task already completed" };
+    }
+
+    // Get task tags
+    const tagsQuery = await localClient.query(
+      `SELECT name FROM skills WHERE id = $1`,
+      [initialTask.skill_id]
+    );
+    const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
+
+    // Store story node data for later use (after transaction)
+    const storyNodeData = {
+      task_id: initialTask.id,
+      user_id: initialTask.assigned_user_ids[0],
+      reflection: initialTask.reflection || "",
+      media_urls: initialTask.proof_of_work_links,
+      tags,
+    };
+
+    console.log("task ID:", taskId);
+    // No need to rollback and begin a new transaction here; just continue in the same transaction
+    console.log("Initial task details:", initialTaskDetails.rows[0]);
+    console.log(
+      "Status value and type:",
+      initialTaskDetails.rows[0].status,
+      typeof initialTaskDetails.rows[0].status
+    );
+
+    // Check if task is in 'submitted' status before updating
+    if (initialTaskDetails.rows[0].status !== "submitted") {
+      await localClient.query("ROLLBACK");
+      return { error: "Cannot complete an unsubmitted task", status: 400 };
+    }
+
+    let updateTask;
+    try {
+      updateTask = await localClient.query(
+        `UPDATE tasks SET status = 'completed' WHERE id = $1 RETURNING id, project_id, assigned_user_ids, status`,
+        [taskId]
+      );
+      if (!updateTask || !updateTask.rows || updateTask.rows.length === 0) {
+        console.error("No rows returned from updateTask query");
+        await localClient.query("ROLLBACK");
+        return { error: "Task not found during update", status: 404 };
+      }
+      console.log("After update query:", updateTask.rows[0]);
+    } catch (err) {
+      console.error("Error during updateTask query:", err);
+      await localClient.query("ROLLBACK");
+      return { error: "Update failed", status: 500 };
+    }
+
+    // Flush all pending results to avoid client deadlock
+    try {
+      await localClient.query("SELECT 1");
+    } catch (flushErr) {
+      console.error("Error flushing client after update:", flushErr);
+    }
+
+    const task = updateTask.rows[0];
+    if (!task) {
+      await localClient.query("ROLLBACK");
+      return { error: "Task not found.", status: 404 };
+    }
+
+    // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
     const taskQuery = `
       SELECT t.reward_tokens, 
              t.assigned_user_ids,
@@ -536,18 +630,25 @@ const approveTask = async (taskId, io) => {
              p.creator_id
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
-      WHERE t.id = $1 FOR UPDATE;
+      WHERE t.id = $1;
     `;
-    const taskResult = await client.query(taskQuery, [taskId]);
+    const taskResult = await localClient.query(taskQuery, [taskId]);
 
     if (taskResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      throw new Error('Task not found');
+      await localClient.query("ROLLBACK");
+      return { error: "Task not found", status: 404 };
     }
 
-    const { reward_tokens, assigned_user_ids, skill_id, status, project_id, community_id, creator_id } = taskResult.rows[0];
+    const {
+      reward_tokens,
+      assigned_user_ids,
+      skill_id,
+      status,
+      project_id,
+      community_id,
+      creator_id,
+    } = taskResult.rows[0];
 
-    // Debug: Log the assigned users
     console.log(
       "Assigned users:",
       assigned_user_ids,
@@ -555,80 +656,43 @@ const approveTask = async (taskId, io) => {
       typeof assigned_user_ids
     );
 
-    // Create notification for each assigned user
+    // Add notifications in the database
     const notificationText = `Your submitted task was approved!`;
-
-    // Only proceed if there are actually assigned users
     if (assigned_user_ids && assigned_user_ids.length > 0) {
       const notificationQuery = `
           INSERT INTO notifications (user_id, message, type, created_at, read) 
           SELECT unnest($1::int[]), $2, $3, NOW(), false
-        `;
-      await client.query(notificationQuery, [
+      `;
+      await localClient.query(notificationQuery, [
         assigned_user_ids,
         notificationText,
         "task",
       ]);
-
-      // Socket notification
-    if (io && assigned_user_ids.length > 0) {
-      console.log('Sending notifications to:', assigned_user_ids);
-      
-      // Verify room exists before emitting
-      const sockets = await io.in(`user_${assigned_user_ids[0]}`).fetchSockets();
-      console.log(`Found ${sockets.length} sockets for user ${assigned_user_ids[0]}`);
-
-      assigned_user_ids.forEach(userId => {
-        const room = `user_${userId}`;
-        console.log(`Emitting to ${room}`);
-        io.to(room).emit('notification', {
-          id: Date.now(),
-          type: 'task-approved',
-          message: 'Your task was approved!',
-          read: false,
-          timestamp: new Date().toISOString()
-        });
-      });
     }
 
-    }
-
-    if (status !== "submitted") {
-      await client.query("ROLLBACK");
-      return { error: "Cannot complete an unsubmitted task", status: 400 };
-    }
-
-    // For now, each use is expected to have worked the same amount so each assigned user gets the full token amount
-    // below is code to calculate the reward per user if we need to split the tokens instead
-    //const rewardPerUser = Math.floor(reward_tokens / assigned_user_ids.length);
+    // 🎓 Calculate rewardPerUser — currently not divided
     const rewardPerUser = reward_tokens;
 
-    // Fetch the current unlocked_users field from the skills table
+    // 🎯 XP system and level calculations
     const skillsQuery = `
       SELECT unlocked_users 
       FROM skills 
       WHERE id = $1 FOR UPDATE;
     `;
-
-    const skillsResult = await client.query(skillsQuery, [skill_id]);
-
+    const skillsResult = await localClient.query(skillsQuery, [skill_id]);
     if (skillsResult.rows.length === 0) {
-      await client.query("ROLLBACK");
-      throw new Error("Skill not found for this task");
+      await localClient.query("ROLLBACK");
+      return { error: "Skill not found for this task", status: 404 };
     }
 
     let unlockedUsers = skillsResult.rows[0].unlocked_users || [];
     let updatedUsers = [];
 
-    // Handle case where unlockedUsers is [null]
     if (unlockedUsers.length === 1 && unlockedUsers[0] === null) {
       unlockedUsers = [];
     }
 
-    // Helper function to calculate level from experience
     const calculateLevel = (exp) => {
-      // New leveling formula - modify this to match your game design
-      // This gives level 1 at 40 exp points
       return Math.floor(Math.sqrt(exp / 40)) + 1;
     };
 
@@ -637,169 +701,188 @@ const approveTask = async (taskId, io) => {
 
       for (let entry of unlockedUsers) {
         let parsedEntry;
-
         try {
-          // Try to parse the entry - it might be a string or already an object
           parsedEntry = typeof entry === "string" ? JSON.parse(entry) : entry;
-
-          // Handle double-stringified JSON (if present)
-          if (typeof parsedEntry === "string") {
+          if (typeof parsedEntry === "string")
             parsedEntry = JSON.parse(parsedEntry);
-          }
-
-          // If parsedEntry is still a string, it might be in an unexpected format
           if (typeof parsedEntry === "string") {
-            // Handle the complex case you showed
             parsedEntry = JSON.parse(
               parsedEntry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, "")
             );
           }
         } catch (err) {
           console.error("Error parsing entry:", err, "Entry:", entry);
-          // Skip invalid entries
           continue;
         }
 
-        if (parsedEntry && parsedEntry.user_id === userId) {
-          parsedEntry.exp += rewardPerUser;
-          parsedEntry.level = calculateLevel(parsedEntry.exp);
+        if (parsedEntry.user_id === userId) {
           found = true;
-          updatedUsers.push(JSON.stringify(parsedEntry));
-        } else if (parsedEntry) {
-          updatedUsers.push(JSON.stringify(parsedEntry));
+          parsedEntry.experience += rewardPerUser;
+          parsedEntry.level = calculateLevel(parsedEntry.experience);
+          updatedUsers.push(parsedEntry);
+        } else {
+          updatedUsers.push(parsedEntry);
         }
       }
 
       if (!found) {
-        const newExp = rewardPerUser;
-        updatedUsers.push(
-          JSON.stringify({
-            exp: newExp,
-            level: calculateLevel(newExp),
-            user_id: userId,
-          })
-        );
-      }
-    }
-
-    // Update the unlocked_users field in the skills table
-    const updateSkillsQuery = `
-      UPDATE skills 
-      SET unlocked_users = $1::jsonb[] 
-      WHERE id = $2;
-    `;
-
-    await client.query(updateSkillsQuery, [updatedUsers, skill_id]);
-
-    // First update cotokens and experience
-    const updateUserTokensQuery = `
-      UPDATE users 
-      SET 
-        cotokens = cotokens + $1, 
-        experience = array_append(experience, $2) 
-      WHERE id = ANY($3);
-    `;
-    await client.query(updateUserTokensQuery, [
-      rewardPerUser,
-      taskId.toString(),
-      assigned_user_ids,
-    ]);
-
-    // Now update token ledgers
-    if (community_id) {
-      // Distribute to community, project, and users
-      const ledgerUpdates = [
-        { type: 'community', id: community_id, tokens: reward_tokens },
-        { type: 'project', id: project_id, tokens: reward_tokens }
-      ];
-      
-      // Update creator's ledger
-      await client.query(`
-        UPDATE users
-        SET token_ledger = token_ledger || $1::jsonb
-        WHERE id = $2;
-      `, [JSON.stringify(ledgerUpdates), creator_id]);
-      
-    // In case we wanted to merge cotokens into the token ledger
-    //  // Update each assigned user's ledger with their share
-    //  for (const userId of assigned_user_ids) {
-    //    const userLedgerUpdate = {
-    //      type: 'cotokens',
-    //      id: taskId,
-    //      tokens: rewardPerUser
-    //    };
-    //    await client.query(`
-    //      UPDATE users
-    //      SET token_ledger = token_ledger || $1::jsonb
-    //      WHERE id = $2;
-    //    `, [JSON.stringify(userLedgerUpdate), userId]);
-    //  }
-    } else {
-      // Just project and users
-      const ledgerUpdate = {
-        type: 'project',
-        id: project_id,
-        tokens: reward_tokens
-      };
-      
-      // Update creator's ledger
-      await client.query(`
-        UPDATE users
-        SET token_ledger = token_ledger || $1::jsonb
-        WHERE id = $2;
-      `, [JSON.stringify(ledgerUpdate), creator_id]);
-      
-      // Update each assigned user's ledger with their share
-      for (const userId of assigned_user_ids) {
-        const userLedgerUpdate = {
-          type: 'task',
-          id: taskId,
-          tokens: rewardPerUser
+        const newEntry = {
+          user_id: userId,
+          experience: rewardPerUser,
+          level: calculateLevel(rewardPerUser),
         };
-        await client.query(`
-          UPDATE users
-          SET token_ledger = token_ledger || $1::jsonb
-          WHERE id = $2;
-        `, [JSON.stringify(userLedgerUpdate), userId]);
+        updatedUsers.push(newEntry);
       }
     }
 
-    // Update the projects' token fields (existing code remains)
-    const updateSpentTokensQuery = `
-      UPDATE projects
-      SET used_tokens = used_tokens + $1, reserved_tokens = GREATEST(0, reserved_tokens - $1)
-      WHERE id = $2;
-    `;
-    await client.query(updateSpentTokensQuery, [reward_tokens, project_id]);
-
-    // Potiential functionality to track community total rather than querying for it
-    // If community exists, update community tokens
-    //if (community_id) {
-    //  await client.query(`
-    //    UPDATE communities
-    //    SET total_tokens = total_tokens + ($1 * assigned_user_ids.length)
-    //    WHERE id = $2;
-    //  `, [reward_tokens, community_id]);
-    //}
-
-    // Mark task as completed (existing code remains)
-    await client.query(
-      `UPDATE tasks SET submitted = false, status = 'completed', assigned_user_ids = ARRAY[]::integer[] WHERE id = $1`,
-      [taskId]
+    await localClient.query(
+      `UPDATE skills SET unlocked_users = $1 WHERE id = $2`,
+      [updatedUsers, skill_id]
     );
 
-    await client.query('COMMIT');
-    return { success: true, message: 'Task approved, rewards distributed' };
+    // Step 5: Update users with tokens and experience logs
+    await localClient.query(
+      `
+      UPDATE users SET cotokens = cotokens + $1, experience = array_append(experience, $2)
+      WHERE id = ANY($3)
+    `,
+      [rewardPerUser, taskId.toString(), assigned_user_ids]
+    );
+
+    // Step 6a: Update token ledgers for assigned users
+    const ledgerUpdates = community_id
+      ? [
+          {
+            type: "community",
+            id: community_id,
+            tokens: reward_tokens,
+            creationDate: new Date(),
+          },
+          {
+            type: "project",
+            id: project_id,
+            tokens: reward_tokens,
+            creationDate: new Date(),
+          },
+        ]
+      : [
+          {
+            type: "project",
+            id: project_id,
+            tokens: reward_tokens,
+            creationDate: new Date(),
+          },
+        ];
+
+    await localClient.query(
+      `
+UPDATE users 
+SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) 
+WHERE id = ANY($2)
+`,
+      [ledgerUpdates.map(JSON.stringify), assigned_user_ids]
+    );
+
+    // Step 6b: Reward project creator
+    console.log("creator_id:", creator_id ? creator_id : "No creator_id found");
+    if (creator_id) {
+      await localClient.query(
+        `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
+        [creator_id]
+      );
+
+      const creatorLedgerUpdates = [
+        {
+          type: "project",
+          id: project_id,
+          tokens: 10,
+          creationDate: new Date(),
+        },
+      ];
+
+      if (community_id) {
+        creatorLedgerUpdates.push({
+          type: "community",
+          id: community_id,
+          tokens: 10,
+          creationDate: new Date(),
+        });
+      }
+
+      await localClient.query(
+        `UPDATE users 
+          SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) 
+          WHERE id = $2`,
+        [creatorLedgerUpdates.map(JSON.stringify), creator_id]
+      );
+    }
+
+    // Step 7: Update project token stats
+    await localClient.query(
+      `
+      UPDATE projects SET used_tokens = used_tokens + $1,
+        reserved_tokens = GREATEST(0, reserved_tokens - $1)
+      WHERE id = $2
+    `,
+      [reward_tokens, project_id]
+    );
+
+    // Step 8: Notify users
+    const approveText = `Your submitted task was approved!`;
+    await localClient.query(
+      `
+      INSERT INTO notifications (user_id, message, type, created_at, read)
+      SELECT unnest($1::int[]), $2, 'task', NOW(), false
+    `,
+      [assigned_user_ids, approveText]
+    );
+
+    // COMMIT the transaction before making external calls
+    await localClient.query("COMMIT");
+
+    // After transaction is committed, we can make external HTTP calls
+    try {
+      console.log("posting story node with tags:", storyNodeData.tags);
+      const response = await fetch(`http://localhost:4000/storyChronicles/story-node`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(storyNodeData),
+      });
+      console.log("response.status:", response.status);
+      console.log("response text:", await response.text());
+    } catch (fetchError) {
+      // Log error but don't fail the whole operation
+      console.error("Error creating story node:", fetchError);
+      // We don't rollback here because the DB transaction is already committed
+    }
+
+    // Send socket notifications after transaction is complete
+    if (io && assigned_user_ids && assigned_user_ids.length > 0) {
+      console.log("Sending notifications to:", assigned_user_ids);
+      for (const userId of assigned_user_ids) {
+        const room = `user_${userId}`;
+        console.log(`Emitting to ${room}`);
+        io.to(room).emit("notification", {
+          id: Date.now(),
+          type: "task-approved",
+          message: "Your task was approved!",
+          read: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    return { message: "Task approved and reward issued.", status: 200 };
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Failed to approve task:', error);
-    return { error: `Failed to complete task: ${error.message}`, status: 500 };
+    await localClient.query("ROLLBACK");
+    console.error("Error approving task:", error);
+    return { error: "Failed to approve task.", status: 500 };
   } finally {
-    client.release();
+    if (clientCreated) localClient.release();
   }
 };
 
-// Function to reset spent points (to be called by a nightly cron job)
+// Function to reset spent points (unchanged)
 const resetAllSpentPoints = async () => {
   const client = await pool.connect();
   try {
@@ -814,42 +897,57 @@ const resetAllSpentPoints = async () => {
     await client.query("COMMIT");
     return { success: true, message: "All spent points have been reset" };
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Failed to reset spent points:', error);
-    return { error: `Failed to reset spent points: ${error.message}`, status: 500 };
+    await client.query("ROLLBACK");
+    console.error("Failed to reset spent points:", error);
+    return {
+      error: `Failed to reset spent points: ${error.message}`,
+      status: 500,
+    };
   } finally {
     client.release();
   }
 };
 
-
 const submitTask = async (req, res, io) => {
   const { taskId } = req.params;
-  const { proofOfWorkLinks } = req.body;
+  // Accept both camelCase and snake_case from frontend
+  const proofOfWorkLinks =
+    req.body.proofOfWorkLinks || req.body.proof_of_work_links;
+  const reflection = req.body.reflection;
+
+  if (
+    !proofOfWorkLinks ||
+    !Array.isArray(proofOfWorkLinks) ||
+    proofOfWorkLinks.length === 0
+  ) {
+    return res.status(400).json({ error: "Proof of work links are required." });
+  }
 
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // Helper function to parse the unlocked_users array
     const parseUnlockedUsers = (unlockedUsers) => {
       if (!unlockedUsers || unlockedUsers.length === 0) return [];
-      
-      return unlockedUsers.map(entry => {
-        try {
-          // Handle various JSON formats
-          let parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
-          if (typeof parsed === 'string') {
-            // Handle double-encoded JSON
-            parsed = JSON.parse(parsed.replace(/\\"/g, '"').replace(/^"{|}"$/g, ''));
+
+      return unlockedUsers
+        .map((entry) => {
+          try {
+            let parsed = typeof entry === "string" ? JSON.parse(entry) : entry;
+            if (typeof parsed === "string") {
+              parsed = JSON.parse(
+                parsed.replace(/\\"/g, '"').replace(/^"{|}"$/g, "")
+              );
+            }
+            return parsed;
+          } catch (e) {
+            console.error("Error parsing unlocked user entry:", e);
+            return null;
           }
-          return parsed;
-        } catch (e) {
-          console.error('Error parsing unlocked user entry:', e);
-          return null;
-        }
-      }).filter(Boolean);
+        })
+        .filter(Boolean);
     };
 
     // Step 1: Update the task and get project/community info in a single query
@@ -858,16 +956,17 @@ const submitTask = async (req, res, io) => {
        SET submitted = TRUE, 
        submitted_at = NOW(), 
        status = 'submitted',
-       proof_of_work_links = $2
+       proof_of_work_links = $2,
+       reflection = $3
        FROM projects p
        WHERE t.id = $1 AND p.id = t.project_id
        RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id, 
                  p.community_id, t.assigned_user_ids, t.skill_id`,
-      [taskId, proofOfWorkLinks || []]
+      [taskId, proofOfWorkLinks || [], reflection || null]
     );
 
     if (result.rowCount === 0) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Task not found" });
     }
 
@@ -880,39 +979,42 @@ const submitTask = async (req, res, io) => {
       WHERE id = $1;
     `;
     const skillsResult = await client.query(skillsQuery, [task.skill_id]);
-    
+
     if (skillsResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Skill not found for this task" });
     }
 
-    const unlockedUsers = parseUnlockedUsers(skillsResult.rows[0].unlocked_users);
-    
+    const unlockedUsers = parseUnlockedUsers(
+      skillsResult.rows[0].unlocked_users
+    );
+
     // Filter out submitting users and find eligible reviewers
     const submittingUserIds = task.assigned_user_ids || [];
-    const eligibleReviewers = unlockedUsers.filter(user => 
-      !submittingUserIds.includes(user.user_id) && 
-      user.user_id !== task.project_owner_id
+    const eligibleReviewers = unlockedUsers.filter(
+      (user) =>
+        !submittingUserIds.includes(user.user_id) &&
+        user.user_id !== task.project_owner_id
     );
 
     // Find level 2+ reviewers
-    const highLevelReviewers = eligibleReviewers.filter(user => user.level >= 2);
-    
+    const highLevelReviewers = eligibleReviewers.filter(
+      (user) => user.level >= 2
+    );
+
     let reviewerIds = [];
-    
+
     // Determine which pool to select from
     if (highLevelReviewers.length >= 3) {
-      // Select 3 random from high level reviewers
       reviewerIds = [...highLevelReviewers]
         .sort(() => 0.5 - Math.random())
         .slice(0, 3)
-        .map(user => user.user_id);
+        .map((user) => user.user_id);
     } else if (eligibleReviewers.length >= 3) {
-      // Select 3 random from all eligible reviewers
       reviewerIds = [...eligibleReviewers]
         .sort(() => 0.5 - Math.random())
         .slice(0, 3)
-        .map(user => user.user_id);
+        .map((user) => user.user_id);
     } else {
       // Get 3 random platform users (excluding creator and submitting users)
       const randomUsersQuery = `
@@ -925,24 +1027,23 @@ const submitTask = async (req, res, io) => {
       `;
       const randomUsersResult = await client.query(randomUsersQuery, [
         submittingUserIds,
-        task.project_owner_id
+        task.project_owner_id,
       ]);
-      reviewerIds = randomUsersResult.rows.map(row => row.id);
+      reviewerIds = randomUsersResult.rows.map((row) => row.id);
     }
 
     // Update task with reviewer IDs
-    await client.query(
-      `UPDATE tasks SET reviewer_ids = $1 WHERE id = $2`,
-      [reviewerIds, taskId]
-    );
+    await client.query(`UPDATE tasks SET reviewer_ids = $1 WHERE id = $2`, [
+      reviewerIds,
+      taskId,
+    ]);
 
     // Step 2: Notify the project creator if we have an owner
     if (task.project_owner_id && reviewerIds.length === 0) {
-      // Only notify project owner if no reviewers were found (fallback)
       const notificationText = `A task was submitted for approval in your project "${
         task.project_name || "Untitled"
       }".`;
-      
+
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          VALUES ($1, $2, $3, NOW(), false)`,
@@ -962,7 +1063,7 @@ const submitTask = async (req, res, io) => {
       const notificationText = `You've been assigned to review a task in project "${
         task.project_name || "Untitled"
       }"`;
-      
+
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
@@ -970,7 +1071,7 @@ const submitTask = async (req, res, io) => {
       );
 
       if (io && typeof io.to === "function") {
-        reviewerIds.forEach(reviewerId => {
+        reviewerIds.forEach((reviewerId) => {
           io.to(`user_${reviewerId}`).emit("notification", {
             message: notificationText,
             type: "task",
@@ -979,16 +1080,17 @@ const submitTask = async (req, res, io) => {
       }
     }
 
-    await client.query('COMMIT');
-    res.json({ 
-      message: "Task submitted for approval", 
+    await client.query("COMMIT");
+    // Return the same shape as router expects
+    return {
+      message: "Task submitted for approval",
       task,
-      reviewerIds: reviewerIds.length > 0 ? reviewerIds : null
-    });
+      reviewerIds: reviewerIds.length > 0 ? reviewerIds : null,
+    };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query("ROLLBACK");
     console.error("Error submitting task:", error);
-    res.status(500).json({ error: "Failed to submit task" });
+    return res.status(500).json({ error: "Failed to submit task" });
   } finally {
     client.release();
   }
@@ -1117,18 +1219,24 @@ const findById = async (taskId) => {
 };
 
 const generateTasks = async (req, res) => {
-  const { projectName, projectDescription, interest_tags, creator_id } = req.body;
+  const { projectName, projectDescription, interest_tags, creator_id } =
+    req.body;
 
   if (!projectName || !projectDescription || !interest_tags || !creator_id) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
-    const generatedData = await autoGenerateTasks(projectName, projectDescription, interest_tags, creator_id);
+    const generatedData = await autoGenerateTasks(
+      projectName,
+      projectDescription,
+      interest_tags,
+      creator_id
+    );
     res.status(200).json(generatedData);
   } catch (error) {
-    console.error('Task generation error:', error);
-    res.status(500).json({ error: 'Failed to generate tasks' });
+    console.error("Task generation error:", error);
+    res.status(500).json({ error: "Failed to generate tasks" });
   }
 };
 
@@ -1140,8 +1248,8 @@ const granularizeTasks = async (req, res) => {
     let nextId = 1;
     const taskIdToName = {};
     const taskNameToTempId = {};
-  
-    tasks.forEach(task => {
+
+    tasks.forEach((task) => {
       if (!task.id) {
         task.tempId = nextId++; // Store temp ID separately
       } else {
@@ -1151,35 +1259,37 @@ const granularizeTasks = async (req, res) => {
       task.project_id = projectId;
       task.reward_tokens = task.reward_tokens ?? 100;
       task.skill_id = task.skill_id ?? null;
-  
+
       taskIdToName[task.tempId] = task.name;
       taskNameToTempId[task.name] = task.tempId;
     });
-  
-    tasks.forEach(task => {
+
+    tasks.forEach((task) => {
       if (!Array.isArray(task.dependencies)) {
         task.dependencies = [];
       } else {
-        task.dependencies = task.dependencies.map(dep => {
-          if (typeof dep === 'string') return taskNameToTempId[dep] || null;
-          return typeof dep === 'number' ? dep : null;
-        }).filter(dep => dep !== null);
+        task.dependencies = task.dependencies
+          .map((dep) => {
+            if (typeof dep === "string") return taskNameToTempId[dep] || null;
+            return typeof dep === "number" ? dep : null;
+          })
+          .filter((dep) => dep !== null);
       }
     });
-  
+
     return {
       tasks,
-      taskIdToName
+      taskIdToName,
     };
   };
 
   if (!projectId) {
-    return res.status(400).json({ success: false, error: 'Missing projectId' });
+    return res.status(400).json({ success: false, error: "Missing projectId" });
   }
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // Fetch all tasks in the project
     const taskResult = await client.query(
@@ -1190,8 +1300,10 @@ const granularizeTasks = async (req, res) => {
     const tasks = taskResult.rows;
 
     if (tasks.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ success: false, error: 'No tasks found for this project' });
+      await client.query("ROLLBACK");
+      return res
+        .status(404)
+        .json({ success: false, error: "No tasks found for this project" });
     }
 
     // Optionally fetch project metadata (optional but helpful for LLM context)
@@ -1202,10 +1314,10 @@ const granularizeTasks = async (req, res) => {
     const project = projectResult.rows[0];
 
     // Generate new granular subtasks for ALL tasks at once (batch)
-    const inputs = tasks.map(task => ({
+    const inputs = tasks.map((task) => ({
       name: task.name,
       description: task.description,
-      skill_id: task.skill_id
+      skill_id: task.skill_id,
     }));
 
     const subtasks = await autoGenerateSubtasks(
@@ -1217,32 +1329,34 @@ const granularizeTasks = async (req, res) => {
     );
 
     // Now we can call sanitizeSubtasks since it's defined and we have subtasks
-    const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(subtasks, projectId);
+    const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(
+      subtasks,
+      projectId
+    );
 
     // Delete all original tasks
-    await client.query(
-      'DELETE FROM tasks WHERE project_id = $1',
-      [projectId]
-    );
+    await client.query("DELETE FROM tasks WHERE project_id = $1", [projectId]);
 
     // Step 1: Insert all subtasks without dependencies
     const subtaskMetadata = []; // store name + original dependencies + other info
 
-    sanitizedSubtasks.forEach(subtask => {
+    sanitizedSubtasks.forEach((subtask) => {
       subtaskMetadata.push({
         projectId: subtask.project_id,
         name: subtask.name,
         description: subtask.description,
         skill_id: subtask.skill_id || null,
         reward_tokens: subtask.reward_tokens ?? 100,
-        status: 'inactive-unassigned',
+        status: "inactive-unassigned",
         originalDependencies: subtask.dependencies || [],
-        dependencyNames: subtask.dependencies.map(id => taskIdToName[id]).filter(Boolean)
+        dependencyNames: subtask.dependencies
+          .map((id) => taskIdToName[id])
+          .filter(Boolean),
       });
     });
 
     // Insert subtasks (no dependencies yet)
-    const insertPromises = subtaskMetadata.map(meta =>
+    const insertPromises = subtaskMetadata.map((meta) =>
       client.query(
         `INSERT INTO tasks (project_id, name, description, skill_id, status, reward_tokens, dependencies)
          VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id, name`,
@@ -1253,7 +1367,7 @@ const granularizeTasks = async (req, res) => {
           meta.skill_id,
           meta.status,
           meta.reward_tokens,
-          [] // empty dependencies for now
+          [], // empty dependencies for now
         ]
       )
     );
@@ -1261,7 +1375,7 @@ const granularizeTasks = async (req, res) => {
     const insertedResults = await Promise.all(insertPromises);
 
     const nameToRealId = {};
-    insertedResults.forEach(result => {
+    insertedResults.forEach((result) => {
       const row = result.rows[0];
       nameToRealId[row.name] = row.id;
     });
@@ -1270,44 +1384,47 @@ const granularizeTasks = async (req, res) => {
     console.log("Name to Real ID mapping:", nameToRealId);
 
     const updatePromises = [];
-subtaskMetadata.forEach((meta, index) => {
-  const realTaskId = insertedResults[index].rows[0].id;
-  
-  // Convert temp IDs to names, then names to real IDs
-  const resolvedDeps = meta.originalDependencies
-    .map(tempId => {
-      const depName = taskIdToName[tempId];
-      return nameToRealId[depName];
-    })
-    .filter(depId => depId !== undefined);
+    subtaskMetadata.forEach((meta, index) => {
+      const realTaskId = insertedResults[index].rows[0].id;
 
-  console.log(`Resolved dependencies for task "${meta.name}" (ID: ${realTaskId}):`, resolvedDeps);
+      // Convert temp IDs to names, then names to real IDs
+      const resolvedDeps = meta.originalDependencies
+        .map((tempId) => {
+          const depName = taskIdToName[tempId];
+          return nameToRealId[depName];
+        })
+        .filter((depId) => depId !== undefined);
 
-  updatePromises.push(
-    client.query(
-      `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
-      [resolvedDeps, realTaskId]
-    )
-  );
-});
+      console.log(
+        `Resolved dependencies for task "${meta.name}" (ID: ${realTaskId}):`,
+        resolvedDeps
+      );
 
-await Promise.all(updatePromises);
+      updatePromises.push(
+        client.query(
+          `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
+          [resolvedDeps, realTaskId]
+        )
+      );
+    });
 
-// Log the results of the subtasks inserted
-const insertedSubtasks = insertedResults.map(result => result.rows[0]);
+    await Promise.all(updatePromises);
 
-await client.query('COMMIT');
+    // Log the results of the subtasks inserted
+    const insertedSubtasks = insertedResults.map((result) => result.rows[0]);
+
+    await client.query("COMMIT");
 
     res.json({
       success: true,
       project: project || { id: projectId },
       deletedTasks: tasks,
-      newTasks: insertedSubtasks
+      newTasks: insertedSubtasks,
     });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Granularize project tasks failed:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    await client.query("ROLLBACK");
+    console.error("Granularize project tasks failed:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
   } finally {
     client.release();
   }
@@ -1318,7 +1435,7 @@ const processReview = async (taskId, userId, action, io) => {
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // Get task details including current approvals/rejections
     const taskQuery = `
@@ -1329,30 +1446,39 @@ const processReview = async (taskId, userId, action, io) => {
     const taskResult = await client.query(taskQuery, [taskId]);
 
     if (taskResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return { error: 'Task not found', status: 404 };
+      await client.query("ROLLBACK");
+      return { error: "Task not found", status: 404 };
     }
 
-    const { reviewer_ids, approvals, rejections, status, reward_tokens, project_id } = taskResult.rows[0];
+    const {
+      reviewer_ids,
+      approvals,
+      rejections,
+      status,
+      reward_tokens,
+      project_id,
+    } = taskResult.rows[0];
 
     // Check if user is a reviewer
     if (!reviewer_ids.includes(userId)) {
-      await client.query('ROLLBACK');
-      return { error: 'User not authorized to review this task', status: 403 };
+      await client.query("ROLLBACK");
+      return { error: "User not authorized to review this task", status: 403 };
     }
 
     // Check if task is still in submitted status
-    if (status !== 'submitted') {
-      await client.query('ROLLBACK');
-      return { error: 'Task is not in review status', status: 400 };
+    if (status !== "submitted") {
+      await client.query("ROLLBACK");
+      return { error: "Task is not in review status", status: 400 };
     }
 
     // Update reviewer arrays based on action
     const updateQuery = `
       UPDATE tasks
-      SET ${action === 'approve' 
-      ? 'approvals = array_append(approvals, $2)' 
-      : 'rejections = array_append(rejections, $2)'}
+      SET ${
+        action === "approve"
+          ? "approvals = array_append(approvals, $2)"
+          : "rejections = array_append(rejections, $2)"
+      }
       WHERE id = $1
       RETURNING approvals, rejections;
     `;
@@ -1360,27 +1486,37 @@ const processReview = async (taskId, userId, action, io) => {
     const updateResult = await client.query(updateQuery, [taskId, userId]);
     const newApprovals = updateResult.rows[0].approvals;
     const newRejections = updateResult.rows[0].rejections;
+    console.log("New approvals:", newApprovals);
+    console.log("New rejections:", newRejections);
 
     // Check if we've reached consensus (2 or more approvals/rejections)
-    if (newApprovals >= 2 || newRejections >= 2) {
-      const finalAction = newApprovals >= 2 ? 'approve' : 'reject';
-      
-      if (finalAction === 'approve') {
+    if (newApprovals?.length >= 2 || newRejections?.length >= 2) {
+      const finalAction = newApprovals?.length >= 2 ? "approve" : "reject";
+
+      if (finalAction === "approve") {
         // Approve the task
-        const approveResult = await approveTask(taskId, io);
+        const currentStatusResult = await client.query(
+          `SELECT status FROM tasks WHERE id = $1`,
+          [taskId]
+        );
+        if (currentStatusResult.rows[0].status !== "submitted") {
+          return { success: true, message: "Task already processed" };
+        }
+
+        const approveResult = await approveTask(taskId, io, client);
         if (approveResult.error) {
-          await client.query('ROLLBACK');
+          await client.query("ROLLBACK");
           return approveResult;
         }
       } else {
         // Reject the task - return to assigned users
         const rejectQuery = `
           UPDATE tasks
-          SET status = 'in_progress',
+          SET status = 'active-assigned',
               submitted = false,
               reviewer_ids = ARRAY[]::integer[],
-              approvals = 0,
-              rejections = 0
+              approvals = ARRAY[]::integer[],
+              rejections = ARRAY[]::integer[]
           WHERE id = $1
           RETURNING assigned_user_ids;
         `;
@@ -1390,20 +1526,23 @@ const processReview = async (taskId, userId, action, io) => {
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
           const notificationText = `Your submitted task was rejected and needs revisions.`;
-          await client.query(`
+          await client.query(
+            `
             INSERT INTO notifications (user_id, message, type, created_at, read) 
             SELECT unnest($1::int[]), $2, $3, NOW(), false
-          `, [assignedUserIds, notificationText, "task"]);
+          `,
+            [assignedUserIds, notificationText, "task"]
+          );
 
           // Socket notifications
           if (io) {
-            assignedUserIds.forEach(userId => {
-              io.to(`user_${userId}`).emit('notification', {
+            assignedUserIds.forEach((userId) => {
+              io.to(`user_${userId}`).emit("notification", {
                 id: Date.now(),
-                type: 'task',
-                message: 'Your task was rejected and needs revisions',
+                type: "task",
+                message: "Your task was rejected and needs revisions",
                 read: false,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               });
             });
           }
@@ -1411,11 +1550,16 @@ const processReview = async (taskId, userId, action, io) => {
       }
     }
 
-    await client.query('COMMIT');
-    return { success: true, action, approvals: newApprovals, rejections: newRejections };
+    await client.query("COMMIT");
+    return {
+      success: true,
+      action,
+      approvals: newApprovals,
+      rejections: newRejections,
+    };
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error processing review:', error);
+    await client.query("ROLLBACK");
+    console.error("Error processing review:", error);
     return { error: error.message, status: 500 };
   } finally {
     client.release();
@@ -1439,7 +1583,6 @@ const getReviewerTasks = async (userId) => {
     if (result.rows.length === 0) {
       console.log("No tasks found for this reviewer");
       return [];
-      
     }
 
     return result.rows;

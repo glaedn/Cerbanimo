@@ -38,14 +38,20 @@ const TaskEditor = ({
   const [loadingDependencies, setLoadingDependencies] = useState(false);
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [isSubmitted, setIsSubmitted] = useState(
-    taskForm.status === "submitted"
+    (taskForm.status || "").toLowerCase().includes("submitted")
   );
+
+ 
   const [platformUserId, setPlatformUserId] = useState(null);
   const isAssigned = taskForm.assigned_user_ids?.length > 0;
   const userIsAssigned = taskForm.assigned_user_ids?.some(
     (id) => Number(id) === Number(platformUserId) // Ensure both are numbers
   );
   const [proofLinks, setProofLinks] = useState(taskForm.proof_of_work_links || [""]);
+
+ useEffect(() => {
+    setIsSubmitted((taskForm.status || "").toLowerCase().includes("submitted"));
+  }, [taskForm.status]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -262,7 +268,7 @@ const TaskEditor = ({
         status: taskForm.status || "inactive-unassigned",
         proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
       };
-      console.log("assigned users: ", taskForm.assigned_user_ids);
+      console.log("Form data before submission:", formData);
 
       // Clean up before submission
       delete formData.project_id;
@@ -320,7 +326,8 @@ const TaskEditor = ({
       await axios.post(
         `http://localhost:4000/tasks/${taskForm.id}/submit`,
         {
-          proofOfWorkLinks: taskForm.proofOfWorkLinks // Add this line
+          proof_of_work_links: proofLinks.filter(link => link.trim() !== ""), // Add this line
+          reflection: taskForm.reflection,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -337,9 +344,10 @@ const TaskEditor = ({
   const handleApproval = async (approved) => {
     try {
       const token = await getAccessTokenSilently();
+      console.log("platformUserId:", platformUserId);
       await axios.put(
         `http://localhost:4000/tasks/${taskForm.id}/review`,
-        { action: approved ? "approve" : "reject" },
+        { action: approved ? "approve" : "reject", userId: Number(platformUserId) },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -353,7 +361,7 @@ const TaskEditor = ({
       console.error(`${approved ? "Approval" : "Rejection"} failed:`, error);
     }
   };
-
+  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted);
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
@@ -611,6 +619,17 @@ const TaskEditor = ({
                         
                         {(taskForm.status !== "submitted" && userIsAssigned) && (
   <Box mt={2}>
+    <h4>Reflection (Summarize your work)</h4>
+    <TextField
+      className="cyber-input"
+      label="Reflection"
+      multiline
+      rows={4}
+      value={taskForm.reflection}
+      onChange={(e) =>
+        setTaskForm({ ...taskForm, reflection: e.target.value })
+      }
+    />
     <h4>Proof of Work</h4>
     {proofLinks.map((link, index) => (
       <Box key={index} display="flex" alignItems="center" mb={1}>
@@ -651,6 +670,55 @@ const TaskEditor = ({
                     { isReviewer &&
                       isSubmitted && (
                         <>
+                        <Box mt={2}>
+                          <h4>Submitted Reflection</h4>
+                          <Box
+                            sx={{
+                              background: "#181c24",
+                              color: "#00f3ff",
+                              borderRadius: 1,
+                              p: 2,
+                              mb: 2,
+                              fontFamily: "monospace",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {taskForm.reflection}
+                          </Box>
+                          <h4>Proof of Work links (must review)</h4>
+                          <Box
+                            sx={{
+                              background: "#181c24",
+                              color: "#00f3ff",
+                              borderRadius: 1,
+                              p: 2,
+                              mb: 2,
+                              fontFamily: "monospace",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {Array.isArray(taskForm.proof_of_work_links)
+                              ? taskForm.proof_of_work_links.map((link, idx) =>
+                                  link ? (
+                                    <div key={idx}>
+                                      <a
+                                        href={link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          color: "#00f3ff",
+                                          textDecoration: "underline",
+                                          wordBreak: "break-all",
+                                        }}
+                                      >
+                                        {link}
+                                      </a>
+                                    </div>
+                                  ) : null
+                                )
+                              : null}
+                          </Box>
+                        </Box>
                           <Button
                             className="cyber-button approve"
                             onClick={() => handleApproval(true)}

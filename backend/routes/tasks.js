@@ -307,10 +307,30 @@ router.put('/:taskId/drop', async (req, res) => {
 
 
 
-router.post('/:taskId/submit', (req, res) => {
-  // Get io from req.app.get('io')
+router.post('/:taskId/submit', async (req, res) => {
   const io = req.app.get('io');
-  taskController.submitTask(req, res, io);
+  const { taskId } = req.params;
+  // Accept both camelCase and snake_case from frontend
+  const proofOfWorkLinks = req.body.proofOfWorkLinks || req.body.proof_of_work_links;
+  const reflection = req.body.reflection;
+
+  if (!proofOfWorkLinks || !Array.isArray(proofOfWorkLinks) || proofOfWorkLinks.length === 0) {
+    return res.status(400).json({ error: 'Proof of work links are required.' });
+  }
+
+  try {
+    const result = await taskController.submitTask(
+      { params: { taskId }, body: { proofOfWorkLinks, reflection } },
+      res,
+      io
+    );
+    if (!res.headersSent) {
+      res.status(200).json(result);
+    }
+  } catch (error) {
+    console.error('Error submitting task:', error);
+    res.status(500).json({ error: 'Server error submitting task' });
+  }
 });
 
 // Approve task route with spent_points tracking

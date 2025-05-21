@@ -1080,6 +1080,21 @@ console.log("Links that should be pink:",
     }
   }, [taskId, tasks, skills]);
 
+  // Add these debug logs right before the TaskEditor component in the return statement
+
+// Debug the reviewer ids for the current task
+console.log('Current task ID:', taskForm?.id);
+console.log('Current userId:', userId, 'type:', typeof userId);
+console.log('reviewer_ids for this task:', 
+  taskForm?.id ? allTasks[taskForm.id]?.reviewer_ids : 'No task selected', 
+  'type:', typeof allTasks[taskForm?.id]?.reviewer_ids);
+
+// Show the comparison that's happening
+const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
+const numericUserId = Number(userId);
+console.log('Comparing:', numericUserId, 'with', currentReviewerIds);
+console.log('Includes check result:', currentReviewerIds.includes(numericUserId));
+
   return (
     <div
       className="skill-hierarchy-container"
