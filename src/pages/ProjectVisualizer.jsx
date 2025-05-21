@@ -42,6 +42,23 @@ const ProjectVisualizer = () => {
   const [popupLaunched, setPopupLaunched] = useState(false);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
+  // Check if any task is active, completed, or urgent
+  const [projectIsActive, setProjectIsActive] = useState(false);
+
+  useEffect(() => {
+    setProjectIsActive(
+      tasks.some(
+        (task) =>
+          task.status === "completed" ||
+          task.status === "active-assigned" ||
+          task.status === "active-unassigned" ||
+          task.status === "urgent-unassigned" ||
+          task.status === "urgent-assigned" ||
+          task.status === "submitted"
+      )
+    );
+  }, [tasks]);
+
 
   const fetchUserCommunities = async () => {
     if (!userId) {
@@ -1161,6 +1178,7 @@ console.log("Links that should be pink:",
                 + New Task
               </button>
             )}
+            {!projectIsActive && (
             <button
               className={`new-task-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
@@ -1171,6 +1189,7 @@ console.log("Links that should be pink:",
             >
               {loading ? 'Granularizing...' : 'Granularize all project tasks'}
             </button>
+            )}
             {project?.community_id === null && (
               <button
                 className="community-proposal-button"
