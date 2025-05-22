@@ -23,11 +23,11 @@ const badges = ['Mentor', 'Innovator', 'Team Hero', 'Quantum Thinker'];
 const emojiOptions = ['👍', '💡', '🚀', '🌟'];
 
 const StoryNode = ({
-  taskName,
-  projectName,
+  task_name,
+  project_name,
   reflection,
   tags,
-  mediaUrls = [],
+  media_urls = [],
   endorsements = [],
   feedback = [],
   onAddEndorsement,
@@ -55,23 +55,29 @@ const StoryNode = ({
     onAddEndorsement({ type: 'badge', badge });
     setAnchorEl(null);
   };
+  console.log('Endorsements:', endorsements);
 
   return (
     <Card className="story-node-card" variant="outlined">
       <CardContent>
         <Typography variant="h6" className="glow-text neon-purple">
-          {taskName}
+          {task_name}
         </Typography>
-        <Typography variant="subtitle2" className="neon-blue">
-          from project: {projectName}
+        <Typography variant="subtitle2" className="neon-green">
+          from project: {project_name}
         </Typography>
 
         <Divider className="neon-divider" />
 
-        <Typography variant="body1" className="reflection-text">
-          {reflection}
+        <Typography variant="subtitle2" className="neon-blue">
+          Reflection:
         </Typography>
-
+        <Typography variant="body1" className="reflection-text">
+          "{reflection}"
+        </Typography>
+        <Typography variant="subtitle2" className="neon-green">
+          Skill type:
+        </Typography>
         <Stack direction="row" spacing={1} className="tag-container">
           {(typeof tags === 'string' ? tags.split(',') : Array.isArray(tags) ? tags : []).map((tag, i) => (
             <Chip
@@ -87,7 +93,7 @@ const StoryNode = ({
           <Typography variant="subtitle2" className="neon-orange">
             Media Links:
           </Typography>
-          {mediaUrls.map((url, i) => (
+          {media_urls.map((url, i) => (
             <a
               key={i}
               href={url}

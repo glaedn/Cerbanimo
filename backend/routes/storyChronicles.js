@@ -36,7 +36,8 @@ router.get('/user/:id/chronicle', async (req, res) => {
       ORDER BY created_at DESC
     `, [id]);
 
-    res.status(200).json(result.rows);
+    // Always return an array, even if only one or zero rows
+    res.status(200).json(Array.isArray(result.rows) ? result.rows : []);
   } catch (err) {
     console.error('Error fetching user chronicle:', err);
     res.status(500).json({ error: 'Failed to fetch user chronicle' });
@@ -88,7 +89,7 @@ router.get('/user/:id/summary', async (req, res) => {
     try {
       const result = await db.query(`
         SELECT 
-          COALESCE(SUM(tokens_earned), 0) AS total_tokens,
+          COALESCE(SUM(reward_tokens), 0) AS total_tokens,
           ARRAY_AGG(DISTINCT skill_name) AS skills
         FROM user_chronicles
         WHERE user_id = $1

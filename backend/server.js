@@ -18,6 +18,7 @@ import notificationRoutes from './routes/notifications.js';
 import taskController from './controllers/taskController.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
+import endorsementsRoutes from './routes/endorsements.js';
 
 // Initialize app
 const app = express();
@@ -139,6 +140,8 @@ app.use('/communities', jwtCheck, communitiesRoutes);
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
 app.use('/storyChronicles', storyChronicleRoutes);
+
+app.use('/endorsements', jwtCheck, endorsementsRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
