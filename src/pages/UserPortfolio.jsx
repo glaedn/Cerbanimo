@@ -11,7 +11,7 @@ const UserPortfolio = () => {
   const { userId } = useParams(); // ✅ Extract userId from URL
   const [filters, setFilters] = useState({});
   const [chronicleData, setChronicleData] = useState([]);
-  const [summaryData, setSummaryData] = useState({ tokens: 0, skills: [] });
+  const [summaryData, setSummaryData] = useState({ total_tokens: 0, skills: [] });
   const [storyStats, setStoryStats] = useState({ total: 0, recent: 0 });
 
   useEffect(() => {
@@ -38,7 +38,11 @@ const UserPortfolio = () => {
         }
 
         const summaryRes = await fetch(`http://localhost:4000/storyChronicles/user/${userId}/summary`);
-        const summaryData = await summaryRes.json();
+        const summaryRaw = await summaryRes.json();
+        const summaryData = {
+          total_tokens: parseInt(summaryRaw.total_tokens, 10) || 0,
+          skills: summaryRaw.skills || []
+        };
         setSummaryData(summaryData);
       } catch (err) {
         console.error("Error fetching chronicle or summary data:", err);
@@ -54,7 +58,10 @@ const UserPortfolio = () => {
         <Typography variant="h4" color="primary">User Portfolio</Typography>
       </div>
 
-      <TokenAndSkillSummary summary={summaryData} />
+      <TokenAndSkillSummary
+        tokens={summaryData.total_tokens}
+        skills={summaryData.skills}
+      />
 
       <div className="portfolio-filters">
         <FilterPanel filters={filters} setFilters={setFilters} />
