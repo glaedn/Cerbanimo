@@ -1,9 +1,9 @@
 /* Base container */
 .chronicle-container {
-    background-color: #0a0a1f;
+    background-color: #0A0A2E;
     padding: 2rem;
     border-radius: 1rem;
-    color: #e0e0f0;
+    color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
   }
   
@@ -20,8 +20,7 @@
   .chronicle-controls .MuiTextField-root {
     flex: 1;
     min-width: 240px;
-    background-color: #1a1a2f;
-    border-radius: 8px;
+    /* background-color and border-radius removed as MUI TextField will be styled by ThemeProvider */
   }
   
   .tag-filters {
@@ -33,24 +32,23 @@
   /* Tag hover effects */
   .tag-filters .MuiChip-root {
     transition: all 0.3s ease;
-    border: 1px solid #444;
-    color: #bbb;
-    background-color: #121225;
+    /* border, color, and background-color removed as MUI Chip will be styled by ThemeProvider for base look */
   }
   
   .tag-filters .MuiChip-root:hover {
-    background-color: #252547;
-    color: #00f0ff;
-    border-color: #00f0ff;
-    box-shadow: 0 0 8px #00f0ff77;
+    background-color: #9C27B0;
+    color: #00F3FF;
+    border-color: #00F3FF; /* Note: Chip variant="outlined" would be needed for this to show */
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.47);
+    transition: all 0.3s ease; /* Ensuring transition */
   }
   
   /* Carousel card */
   .MuiCard-root.carousel-card {
-    background: linear-gradient(135deg, #15152a, #1f1f3a);
-    border: 1px solid #30305a;
-    box-shadow: 0 0 15px #7e4fff66;
-    transition: transform 0.5s ease, opacity 0.5s ease;
+    background: linear-gradient(135deg, #1C1C1E, #000000);
+    border: 1px solid rgba(156, 39, 176, 0.6);
+    box-shadow: 0 0 15px rgba(156, 39, 176, 0.6);
+    transition: transform 0.5s ease, opacity 0.5s ease; /* Existing transitions kept */
     opacity: 0;
     transform: translateY(20px);
   }
@@ -62,12 +60,12 @@
   
   /* Chronicle card grid */
   .MuiCard-root.chronicle-card {
-    background-color: #13132a;
-    color: #eee;
-    border-radius: 12px;
-    border: 1px solid #2c2c4c;
-    box-shadow: 0 0 8px rgba(128, 0, 255, 0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #1C1C1E;
+    color: #FFFFFF;
+    border-radius: 12px; /* Existing border-radius kept */
+    border: 1px solid #444444;
+    box-shadow: 0 0 10px rgba(156, 39, 176, 0.47);
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Ensuring transition */
     opacity: 0;
     transform: translateY(20px);
   }
@@ -78,8 +76,8 @@
   }
   
   .MuiCard-root.chronicle-card:hover {
-    transform: scale(1.02);
-    box-shadow: 0 0 12px rgba(0, 255, 170, 0.6);
+    transform: scale(1.02); /* Existing transform kept */
+    box-shadow: 0 0 15px #00F3FF;
   }
   
   /* Media query for smaller screens */

@@ -4,6 +4,8 @@ import { Auth0Provider } from '@auth0/auth0-react';
 import App from './App.jsx';
 import NotificationProvider from './pages/NotificationProvider.jsx';
 import AuthWrapper from './AuthWrapper.jsx';  // Import the new component
+import { ThemeProvider } from '@mui/material/styles';
+import muiTheme from './styles/muiTheme.js';
 
 const onRedirectCallback = (appState) => {
   window.history.replaceState(
@@ -27,10 +29,12 @@ root.render(
     onRedirectCallback={onRedirectCallback}
     cacheLocation="localstorage"
   >
-    <AuthWrapper>
-      <NotificationProvider>
-        <App />
-      </NotificationProvider>
-    </AuthWrapper>
+    <ThemeProvider theme={muiTheme}>
+      <AuthWrapper>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </AuthWrapper>
+    </ThemeProvider>
   </Auth0Provider>
 );

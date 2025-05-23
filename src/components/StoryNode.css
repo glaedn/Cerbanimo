@@ -1,33 +1,33 @@
 .story-node-card {
-    background-color: #121212!important;
-    border: 1px solid #333;
+    background-color: #1C1C1E;
+    border: 1px solid #444444;
     margin: 1rem 0;
     padding: 1rem;
-    color: white!important;
+    color: #FFFFFF;
   }
   
   .glow-text {
-    text-shadow: 0 0 5px #fff;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.47);
   }
   
   .neon-purple {
-    color: #c792ea;
+    color: #9C27B0;
   }
   
   .neon-blue {
-    color: #82aaff;
+    color: #4DABF7;
   }
   
   .neon-green {
-    color: #c3e88d!important;
+    color: #00D787;
   }
   
   .neon-orange {
-    color: #f78c6c;
+    color: #FF9F40;
   }
   
   .neon-pink {
-    color: #f07178;
+    color: #FF5CA2;
   }
   
   .neon-chip {
@@ -36,7 +36,7 @@
   
   .neon-divider {
     margin: 0.5rem 0;
-    border-color: #444;
+    border-color: #444444;
   }
   
   .media-links {
@@ -60,18 +60,13 @@
     color: white;
   }
   
-  .feedback-toggle {
-    margin-top: 1rem;
-    color: #82aaff;
-  }
-  
   .feedback-section {
     margin-top: 0.5rem;
   }
   
   .feedback-text {
     padding-left: 0.5rem;
-    border-left: 2px solid #c792ea;
+    border-left: 2px solid #9C27B0;
     margin-bottom: 0.25rem;
   }
   
@@ -80,10 +75,10 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 1rem;
-    background: rgba(10, 10, 20, 0.6);
+    background: rgba(28, 28, 30, 0.7);
     padding: 0.5rem;
     border-radius: 12px;
-    border: 1px solid #444;
+    border: 1px solid #444444;
   }
   
   .endorse-input {
@@ -92,25 +87,8 @@
     gap: 0.3rem;
   }
   
-  .neon-button {
-    color: white;
-    background-color: #222;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-  
-  .neon-button:hover {
-    background-color: #6f00ff;
-    box-shadow: 0 0 6px #6f00ff88;
-  }
-  
-  .neon-input .MuiInputBase-root {
-    background-color: #111;
-    color: white;
-  }
-  
   .reflection-text {
-    color: #82aaff;
+    color: #4DABF7;
     font-weight: bold;
     font-size: 1.2rem;
     margin-top: 1rem;

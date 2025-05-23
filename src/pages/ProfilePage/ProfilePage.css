@@ -1,10 +1,10 @@
 /* Profile Page - Space Game Theme */
 .profile-container {
     padding: 20px;
-    color: rgb(255, 255, 255);
+    color: #FFFFFF;
     font-family: 'Orbitron', sans-serif; /* Sci-Fi Font */
     text-align: center;
-    background: radial-gradient(circle, #0a0a1a, #000000);
+    background: radial-gradient(circle, #0A0A2E, #000000);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -20,141 +20,62 @@
 }
 
 .profile-container::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .profile-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .profile-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF);
 }
 
 /* Profile Title */
 .profile-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 20px;
 }
 
-/* Profile Picture */
-.profile-avatar {
-    width: 120px !important;
-    height: 120px !important;
-    margin-bottom: 10px;
-    border: 3px solid #6dd5ed;
-    box-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
-}
-
 /* Profile Fields */
+/* Retaining .profile-field for general layout like max-width, margin, but removing border */
 .profile-field {
     max-width: 1200px;
     margin: 10px 0;
-    border: 1px solid #6dd5ed;
+    /* border: 1px solid #6dd5ed; */ /* Removed border */
     justify-content: center;
 }
 
+/* Retaining .profile-textfield for general layout like max-width, min-width, margin-left */
 .profile-textfield {
     max-width: 500px;
     min-width: 200px;
     margin-left: 10px;
 }
 
-.profile-textfield .MuiOutlinedInput-root {
-    background: rgba(0, 0, 0, 0.6); 
-    color: white;
-    border-radius: 10px;
-    border: 2px solid #6dd5ed;
-}
+/* Direct MUI component styling for TextFields and Autocomplete removed below */
+/* .profile-textfield .MuiOutlinedInput-root ... */
+/* .profile-textfield label ... */
+/* .profile-autocomplete .MuiInputBase-root ... */
+/* .profile-autocomplete label ... */
+/* .profile-autocomplete .MuiOutlinedInput-notchedOutline ... */
+/* .profile-autocomplete .MuiAutocomplete-tag ... */
 
-.profile-textfield .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-    border-color: #29b6f6;
-}
-
-.profile-textfield .MuiOutlinedInput-notchedOutline {
-    border-color: #6dd5ed;
-}
-
-.profile-textfield label {
-    color: #6dd5ed;
-    background:rgba(0, 0, 0, 0.6)
-}
-
-/* Autocomplete Fields */
-.profile-autocomplete .MuiInputBase-root {
-    background: rgba(0, 0, 0, 0.6); /* Slightly transparent input */
-    color: white;
-}
-
-.profile-autocomplete label {
-    color: #6dd5ed;
-}
-
-.profile-autocomplete .MuiOutlinedInput-notchedOutline {
-    border-color: #6dd5ed;
-}
-
-.profile-autocomplete .MuiAutocomplete-tag {
-    background-color: rgba(109, 213, 237, 0.8);
-}
-
-
-/* Buttons */
-.profile-footer {
-    width: 80%;
-    max-width: 500px;
-    position: absolute; /* Instead of fixed, so it respects container height */
-    bottom: 0px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-}
-
-.profile-buttons {
-    display: flex;
-    justify-content: space-between;
-    width: 80%;
-    max-width: 600px;
-    margin-top: 20px;
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-
-.profile-button {
-    background-color: #29f652;
-    color: black;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: bold;
-    padding: 10px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: 0.3s ease-in-out;
-    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
-    margin-top: 10px;
-    width: 48%;
-    text-align: center;
-}
-
-.profile-button:hover {
-    background-color: #71f88c;
-    text-shadow: 0 0 20px #6dd5ed;
-}
+/* Buttons removed as they will be styled using MUI props in JSX */
+/* .profile-footer ... */
+/* .profile-buttons ... */
+/* .profile-button ... */
 
 /* Experience Section */
 .profile-experience-container {
-    background: rgba(26, 9, 57, 0.9); 
-    background-color: #1a1a2e;
+    /* background: rgba(26, 9, 57, 0.9); */ /* Old background */
+    background-color: #1C1C1E; /* New background */
     border-radius: 10px;
     padding: 15px;
     margin-top: 20px;
@@ -167,14 +88,14 @@
     max-height: 500px;
     overflow-y: auto;
     text-align: center;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
 }
 
-.profile-experience-title {
+.profile-experience-title { /* This rule might be duplicated or conflict, ensuring it's updated */
     font-size: 1.5rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    /* text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; */ /* Shadow can be removed or updated if needed */
     margin-bottom: 10px;
 }
 
@@ -205,7 +126,7 @@
 .profile-experience-link:hover {
     color: #29b6f6;
     background: rgba(109, 213, 237, 0.4);
-    box-shadow: 0 0 20px rgba(109, 213, 237, 1);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* Updated shadow color */
 }
 
 .profile-experience-container::-webkit-scrollbar {
@@ -213,18 +134,18 @@
 }
 
 .profile-experience-container::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .profile-experience-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .profile-experience-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF);
 }
 
   /* Task Browser Wrapper */
@@ -238,8 +159,9 @@
     padding-bottom: 80px; /* Keeps it from colliding with the footer */
 }
   
-  .profile-experience-title {
-    color: #00f5ff;
+  /* This second .profile-experience-title rule is more specific or later in cascade. Update it too. */
+  .profile-experience-title { 
+    color: #00F3FF;
     font-size: 1.5rem;
     margin-bottom: 15px;
     text-transform: uppercase;
@@ -261,18 +183,18 @@
   }
   
   .task-name {
-    color: #00f5ff;
+    color: #00F3FF;
     font-weight: bold;
   }
   
   .task-description {
-    color: #e5e5e5 !important;
+    color: #CCCCCC; /* Removed !important */
   }
   
   .view-project-link {
     align-self: flex-start;
-    background-color: #0f3460;
-    color: #00f5ff;
+    background-color: rgba(0, 243, 255, 0.1);
+    color: #00F3FF;
     padding: 8px 15px;
     border-radius: 5px;
     text-decoration: none;
@@ -281,5 +203,5 @@
   }
   
   .view-project-link:hover {
-    background-color: #16213e;
+    background-color: rgba(0, 243, 255, 0.2);
   }

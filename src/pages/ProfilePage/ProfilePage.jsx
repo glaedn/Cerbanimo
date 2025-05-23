@@ -247,13 +247,12 @@ const ProfilePage = () => {
       </Box>
       
       {/* File input to change the profile picture */}
-      <Button variant="contained" component="label" className="edit-button">
+      <Button variant="contained" component="label" color="primary" sx={{ marginTop: 1, marginBottom: 2 }}>
         Edit
         <input type="file" hidden onChange={handleProfilePictureChange} />
       </Button>
       
       <TextField
-        className="profile-textfield profile-field"
         label="Username"
         value={profileData.username || ''}
         onChange={(e) => handleInputChange('username', e.target.value)}
@@ -263,7 +262,6 @@ const ProfilePage = () => {
       <Box mb={2} >
       
       <Autocomplete
-        className="profile-textfield profile-field"
         multiple
         options={skillsPool}
         getOptionLabel={(option) => option.name || ''} // Ensure it returns a string
@@ -300,11 +298,7 @@ const ProfilePage = () => {
                 key={key}
                 label={`${label} (Lvl ${skillLevel})`}
                 {...otherProps}
-                style={{
-                  backgroundColor: getRandomColorFromPalette(),
-                  margin: '2px',
-                  color: 'white',
-                }}
+                sx={{ margin: '2px' }}
               />
             );
           })
@@ -318,12 +312,11 @@ const ProfilePage = () => {
         
       />
       </Box>
-      <Button variant="contained" className="tree-button"  onClick={goToSkillTree}>
+      <Button variant="contained" color="secondary" sx={{ marginTop: 1, marginBottom: 2 }} onClick={goToSkillTree}>
         Skill Tree
       </Button>
       <Box mb={2}>
       <Autocomplete
-        className="profile-textfield profile-field"
         multiple
         options={interestsPool}
         getOptionLabel={(option) => option.name || ''} // Ensure string return
@@ -342,7 +335,7 @@ const ProfilePage = () => {
                 key={key}
                 label={option.name} // Ensure label is a string
                 {...otherProps}
-                style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color:'white' }}
+                sx={{ margin: '2px' }}
               />
             );
           })
@@ -375,13 +368,13 @@ const ProfilePage = () => {
       </Box>
       
       <Box className="profile-footer">
-      <Button variant="contained" color="secondary" className="profile-button"  onClick={handleSaveProfile}>
+      <Button variant="contained" color="primary" onClick={handleSaveProfile}>
         Save Profile
       </Button>
-      <Button variant="contained" className="profile-button"  onClick={goToDashboard}>
+      <Button variant="contained" color="secondary" onClick={goToDashboard}>
         Dashboard
       </Button>
-      <Button variant="contained" className="profile-button"  onClick={() => logout({ returnTo: window.location.origin })}>
+      <Button variant="contained" sx={{ backgroundColor: 'error.main', '&:hover': { backgroundColor: 'error.dark' } }} onClick={() => logout({ returnTo: window.location.origin })}>
         Logout
       </Button>
       </Box>
