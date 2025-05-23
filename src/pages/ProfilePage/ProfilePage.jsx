@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TextField, Autocomplete, Button, Box, Typography, Avatar, Chip } from '@mui/material';
+import {
+  TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
+  Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
+import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
 
 
 const ProfilePage = () => {
@@ -23,6 +29,13 @@ const ProfilePage = () => {
   const [interestsPool, setInterestsPool] = useState([]);
   const [error, setError] = useState(null);
   const [newProfilePicture, setNewProfilePicture] = useState(null); // New state for the file input
+
+  // State for Resources
+  const [userResources, setUserResources] = useState([]);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourceError, setResourceError] = useState(null);
 
   const colorPalette = [
       blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
@@ -41,9 +54,8 @@ const ProfilePage = () => {
             throw new Error('User email is not available');
           }
 
-          // Fetch the access token to be included in the request
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000', // Match the exact value from Auth0
+            audience: 'http://localhost:4000',
             scope: 'openid profile email read:profile write:profile',
           });
           
@@ -51,7 +63,6 @@ const ProfilePage = () => {
             throw new Error('Access token not available');
           }
 
-          // Use the token for authorized requests
           const profileResponse = await axios.get('http://localhost:4000/profile', {
             params: { 
               sub: user.sub,
@@ -64,7 +75,7 @@ const ProfilePage = () => {
             },
           });
 
-          setProfileData({
+          const fetchedProfileData = {
             id: profileResponse.data.id,
             username: profileResponse.data.username || '',
             skills: (profileResponse.data.skills || []).map(skill => {
@@ -82,7 +93,6 @@ const ProfilePage = () => {
               return skill;
             }),
             interests: (profileResponse.data.interests || []).map(interest => {
-              // Same logic as skills
               if (typeof interest === 'string') {
                 try {
                   if (interest.startsWith('{') && interest.includes('"name"')) {
@@ -97,10 +107,10 @@ const ProfilePage = () => {
             }),
             experience: profileResponse.data.experience || [],
             profile_picture: profileResponse.data.profile_picture || '',
-          });
+          };
+          setProfileData(fetchedProfileData);
 
 
-          // Fetch skills and interests pool
           const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -123,7 +133,7 @@ const ProfilePage = () => {
 
       fetchProfileAndOptions();
     }
-  }, [isAuthenticated, isLoading, user, logout, getAccessTokenSilently]);
+  }, [isAuthenticated, isLoading, user, logout, getAccessTokenSilently]); // Removed profileData.id from deps
 
   const [experienceDetails, setExperienceDetails] = useState([]);
 
@@ -182,8 +192,102 @@ const ProfilePage = () => {
     navigate('/dashboard'); // Ensure the `/profile` route is properly defined
   };
   const goToSkillTree = () => {
-    navigate('/profile/skilltree'); // Ensure the `/profile` route is properly defined
+    navigate('/profile/skilltree');
   };
+
+  // --- Resource Management Functions ---
+  const fetchUserResources = useCallback(async () => {
+    if (!profileData.id) return;
+    setResourcesLoading(true);
+    setResourceError(null);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: 'http://localhost:4000',
+        scope: 'read:profile', // Adjust scope if needed for resources
+      });
+      const response = await axios.get(`http://localhost:4000/resources/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserResources(response.data);
+    } catch (err) {
+      console.error('Error fetching user resources:', err);
+      setResourceError('Failed to fetch resources.');
+      // alert('Failed to fetch your resources.');
+    } finally {
+      setResourcesLoading(false);
+    }
+  }, [profileData.id, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (profileData.id) {
+      fetchUserResources();
+    }
+  }, [profileData.id, fetchUserResources]);
+
+  const handleOpenResourceModal = (resource = null) => {
+    setEditingResource(resource);
+    setIsResourceModalOpen(true);
+  };
+
+  const handleCloseResourceModal = () => {
+    setIsResourceModalOpen(false);
+    setEditingResource(null);
+  };
+
+  const handleResourceSubmit = async (resourceData) => {
+    try {
+      const token = await getAccessTokenSilently({
+        audience: 'http://localhost:4000',
+        // Ensure appropriate scope for writing resources
+        scope: 'write:profile', // Placeholder, adjust to actual scope for resources
+      });
+
+      let response;
+      const payload = { ...resourceData };
+
+      if (editingResource) {
+        // Update existing resource
+        response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Resource updated successfully!');
+      } else {
+        // Create new resource
+        payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
+        response = await axios.post('http://localhost:4000/resources', payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Resource created successfully!');
+      }
+      
+      fetchUserResources(); // Refresh list
+      handleCloseResourceModal();
+    } catch (err) {
+      console.error('Error submitting resource:', err.response ? err.response.data : err.message);
+      alert(`Failed to save resource: ${err.response ? err.response.data.error : err.message}`);
+    }
+  };
+
+  const handleDeleteResource = async (resourceId) => {
+    if (window.confirm('Are you sure you want to delete this resource?')) {
+      try {
+        const token = await getAccessTokenSilently({
+          audience: 'http://localhost:4000',
+          scope: 'write:profile', // Placeholder, adjust scope
+        });
+        await axios.delete(`http://localhost:4000/resources/${resourceId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Resource deleted successfully!');
+        fetchUserResources(); // Refresh list
+      } catch (err) {
+        console.error('Error deleting resource:', err);
+        alert('Failed to delete resource.');
+      }
+    }
+  };
+  // --- End Resource Management Functions ---
+
 
   const handleSaveProfile = async () => {
     try {
@@ -378,6 +482,84 @@ const ProfilePage = () => {
         Logout
       </Button>
       </Box>
+
+      {/* My Resources Section */}
+      <Box className="profile-resources-container" sx={{ mt: 4, p: 2, border: '1px solid #ddd', borderRadius: 2 }}>
+        <Typography variant="h5" gutterBottom>
+          My Resources
+        </Typography>
+        <Button variant="contained" color="primary" onClick={() => handleOpenResourceModal()} sx={{ mb: 2 }}>
+          List New Resource
+        </Button>
+        {resourcesLoading && <CircularProgress />}
+        {resourceError && <Typography color="error">{resourceError}</Typography>}
+        {!resourcesLoading && !resourceError && userResources.length === 0 && (
+          <Typography>You haven't listed any resources yet.</Typography>
+        )}
+        {!resourcesLoading && !resourceError && userResources.length > 0 && (
+          <List>
+            {userResources.map((resource) => (
+              <ListItem 
+                key={resource.id}
+                secondaryAction={
+                  <>
+                    <IconButton edge="end" aria-label="edit" onClick={() => handleOpenResourceModal(resource)} sx={{mr: 1}}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteResource(resource.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </>
+                }
+                sx={{ borderBottom: '1px solid #eee' }}
+              >
+                <ListItemText 
+                  primary={resource.name} 
+                  secondary={
+                    <>
+                      <Typography component="span" variant="body2" color="text.primary">
+                        Category: {resource.category || 'N/A'}
+                      </Typography>
+                      <br />
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        Quantity: {resource.quantity || 'N/A'} - Status: {resource.status || 'N/A'}
+                      </Typography>
+                    </>
+                  } 
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+
+      {/* Resource Form Modal */}
+      <Modal
+        open={isResourceModalOpen}
+        onClose={handleCloseResourceModal}
+        aria-labelledby="resource-modal-title"
+        aria-describedby="resource-modal-description"
+      >
+        <Paper sx={{ 
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '75%', md: '600px' },
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          p: { xs: 2, sm: 3, md: 4 },
+          borderRadius: 2,
+        }}>
+          <ResourceListingForm
+            initialResourceData={editingResource}
+            onSubmit={handleResourceSubmit}
+            onCancel={handleCloseResourceModal}
+          />
+        </Paper>
+      </Modal>
     </Box>
   );
 };

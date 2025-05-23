@@ -1,0 +1,26 @@
+/*
+  CommunityResourceManagement.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+
+  For now, most styling is expected to be handled directly within the
+  CommunityResourceManagement.jsx file using Material-UI's styling solutions.
+*/
+
+/* Example of a custom style:
+.resource-list-item-custom {
+  border-left: 4px solid blue;
+  margin-bottom: 8px;
+}
+*/
+
+.community-resource-management-container {
+  /* Styles for the main container if needed */
+}
+
+.resource-modal-paper {
+  /* Custom styles for the modal's Paper component if sx prop is not enough */
+  /* Example:
+  border-radius: 10px;
+  */
+}
