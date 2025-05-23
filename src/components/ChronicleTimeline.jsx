@@ -56,12 +56,12 @@ const ChronicleTimeline = ({ stories }) => {
   };
 
   return (
-    <Box sx={{ bgcolor: '#000', p: 2 }}>
-      <Typography variant="h5" color="#0ff" mb={2}>
+    <Box sx={{ bgcolor: 'background.default', p: 2 }}>
+      <Typography variant="h5" color="primary" mb={2}>
         Chronicle Timeline
       </Typography>
       {safeStories.length === 0 ? (
-        <Typography color="#888">No stories to display.</Typography>
+        <Typography color="textSecondary">No stories to display.</Typography>
       ) : (
         safeStories.map((story) => (
           <StoryNode

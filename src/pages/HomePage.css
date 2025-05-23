@@ -11,8 +11,8 @@ html, body {
   
   .homepage {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0e0e2c, #1a1a40);
-    color: #f4f4f9;
+    background: linear-gradient(135deg, #0A0A2E, #1C1C1E);
+    color: #FFFFFF;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -26,20 +26,20 @@ html, body {
   
   html::-webkit-scrollbar-track,
   body::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 2px;
   }
   
   html::-webkit-scrollbar-thumb,
   body::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 2px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
   }
   
   html::-webkit-scrollbar-thumb:hover,
   body::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF);
   }
   
   .section {
@@ -81,8 +81,8 @@ html, body {
   .hero h1 {
     font-size: 3.5rem;
     margin-bottom: 1.5rem;
-    color: #ffffff;
-    text-shadow: 0 0 15px rgba(108, 99, 255, 0.5);
+    color: #FFFFFF;
+    text-shadow: 0 0 15px rgba(156, 39, 176, 0.47);
     position: relative;
     z-index: 1;
   }
@@ -90,7 +90,7 @@ html, body {
   .hero p {
     font-size: 1.4rem;
     max-width: 700px;
-    color: #d8d8f0;
+    color: #CCCCCC;
     margin-bottom: 2rem;
     position: relative;
     z-index: 1;
@@ -102,21 +102,21 @@ html, body {
     padding: 14px 32px;
     font-size: 1.1rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #6c63ff, #4e46e8);
+    background: linear-gradient(135deg, #9C27B0, #FF5CA2);
     border: none;
     border-radius: 8px;
-    color: white;
+    color: #FFFFFF;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
     z-index: 1;
-    box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4);
+    box-shadow: 0 4px 20px rgba(156, 39, 176, 0.4);
   }
   
   .cta-button:hover {
-    background: linear-gradient(135deg, #817cff, #6c63ff);
+    background: linear-gradient(135deg, #B048C8, #FF79B8);
     transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(108, 99, 255, 0.6);
+    box-shadow: 0 6px 25px rgba(156, 39, 176, 0.6);
   }
   
   .features {
@@ -128,7 +128,7 @@ html, body {
   }
   
   .feature-card {
-    background: linear-gradient(145deg, #2c2c54, #252547);
+    background: linear-gradient(145deg, #1C1C1E, #0A0A2E);
     padding: 30px;
     border-radius: 16px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
@@ -148,7 +148,7 @@ html, body {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #6c63ff, #6dd5ed);
+    background: linear-gradient(90deg, #9C27B0, #00F3FF);
     opacity: 0.8;
   }
   
@@ -158,14 +158,14 @@ html, body {
   }
   
   .feature-card h3 {
-    color: #ffffff;
+    color: #FFFFFF;
     margin-bottom: 16px;
     font-size: 1.5rem;
     width: 100%;
   }
   
   .feature-card p {
-    color: #b9b9d3;
+    color: #CCCCCC;
     font-size: 1rem;
     line-height: 1.6;
   }
@@ -180,7 +180,7 @@ html, body {
   }
 
   .vision {
-    background: linear-gradient(to bottom, rgba(20, 20, 43, 0.7), rgba(14, 14, 44, 0.7));
+    background: linear-gradient(to bottom, rgba(28, 28, 30, 0.7), rgba(10, 10, 46, 0.7));
     border-radius: 16px;
     padding: 40px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -190,7 +190,7 @@ html, body {
   }
   /* Make the mission section more visually distinct */
   .mission-section {
-    background: linear-gradient(to bottom, rgba(20, 20, 43, 0.7), rgba(14, 14, 44, 0.7));
+    background: linear-gradient(to bottom, rgba(28, 28, 30, 0.7), rgba(10, 10, 46, 0.7));
     border-radius: 16px;
     padding: 40px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -206,7 +206,7 @@ html, body {
     right: 0;
     width: 150px;
     height: 150px;
-    background: radial-gradient(circle, rgba(108, 99, 255, 0.15), transparent 70%);
+    background: radial-gradient(circle, rgba(156, 39, 176, 0.15), transparent 70%);
     border-radius: 50%;
     z-index: 0;
   }
@@ -221,12 +221,12 @@ html, body {
     padding: 0px 20px 10px 0px;
     text-align: center;
     font-size: 0.95rem;
-    color: #b9b9d3;
-    background-color: #0a0a20;
+    color: #CCCCCC;
+    background-color: #000000;
     position: relative;
     margin-top: auto;
     width: 100%;
-    border-top: 1px solid rgba(108, 99, 255, 0.2);
+    border-top: 1px solid rgba(156, 39, 176, 0.2);
   }
   
   @media (max-width: 768px) {
@@ -276,5 +276,5 @@ html, body {
   }
   
   body {
-    overflow-x: hidden !important;
+    overflow-x: hidden;
   }

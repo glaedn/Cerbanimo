@@ -1,13 +1,3 @@
-/* Reset body & html padding/margins to remove white space */
-html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: radial-gradient(circle, #0a0a1a, #000000);
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-}
-
 /* Container for the Project Page */
 .project-page-container {
     display: flex;
@@ -19,35 +9,38 @@ html, body {
     padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
+    background: radial-gradient(circle, #0A0A2E, #000000);
+    color: #FFFFFF;
+    font-family: 'Orbitron', sans-serif;
 }
 
 /* Project Header Section */
 .project-header {
     width: 90%;
-    background: rgba(26, 9, 57, 0.9);
+    background: rgba(28, 28, 30, 0.9);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
     margin-top: 20px;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
 }
 
 /* Project Title */
 .project-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 10px;
 }
 
 /* Project Description */
 .project-description {
     font-size: 1rem;
-    color: #e0e0e0;
+    color: #CCCCCC;
     margin-bottom: 5px;
     background: transparent;
-    border: none;
+    border: 1px solid #444444;
     width: 100%;
     padding: 10px;
     resize: none;
@@ -65,18 +58,6 @@ html, body {
     font-size: 1rem;
 }
 
-.tags {
-    color: white !important;
-    color: rgba(255, 255, 255, 1) !important;
-    background-color: rgba(109, 213, 237, 0.8) !important;
-    font-weight: bold;
-}
-
-.tags * {
-    color: white !important;
-    color: rgba(255, 255, 255, 1) !important;
-}
-
 /* Tasks Section */
 .tasks-section {
     width: 100%;
@@ -88,15 +69,15 @@ html, body {
 .tasks-title {
     font-size: 1.8rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #00F3FF;
     margin-left: 20px;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
 }
 
 /* Add Task Button */
 .add-task-button {
-    background-color: #6dd5ed;
-    color: white;
+    background-color: #00F3FF;
+    color: #000000;
     font-size: 2rem;
     width: 40px;
     height: 40px;
@@ -107,12 +88,12 @@ html, body {
     margin-bottom: 10px;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
 .add-task-button:hover {
-    background-color: #29b6f6;
-    text-shadow: 0 0 20px #6dd5ed;
+    background-color: #4DABF7;
+    text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text, consider removing or adjusting */
 }
 
 /* Task List */
@@ -131,44 +112,44 @@ html, body {
 }
 
 .tasks-section::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .tasks-section::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .tasks-section::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency with other scrollbars */
 }
 
 .task-card {
-    background-color: rgba(26, 9, 57, 0.7);
+    background-color: rgba(28, 28, 30, 0.7);
     border-radius: 10px;
     padding: 15px;
     width: calc(33.33% - 20px);
     box-sizing: border-box;
     transition: transform 0.2s ease-in-out;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .task-card:hover {
     transform: scale(1.02);
-    background: rgba(109, 213, 237, 0.1);
+    background: rgba(0, 243, 255, 0.1); /* Updated hover background */
 }
 
 .task-card h3 {
     font-size: 1.2rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #00F3FF;
 }
 
 .visualize-button {
-  background: linear-gradient(45deg, #6dd5ed, #2193b0);
-  color: white;
+  background: linear-gradient(45deg, #00F3FF, #4DABF7);
+  color: #000000;
   padding: 8px 15px;
   border: none;
   border-radius: 5px;
@@ -176,7 +157,7 @@ html, body {
   font-family: 'Orbitron', sans-serif;
   text-transform: uppercase;
   letter-spacing: 1px;
-  box-shadow: 0 0 15px rgba(109, 213, 237, 0.5),
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.5),
         inset 0 0 10px rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
   position: relative;
@@ -185,30 +166,30 @@ html, body {
 
 .visualize-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(109, 213, 237, 0.8),
+  box-shadow: 0 0 25px rgba(0, 243, 255, 0.8),
         inset 0 0 15px rgba(255, 255, 255, 0.5);
-  background: linear-gradient(45deg, #2193b0, #6dd5ed);
+  background: linear-gradient(45deg, #4DABF7, #00F3FF);
 }
 
 .visualize-button:active {
   transform: translateY(1px);
-  box-shadow: 0 0 10px rgba(109, 213, 237, 0.3);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3); /* Updated shadow color */
 }
 
 /* Task Card Description */
 .task-card p {
     font-size: 1rem;
-    color: #e0e0e0;
+    color: #CCCCCC;
 }
 
 /* Task Card Skill */
 .task-card p strong {
-    color: #6dd5ed;
+    color: #00F3FF;
 }
 
 .accept-task-button {
-    background-color: rgba(109, 213, 237, 0.8);
-    color: white;
+    background-color: rgba(0, 243, 255, 0.8);
+    color: #000000;
     padding: 5px 10px;
     border: none;
     border-radius: 5px;
@@ -222,18 +203,24 @@ html, body {
   }
 
   .accept-task-button.drop-task-button {
-    background-color: rgba(217, 106, 91, 0.9);
-    color: white;
+    background-color: rgba(255, 65, 54, 0.8);
+    color: #FFFFFF;
+  }
+  .accept-task-button.drop-task-button:hover {
+    background-color: rgba(255, 100, 80, 0.9);
   }
   
   .edit-task-button {
-    background-color: rgba(109, 213, 237, 0.8);
-    color: white;
+    background-color: rgba(77, 171, 247, 0.8);
+    color: #FFFFFF;
     padding: 5px 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+  }
+  .edit-task-button:hover {
+    background-color: rgba(100, 190, 255, 0.9);
   }
   
   .edit-task-button:disabled {
@@ -242,13 +229,16 @@ html, body {
   }
   
   .submit-task-button {
-    background-color: rgba(109, 237, 147, 0.8);
-    color: black;
+    background-color: rgba(0, 215, 135, 0.8);
+    color: #000000;
     padding: 5px 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+  }
+  .submit-task-button:hover {
+    background-color: rgba(50, 235, 155, 0.9);
   }
   
   .submit-task-button:disabled {
@@ -257,13 +247,16 @@ html, body {
   }
 
   .reject-task-button {
-    background-color: rgba(237, 124, 109, 0.8);
-    color: black;
+    background-color: rgba(255, 92, 162, 0.8);
+    color: #FFFFFF;
     padding: 5px 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+  }
+  .reject-task-button:hover {
+    background-color: rgba(255, 120, 180, 0.9);
   }
   
   .reject-task-button:disabled {
@@ -272,13 +265,16 @@ html, body {
   }
 
   .approve-task-button {
-    background-color: rgba(109, 237, 147, 0.8);
-    color: black;
+    background-color: rgba(0, 215, 135, 0.8);
+    color: #000000;
     padding: 5px 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+  }
+  .approve-task-button:hover {
+    background-color: rgba(50, 235, 155, 0.9);
   }
   
   .approve-task-button:disabled {
@@ -294,7 +290,7 @@ html, body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -302,10 +298,10 @@ html, body {
 }
 
 .task-popup {
-    background: rgba(26, 9, 57, 0.9);
+    background: rgba(28, 28, 30, 0.95);
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.7);
     width: 400px;
     color: white;
 }
@@ -313,7 +309,7 @@ html, body {
 .task-popup h2 {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #00F3FF;
     margin-bottom: 15px;
 }
 
@@ -321,10 +317,10 @@ html, body {
     width: 90%;
     padding: 10px;
     margin-bottom: 10px;
-    background: rgba(26, 9, 57, 0.8);
-    color: white;
+    background: rgba(10, 10, 46, 0.7);
+    color: #FFFFFF;
     border-radius: 5px;
-    border: 1px solid #6dd5ed;
+    border: 1px solid #00F3FF;
     font-size: 1rem;
 }
 
@@ -344,8 +340,8 @@ html, body {
   
 /* Buttons in Popup */
 .task-popup button {
-    background-color: #6dd5ed;
-    color: white;
+    background-color: #00F3FF;
+    color: #000000;
     font-size: 1rem;
     font-weight: bold;
     padding: 10px 20px;
@@ -356,13 +352,13 @@ html, body {
 }
 
 .task-popup button:hover {
-    background-color: #29b6f6;
-    text-shadow: 0 0 20px #6dd5ed;
+    background-color: #4DABF7;
+    text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text */
 }
 
 .close-popup-button {
     background-color: transparent;
-    color: #e0e0e0;
+    color: #CCCCCC;
     font-size: 1.2rem;
     font-weight: bold;
     border: none;
@@ -371,7 +367,7 @@ html, body {
 }
 
 .close-popup-button:hover {
-    color: #6dd5ed;
+    color: #00F3FF;
 }
 
 /* Sci-Fi Themed Buttons */
@@ -388,8 +384,8 @@ html, body {
 }
 
 .save-project-button {
-    background-color: rgba(109, 213, 237, 0.8);
-    color: white;
+    background-color: rgba(0, 243, 255, 0.8);
+    color: #000000;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 10px 10px;
@@ -397,27 +393,27 @@ html, body {
     border-radius: 5px;
     cursor: pointer;
     transition: 0.3s;
-    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    text-shadow: 0 0 10px rgba(0, 243, 255, 1); /* Updated shadow color */
 }
 
 .save-project-button:hover {
-    background-color: rgba(86, 185, 207, 0.8);
+    background-color: rgba(77, 171, 247, 0.9);
 }
 
 .back-to-projects-button {
-    background-color: rgba(156, 109, 237, 0.8);
-    color: white;
+    background-color: rgba(156, 39, 176, 0.8);
+    color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 10px 10px;
     border-radius: 5px;
     cursor: pointer;
     transition: 0.3s;
-    text-shadow: 0 0 10px rgb(164, 109, 237);
+    text-shadow: 0 0 10px rgba(156, 39, 176, 1); /* Updated shadow color */
 }
 
 .back-to-projects-button:hover {
-    background-color: rgba(132, 86, 211, 0.8);
+    background-color: rgba(176, 60, 196, 0.9);
 }
 
 .project-controls {
@@ -446,10 +442,11 @@ html, body {
   .token-display {
     margin: 10px 0;
     padding: 8px;
-    background-color: #002955;
+    background-color: rgba(0, 30, 70, 0.8);
     border-radius: 4px;
     font-size: 16px;
     max-width: 300px;
+    color: #FFFFFF; /* Ensuring text is visible */
   }
 
   .token-display div {
