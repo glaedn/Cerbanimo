@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link, useLocation } from 'react-router-dom';
 import './SiteNav.css';
-import { Badge, IconButton, Menu, MenuItem } from "@mui/material";
+import { Badge, IconButton, Menu, MenuItem, Button } from "@mui/material"; // Added Button
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useNotifications } from "./NotificationProvider";  // Import the useNotifications hook
 import IdleSpaceGame from './IdleSpaceGame';
+import LevelNotification from '../components/LevelNotification/LevelNotification'; // Added LevelNotification import
 
 const SiteNav = () => {
     const { logout, loginWithRedirect, isAuthenticated } = useAuth0();
@@ -18,6 +19,27 @@ const SiteNav = () => {
     const { notifications, unreadCount, markAsRead } = useNotifications(); // Destructure markAsRead here
     
     const [anchorEl, setAnchorEl] = useState(null);
+
+    // State for LevelNotification demo
+    const [demoPreviousXP, setDemoPreviousXP] = useState(0);
+    const [demoNewXP, setDemoNewXP] = useState(0);
+    const [demoPreviousLevel, setDemoPreviousLevel] = useState(1);
+    const [demoNewLevel, setDemoNewLevel] = useState(1);
+
+    const handleGainXP = () => {
+        setDemoPreviousXP(demoNewXP);
+        setDemoPreviousLevel(demoNewLevel);
+
+        let newXPVal = demoNewXP + 30; // Gain 30 XP
+        let newLevelVal = demoNewLevel;
+
+        if (newXPVal >= 100) {
+            newXPVal -= 100; // Reset XP for new level
+            newLevelVal += 1;  // Increment level
+        }
+        setDemoNewXP(newXPVal);
+        setDemoNewLevel(newLevelVal);
+    };
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -139,6 +161,17 @@ const SiteNav = () => {
                             </Link>
                         </>
                     )}
+                    {/* Test button for LevelNotification */}
+                    {isAuthenticated && ( // Only show if authenticated for simplicity
+                        <Button 
+                            variant="contained" 
+                            color="secondary" 
+                            onClick={handleGainXP} 
+                            sx={{ m: 2 }}
+                        >
+                            Gain XP (Test)
+                        </Button>
+                    )}
                 </div>
                 
                 {/* Conditional rendering of login/logout button */}
@@ -152,6 +185,12 @@ const SiteNav = () => {
                     </button>
                 )}
             </div>
+            <LevelNotification
+                previousXP={demoPreviousXP}
+                newXP={demoNewXP}
+                previousLevel={demoPreviousLevel}
+                newLevel={demoNewLevel}
+            />
         </nav>
     );
 };
