@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TextField, Button, Box, Typography, Autocomplete, Chip } from '@mui/material';
+import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import './CommunityCreation.css';
@@ -116,11 +116,8 @@ const CommunityCreation = () => {
           fullWidth
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="form-input"
           required
-          InputProps={{
-            style: { color: 'white', backgroundColor: 'rgba(26, 9, 57, 0.9)', borderRadius: '10px' }
-          }}
+          margin="normal"
         />
         <div className="cosmic-glow"></div>
       </div>
@@ -134,10 +131,7 @@ const CommunityCreation = () => {
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="form-input"
-          InputProps={{
-            style: { color: 'white', backgroundColor: 'rgba(26, 9, 57, 0.9)', borderRadius: '10px' }
-          }}
+          margin="normal"
         />
         <div className="cosmic-glow"></div>
       </div>
@@ -153,7 +147,7 @@ const CommunityCreation = () => {
           onChange={(event, newValue) => setSelectedTags(newValue)}
           freeSolo
           renderInput={(params) => (
-            <TextField {...params} variant="outlined" label="Interest Tags" placeholder="Add tags" className="form-input" />
+            <TextField {...params} variant="outlined" label="Interest Tags" placeholder="Add tags" margin="normal" />
           )}
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
@@ -163,12 +157,7 @@ const CommunityCreation = () => {
                 {...getTagProps({ index })}
                   key={index}
                   label={label}
-                  style={{
-                    backgroundColor: getRandomColorFromPalette(),
-                    color: 'white',
-                    margin: '2px',
-                    textShadow: '0 0 10px rgba(0,0,0,0.8)',
-                  }}
+                  sx={{ margin: '2px' }}
                 />
               );
             })
@@ -181,8 +170,8 @@ const CommunityCreation = () => {
         variant="contained"
         color="primary"
         onClick={handleCreateCommunity}
-        className="create-button"
         disabled={isLoading}
+        sx={{ marginTop: 3, paddingY: '12px', paddingX: '24px', fontWeight: 'bold' }}
       >
         {isLoading ? 'Creating...' : 'Launch Community'}
       </Button>

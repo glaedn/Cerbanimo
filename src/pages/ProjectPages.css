@@ -1,13 +1,3 @@
-/* Reset body & html padding/margins to remove white space */
-html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* Prevent any scrolling due to extra space */
-    background: radial-gradient(circle, #0a0a1a, #000000);
-    color: white;
-    font-family: 'Orbitron', sans-serif; /* Futuristic font */
-}
-
 /* Container for Project Pages */
 .project-pages-container {
     display: flex;
@@ -19,14 +9,17 @@ html, body {
     padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
+    background: transparent;
+    color: #FFFFFF;
+    font-family: 'Orbitron', sans-serif;
 }
 
 /* Page Title */
 .project-page-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 10px;
     margin-top: 60px;
 }
@@ -45,17 +38,12 @@ html, body {
     width: 100%;
     padding: 10px;
     border-radius: 5px;
-    border: none;
-    background: rgba(26, 9, 57, 0.9);
-    color: white;
+    border: 1px solid #444444;
+    background-color: rgba(28, 28, 30, 0.8);
+    color: #FFFFFF;
     margin-right: 10px;
 }
-
-.add-project-button:hover {
-    background-color: #29b6f6;
-    text-shadow: 0 0 20px #6dd5ed;
-}
-
+/* Note: Hover/focus for search-input would ideally be separate or handled in JS/MUI */
 
 /* Project List Wrapper */
 .project-list-wrapper {
@@ -64,9 +52,9 @@ html, body {
     max-width: 1200px;
     margin-top: 10px;
     overflow-y: auto;
-    background: rgba(26, 9, 57, 0.9);
+    background: rgba(28, 28, 30, 0.9);
     border-radius: 10px;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
     padding: 20px;
 }
 
@@ -76,49 +64,50 @@ html, body {
 }
 
 .project-list-wrapper::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .project-list-wrapper::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .project-list-wrapper::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
 /* Project Card */
 .project-card {
-    background-color: rgba(26, 9, 57, 0.7);
+    background-color: rgba(10, 10, 46, 0.7);
     border-radius: 10px;
     padding: 15px;
     max-height: 300px;
     margin-bottom: 10px;
     transition: transform 0.2s ease-in-out;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .project-card:hover {
     transform: scale(1.02);
-    background: rgba(109, 213, 237, 0.1);
+    background: rgba(0, 243, 255, 0.1);
 }
 
-/* Project Title */
-.project-title {
+/* Project Title (inside card) - this selector is identical to page title, be careful */
+/* Assuming this rule is for the title inside .project-card based on its position in the original CSS */
+.project-card .project-title { /* Made selector more specific */
     font-size: 1.5rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6), 0 0 15px rgba(0, 243, 255, 0.4); /* Adjusted shadow for smaller text */
     margin-bottom: 10px;
 }
 
 /* Project Description */
 .project-description {
     font-size: 1rem;
-    color: #e0e0e0;
+    color: #CCCCCC;
     margin-bottom: 5px;
 }
 
@@ -127,9 +116,9 @@ html, body {
     display: flex;
     flex-wrap: wrap;
     margin-top: 10px;
-    background-color:#21113c!important;
-    border-radius: 5px!important;
-    border-color: #00f3ff!important;
+    background-color: rgba(28, 28, 30, 0.5);
+    border-radius: 5px;
+    border: 1px solid #00F3FF;
     max-width: 400px;
 }
 
@@ -144,22 +133,15 @@ html, body {
     z-index: 10;
 }
 
-/* Search Input */
-.search-input {
-    flex: 1;
-    padding: 10px;
-    margin-right: 10px;
-    border-radius: 5px;
-    border: none;
-    background-color: rgba(109, 213, 237, 0.2);
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-}
+/* Search Input (This rule is a duplicate from above, ensuring it's updated or removed if truly identical) */
+/* Assuming this is the same search input as above, the previous changes cover it. */
+/* If it's a different one, its specific properties would need to be addressed. */
+/* For now, I'll assume it's the same and the previous changes apply. */
 
 /* Add Project Button */
 .add-project-button {
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     font-size: 1.5rem;
     width: 40px;
     height: 40px;
@@ -169,34 +151,34 @@ html, body {
     margin-left: 10px;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
 .add-project-button:hover {
-    background-color: #29b6f6;
+    background-color: #4DABF7;
 }
 
 /* Sci-Fi Themed Buttons */
 .open-project-button {
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
     transition: 0.3s;
-    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
     margin: 5px;
 }
 
 .open-project-button:hover {
-    background-color: #29b6f6;
+    background-color: #4DABF7;
 }
 
 .pagination-button {
-    background-color: rgba(128, 0, 128, 0.8); /* Purple */
-    color: white;
+    background-color: #9C27B0;
+    color: #FFFFFF;
     font-weight: bold;
     padding: 10px 20px;
     border-radius: 5px;
@@ -205,9 +187,12 @@ html, body {
     margin: 5px;
     margin-bottom: 30px;
 }
+.pagination-button:hover { /* Added hover state */
+    background-color: #B048C8;
+}
 
 .pagination-button:disabled {
-    background-color: rgba(100, 100, 100, 0.5);
+    background-color: #444444;
     cursor: not-allowed;
 }
 
@@ -218,8 +203,8 @@ html, body {
 /* Contribute Button */
 .contribute-button {
     padding: 8px 12px;
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -227,12 +212,26 @@ html, body {
 }
 
 .contribute-button:hover {
-    background-color: #29b6f6;
+    background-color: #4DABF7;
+}
+
+/* Task Popup Overlay */
+.task-popup-overlay { /* Added for clarity */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85); /* Updated */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000; /* Ensure it's high enough */
 }
 
 /* Task Popup */
 .task-popup {
-    position: fixed;
+    position: fixed; /* This might be redundant if task-popup-overlay handles positioning */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -241,16 +240,16 @@ html, body {
     max-height: 70vh;
     overflow-y: auto;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.8);
+    background: #1C1C1E; /* Updated */
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(109, 213, 237, 1);
-    z-index: 1000;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.7); /* Updated */
+    z-index: 1000; /* Ensure it's consistent or higher than overlay if not a child */
     color: white;
 }
 
 .popup-title {
     font-size: 1.8rem;
-    color: #6dd5ed;
+    color: #00F3FF; /* Updated */
     margin-bottom: 20px;
 }
 
@@ -268,36 +267,37 @@ html, body {
 }
 
 .ptask-list::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2); /* Updated */
     border-radius: 5px;
 }
 
 .ptask-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7); /* Updated */
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* Updated */
 }
 
 .ptask-list::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
-
-.task-card {
+/* Task Card (inside popup) - this selector is identical to the main task card, be careful */
+.task-popup .task-card { /* Made selector more specific */
     margin: 10px 0;
     padding: 10px;
     border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(10, 10, 46, 0.6); /* Updated */
     color: white;
-    min-width: 100%;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    min-width: 100%; /* This might be too wide if popup isn't full width */
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.4); /* Updated */
 }
+
 
 .accept-button {
     padding: 8px 15px;
     border-radius: 5px;
-    background-color: rgba(109, 213, 237, 0.8);
-    color: black;
+    background-color: rgba(0, 243, 255, 0.8); /* Updated */
+    color: #000000; /* Updated */
     font-weight: bold;
     border: none;
     cursor: pointer;
@@ -305,8 +305,8 @@ html, body {
 }
 
 .accept-button.drop-button {
-    background-color: rgba(217, 106, 91, 0.9);
-    color: white;
+    background-color: rgba(255, 65, 54, 0.9); /* Updated */
+    color: #FFFFFF; /* Updated */
   }
 
 .accept-button:disabled {
@@ -318,15 +318,15 @@ html, body {
 .close-popup-button {
     margin-top: 20px;
     padding: 10px 20px;
-    background-color: #ff1744;
+    background-color: #FF4136; /* Updated */
     border: none;
     border-radius: 5px;
-    color: white;
+    color: #FFFFFF; /* Updated */
     font-weight: bold;
     cursor: pointer;
 }
 
 .close-popup-button:hover {
-    background-color: #ff5252;
-    text-shadow: 0 0 20px #ff5252;
+    background-color: #FF79B8; /* Updated */
+    text-shadow: 0 0 20px #ff5252; /* This shadow color might need adjustment based on new bg */
 }

@@ -8,6 +8,8 @@ import {
   Typography,
   Autocomplete,
   Chip,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
@@ -137,13 +139,7 @@ const ProjectCreation = () => {
         fullWidth
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="form-input"
-        sx={{
-          color: "white",
-          backgroundColor: "rgba(26, 9, 57, 0.9)",
-          borderRadius: "10px",
-          "& .MuiInputBase-input": { color: "white" },
-        }}
+        margin="normal"
       />
       <TextField
         label="Project Description"
@@ -153,13 +149,7 @@ const ProjectCreation = () => {
         rows={4}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        className="form-input"
-        sx={{
-          color: "white",
-          backgroundColor: "rgba(26, 9, 57, 0.9)",
-          borderRadius: "10px",
-          "& .MuiInputBase-input": { color: "white" },
-        }}
+        margin="normal"
       />
       <Autocomplete
         multiple
@@ -174,7 +164,7 @@ const ProjectCreation = () => {
             variant="outlined"
             label="Tags"
             placeholder="Add tags"
-            className="form-input"
+            margin="normal"
           />
         )}
         renderTags={(value, getTagProps) =>
@@ -185,30 +175,28 @@ const ProjectCreation = () => {
                 key={key}
                 label={option.name}
                 {...otherProps}
-                style={{
-                  backgroundColor: getRandomColorFromPalette(),
-                  color: "white",
-                  margin: "2px",
-                  textShadow: "0 0 10px rgba(0,0,0,0.8)",
-                }}
+                sx={{ margin: '2px' }}
               />
             );
           })
         }
       />
-      <label className="flex items-center gap-2 mt-4">
-        <input
-          type="checkbox"
-          checked={autoGenerateTasks}
-          onChange={(e) => setAutoGenerateTasks(e.target.checked)}
-        />
-        Auto-generate project tasks using AI
-      </label>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={autoGenerateTasks}
+            onChange={(e) => setAutoGenerateTasks(e.target.checked)}
+            color="primary"
+          />
+        }
+        label="Auto-generate project tasks using AI"
+        sx={{ marginTop: 2, marginBottom: 1 }}
+      />
       <Button
         variant="contained"
         color="primary"
         onClick={handleCreateProject}
-        className="create-button"
+        sx={{ marginTop: 2, paddingY: '10px', paddingX: '20px', fontWeight: 'bold' }}
       >
         Create Project
       </Button>

@@ -9,8 +9,8 @@
     padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
-    background: radial-gradient(circle, #0a0a1a, #000000);
-    color: white;
+    background: radial-gradient(circle, #0A0A2E, #000000);
+    color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
 }
 
@@ -18,8 +18,8 @@
 .community-page-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 10px;
     margin-top: 60px;
 }
@@ -38,16 +38,16 @@
     width: 100%;
     padding: 10px;
     border-radius: 5px;
-    border: none;
-    background: rgba(26, 9, 57, 0.9);
-    color: white;
+    border: 1px solid #444444;
+    background: rgba(28, 28, 30, 0.8);
+    color: #FFFFFF;
     margin-right: 10px;
     font-family: 'Orbitron', sans-serif;
 }
 
 .add-community-button {
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     font-size: 1.5rem;
     width: 40px;
     height: 40px;
@@ -57,12 +57,12 @@
     margin-left: 10px;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
 .add-community-button:hover {
-    background-color: #29b6f6;
-    text-shadow: 0 0 20px #6dd5ed;
+    background-color: #4DABF7;
+    /* text-shadow for black text might not be ideal, removed */
 }
 
 /* Community List Wrapper */
@@ -72,9 +72,9 @@
     max-width: 1200px;
     margin-top: 10px;
     overflow-y: auto;
-    background: rgba(26, 9, 57, 0.9);
+    background: rgba(28, 28, 30, 0.9);
     border-radius: 10px;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
     padding: 20px;
 }
 
@@ -84,48 +84,49 @@
 }
 
 .community-list-wrapper::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .community-list-wrapper::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .community-list-wrapper::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #29b6f6, #0d47a1);
+    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
 /* Community Card */
 .community-card {
-    background-color: rgba(26, 9, 57, 0.7);
+    background-color: rgba(10, 10, 46, 0.7);
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 20px;
     transition: transform 0.2s ease-in-out;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    border: 1px solid #444444; /* Added border */
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .community-card:hover {
     transform: scale(1.02);
-    background: rgba(109, 213, 237, 0.1);
+    background: rgba(0, 243, 255, 0.1);
 }
 
 /* Community Title */
 .community-title {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6), 0 0 15px rgba(0, 243, 255, 0.4); /* Adjusted shadow */
     margin-bottom: 10px;
 }
 
 /* Community Description */
 .community-description {
     font-size: 1rem;
-    color: #e0e0e0;
+    color: #CCCCCC;
     margin-bottom: 15px;
 }
 
@@ -138,13 +139,13 @@
 }
 
 .tag-chip {
-    background-color: rgba(109, 213, 237, 0.2);
-    color: #6dd5ed;
+    background-color: rgba(0, 243, 255, 0.2);
+    color: #00F3FF;
     padding: 5px 10px;
     border-radius: 15px;
     font-size: 0.8rem;
-    border: 1px solid #6dd5ed;
-    box-shadow: 0 0 5px rgba(109, 213, 237, 0.5);
+    border: 1px solid #00F3FF;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
 }
 
 /* Community Stats */
@@ -155,11 +156,11 @@
 }
 
 .member-count {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     padding: 5px 10px;
     border-radius: 5px;
     font-size: 0.9rem;
-    color: #e0e0e0;
+    color: #CCCCCC;
 }
 
 /* Community Actions */
@@ -171,8 +172,8 @@
 
 /* Buttons */
 .view-projects-button, .join-button {
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 8px 15px;
@@ -183,13 +184,13 @@
 }
 
 .view-projects-button:hover, .join-button:hover {
-    background-color: #29b6f6;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.8);
+    background-color: #4DABF7;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
 .open-project-button {
-    background-color: #6dd5ed;
-    color: black;
+    background-color: #00F3FF;
+    color: #000000;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     padding: 8px 15px;
@@ -201,8 +202,8 @@
 }
 
 .open-project-button:hover {
-    background-color: #29b6f6;
-    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
+    background-color: #4DABF7;
+    /* text-shadow for black text might not be ideal, removed */
 }
 
 /* Pagination */
@@ -217,8 +218,8 @@
 }
 
 .pagination-button {
-    background-color: rgba(128, 0, 128, 0.8);
-    color: white;
+    background-color: #9C27B0;
+    color: #FFFFFF;
     font-weight: bold;
     padding: 10px 20px;
     border-radius: 5px;
@@ -227,14 +228,17 @@
     margin: 0 10px;
     border: none;
 }
+.pagination-button:hover { /* Added hover state */
+    background-color: #B048C8;
+}
 
 .pagination-button:disabled {
-    background-color: rgba(100, 100, 100, 0.5);
+    background-color: #444444;
     cursor: not-allowed;
 }
 
 .page-text {
-    color: #e0e0e0;
+    color: #CCCCCC; /* Updated from #e0e0e0 */
     margin: 0 15px;
 }
 
@@ -245,7 +249,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -256,18 +260,18 @@
     width: 80%;
     max-width: 800px;
     max-height: 80vh;
-    background: rgba(26, 9, 57, 0.95);
+    background: rgba(28, 28, 30, 0.95);
     border-radius: 10px;
     padding: 20px;
-    box-shadow: 0 0 20px rgba(109, 213, 237, 1);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.7);
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
 .community-popup h2 {
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); /* Adjusted shadow */
     margin-bottom: 20px;
     text-align: center;
 }
@@ -283,41 +287,44 @@
 }
 
 .community-projects-list::-webkit-scrollbar-track {
-    background: rgba(13, 71, 161, 0.2);
+    background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
 .community-projects-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6dd5ed, #2193b0);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* Added consistent shadow */
 }
-
-.project-card {
-    background-color: rgba(0, 0, 0, 0.6);
+/* Note: Removed duplicate .project-card styling specific to the popup, it's now more specific */
+.community-popup .project-card { /* Made selector more specific */
+    background-color: rgba(10, 10, 46, 0.7);
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.3);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
 }
 
-.project-card h3 {
-    color: #6dd5ed;
+.community-popup .project-card h3 { /* Made selector more specific */
+    color: #00F3FF;
     margin-bottom: 10px;
 }
 
 .close-popup-button {
     margin-top: 20px;
     padding: 10px 20px;
-    background-color: #ff1744;
+    background-color: #FF4136;
     border: none;
     border-radius: 5px;
-    color: white;
+    color: #FFFFFF;
     font-weight: bold;
     cursor: pointer;
     align-self: center;
+    transition: 0.3s; /* Added transition */
 }
 
 .close-popup-button:hover {
-    background-color: #ff5252;
-    text-shadow: 0 0 20px #ff5252;
+    background-color: #FF79B8;
+    /* text-shadow for white text is fine, kept original */
+    text-shadow: 0 0 20px #ff5252; /* Original shadow from file, likely intended for the old red */
 }
