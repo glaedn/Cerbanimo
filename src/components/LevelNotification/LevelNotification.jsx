@@ -103,7 +103,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel }) => {
                     </Typography>
                 </Box>
                 <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                    XP: {previousXP || 0} -> {newXP || 0}
+                    XP: {previousXP || 0} - {newXP || 0}
                 </Typography>
             </Box>
         </Box>

@@ -740,6 +740,31 @@ const approveTask = async (taskId, io, client) => {
       [updatedUsers, skill_id]
     );
 
+    // After level and XP updates are finalized
+    for (const user of updatedUsers) {
+      const { user_id, experience, level } = user;
+
+      const previousLevel = calculateLevel(experience - rewardPerUser);
+      const previousXP = experience - rewardPerUser;
+      const newXP = experience;
+      const newLevel = level;
+
+      console.log("Emitting levelUpdate for", user_id, {
+        previousXP,
+        newXP,
+        previousLevel,
+        newLevel,
+      });
+      const room = `user_${user_id}`;
+      console.log(`Emitting to ${room}`);
+      io.to(room).emit("levelUpdate", {
+        previousXP,
+        newXP,
+        previousLevel,
+        newLevel,
+      });
+    }
+
     // Step 5: Update users with tokens and experience logs
     await localClient.query(
       `
@@ -843,11 +868,14 @@ WHERE id = ANY($2)
     // After transaction is committed, we can make external HTTP calls
     try {
       console.log("posting story node with tags:", storyNodeData.tags);
-      const response = await fetch(`http://localhost:4000/storyChronicles/story-node`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(storyNodeData),
-      });
+      const response = await fetch(
+        `http://localhost:4000/storyChronicles/story-node`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(storyNodeData),
+        }
+      );
       console.log("response.status:", response.status);
       console.log("response text:", await response.text());
     } catch (fetchError) {
