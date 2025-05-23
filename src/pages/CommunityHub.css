@@ -5,30 +5,31 @@
     min-height: 100vh;
     align-items: center;
     padding: 20px;
-    background-color: #121212;
-    color: #ffffff;
+    background-color: #0A0A2E;
+    color: #FFFFFF;
 }
 
 .hub-title {
-    color: #fff;
+    color: #00F3FF;
     text-align: center;
     margin-bottom: 10px;
     padding: 20px;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .community-info {
     max-width: 900px;
     text-align: center;
     margin-bottom: 30px;
-    background: rgba(212, 206, 255, 0.104);
+    background: rgba(28, 28, 30, 0.7);
     padding: 10px;
     border-radius: 10px;
-    box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.1);
+    box-shadow: 0px 0px 15px rgba(0, 243, 255, 0.3);
 }
 
 .community-description {
     margin-bottom: 15px;
-    color: #e0e0e0;
+    color: #CCCCCC;
     line-height: 1.6;
     min-width: 200px;
 }
@@ -42,8 +43,8 @@
 }
 
 .interest-tag {
-    background: linear-gradient(145deg, #3a3240, #4c4350) !important;
-    color: #ffffff !important;
+    /* background and color removed */
+    /* Keep other styles if needed, or remove rule if fully handled by MUI sx */
 }
 
 .small-tags .MuiChip-root {
@@ -79,25 +80,25 @@
     border-radius: 12px;
     padding: 5px;
     width: 100%;
-    box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.2);
+    box-shadow: 0px 0px 15px rgba(0, 243, 255, 0.3);
     text-align: center;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    color: #e0e0e0!important;
+    color: #CCCCCC;
     max-height: 300px;
-    overflow-y: auto!important;
+    overflow-y: auto!important; /* Keeping !important if it's overriding something critical */
     border-radius: 10px;
-    background: rgba(34, 27, 54, 0.985)!important;
+    background: linear-gradient(145deg, #1C1C1E, #0A0A2E);
 }
 
 .hub-card:hover {
     transform: scale(1.02);
-    box-shadow: 0px 0px 25px rgba(0, 255, 255, 0.5);
+    box-shadow: 0px 0px 25px rgba(0, 243, 255, 0.6);
 }
 
 /* Icons */
 .hub-icon {
     font-size: 40px;
-    color: #e0e0e0;
+    color: #00F3FF;
     margin-bottom: 10px;
 }
 
@@ -108,7 +109,7 @@
 }
 
 .member-entry {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     margin-bottom: 8px;
     border-radius: 6px;
     transition: background 0.3s ease;
@@ -119,19 +120,19 @@
 }
 
 .member-entry .MuiListItemText-secondary {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(204, 204, 204, 0.7);
 }
 
 .member-entry:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 243, 255, 0.1);
 }
 
 .delegation-info {
-    background: rgba(76, 175, 80, 0.1);
+    background: rgba(0, 215, 135, 0.1);
     padding: 10px;
     border-radius: 6px;
     margin: 10px 0;
-    border: 1px solid rgba(76, 175, 80, 0.3);
+    border: 1px solid rgba(0, 215, 135, 0.3);
 }
 
 .revoke-button {
@@ -147,7 +148,7 @@
 
 .proposal-entry,
 .request-entry {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     margin-bottom: 8px;
     border-radius: 6px;
     padding: 12px !important;
@@ -174,27 +175,27 @@
 
 .clickable-title {
     cursor: pointer;
-    color: #90caf9;
+    color: #4DABF7;
     transition: color 0.3s ease;
 }
 
 .clickable-title:hover {
-    color: #42a5f5;
+    color: #00F3FF;
     text-decoration: underline;
 }
 
 .clickable-name {
     cursor: pointer;
-    color: #d1eaff;
+    color: #E0E0E0;
 }
 
 .MuiListItemText-secondary {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: rgba(204, 204, 204, 0.7);
 }
 
 .clickable-name:hover {
     text-decoration: underline;
-    color: #42a5f5;
+    color: #4DABF7;
 }
 
 .clickable-avatar {
@@ -202,8 +203,8 @@
 }
 
 .proposal-description,
-.project-description {
-    color: #b0b0b0;
+.project-description { /* Assuming this is the one for hub cards */
+    color: #B0B0B0;
     margin: 6px 0;
     font-size: 0.9rem;
     text-align: left;
@@ -217,30 +218,29 @@
     margin-top: 15px;
 }
 
-.project-card {
-    background: rgba(255, 255, 255, 0.08) !important;
+.projects-grid .project-card { /* Made selector more specific */
+    background: rgba(28, 28, 30, 0.8);
     transition: transform 0.3s ease;
     height: 100%;
 }
 
-.project-card:hover {
+.projects-grid .project-card:hover { /* Made selector more specific */
     transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.12) !important;
+    background: rgba(28, 28, 30, 1);
 }
 
 .project-tag {
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: #e0e0e0 !important;
+    /* background and color removed */
 }
 
 .view-project-btn {
-    margin-top: 12px !important;
+    margin-top: 12px !important; /* Kept !important if necessary for override */
 }
 
 .no-items {
     padding: 20px;
     font-style: italic;
-    color: #b0b0b0;
+    color: #CCCCCC;
 }
 
 /* Custom scrollbars for all containers */
@@ -255,7 +255,7 @@
 .member-list::-webkit-scrollbar-thumb,
 .proposal-list::-webkit-scrollbar-thumb,
 .request-list::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(0, 243, 255, 0.4);
     border-radius: 3px;
 }
 
@@ -263,23 +263,28 @@
 .member-list::-webkit-scrollbar-track,
 .proposal-list::-webkit-scrollbar-track,
 .request-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 /* Loading and Error States */
-.loading-container,
-.error-container {
+.loading-container { /* Error container styled separately */
     display: flex;
     justify-content: center;
     align-items: center;
     height: 50vh;
     width: 100%;
-    color: #e0e0e0;
+    color: #CCCCCC;
     font-size: 1.2rem;
 }
 
 .error-container {
-    color: #f44336;
+    display: flex; /* Added for consistency if missing */
+    justify-content: center; /* Added for consistency if missing */
+    align-items: center; /* Added for consistency if missing */
+    height: 50vh; /* Added for consistency if missing */
+    width: 100%; /* Added for consistency if missing */
+    color: #FF4136;
+    font-size: 1.2rem; /* Added for consistency if missing */
 }
 
 /* Responsive Adjustments */
@@ -294,11 +299,11 @@
 }
 
 .join-request-container {
-    background-color: #2f2e35!important;
+    background-color: #1C1C1E;
     border-radius: 8px;
     margin-bottom: 24px;
     text-align: center;
-    color: white!important;
+    color: white!important; /* Kept !important if it's a critical override */
   }
   
   .full-width-item {

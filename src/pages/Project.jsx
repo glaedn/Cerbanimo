@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
-import { Chip, Autocomplete, TextField } from '@mui/material';
+import { Chip, Autocomplete, TextField, Button } from '@mui/material';
 import { useNotifications } from "./NotificationProvider.jsx"; 
 import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
@@ -250,10 +250,9 @@ const Project = () => {
           <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
         </div>
         )}
-        <button className="visualize-button" onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</button>
+        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
         {isProjectCreator && (
         <Autocomplete
-          className="profile-textfield profile-field"
           multiple
           options={interestsPool}
           value={project.tags || []}
@@ -271,10 +270,9 @@ const Project = () => {
             const { key, ...otherProps } = getTagProps({ index });
             return (
             <Chip
-              className="tags"
               key={key}
               label={option}
-              style={{ backgroundColor: getRandomColorFromPalette(), margin: '2px', color: 'white' }}
+              sx={{ margin: '2px' }}
               {...otherProps}
             />
             );
@@ -286,7 +284,7 @@ const Project = () => {
       )}
       <div className="tasks-section">
       <h2 className="tasks-title">Tasks</h2>
-      {isProjectCreator && <button className="add-task-button" onClick={() => handleTaskPopupOpen()}>+</button>}
+      {isProjectCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleTaskPopupOpen()}>+</Button>}
       <div className="tasks-list">
         {tasks.map((task) => (
         <div key={task.id} className="task-card">
@@ -298,60 +296,50 @@ const Project = () => {
           <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
           <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
           {task.submitted && isProjectCreator && task.active_ind && (
-          <button 
-            className="approve-task-button" 
-            onClick={() => handleTaskAction(task.id, 'approve')}
-          >
+          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'approve')}>
             Approve Work
-          </button>
+          </Button>
           )}
           {isProjectCreator && (
-          <button className="edit-task-button" onClick={() => handleTaskPopupOpen(task)}>
+          <Button variant="contained" sx={{ backgroundColor: 'accentBlue.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskPopupOpen(task)}>
             Edit
-          </button>
+          </Button>
           )}
           {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
-          <button
-            className="submit-task-button"
-            onClick={() => handleTaskAction(task.id, 'submit')}
-          >
+          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'submit')}>
             Submit for Approval
-          </button>
+          </Button>
           )}
-          <button 
-          className={`accept-task-button ${task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop-task-button' : ''}`}
-          onClick={() => handleTaskAction(
-            task.id, 
-            task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
-          )}
+          <Button 
+            variant="contained" 
+            sx={{ 
+              backgroundColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'error.main' : 'primary.main', 
+              color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'common.white' : 'common.black', 
+              margin: '4px' 
+            }}
+            onClick={() => handleTaskAction(
+              task.id, 
+              task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+            )}
           >
-          {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
-          </button>
+            {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
+          </Button>
           {isProjectCreator && task.submitted && (
-          <button 
-            className="reject-task-button"
-            onClick={() => handleTaskAction(task.id, 'reject')}
-          >
+          <Button variant="contained" sx={{ backgroundColor: 'secondary.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'reject')}>
             Reject Work
-          </button>
+          </Button>
           )}
         </div>
         ))}
       </div>
       </div>
       <div className="project-controls">
-      <button 
-        className="save-project-button" 
-        onClick={saveProject}
-      >
+      <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={saveProject}>
         Save Project
-      </button>
-      <button 
-        className="back-to-projects-button" 
-        onClick={() => window.location.href = '/projects'}
-      >
+      </Button>
+      <Button variant="contained" sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={() => window.location.href = '/projects'}>
         Projects
-      </button>
+      </Button>
       </div>
 
       <TaskEditor

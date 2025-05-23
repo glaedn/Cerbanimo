@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
+import { Button, TextField, Typography } from '@mui/material';
 import './ProjectPages.css';
 
 const ProjectPages = () => {
@@ -142,73 +143,82 @@ const ProjectPages = () => {
 
   return (
     <div className="project-pages-container">
-      <h1 className="project-page-title">Browse Projects</h1>
+      <Typography variant="h4" className="project-page-title">Browse Projects</Typography> {/* className kept for now if it has margin/padding */}
 
       <div className="search-bar-container">
-        <input
-          className="search-input"
+        <TextField
+          variant="outlined"
+          size="small"
           type="text"
           placeholder="Search Projects..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          sx={{ flexGrow: 1, marginRight: 1 }}
         />
-        <button
-          className="add-project-button"
+        <Button
+          variant="contained"
           onClick={() => window.location.href = '/projectcreation'}
           title="Add New Project"
+          sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '1.5rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0 }}
         >
           +
-        </button>
+        </Button>
       </div>
 
       <div className="project-list-wrapper">
         {projects.map((project) => (
           <div key={project.id} className="project-card">
-            <h2 className="project-title">{project.name}</h2>
-            <p className="project-description">{project.description}</p>
-            <p className="project-tags">Tags: {project.tags.join(', ')}</p>
-            <button
-              className="contribute-button"
+            <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>Tags: {project.tags.join(', ')}</Typography>
+            <Button
+              variant="contained"
+              size="small"
+              sx={{ backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
               onClick={() => {
                 setSelectedProject(project);
                 fetchTasks(project.id);
               }}
             >
               Contribute
-            </button>
-            <button
-              className="open-project-button"
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              sx={{ borderColor: 'primary.main', color: 'primary.main' }}
               onClick={() => {
                 navigate(`/visualizer/${project.id}`);
               }}
             >
               Open Project
-            </button>
+            </Button>
           </div>
         ))}
       </div>
 
       <div className="pagination-container">
-        <button
-          className="pagination-button"
+        <Button
+          variant="contained"
+          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' } }}
           onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
           disabled={page === 1}
         >
           Previous
-        </button>
-        <span className="page-text">Page {page}</span>
-        <button
-          className="pagination-button"
+        </Button>
+        <Typography className="page-text" sx={{ marginX: 2 }}>Page {page}</Typography> {/* className kept for now if it has margin/padding */}
+        <Button
+          variant="contained"
+          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' } }}
           onClick={() => setPage((prev) => prev + 1)}
         >
           Next
-        </button>
+        </Button>
       </div>
 
       {selectedProject && (
         <div className="task-popup-overlay">
         <div className="task-popup">
-          <h2>Tasks for {selectedProject.name}</h2>
+          <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedProject.name}</Typography>
           <div className="ptask-list">
             {tasks.length > 0 ? tasks.map((task) => {
               // Robust check for task assignment
@@ -225,24 +235,27 @@ const ProjectPages = () => {
 
               return (
                 <div key={task.id} className="task-card">
-                  <h3>{task.name}</h3>
-                  <p>{task.description}</p>
-                  <button
-                    className={`accept-button ${isAssigned ? 'drop-button' : ''}`}
+                  <Typography variant="subtitle1" sx={{ color: 'primary.main' }}>{task.name}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{task.description}</Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black' }}
                     onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
                   >
                     {isAssigned ? 'Drop' : 'Accept'}
-                  </button>
+                  </Button>
                 </div>
               );
-            }) : <p>No tasks available</p>}
+            }) : <Typography sx={{ color: 'text.secondary' }}>No tasks available</Typography>}
           </div>
-          <button
-            className="close-popup-button"
+          <Button
+            variant="contained"
+            sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2 }}
             onClick={() => setSelectedProject(null)}
           >
             Close
-          </button>
+          </Button>
         </div>
         </div>
       )}

@@ -1,10 +1,10 @@
 /* Community Creation Page - Space Game Theme */
 .community-creation-container {
     padding: 20px;
-    color: rgb(255, 255, 255);
+    color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
-    background: radial-gradient(circle, #0a0a1a, #000000);
+    background: radial-gradient(circle, #0A0A2E, #000000);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -18,16 +18,16 @@
 .form-title {
     font-size: 2.5rem;
     font-weight: bold;
-    color: #6dd5ed;
-    text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 30px;
     animation: pulsate 3s infinite ease-in-out;
 }
 
 @keyframes pulsate {
-    0% { text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; }
-    50% { text-shadow: 0 0 15px #6dd5ed, 0 0 30px #2193b0, 0 0 40px rgba(109, 213, 237, 0.5); }
-    100% { text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; }
+    0% { text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); }
+    50% { text-shadow: 0 0 15px rgba(0, 243, 255, 0.7), 0 0 30px rgba(0, 243, 255, 0.5), 0 0 40px rgba(0, 243, 255, 0.5); }
+    100% { text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); }
 }
 
 /* Cosmic Field Container */
@@ -47,7 +47,7 @@
     border-radius: 15px;
     z-index: -1;
     opacity: 0;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.7);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.7);
     transition: opacity 0.3s ease;
 }
 
@@ -57,8 +57,8 @@
 }
 
 @keyframes cosmicPulse {
-    0% { box-shadow: 0 0 15px rgba(109, 213, 237, 0.7); }
-    100% { box-shadow: 0 0 25px rgba(109, 213, 237, 0.9), 0 0 40px rgba(33, 147, 176, 0.5); }
+    0% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.7); }
+    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.9), 0 0 40px rgba(0, 243, 255, 0.5); }
 }
 
 /* Input Fields */
@@ -66,7 +66,7 @@
     width: 100%;
     max-width: 600px;
     margin: 10px 0;
-    border-radius: 10px;
+    /* border-radius: 10px; Removed */
     transition: transform 0.2s ease;
 }
 
@@ -74,63 +74,22 @@
     transform: scale(1.02);
 }
 
-.form-input label {
-    color: #6dd5ed;
-}
-
-.form-input .MuiOutlinedInput-root {
-    color: white;
-    background: rgba(26, 9, 57, 0.9);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-.form-input .MuiOutlinedInput-notchedOutline {
-    border-color: #6dd5ed;
-}
-
-.form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
-    border-color: #29b6f6;
-    border-width: 2px;
-}
+/* MUI Input styling rules removed */
+/* .form-input label { ... } */
+/* .form-input .MuiOutlinedInput-root { ... } */
+/* .form-input .MuiOutlinedInput-notchedOutline { ... } */
+/* .form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { ... } */
 
 .MuiAutocomplete-root {
     width: 100%;
     max-width: 600px;
 }
 
-/* Create Button */
-.create-button {
-    background: linear-gradient(45deg, rgba(109, 213, 237, 0.8), rgba(41, 182, 246, 0.9));
-    color: black;
-    font-weight: bold;
-    padding: 12px 24px;
-    border-radius: 10px;
-    margin-top: 30px;
-    cursor: pointer;
-    transition: 0.3s ease-in-out;
-    text-shadow: 0 0 10px rgba(109, 213, 237, 1);
-    width: 100%;
-    max-width: 300px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
-}
-
-.create-button:hover {
-    background: linear-gradient(45deg, rgba(41, 182, 246, 0.9), rgba(109, 213, 237, 0.8));
-    transform: translateY(-3px);
-    box-shadow: 0 0 25px rgba(109, 213, 237, 0.8);
-}
-
-.create-button:active {
-    transform: translateY(1px);
-}
-
-.create-button:disabled {
-    background: rgba(109, 213, 237, 0.4);
-    cursor: not-allowed;
-}
+/* Create Button rules removed */
+/* .create-button { ... } */
+/* .create-button:hover { ... } */
+/* .create-button:active { ... } */
+/* .create-button:disabled { ... } */
 
 /* Space Particles */
 .space-particles {
@@ -154,8 +113,8 @@
 }
 
 .particle:nth-child(odd) {
-    background-color: #6dd5ed;
-    box-shadow: 0 0 10px #6dd5ed;
+    background-color: #00F3FF;
+    box-shadow: 0 0 10px #00F3FF;
 }
 
 .particle:nth-child(3n) {

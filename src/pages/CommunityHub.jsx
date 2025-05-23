@@ -460,15 +460,15 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     };
 
     if (isLoading) {
-        return <div className="loading-container">Loading community data...</div>;
+        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading community data...</Typography>;
     }
 
     if (error) {
-        return <div className="error-container">{error}</div>;
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{error}</Typography>;
     }
 
     if (!community) {
-        return <div className="error-container">Community not found</div>;
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Community not found</Typography>;
     }
 
     return (
@@ -480,7 +480,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 <Typography variant="body1" className="community-description">{community.description}</Typography>
                 <div className="tag-container">
                     {community.interest_tags && community.interest_tags.map((tag, index) => (
-                        <Chip key={index} label={tag} className="interest-tag" />
+                        <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
                     ))}
                 </div>
                 
@@ -527,7 +527,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     <Card className="hub-card members-card">
                         <CardContent>
                             <GroupIcon className="hub-icon" />
-                            <Typography variant="h5">Members</Typography>
+                            <Typography variant="h5" sx={{ color: 'primary.main' }}>Members</Typography>
                             
                             {isMember && isDelegating && (
                                 <div className="delegation-info">
@@ -587,7 +587,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         <Card className="hub-card voting-card">
                             <CardContent>
                                 <HowToVoteIcon className="hub-icon" />
-                                <Typography variant="h5">Project Proposals</Typography>
+                                <Typography variant="h5" sx={{ color: 'primary.main' }}>Project Proposals</Typography>
                                 {proposals.length === 0 ? (
                                     <Typography variant="body2" className="no-items">No active proposals</Typography>
                                 ) : (
@@ -597,7 +597,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                 <div className="proposal-content">
                                                     <Typography 
                                                         variant="h6" 
-                                                        className="clickable-title"
+                                                        className="clickable-title" // Retaining for clickability and CSS color
                                                         onClick={() => navigate(`/visualizer/${proposal.id}`)}
                                                     >
                                                         {proposal.name}
@@ -607,7 +607,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     </Typography>
                                                     <div className="tag-container small-tags">
                                                         {proposal.tags && proposal.tags.map((tag, idx) => (
-                                                            <Chip key={idx} label={tag} size="small" className="project-tag" />
+                                                            <Chip key={idx} label={tag} size="small" sx={{ /* className='project-tag' removed, use sx if direct styling needed */ }} />
                                                         ))}
                                                     </div>
                                                     
@@ -657,7 +657,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         <Card className="hub-card membership-card">
                             <CardContent>
                                 <PersonAddIcon className="hub-icon" />
-                                <Typography variant="h5">Membership Requests</Typography>
+                                <Typography variant="h5" sx={{ color: 'primary.main' }}>Membership Requests</Typography>
                                 {membershipRequests.length === 0 ? (
                                     <Typography variant="body2" className="no-items">No pending requests</Typography>
                                 ) : (
@@ -715,7 +715,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     <Card className="hub-card projects-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5">Active Projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'primary.main' }}>Active Projects</Typography>
                             {approvedProjects.length === 0 ? (
                                 <Typography variant="body2" className="no-items">No active projects</Typography>
                             ) : (
@@ -725,7 +725,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                             <CardContent>
                                                 <Typography 
                                                     variant="h6" 
-                                                    className="clickable-title"
+                                                    className="clickable-title" // Retaining for clickability and CSS color
                                                     onClick={() => navigate(`/visualizer/${project.id}`)}
                                                 >
                                                     {project.name}
@@ -735,13 +735,13 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                 </Typography>
                                                 <div className="tag-container small-tags">
                                                     {project.tags && project.tags.map((tag, idx) => (
-                                                        <Chip key={idx} label={tag} size="small" className="project-tag" />
+                                                        <Chip key={idx} label={tag} size="small" sx={{ /* className='project-tag' removed, use sx if direct styling needed */ }} />
                                                     ))}
                                                 </div>
                                                 <Button 
                                                     variant="outlined" 
                                                     color="primary"
-                                                    className="view-project-btn"
+                                                    // className="view-project-btn" // Removed, assuming sx or direct MUI Button props will style
                                                     onClick={() => navigate(`/visualizer/${project.id}`)}
                                                 >
                                                     View Project
