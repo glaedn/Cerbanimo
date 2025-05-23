@@ -1,0 +1,24 @@
+/*
+  NeedDeclarationForm.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+
+  For now, most styling is expected to be handled directly within the
+  NeedDeclarationForm.jsx file using Material-UI's styling solutions.
+*/
+
+/* Example of a custom style:
+.need-form-container {
+  background-color: #f9f9f9;
+  padding: 20px;
+}
+*/
+
+.form-field-custom-spacing {
+  margin-bottom: 12px; /* Example custom spacing */
+}
+
+.error-message-custom {
+  /* Custom styles for error messages if needed */
+  font-weight: bold;
+}

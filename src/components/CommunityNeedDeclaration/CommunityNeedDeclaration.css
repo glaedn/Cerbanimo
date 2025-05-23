@@ -1,0 +1,25 @@
+/*
+  CommunityNeedDeclaration.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+
+  For now, most styling is expected to be handled directly within the
+  CommunityNeedDeclaration.jsx file using Material-UI's styling solutions.
+*/
+
+/* Example of a custom style:
+.need-list-item-highlight {
+  background-color: #f0f8ff; // AliceBlue for highlighting
+}
+*/
+
+.community-needs-container {
+  /* Styles for the main container of this component, if needed */
+}
+
+.need-modal-custom-paper {
+  /* Custom styles for the modal's Paper component if sx prop in JSX is not sufficient */
+  /* Example:
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  */
+}

@@ -19,6 +19,19 @@ import taskController from './controllers/taskController.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
 import endorsementsRoutes from './routes/endorsements.js';
+import resourceRoutes from './routes/resources.js';
+import needRoutes from './routes/needs.js';
+import matchingRoutes from './routes/matching.js';
+import exchangeRoutes from './routes/exchange.js';
+import impactRoutes from './routes/impact.js';
+
+// Import database table creation functions
+import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
+import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
+import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
+import { createTokenTransactionsTable } from './models/tokenTransactions.js';
+// Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
+// If they had similar exported creation functions, they would be imported here too.
 
 // Initialize app
 const app = express();
@@ -143,6 +156,13 @@ app.use('/storyChronicles', storyChronicleRoutes);
 
 app.use('/endorsements', jwtCheck, endorsementsRoutes);
 
+// Mount new resource and need routes
+app.use('/resources', resourceRoutes);
+app.use('/needs', needRoutes);
+app.use('/matching', matchingRoutes);
+app.use('/exchange', exchangeRoutes);
+app.use('/impact', impactRoutes);
+
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
   console.log('Running nightly reset of spent points');
@@ -156,6 +176,38 @@ cron.schedule('0 0 * * *', async () => {
 
 // Start server
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+
+// Initialize Database Tables
+async function initializeDatabase() {
+  try {
+    // Create tables first
+    await createResourcesTable();
+    await createNeedsTable();
+    await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
+    await createTokenTransactionsTable();
+    
+    // Then create triggers that depend on these tables
+    // Ensure the trigger function (update_updated_at_column) is created once,
+    // which is handled within each of these trigger creation functions by using CREATE OR REPLACE.
+    await createResourcesUpdatedAtTrigger();
+    await createNeedsUpdatedAtTrigger();
+    await createTaskUpdatedAtTrigger();
+    // tokenTransactions table in this example does not have an updated_at trigger by default.
+
+    console.log('Database tables checked/initialized successfully.');
+  } catch (error) {
+    console.error('Error initializing database tables:', error);
+    process.exit(1); // Exit if essential tables can't be set up
+  }
+}
+
+initializeDatabase().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}).catch(error => {
+  // This catch is for errors during the initializeDatabase() promise itself,
+  // though process.exit(1) inside initializeDatabase should already terminate.
+  console.error('Failed to initialize database, server not started:', error);
+  process.exit(1);
 });

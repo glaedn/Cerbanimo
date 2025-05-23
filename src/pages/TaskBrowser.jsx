@@ -197,9 +197,11 @@ const TaskBrowser = () => {
                             : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        <Link href={`/visualizer/${task.project_id}`} className="task-link">
-                          🚀 View Project
-                        </Link>
+                        {task.project_id && (
+                          <Link href={`/visualizer/${task.project_id}`} className="task-link">
+                            🚀 View Project
+                          </Link>
+                        )}
                       </>
                     }
                   />
@@ -268,14 +270,22 @@ const TaskBrowser = () => {
                         <Typography component="span" variant="body2" className="task-status">
                           {`📝 Needs Review (${task.approvals || 0} approvals, ${task.rejections || 0} rejections)`}
                         </Typography>
-                        <br />
-                        <Link href={`/visualizer/`} className="task-link">
-                          🚀 View Project
-                        </Link>
-                        <br />
-                        <Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">
-                          ✏️ Review Task
-                        </Link>
+                        {task.project_id && (
+                          <>
+                            <br />
+                            <Link href={`/visualizer/${task.project_id}`} className="task-link">
+                              🚀 View Project
+                            </Link>
+                          </>
+                        )}
+                        {task.project_id && task.id && ( // Assuming task.id is always present for tasks in this list
+                          <>
+                            <br />
+                            <Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">
+                              ✏️ Review Task
+                            </Link>
+                          </>
+                        )}
                       </>
                     }
                   />

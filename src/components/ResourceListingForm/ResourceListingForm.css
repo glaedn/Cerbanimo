@@ -1,0 +1,19 @@
+/*
+  ResourceListingForm.css
+  You can add custom CSS here if Material-UI's sx prop or styled components are not sufficient.
+  For now, most styling is handled directly in the JSX using Material-UI's sx prop.
+*/
+
+.form-container {
+  padding: 16px;
+  /* Example:
+  max-width: 600px;
+  margin: auto;
+  */
+}
+
+.form-field {
+  margin-bottom: 16px; /* Example spacing */
+}
+
+/* Additional specific styles can be added as needed */

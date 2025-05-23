@@ -1,0 +1,67 @@
+/*
+  ImpactDisplay.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+*/
+
+.impact-display-container {
+  /* Styles for the main container of this component, if needed */
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.impact-stat-item {
+  /* Custom styles for individual stat items if Paper/Box with sx is not enough */
+  /* Example:
+  text-align: center;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  */
+}
+
+.impact-stat-value {
+  font-weight: bold;
+  font-size: 1.5rem; /* Example size */
+  /* color: #3f51b5; Example color, or use theme colors */
+}
+
+.impact-stat-label {
+  /* color: #757575; Example color, or use theme colors */
+  font-size: 0.9rem;
+}
+
+.loading-impact-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  min-height: 100px; /* Ensure it has some size while loading */
+}
+
+.error-impact-display {
+  color: #d32f2f; /* Material-UI error.main color */
+  padding: 10px;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  margin: 10px 0;
+  background-color: #ffcdd2; /* Light red for error background */
+}
+
+/* Example styles if using MUI icons directly with classes */
+.impact-icon {
+  font-size: 2.5rem !important; /* Example to make icons larger */
+  margin-bottom: 8px;
+}
+
+/* Background color utility classes for stat items, if not using theme directly in sx */
+.bg-primary-lightest {
+  /* background-color: #e3f2fd; */ /* Example for a light blue */
+}
+.bg-secondary-lightest {
+  /* background-color: #f3e5f5; */ /* Example for a light purple */
+}
+.bg-success-lightest {
+  /* background-color: #e8f5e9; */ /* Example for a light green */
+}

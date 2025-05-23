@@ -1,0 +1,62 @@
+/*
+  ResourceMatchesDisplay.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+*/
+
+.resource-matches-container {
+  /* Styles for the main container of this component, if needed */
+  margin-top: 16px;
+}
+
+.match-list-item-need { /* Different class name from NeedMatchesDisplay */
+  /* Custom styles for list items if needed beyond sx props */
+  /* Example:
+  border-left: 4px solid green;
+  margin-bottom: 8px;
+  */
+}
+
+.need-item-detail {
+  /* Custom class for individual detail lines within a list item for needs */
+  display: block;
+  margin-bottom: 4px;
+}
+
+.offer-help-button {
+  /* Custom styles for the offer help button if needed */
+  margin-top: 8px;
+}
+
+.loading-need-matches-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.error-need-matches-display {
+  color: #b71c1c; /* Example error color */
+  padding: 10px;
+  border: 1px solid #b71c1c; /* Example error border */
+  border-radius: 4px;
+  margin: 10px 0;
+  background-color: #ffcdd2; /* Example error background */
+}
+
+.urgency-chip-low {
+  background-color: #c8e6c9; /* Light green */
+  color: #1b5e20; /* Dark green text */
+}
+.urgency-chip-medium {
+  background-color: #fff9c4; /* Light yellow */
+  color: #f57f17; /* Dark yellow/orange text */
+}
+.urgency-chip-high {
+  background-color: #ffccbc; /* Light red/orange */
+  color: #d84315; /* Dark orange/red text */
+}
+.urgency-chip-critical {
+  background-color: #ffcdd2; /* Light red */
+  color: #b71c1c; /* Dark red text */
+}

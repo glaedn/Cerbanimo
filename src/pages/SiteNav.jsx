@@ -1,36 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link, useLocation } from 'react-router-dom';
 import './SiteNav.css';
-import { Badge, IconButton, Menu, MenuItem, Button } from "@mui/material"; // Added Button
+import { Badge, IconButton, Menu, MenuItem, Button, Modal, Paper, Box, Snackbar, Alert } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import { useNotifications } from "./NotificationProvider";  // Import the useNotifications hook
+import { useNotifications } from "./NotificationProvider";
 import IdleSpaceGame from './IdleSpaceGame';
-import LevelNotification from '../components/LevelNotification/LevelNotification'; // Added LevelNotification import
-
- //                   {/* Test button for LevelNotification */}
-   //                 {isAuthenticated && ( // Only show if authenticated for simplicity
-     //                   <Button 
-       //                     variant="contained" 
-         //                   color="secondary" 
-           ///               onClick={handleGainXP} 
-            //                sx={{ m: 2 }}
-           ////             >
-            //                Gain XP (Test)
-              //          </Button>
-                //    )}
+import LevelNotification from '../components/LevelNotification/LevelNotification';
+import axios from 'axios';
+import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm';
 
 const SiteNav = () => {
-    const { logout, loginWithRedirect, isAuthenticated } = useAuth0();
+    const { user, logout, loginWithRedirect, isAuthenticated, getAccessTokenSilently } = useAuth0(); // Added user, getAccessTokenSilently
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isGameOpen, setIsGameOpen] = useState(false);
     const toggleGameTray = () => {
         setIsGameOpen(prev => !prev);
     };
-    const { notifications, unreadCount, markAsRead } = useNotifications(); // Destructure markAsRead here
+    const { notifications, unreadCount, markAsRead } = useNotifications();
     
     const [anchorEl, setAnchorEl] = useState(null);
+
+    // State for Need Declaration Modal
+    const [isNeedModalOpen, setIsNeedModalOpen] = useState(false);
+    const [userProfileId, setUserProfileId] = useState(null);
+    const [notificationState, setNotificationState] = useState({ open: false, message: '', severity: 'info' });
+
 
     // State for LevelNotification demo
     const [demoPreviousXP, setDemoPreviousXP] = useState(0);
@@ -82,13 +78,69 @@ const SiteNav = () => {
     // Get the most recent 5 notifications
     const recentNotifications = notifications.slice(0, 5);
 
+    // Fetch User Profile ID
+    const fetchUserProfileId = useCallback(async () => {
+        if (isAuthenticated && user?.sub && !userProfileId) {
+            try {
+                const token = await getAccessTokenSilently();
+                const response = await axios.get('http://localhost:4000/profile', {
+                    params: { sub: user.sub, email: user.email },
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.data && response.data.id) {
+                    setUserProfileId(response.data.id);
+                }
+            } catch (error) {
+                console.error('Error fetching user profile ID:', error);
+                setNotificationState({ open: true, message: 'Could not fetch user profile for needs.', severity: 'error' });
+            }
+        }
+    }, [isAuthenticated, user, userProfileId, getAccessTokenSilently, setUserProfileId]);
+
+    useEffect(() => {
+        fetchUserProfileId();
+    }, [fetchUserProfileId]);
+
+    // Need Modal Handlers
+    const handleOpenNeedModal = () => {
+        if (isAuthenticated && userProfileId) {
+            setIsNeedModalOpen(true);
+        } else {
+            setNotificationState({ open: true, message: 'Please log in and ensure your profile is loaded to declare a need.', severity: 'warning' });
+        }
+    };
+
+    const handleCloseNeedModal = () => setIsNeedModalOpen(false);
+
+    const handleNeedSubmit = async (needData) => {
+        try {
+            const token = await getAccessTokenSilently();
+            // The NeedDeclarationForm already sets requestor_user_id to loggedInUserId (which is userProfileId here)
+            await axios.post('http://localhost:4000/needs', needData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setNotificationState({ open: true, message: 'Need declared successfully!', severity: 'success' });
+            handleCloseNeedModal();
+        } catch (error) {
+            console.error('Error declaring need:', error.response ? error.response.data : error.message);
+            setNotificationState({ open: true, message: `Failed to declare need: ${error.response?.data?.error || error.message}`, severity: 'error' });
+        }
+    };
+    
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setNotificationState(prev => ({ ...prev, open: false }));
+    };
+
+
     return (
         <nav className={`site-nav ${isSidebarOpen ? 'open' : ''}`}>
             <div className="title-container">
                 <h1 className="site-title">Cerbanimo</h1>
             </div>
             
-            {/* Notification bell - Only show when authenticated */}
             {isAuthenticated && (
                 <div className="notification-container">
                     <IconButton color="inherit" onClick={handleOpen}>
@@ -126,7 +178,6 @@ const SiteNav = () => {
                         Home Page
                     </Link>
                     
-                    {/* Only show authenticated links when user is logged in */}
                     {isAuthenticated && (
                         <>
                             <Link
@@ -171,11 +222,29 @@ const SiteNav = () => {
                             >
                                 Create a Community
                             </Link>
+                             {/* Declare a Need Button */}
+                            <Button 
+                                variant="text" 
+                                onClick={handleOpenNeedModal} 
+                                disabled={!userProfileId}
+                                sx={{ 
+                                    color: 'var(--text-color)', // Use CSS variable for color
+                                    justifyContent: 'flex-start', 
+                                    padding: '10px 15px', // Match nav-link padding
+                                    textTransform: 'none', // Match nav-link text transform
+                                    fontSize: '1rem', // Match nav-link font size
+                                    '&:hover': {
+                                        backgroundColor: 'var(--hover-bg-color)', // Use CSS variable for hover
+                                    }
+                                }}
+                                className="nav-link" // Apply nav-link class for consistent styling
+                            >
+                                Declare a Need
+                            </Button>
                         </>
                     )}
                 </div>
                 
-                {/* Conditional rendering of login/logout button */}
                 {isAuthenticated ? (
                     <button className="nav-button logout-button" onClick={() => logout({ returnTo: window.location.origin })}>
                         Logout
@@ -186,6 +255,50 @@ const SiteNav = () => {
                     </button>
                 )}
             </div>
+
+            {/* Need Declaration Modal */}
+            <Modal
+                open={isNeedModalOpen}
+                onClose={handleCloseNeedModal}
+                aria-labelledby="declare-need-modal-title"
+            >
+                <Paper sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: { xs: '90%', sm: '75%', md: '600px' },
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    bgcolor: 'background.paper',
+                    boxShadow: 24,
+                    p: { xs: 2, sm: 3, md: 4 },
+                    borderRadius: 2,
+                }}>
+                    <Typography variant="h6" id="declare-need-modal-title" gutterBottom>
+                        Declare Your Need
+                    </Typography>
+                    <NeedDeclarationForm
+                        onSubmit={handleNeedSubmit}
+                        onCancel={handleCloseNeedModal}
+                        loggedInUserId={userProfileId}
+                        // No initialNeedData as it's for new declarations
+                        // No communityId as it's for individual needs from SiteNav
+                    />
+                </Paper>
+            </Modal>
+
+            {/* Snackbar for Notifications */}
+            <Snackbar 
+                open={notificationState.open} 
+                autoHideDuration={6000} 
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity={notificationState.severity} sx={{ width: '100%' }}>
+                    {notificationState.message}
+                </Alert>
+            </Snackbar>
         </nav>
     );
 };

@@ -1,0 +1,45 @@
+/*
+  NeedMatchesDisplay.css
+  This file can be used for custom CSS that is not easily achievable
+  with Material-UI's sx prop or styled-components.
+*/
+
+.need-matches-container {
+  /* Styles for the main container of this component, if needed */
+  margin-top: 16px;
+}
+
+.match-list-item {
+  /* Custom styles for list items if needed beyond sx props */
+  /* Example:
+  border: 1px solid #eee;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  */
+}
+
+.match-item-detail {
+  /* Custom class for individual detail lines within a list item */
+  display: block; /* Ensures each detail takes its own line if needed */
+  margin-bottom: 4px;
+}
+
+.request-exchange-button {
+  /* Custom styles for the request exchange button if needed */
+  margin-top: 8px;
+}
+
+.loading-matches-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.error-matches-display {
+  color: red; /* Or use theme colors */
+  padding: 10px;
+  border: 1px solid red; /* Or use theme colors */
+  border-radius: 4px;
+  margin: 10px 0;
+}
