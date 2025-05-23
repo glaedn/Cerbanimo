@@ -1,6 +1,7 @@
 import express from 'express';
 import pg from 'pg';
 import multer from 'multer';
+import { checkAndAwardBadges } from '../services/badgeService.js';
 
 const { Pool } = pg;
 const router = express.Router();
@@ -77,6 +78,25 @@ router.get('/leaderboard', async (req, res) => {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ error: 'Failed to fetch leaderboard' });
     }
+});
+
+// Route to manually trigger badge check for a user
+router.post('/user/:userId/check-badges', async (req, res) => {
+  const { userId } = req.params;
+  const parsedUserId = parseInt(userId, 10);
+
+  if (isNaN(parsedUserId)) {
+    return res.status(400).json({ message: 'Invalid user ID.' });
+  }
+
+  try {
+    console.log(`Manually triggering badge check for user ID: ${parsedUserId}`);
+    await checkAndAwardBadges(parsedUserId);
+    res.status(200).json({ message: `Badge check completed for user ${parsedUserId}.` });
+  } catch (error) {
+    console.error(`Error during manual badge check for user ${parsedUserId}:`, error);
+    res.status(500).json({ message: 'Failed to complete badge check.', error: error.message });
+  }
 });
 
 export default router;
