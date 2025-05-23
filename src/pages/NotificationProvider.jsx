@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import LevelNotification from '../components/LevelNotification/LevelNotification.jsx';
 
 const NotificationContext = createContext();
 
@@ -11,6 +12,9 @@ const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [socket, setSocket] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [levelNotificationData, setLevelNotificationData] = useState(null);
+  const [showLevelNotification, setShowLevelNotification] = useState(false);
+
 
   // Replace both handlers with this single version
 useEffect(() => {
@@ -106,6 +110,23 @@ useEffect(() => {
     fetchNotifications();
   }, [isAuthenticated, userId, getAccessTokenSilently]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleLevelUpdate = (data) => {
+      console.log("Received levelUpdate:", data); // Add this
+      const { previousXP, newXP, previousLevel, newLevel } = data;
+      setLevelNotificationData({ previousXP, newXP, previousLevel, newLevel });
+      setShowLevelNotification(true);
+      setTimeout(() => setShowLevelNotification(false), 6000);
+    };
+
+    socket.on("levelUpdate", handleLevelUpdate);
+
+    return () => socket.off("levelUpdate", handleLevelUpdate);
+  }, [socket]);
+  
+
   // Setup socket connection
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
@@ -178,17 +199,27 @@ useEffect(() => {
     }
 };
 
-  return (
-    <NotificationContext.Provider
-      value={{ 
-        notifications, 
-        unreadCount, 
-        markAsRead 
-      }}
-    >
-      {children}
-    </NotificationContext.Provider>
-  );
+return (
+  <NotificationContext.Provider
+    value={{ 
+      notifications, 
+      unreadCount, 
+      markAsRead 
+    }}
+  >
+    {showLevelNotification && levelNotificationData && (
+      <LevelNotification
+        previousXP={levelNotificationData.previousXP}
+        newXP={levelNotificationData.newXP}
+        previousLevel={levelNotificationData.previousLevel}
+        newLevel={levelNotificationData.newLevel}
+        onClose={() => setShowLevelNotification(false)}
+      />
+    )}
+    {children}
+  </NotificationContext.Provider>
+);
+
 };
 
 export const useNotifications = () => useContext(NotificationContext);

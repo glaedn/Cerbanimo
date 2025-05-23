@@ -8,6 +8,18 @@ import { useNotifications } from "./NotificationProvider";  // Import the useNot
 import IdleSpaceGame from './IdleSpaceGame';
 import LevelNotification from '../components/LevelNotification/LevelNotification'; // Added LevelNotification import
 
+ //                   {/* Test button for LevelNotification */}
+   //                 {isAuthenticated && ( // Only show if authenticated for simplicity
+     //                   <Button 
+       //                     variant="contained" 
+         //                   color="secondary" 
+           ///               onClick={handleGainXP} 
+            //                sx={{ m: 2 }}
+           ////             >
+            //                Gain XP (Test)
+              //          </Button>
+                //    )}
+
 const SiteNav = () => {
     const { logout, loginWithRedirect, isAuthenticated } = useAuth0();
     const location = useLocation();
@@ -161,17 +173,6 @@ const SiteNav = () => {
                             </Link>
                         </>
                     )}
-                    {/* Test button for LevelNotification */}
-                    {isAuthenticated && ( // Only show if authenticated for simplicity
-                        <Button 
-                            variant="contained" 
-                            color="secondary" 
-                            onClick={handleGainXP} 
-                            sx={{ m: 2 }}
-                        >
-                            Gain XP (Test)
-                        </Button>
-                    )}
                 </div>
                 
                 {/* Conditional rendering of login/logout button */}
@@ -185,12 +186,6 @@ const SiteNav = () => {
                     </button>
                 )}
             </div>
-            <LevelNotification
-                previousXP={demoPreviousXP}
-                newXP={demoNewXP}
-                previousLevel={demoPreviousLevel}
-                newLevel={demoNewLevel}
-            />
         </nav>
     );
 };

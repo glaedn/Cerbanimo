@@ -72,7 +72,6 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
   
-      console.log('Fetching communities for user:', userId);
       const response = await fetch(`http://localhost:4000/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -85,17 +84,13 @@ const ProjectVisualizer = () => {
       }
   
       const data = await response.json();
-      console.log('Got response from server:', data);
       
       if (Array.isArray(data)) {
         setUserCommunities(data);
-        console.log('Set user communities:', data);
       } else {
-        console.error('Received non-array data:', data);
         setUserCommunities([]);
       }
     } catch (error) {
-      console.error('Error fetching communities:', error);
       setUserCommunities([]);
     }
   };
@@ -127,7 +122,6 @@ const ProjectVisualizer = () => {
       }
       
       const data = await response.json();
-      console.log('Granularization response:', data);
 
       if (data.success) {
         // Refresh tasks after successful granularization
@@ -236,9 +230,7 @@ const ProjectVisualizer = () => {
         }
 
         const data = await response.json();
-        console.log(data);
         setInterests(data.interestsPool || []);
-        console.log('Fetched interests:', data.interestsPool);
       } catch (error) {
         console.error('Error fetching interests:', error);
       }
@@ -568,9 +560,6 @@ useEffect(() => {
     // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
     
-    // Debug: Check if the category has tasks
-    console.log(`Drawing ${activeCategory} with ${data.length} tasks`);
-    
     // Exit early if no data
     if (data.length === 0) return;
 
@@ -807,16 +796,7 @@ links.forEach(link => {
   }
 });
 
-// 4. For debugging, log links that should be pink
-console.log("Links that should be pink:", 
-  links.filter(link => link.targetStatus === "completed")
-    .map(link => ({
-      id: link.id,
-      sourceId: link.source.id,
-      targetId: link.target.id,
-      targetStatus: link.targetStatus
-    }))
-);
+
     // Only process external dependencies if we're not in All Tasks view
     if (activeCategory !== "All Tasks") {
       Object.values(graph).forEach((node) => {
@@ -1082,19 +1062,9 @@ console.log("Links that should be pink:",
 
   // Add these debug logs right before the TaskEditor component in the return statement
 
-// Debug the reviewer ids for the current task
-console.log('Current task ID:', taskForm?.id);
-console.log('Current userId:', userId, 'type:', typeof userId);
-console.log('reviewer_ids for this task:', 
-  taskForm?.id ? allTasks[taskForm.id]?.reviewer_ids : 'No task selected', 
-  'type:', typeof allTasks[taskForm?.id]?.reviewer_ids);
-
 // Show the comparison that's happening
 const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
 const numericUserId = Number(userId);
-console.log('Comparing:', numericUserId, 'with', currentReviewerIds);
-console.log('Includes check result:', currentReviewerIds.includes(numericUserId));
-
   return (
     <div
       className="skill-hierarchy-container"
@@ -1138,7 +1108,6 @@ console.log('Includes check result:', currentReviewerIds.includes(numericUserId)
                 }`}
                 onClick={() => {
                   const skillId = skills.find(s => s.name === category.name)?.id;
-                  console.log(`Selected tab: ${category.name}, Skill ID: ${skillId}`); // Debug log
                   setActiveCategory(category.name);
                   setActiveSkillId(skillId);
                 }}
@@ -1186,7 +1155,6 @@ console.log('Includes check result:', currentReviewerIds.includes(numericUserId)
               <button
                 className="new-task-button"
                 onClick={() => {
-                  console.log("Button clicked");
                   handleAddTask();
                 }}
               >
@@ -1197,7 +1165,6 @@ console.log('Includes check result:', currentReviewerIds.includes(numericUserId)
             <button
               className={`new-task-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
-                console.log("Button clicked");
                 handleGranularizeTasks(projectId);
               }}
               disabled={loading}
@@ -1211,7 +1178,6 @@ console.log('Includes check result:', currentReviewerIds.includes(numericUserId)
                 onClick={() => {
                   fetchUserCommunities();
                   setShowCommunityProposalPopup(true);
-                  console.log("community proposal popup: ", showCommunityProposalPopup);
                 }}
               >
                 Propose to Community
