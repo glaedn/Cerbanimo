@@ -21,6 +21,7 @@ import Communities from './pages/Communities.jsx';
 import UserPortfolio from './pages/UserPortfolio.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import GalacticActivityMap from './components/GalacticActivityMap/GalacticActivityMap.jsx';
 
 
 const App = () => {
@@ -136,6 +137,15 @@ const App = () => {
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <UserPortfolio />
               </LocalizationProvider>
+            </PrivateRoute>
+          }
+        />
+        {/* New Route for Galactic Activity Map */}
+        <Route
+          path="/activity-map"
+          element={
+            <PrivateRoute>
+              <GalacticActivityMap />
             </PrivateRoute>
           }
         />
