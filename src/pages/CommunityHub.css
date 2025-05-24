@@ -40,12 +40,13 @@
     justify-content: center;
     gap: 8px;
     margin-top: 10px;
+    margin-bottom: 10px;
 }
 
-.interest-tag {
+/*.interest-tag {
     /* background and color removed */
     /* Keep other styles if needed, or remove rule if fully handled by MUI sx */
-}
+/*}*/
 
 .small-tags .MuiChip-root {
     height: 24px;
@@ -84,7 +85,7 @@
     text-align: center;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     color: #CCCCCC;
-    max-height: 300px;
+    max-height: 600px;
     overflow-y: auto!important; /* Keeping !important if it's overriding something critical */
     border-radius: 10px;
     background: linear-gradient(145deg, #1C1C1E, #0A0A2E);
@@ -222,6 +223,7 @@
     background: rgba(28, 28, 30, 0.8);
     transition: transform 0.3s ease;
     height: 100%;
+    overflow-y: auto;
 }
 
 .projects-grid .project-card:hover { /* Made selector more specific */
@@ -229,9 +231,10 @@
     background: rgba(28, 28, 30, 1);
 }
 
+/*
 .project-tag {
     /* background and color removed */
-}
+/*}*/
 
 .view-project-btn {
     margin-top: 12px !important; /* Kept !important if necessary for override */

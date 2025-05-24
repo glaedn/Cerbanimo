@@ -35,6 +35,14 @@ const createTaskTable = async () => {
       -- New columns
       status task_status NOT NULL DEFAULT 'inactive-unassigned',   -- Add status column
       dependencies INTEGER[] DEFAULT '{}',  -- Add dependencies column
+      -- New fields for task type and resource/need linkage
+      task_type VARCHAR(50) DEFAULT 'project_task', -- e.g., project_task, resource_pickup, resource_delivery, etc.
+      related_resource_id INTEGER REFERENCES resources(id) ON DELETE SET NULL,
+      related_need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL,
+      
+      -- Standard timestamp fields
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
       CONSTRAINT fk_dependencies FOREIGN KEY (id) REFERENCES tasks(id) ON DELETE CASCADE -- Optional, can be enforced by trigger
     );

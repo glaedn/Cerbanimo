@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link, useLocation } from 'react-router-dom';
 import './SiteNav.css';
-import { Badge, IconButton, Menu, MenuItem, Button, Modal, Paper, Box, Snackbar, Alert } from "@mui/material";
+import { Badge, IconButton, Menu, MenuItem, Button, Modal, Paper, Box, Snackbar, Alert, Typography } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useNotifications } from "./NotificationProvider";
 import IdleSpaceGame from './IdleSpaceGame';
 import LevelNotification from '../components/LevelNotification/LevelNotification';
 import axios from 'axios';
-import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm';
+import NeedDeclarationForm from '../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
 
 const SiteNav = () => {
     const { user, logout, loginWithRedirect, isAuthenticated, getAccessTokenSilently } = useAuth0(); // Added user, getAccessTokenSilently

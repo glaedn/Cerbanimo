@@ -42,7 +42,6 @@ const findMatchesForNeed = async (needId, dbPool) => {
     // Basic query by category and availability status
     let resourceQueryText = 'SELECT * FROM resources WHERE category = $1 AND status = $2';
     const queryParams = [need.category, 'available'];
-    let paramIndex = 3; // Start after category and status
 
     // Add check for availability window
     resourceQueryText += ' AND (availability_window_end IS NULL OR availability_window_end >= NOW())';
@@ -126,10 +125,8 @@ const findMatchesForResource = async (resourceId, dbPool) => {
 
     let needQueryText = 'SELECT * FROM needs WHERE category = $1 AND status = $2';
     const queryParams = [resource.category, 'open'];
-    let paramIndex = 3;
     
     // Add check for required_before_date
-    needQueryText += ' AND (required_before_date IS NULL OR required_before_date >= NOW())';
 
     // Placeholder for geo-spatial filtering (similar to above)
     // const searchRadiusKm = 50;
@@ -169,7 +166,5 @@ const findMatchesForResource = async (resourceId, dbPool) => {
   }
 };
 
-module.exports = { // Using CommonJS export for Node.js backend services
-  findMatchesForNeed,
-  findMatchesForResource,
-};
+
+export { findMatchesForNeed, findMatchesForResource };

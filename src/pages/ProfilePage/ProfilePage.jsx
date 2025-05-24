@@ -13,7 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
-
+import UserPortfolio from '../UserPortfolio.jsx';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
@@ -56,7 +57,7 @@ const ProfilePage = () => {
 
           const token = await getAccessTokenSilently({
             audience: 'http://localhost:4000',
-            scope: 'openid profile email read:profile write:profile',
+            scope: 'openid profile email read:write:profile',
           });
           
           if (!token) {
@@ -202,8 +203,8 @@ const ProfilePage = () => {
     setResourceError(null);
     try {
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
-        scope: 'read:profile', // Adjust scope if needed for resources
+        audience: 'http://localhost:4000/',
+        scope: 'openid profile email read:profile', 
       });
       const response = await axios.get(`http://localhost:4000/resources/user/${profileData.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -236,17 +237,19 @@ const ProfilePage = () => {
 
   const handleResourceSubmit = async (resourceData) => {
     try {
+      console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: 'http://localhost:4000/',
         // Ensure appropriate scope for writing resources
-        scope: 'write:profile', // Placeholder, adjust to actual scope for resources
+        scope: 'read:write:profile openid profile email read:profile',
+        ignoreCache: true
       });
-
       let response;
       const payload = { ...resourceData };
 
       if (editingResource) {
         // Update existing resource
+        payload.user_id = profileData.id; // Ensure user_id is set
         response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -254,6 +257,7 @@ const ProfilePage = () => {
       } else {
         // Create new resource
         payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
+        console.log('Creating new resource with payload:', payload);
         response = await axios.post('http://localhost:4000/resources', payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -273,7 +277,7 @@ const ProfilePage = () => {
       try {
         const token = await getAccessTokenSilently({
           audience: 'http://localhost:4000',
-          scope: 'write:profile', // Placeholder, adjust scope
+          scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
         await axios.delete(`http://localhost:4000/resources/${resourceId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -360,7 +364,6 @@ const ProfilePage = () => {
         label="Username"
         value={profileData.username || ''}
         onChange={(e) => handleInputChange('username', e.target.value)}
-        fullWidth
         margin="normal"
       />
       <Box mb={2} >
@@ -448,27 +451,7 @@ const ProfilePage = () => {
 
       </Box>
       <Box className="profile-experience-container">
-      <Typography className="profile-experience-title">
-        Experience:
-      </Typography>
-      <Box className="experience-list">
-      {experienceDetails.map((task, index) => (
-        <Box key={index} className="experience-item">
-            <Typography variant="h6" className="task-name">
-            {task.name || 'Unnamed Task'}
-          </Typography>
-          <Typography variant="body1" className="task-description">
-            {task.description || 'No description available'}
-          </Typography>
-            <Link 
-              to={`/visualizer/${task.project_id}`} 
-              className="view-project-link"
-            >
-              🚀 View Project
-            </Link>
-        </Box>
-      ))}
-    </Box>
+        <UserPortfolio userId={profileData.id}/>
       </Box>
       
       <Box className="profile-footer">

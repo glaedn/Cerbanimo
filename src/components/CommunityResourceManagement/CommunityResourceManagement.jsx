@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 import {
   Box, Typography, Button, List, ListItem, ListItemText, IconButton,
   Modal, Paper, CircularProgress, Snackbar, Alert
@@ -9,14 +10,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ResourceListingForm from '../ResourceListingForm/ResourceListingForm'; // Adjust path if needed
 
-const CommunityResourceManagement = ({ communityId, loggedInUserId, getAccessTokenSilently }) => {
+const CommunityResourceManagement = ({ communityId }) => {
   const [communityResources, setCommunityResources] = useState([]);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
-
+  const { user: loggedInUser, getAccessTokenSilently } = useAuth0(); // Get user and token function from Auth0
   const showNotification = (message, severity = 'info') => {
     setNotification({ open: true, message, severity });
   };
@@ -29,7 +30,7 @@ const CommunityResourceManagement = ({ communityId, loggedInUserId, getAccessTok
   };
 
   const fetchCommunityResources = useCallback(async () => {
-    if (!communityId || !getAccessTokenSilently) return;
+    if (!communityId) return;
     setLoading(true);
     setError(null);
     try {
@@ -46,7 +47,7 @@ const CommunityResourceManagement = ({ communityId, loggedInUserId, getAccessTok
     } finally {
       setLoading(false);
     }
-  }, [communityId, getAccessTokenSilently]);
+  }, [communityId]);
 
   useEffect(() => {
     fetchCommunityResources();
@@ -135,7 +136,7 @@ const CommunityResourceManagement = ({ communityId, loggedInUserId, getAccessTok
   };
 
   return (
-    <Paper elevation={2} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+    <Paper classname="resource-modal-paper" elevation={2} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
       <Typography variant="h6" gutterBottom component="div">
         Community Resources
       </Typography>
@@ -240,7 +241,6 @@ const CommunityResourceManagement = ({ communityId, loggedInUserId, getAccessTok
 CommunityResourceManagement.propTypes = {
   communityId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   loggedInUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Optional, for future permission checks
-  getAccessTokenSilently: PropTypes.func.isRequired,
 };
 
 export default CommunityResourceManagement;

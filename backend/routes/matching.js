@@ -1,9 +1,10 @@
 import express from 'express';
 import { findMatchesForNeed, findMatchesForResource } from '../services/matchingService.js'; 
 import db from '../db.js'; // Database pool
-import authenticate from '../middleware/authenticate.js'; // Authentication middleware
+import ensureAuthenticated from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
+const authenticate = ensureAuthenticated; // Alias for clarity
 
 // Match resources for a given need
 router.get('/need/:needId', authenticate, async (req, res) => {

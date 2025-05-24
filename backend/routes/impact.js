@@ -5,10 +5,10 @@ import {
   getCommunityImpactStats,
 } from '../services/impactService.js';
 import db from '../db.js'; // Database pool
-import authenticate from '../middleware/authenticate.js'; // Authentication middleware
+import ensureAuthenticated from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
-
+const authenticate = ensureAuthenticated; // Alias for clarity
 // GET overall platform impact summary
 // Path: /impact/summary (when mounted in server.js as app.use('/impact', impactRoutes))
 router.get('/summary', authenticate, async (req, res) => {

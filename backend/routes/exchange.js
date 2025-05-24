@@ -2,7 +2,7 @@
 import express from 'express';
 import { initiateExchange } from '../services/resourceExchangeService.js';
 import db from '../db.js'; // Database pool
-import authenticate from '../middleware/authenticate.js'; // Authentication middleware
+import authenticate from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
 

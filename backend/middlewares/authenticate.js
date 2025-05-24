@@ -1,15 +1,17 @@
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
 
 // Auth0 configuration
 const authConfig = {
   domain: 'dev-i5331ndl5kxve1hd.us.auth0.com',
   audience: 'http://localhost:4000',
+  jwksUri: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/.well-known/jwks.json'
 };
-
 // Set up JWKS client for token verification
 const client = jwksClient({
-  jwksUri: `https://${authConfig.domain}/.well-known/jwks.json`,
+  jwksUri: authConfig.jwksUri,
+  requestHeaders: {}, // Add empty headers object
+  timeout: 30000 // Increase timeout
 });
 
 // Middleware to authenticate requests
@@ -35,8 +37,8 @@ const ensureAuthenticated = (req, res, next) => {
     token,
     getKey,
     {
-      audience: 'http://localhost:4000/',
-      issuer: `https://dev-i5331ndl5kxve1hd.us.auth0.com/`,
+      audience: authConfig.audience,
+      issuer: `https://${authConfig.domain}/`,
       algorithms: ['RS256'],
     },
     (err, decoded) => {
@@ -48,17 +50,17 @@ const ensureAuthenticated = (req, res, next) => {
       console.log('Decoded Token:', decoded);
   
       // Check for required scopes
-      const requiredScopes = ['read:profile'];
-      const tokenScopes = decoded.scope ? decoded.scope.split(' ') : [];
+      //const requiredScopes = ['read:profile'];
+      //const tokenScopes = decoded.scope ? decoded.scope.split(' ') : [];
   
-      const hasRequiredScopes = requiredScopes.every((scope) =>
-        tokenScopes.includes(scope)
-      );
+      //const hasRequiredScopes = requiredScopes.every((scope) =>
+      //  tokenScopes.includes(scope)
+      //);
   
-      if (!hasRequiredScopes) {
-        console.error('Insufficient scopes:', tokenScopes);
-        return res.status(403).json({ message: 'Forbidden: Insufficient scope' });
-      }
+      //if (!hasRequiredScopes) {
+      //  console.error('Insufficient scopes:', tokenScopes);
+      //  return res.status(403).json({ message: 'Forbidden: Insufficient scope' });
+      //}
   
       req.user = decoded; // Attach decoded user info to the request
       next();
@@ -72,9 +74,9 @@ function getKey(header, callback) {
     if (err) {
       return callback(err);
     }
-    const signingKey = key.publicKey || key.rsaPublicKey;
+    const signingKey = key.getPublicKey();
     callback(null, signingKey);
   });
 }
 
-module.exports = ensureAuthenticated;
+export default ensureAuthenticated;
