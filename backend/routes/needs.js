@@ -1,6 +1,6 @@
-const express = require('express');
-const pool = require('../db'); // Assuming db.js is in the backend directory
-const authenticate = require('../middleware/authenticate'); // Assuming middleware is in backend/middleware
+import express from 'express';
+import pool from '../db.js'; // Assuming db.js is in the backend directory
+import authenticate from '../middlewares/authenticate.js'; // Assuming middleware is in backend/middleware
 
 const router = express.Router();
 
@@ -20,23 +20,25 @@ router.post('/', authenticate, async (req, res) => {
     longitude,
     status // Default is 'open' in schema
   } = req.body;
-
+  console.log('Received data:', req.body);
+  console.log('id passed in the req:', req.user.id);
   // If requestor_user_id is not provided, and it's not a community request, set it to the logged-in user.
   if (!requestor_user_id && !requestor_community_id) {
+    console.log('No requestor_user_id or requestor_community_id provided, using logged-in user id:', req.user.id);
     requestor_user_id = req.user.id;
   } else if (!requestor_user_id && requestor_community_id) {
     // It's a community request, user_id is implicitly the one making the request via authenticate
     // but the primary requestor is the community. We can also store req.user.id if needed
     // e.g. as 'created_by_user_id' if schema supported it. For now, requestor_user_id can be null.
-  } else if (requestor_user_id && requestor_user_id !== req.user.id && !req.user.isAdmin) {
+  //} else if (requestor_user_id && requestor_user_id !== req.user.id && !req.user.isAdmin) {
     // A user is trying to post a need for another user and is not an admin
     // This could be disallowed, or allowed based on specific rules (e.g. community admin)
     // For now, let's assume if requestor_user_id is provided, it must match req.user.id unless it's a community request.
     // This logic might need refinement based on product decisions.
     // If it's a community request, requestor_user_id can be different or null.
-    if(!requestor_community_id) {
-        return res.status(403).json({ error: 'You can only declare needs for yourself unless it is a community need or you are an admin.' });
-    }
+  //  if(!requestor_community_id) {
+  //      return res.status(403).json({ error: 'You can only declare needs for yourself unless it is a community need or you are an admin.' });
+  //  }
   }
 
 
@@ -237,4 +239,4 @@ router.delete('/:needId', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

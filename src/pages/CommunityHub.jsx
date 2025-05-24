@@ -29,6 +29,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
+import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
 import './CommunityHub.css';
 
 const CommunityHub = () => {
@@ -709,7 +710,6 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         </Card>
                     </div>
                 )}
-                
                 {/* Active Projects Card - Visible to all */}
                 <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
                     <Card className="hub-card projects-card">
@@ -755,6 +755,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
+            <CommunityResourceManagement communityId={communityId} />
             <CommunityChronicle communityId={communityId} />
             <Snackbar 
   open={snackbarOpen} 
@@ -762,6 +763,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
   onClose={handleCloseSnackbar}
   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
 >
+
   <MuiAlert 
     elevation={6} 
     variant="filled" 

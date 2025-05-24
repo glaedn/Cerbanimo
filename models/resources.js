@@ -1,4 +1,4 @@
-const pool = require('../db'); // Assuming db.js contains the PostgreSQL pool configuration
+const pool = require('../backend/db'); // Assuming db.js contains the PostgreSQL pool configuration
 
 const createResourcesTable = async () => {
   const query = `

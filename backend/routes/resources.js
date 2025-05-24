@@ -1,44 +1,44 @@
-const express = require('express');
-const pool = require('../db'); // Assuming db.js is in the backend directory
-const authenticate = require('../middleware/authenticate'); // Assuming middleware is in backend/middleware
+import express from 'express';
+import pool from '../db.js';  // Assuming db.js is in the backend directory
+import authenticate from '../middlewares/authenticate.js';  // Assuming middleware is in backend/middleware
 
 const router = express.Router();
 
 // POST /resources - Create a new resource
 router.post('/', authenticate, async (req, res) => {
+  const payload = req.body;
+  
+  // Destructure with defaults from the payload
   const {
     name,
-    description,
-    category,
-    quantity,
-    condition,
-    availability_window_start,
-    availability_window_end,
-    location_text,
-    latitude,
-    longitude,
-    is_recurring,
-    recurring_details,
-    owner_community_id, // owner_user_id will be from req.user.id
-    status
-  } = req.body;
+    description = null,
+    category = null,
+    quantity = 1,
+    condition = null,
+    availability_window_start = null,
+    availability_window_end = null,
+    location_text = null,
+    latitude = null,
+    longitude = null,
+    is_recurring = false,
+    recurring_details = null,
+    owner_user_id = req.user.id, // Set to authenticated user's ID
+    owner_community_id = null,
+    status = 'available'
+  } = payload;
+  console.log('Creating resource with payload:', payload);
 
-  const owner_user_id = req.user.id;
-
+  // Validation
   if (!name) {
     return res.status(400).json({ error: 'Resource name is required.' });
-  }
-
-  if (!owner_user_id && !owner_community_id) {
-    return res.status(400).json({ error: 'Either owner_user_id or owner_community_id must be provided.' });
   }
 
   try {
     const result = await pool.query(
       `INSERT INTO resources (name, description, category, quantity, condition, 
-                              availability_window_start, availability_window_end, 
-                              location_text, latitude, longitude, is_recurring, 
-                              recurring_details, owner_user_id, owner_community_id, status)
+                            availability_window_start, availability_window_end, 
+                            location_text, latitude, longitude, is_recurring, 
+                            recurring_details, owner_user_id, owner_community_id, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
@@ -128,7 +128,6 @@ router.get('/:resourceId', async (req, res) => {
 // PUT /resources/:resourceId - Update an existing resource
 router.put('/:resourceId', authenticate, async (req, res) => {
   const { resourceId } = req.params;
-  const currentUserId = req.user.id;
   const {
     name,
     description,
@@ -142,10 +141,11 @@ router.put('/:resourceId', authenticate, async (req, res) => {
     longitude,
     is_recurring,
     recurring_details,
+    user_id,
     owner_community_id, // owner_user_id is not updatable directly, tied to creator
     status
   } = req.body;
-
+ const currentUserId = parseInt(user_id);
   if (!name) { // Basic validation
     return res.status(400).json({ error: 'Resource name is required.' });
   }
@@ -159,6 +159,8 @@ router.put('/:resourceId', authenticate, async (req, res) => {
 
     const resource = resourceResult.rows[0];
     // TODO: Add more robust authorization check (e.g., community admin rights)
+    //log the type and value of both resource.owner_user_id and currentUserId
+    console.log('Resource owner ID:', resource.owner_user_id, 'Current user ID:', currentUserId);
     if (resource.owner_user_id !== currentUserId) {
       return res.status(403).json({ error: 'User not authorized to update this resource.' });
     }
@@ -225,4 +227,4 @@ router.delete('/:resourceId', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

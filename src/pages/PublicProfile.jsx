@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Avatar, Typography, Chip, CircularProgress, Box } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
+import UserPortfolio from "./UserPortfolio.jsx";
 import "./PublicProfile.css";
 
 const PublicProfile = () => {
@@ -149,7 +150,7 @@ const PublicProfile = () => {
       <Typography variant="h4" gutterBottom>
         {profile.username}
       </Typography>
-      
+      <UserPortfolio userId={userId} />
       <Typography variant="h6" gutterBottom>
         Skills:
       </Typography>

@@ -89,6 +89,7 @@ const NeedDeclarationForm = ({
       // For now, we remove it if communityId is present.
       delete payload.requestor_user_id; 
     } else {
+      console.log('Submitting need for user:', loggedInUserId);
       payload.requestor_user_id = loggedInUserId;
       delete payload.requestor_community_id;
     }

@@ -26,10 +26,10 @@ import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 
 // Import database table creation functions
-import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
-import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
-import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
-import { createTokenTransactionsTable } from './models/tokenTransactions.js';
+//import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
+//import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
+//import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
+//import { createTokenTransactionsTable } from './models/tokenTransactions.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
 // If they had similar exported creation functions, they would be imported here too.
 
@@ -181,17 +181,17 @@ const PORT = process.env.PORT || 4000;
 async function initializeDatabase() {
   try {
     // Create tables first
-    await createResourcesTable();
-    await createNeedsTable();
-    await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
-    await createTokenTransactionsTable();
+    //await createResourcesTable();
+    //await createNeedsTable();
+    //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
+    //await createTokenTransactionsTable();
     
     // Then create triggers that depend on these tables
     // Ensure the trigger function (update_updated_at_column) is created once,
     // which is handled within each of these trigger creation functions by using CREATE OR REPLACE.
-    await createResourcesUpdatedAtTrigger();
-    await createNeedsUpdatedAtTrigger();
-    await createTaskUpdatedAtTrigger();
+    //await createResourcesUpdatedAtTrigger();
+    //await createNeedsUpdatedAtTrigger();
+    //await createTaskUpdatedAtTrigger();
     // tokenTransactions table in this example does not have an updated_at trigger by default.
 
     console.log('Database tables checked/initialized successfully.');

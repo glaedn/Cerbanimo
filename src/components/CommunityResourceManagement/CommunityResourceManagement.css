@@ -14,13 +14,17 @@
 }
 */
 
-.community-resource-management-container {
+/*.community-resource-management-container {
   /* Styles for the main container if needed */
-}
-
+/*}
+*/
+ /*
 .resource-modal-paper {
   /* Custom styles for the modal's Paper component if sx prop is not enough */
   /* Example:
   border-radius: 10px;
   */
+/*
+  max-height: 200px!important;
 }
+*/

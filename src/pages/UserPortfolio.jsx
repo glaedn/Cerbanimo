@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom'; // ✅ Add this line
+import { useParams } from 'react-router-dom';
 import TokenAndSkillSummary from '../components/TokenAndSkillSummary';
-import FilterPanel from '../components/FilterPanel';
+// import FilterPanel from '../components/FilterPanel';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import './UserPortfolio.css';
-import { Avatar, Tooltip, Typography } from '@mui/material';
-import { Stars, BookOpen } from 'lucide-react';
+import { Typography } from '@mui/material';
+import { BookOpen } from 'lucide-react';
 
-const UserPortfolio = () => {
-  const { userId } = useParams(); // ✅ Extract userId from URL
-  const [filters, setFilters] = useState({});
+const UserPortfolio = ({ userId: propUserId }) => {
+  const routeParams = useParams();
+  const userId = propUserId || routeParams.userId;
+
   const [chronicleData, setChronicleData] = useState([]);
   const [summaryData, setSummaryData] = useState({ total_tokens: 0, skills: [] });
   const [storyStats, setStoryStats] = useState({ total: 0, recent: 0 });
@@ -52,6 +53,10 @@ const UserPortfolio = () => {
     fetchData();
   }, [userId]);
 
+  if (!userId) {
+    return <Typography color="error">No user specified</Typography>;
+  }
+
   return (
     <div className="portfolio-page">
       <div className="header-row">
@@ -64,10 +69,14 @@ const UserPortfolio = () => {
       />
 
       <div className="portfolio-filters">
-        <FilterPanel filters={filters} setFilters={setFilters} />
+        {/* <FilterPanel filters={filters} setFilters={setFilters} /> */}
         <div className="story-stats">
-          <Typography variant="body1" color="secondary"><BookOpen size={18} /> Total Stories: {storyStats.total}</Typography>
-          <Typography variant="body1" color="secondary">Recent (30d): {storyStats.recent}</Typography>
+          <Typography variant="body1" color="secondary">
+            <BookOpen size={18} /> Total Stories: {storyStats.total}
+          </Typography>
+          <Typography variant="body1" color="secondary">
+            Recent (30d): {storyStats.recent}
+          </Typography>
         </div>
       </div>
 
