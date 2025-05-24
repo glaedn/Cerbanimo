@@ -5,8 +5,8 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
 import GalacticMap from './GalacticMap.jsx';
+import SpaceshipHUD from '../components/HUD/SpaceshipHUD.jsx'; // Adjusted path
 import './Dashboard.css';
-//import GalacticMap from '../pages/GalacticMap';
 
 
 const Dashboard = () => {
@@ -28,7 +28,7 @@ const Dashboard = () => {
         if (isAuthenticated && user) {
           // Get JWT token from Auth0
           const token = await getAccessTokenSilently({
-            //audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+            // audience: import.meta.env.VITE_AUTH0_AUDIENCE, // Example audience
         });
           console.log('JWT Token:', token);
           console.log('User is authenticated, caching session...');
@@ -58,18 +58,9 @@ const Dashboard = () => {
   }, [isAuthenticated, user, getAccessTokenSilently]);
 
   return (
-    <Box className="dashboard-container">
-      <Box className="task-browser-wrapper"><GalacticMap />
-      </Box>
-      <Box className="dashboard-footer">
-        <Button className="dashboard-button" variant="contained" color="primary" onClick={goToProfile}>
-          Profile
-        </Button>
-        <Button className="dashboard-button" variant="contained" color="secondary" onClick={goToProjects}>
-          Projects
-        </Button>
-      </Box>
-    </Box>
+    <SpaceshipHUD>
+      <GalacticMap />
+    </SpaceshipHUD>
   );
 };
 
