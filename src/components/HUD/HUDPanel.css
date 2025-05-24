@@ -1,0 +1,256 @@
+.hud-panel {
+  background-color: rgba(10, 10, 46, 0.8); /* Adjusted theme.colors.backgroundDefault with transparency */
+  border: 1px solid #00F3FF; /* theme.colors.primary */
+  box-shadow: 0 0 10px #00F3FF7A; /* theme.effects.glowSubtle(theme.colors.primary) */
+  border-radius: 8px; /* theme.borders.borderRadiusMd */
+  color: #FFFFFF; /* theme.colors.textPrimary */
+  padding: 15px; /* Increased padding */
+  margin: 5px; 
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+  /* Max height and overflow for panels that might have long content */
+  max-height: 400px; /* Example max-height, adjust per panel or content */
+  overflow-y: auto; /* Allow vertical scroll if content exceeds max-height */
+  overflow-x: hidden; /* Prevent horizontal scrollbars */
+  /* Scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) rgba(var(--color-background-paper-rgb), 0.5);
+}
+
+.hud-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.hud-panel::-webkit-scrollbar-track {
+  background: rgba(var(--color-background-paper-rgb), 0.5); /* Dark track */
+}
+.hud-panel::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary); /* Primary color for thumb */
+  border-radius: 4px;
+  border: 2px solid transparent; /* Optional: creates padding around thumb */
+  background-clip: content-box; /* Optional: makes border act as padding */
+}
+.hud-panel::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-secondary);
+}
+
+
+.hud-panel h3, .hud-panel h4 { /* Panel titles, changed h3 to h4 to match current panel implementations */
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  color: #00F3FF; /* theme.colors.primary */
+  text-shadow: 0 0 5px #00F3FF; /* theme.colors.primary */
+  margin-top: 0;
+  margin-bottom: 10px; /* Added margin-bottom */
+  border-bottom: 1px solid #FF5CA2; /* theme.colors.secondary */
+  padding-bottom: 8px; /* Adjusted padding */
+  font-size: 1.2em; /* Slightly larger title */
+}
+
+.hud-panel ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0; /* Added margin reset */
+}
+
+.hud-panel li {
+  padding: 6px 0; /* Adjusted padding */
+  border-bottom: 1px dashed rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
+  font-size: 0.9em; /* Slightly smaller list item font */
+}
+
+.hud-panel li:last-child {
+  border-bottom: none; /* Remove border from last item */
+}
+
+.hud-panel button {
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  background-color: transparent;
+  color: #FF5CA2; /* theme.colors.secondary */
+  border: 1px solid #FF5CA2; /* theme.colors.secondary */
+  padding: 5px 10px;
+  border-radius: 4px; /* theme.borders.borderRadiusSm */
+  box-shadow: 0 0 8px rgba(255, 92, 162, 0.7); /* theme.colors.secondary with alpha */
+  transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* theme.transitions */
+  cursor: pointer;
+  outline: none; /* Remove default outline */
+}
+
+.hud-panel button:hover {
+  background-color: rgba(255, 92, 162, 0.2); /* theme.colors.secondary with alpha */
+  box-shadow: 0 0 12px rgba(255, 92, 162, 1); /* theme.colors.secondary */
+  position: relative; /* For ripple effect */
+  overflow: hidden;   /* For ripple effect */
+}
+
+.hud-panel button .ripple { /* Ripple effect span */
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  transform: scale(0);
+  animation: rippleAnim 0.6s linear;
+  pointer-events: none; 
+}
+
+@keyframes rippleAnim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Style for hover effect on list items, for step 5 */
+.hud-panel li:hover {
+  background-color: rgba(0, 243, 255, 0.1); /* Faint primary color highlight - theme.colors.primary with alpha */
+}
+
+/* Styles for task action buttons, can be common */
+.task-actions { /* Container for buttons within a list item, for layout */
+  margin-top: 8px;
+  display: flex;
+  gap: 8px; /* Spacing between buttons */
+}
+
+.task-actions button {
+  margin-right: 0; /* Remove individual margin if using gap */
+  font-size: 0.8em; /* Smaller buttons for task items */
+  padding: 3px 7px;
+  /* General button styles from .hud-panel button already apply */
+}
+
+/* Animation for urgent tasks in Targeting Scanner or other panels */
+.task-item.urgent-task {
+  animation: pulseHighlight 1.5s infinite;
+  border-radius: 4px; /* Match list item padding/look */
+}
+
+@keyframes pulseHighlight {
+  0% { box-shadow: 0 0 5px rgba(255, 65, 54, 0.7), inset 0 0 3px rgba(255, 65, 54, 0.5); } /* theme.colors.error */
+  50% { box-shadow: 0 0 15px rgba(255, 65, 54, 1), inset 0 0 8px rgba(255, 65, 54, 0.7); }
+  100% { box-shadow: 0 0 5px rgba(255, 65, 54, 0.7), inset 0 0 3px rgba(255, 65, 54, 0.5); }
+}
+
+/* Fade-in animation for CommsLog or other new items */
+.notification-item { /* Applied to individual notification list items */
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer animation for progress bars, particularly for StatusBar XP bar */
+.progress-bar.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%; /* Start off-screen */
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  50% { left: 0; } 
+  100% { left: 100%; }
+}
+
+/* Styles for Draggable Panel Headers */
+.hud-panel-header {
+  background-color: rgba(255, 92, 162, 0.3); /* theme.colors.secondary with alpha */
+  padding: 8px 10px; /* Adjusted padding */
+  cursor: move;
+  border-top-left-radius: 8px; /* theme.borders.borderRadiusMd */
+  border-top-right-radius: 8px; /* theme.borders.borderRadiusMd */
+  border-bottom: 1px solid rgba(255, 92, 162, 0.5); /* theme.colors.secondary with alpha */
+  margin: -15px -15px 10px -15px; /* Pull header to top edges of panel, add bottom margin */
+}
+
+.hud-panel-header h4 { /* Adjust title within header */
+  margin: 0;
+  border-bottom: none; 
+  padding-bottom: 0; /* Remove padding from general h4 style */
+  font-size: 1.1em; /* Slightly smaller than default panel title */
+  text-shadow: 0 0 3px #00F3FF; /* theme.colors.primary */
+}
+
+
+/* Progress bar styles, already added */
+.progress-bar-container {
+  width: 100%;
+}
+
+/* --- Mobile Responsiveness for General Panels --- */
+@media (max-width: 768px) {
+  .hud-panel {
+    font-size: 0.9em; /* Slightly smaller fonts */
+    padding: 10px; /* Adjusted padding */
+    margin-left: 0; /* Override .panel-wrapper margin for direct .hud-panel children if any */
+    margin-right: 0;
+  }
+  .hud-panel h4 { /* Panel titles */
+    font-size: 1.1em;
+    padding-bottom: 6px; /* Reduced padding */
+    margin-bottom: 8px; /* Reduced margin */
+  }
+  .hud-panel-header { /* Adjust header for mobile */
+      cursor: default; /* No dragging */
+      padding: 6px 8px;
+      margin-bottom: 8px; /* Ensure space below header */
+  }
+  .hud-panel-header h4 { /* Title inside header */
+      font-size: 1em; /* Match general panel title or slightly smaller */
+  }
+  .hud-panel button, 
+  .task-actions button { /* General buttons and task action buttons */
+    padding: 8px 10px; /* Increased padding for touch */
+    font-size: 0.95em; /* Ensure readable font size */
+  }
+  .hud-panel li {
+    padding: 8px 2px; /* More vertical padding for touch */
+  }
+
+  /* Adjust progress bar text if needed */
+  .progress-bar {
+    font-size: 10px; /* Ensure readability */
+    line-height: 16px; /* Adjust if height changes */
+  }
+  .progress-bar-container {
+    height: 16px; /* Slightly taller for mobile */
+  }
+}
+
+/* --- Mobile Responsiveness for HUDSettingsPanel (assuming it uses .hud-panel class) --- */
+@media (max-width: 768px) {
+  .hud-settings-panel button { /* Specific to buttons within HUDSettingsPanel */
+    display: block; /* Stack buttons */
+    width: calc(100% - 10px); /* Full width minus some padding */
+    margin: 5px auto; /* Center buttons with auto horizontal margins */
+    box-sizing: border-box; /* Ensure padding/border is included in width */
+  }
+  /* If HUDSettingsPanel itself needs width adjustment and is identifiable by a class */
+  .hud-settings-panel {
+    width: 90% !important; /* Make settings panel wider on mobile if it's fixed/absolute */
+    max-width: 200px; /* Max width for settings panel on mobile */
+    /* Position adjustments for HUDSettingsPanel fixed wrapper are in SpaceshipHUD.jsx */
+  }
+}
+  height: 18px; /* Slightly taller */
+  background-color: rgba(0, 0, 0, 0.3); /* Darker, slightly transparent background for the bar */
+  border-radius: 4px; /* theme.borders.borderRadiusSm */
+  margin-top: 8px; /* Increased margin */
+  overflow: hidden; 
+  border: 1px solid rgba(0, 243, 255, 0.2); /* Subtle border for container */
+}
+
+.progress-bar {
+  height: 100%;
+  color: #0A0A2E; /* Dark text for contrast on bright bar */
+  font-weight: bold;
+  text-align: right;
+  padding-right: 5px;
+  font-size: 10px;
+  line-height: 18px; /* Vertically center text */
+  transition: width 0.5s ease-in-out;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.3); /* Inner shadow for depth */
+}

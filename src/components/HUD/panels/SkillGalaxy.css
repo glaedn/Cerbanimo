@@ -1,0 +1,66 @@
+/* src/components/HUD/panels/SkillGalaxy.css */
+
+.skill-galaxy .category-title {
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  color: #00F3FF; /* theme.colors.primary */
+  font-size: 1.1em;
+  margin-top: 15px;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.5); /* theme.colors.primary with alpha */
+}
+
+.skill-galaxy .skill-list {
+  list-style-type: none;
+  padding-left: 10px; /* Indent skill list slightly under category */
+  position: relative; /* For potential connector lines if implemented later */
+}
+
+.skill-galaxy .skill-node {
+  padding: 6px 8px; /* Increased padding slightly */
+  margin: 4px 0; /* Vertical margin between skills */
+  border-radius: 4px; /* theme.borders.borderRadiusSm */
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  font-size: 0.95em;
+}
+
+.skill-galaxy .skill-node .skill-name {
+  font-weight: bold;
+}
+
+.skill-galaxy .skill-node .skill-level {
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  font-size: 0.9em;
+  margin-left: 5px;
+}
+
+/* Unlocked skills styling */
+.skill-galaxy .skill-node.unlocked {
+  background-color: rgba(0, 215, 135, 0.15); /* theme.colors.accentGreen with alpha */
+  border: 1px solid #00D787; /* theme.colors.accentGreen */
+  color: #FFFFFF; /* theme.colors.textPrimary, level will be accentGreen */
+  box-shadow: 0 0 5px rgba(0, 215, 135, 0.5); /* theme.colors.accentGreen glow */
+}
+.skill-galaxy .skill-node.unlocked .skill-name{
+  color: #FFFFFF; /* theme.colors.textPrimary */
+}
+
+
+/* Locked skills styling */
+.skill-galaxy .skill-node.locked {
+  background-color: rgba(100, 100, 120, 0.1); /* Dimmer background */
+  border: 1px dashed #666; /* Dimmer, dashed border */
+  color: #999; /* Dimmer text color */
+}
+.skill-galaxy .skill-node.locked .skill-name {
+  color: #aaa; /* Even dimmer for the name itself */
+}
+
+/* Basic hover effect for nodes - can be combined with existing .hud-panel li:hover if desired, or kept specific */
+.skill-galaxy .skill-node:hover {
+  background-color: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
+  border-color: #00F3FF; /* theme.colors.primary */
+}
+
+/* Placeholder for connector lines - not implemented in this static version */
+/* .skill-connector-line { ... } */

@@ -7,13 +7,14 @@ import './GalacticActivityMap.css';
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
 // For a dynamically resizing map, consider using useState and useEffect with a ResizeObserver
 // to update these dimensions and trigger a re-render/re-layout.
-const MAP_WIDTH = window.innerWidth * 0.9;
-const MAP_HEIGHT = window.innerHeight * 0.8;
+// const MAP_WIDTH = window.innerWidth * 0.9; // Old
+// const MAP_HEIGHT = window.innerHeight * 0.8; // Old
 
 const GalacticActivityMap = () => {
   const d3Container = useRef(null);
   const tooltipRef = useRef(null);
   const [starData, setStarData] = useState([]);
+  const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 }); // New
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -98,6 +99,9 @@ const GalacticActivityMap = () => {
   // useEffect for D3 rendering
   useEffect(() => {
     if (d3Container.current && !isLoading && !error && starData.length > 0) {
+      const { clientWidth, clientHeight } = d3Container.current;
+      // setMapDimensions({ width: clientWidth, height: clientHeight }); // Set state if needed elsewhere
+
       let svg = d3.select(d3Container.current).select('svg');
       svg.selectAll('*').remove();
 
@@ -105,10 +109,10 @@ const GalacticActivityMap = () => {
         svg = d3.select(d3Container.current).append('svg');
       }
       
-      svg.attr('width', MAP_WIDTH)
-         .attr('height', MAP_HEIGHT)
+      svg.attr('width', clientWidth)
+         .attr('height', clientHeight)
          .style('background-color', 'transparent')
-         .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`);
+         .attr('viewBox', `0 0 ${clientWidth} ${clientHeight}`);
 
       const defs = svg.append('defs');
       // Performance Note: SVG filters can be costly.
@@ -125,7 +129,7 @@ const GalacticActivityMap = () => {
       // Avoid running the simulation continuously if not needed.
       const simulation = d3.forceSimulation(starData)
           .force('charge', d3.forceManyBody().strength(-35))
-          .force('center', d3.forceCenter(MAP_WIDTH / 2, MAP_HEIGHT / 2))
+          .force('center', d3.forceCenter(clientWidth / 2, clientHeight / 2)) // Use clientWidth/Height
           .force('collision', d3.forceCollide().radius(d => getStarRadius(d) + (d.type === 'task' ? 2:4) ))
           .stop(); // Important: simulation is stopped after ticks.
 
@@ -200,33 +204,33 @@ const GalacticActivityMap = () => {
     // 2. WebGL: For even better performance and 3D capabilities, libraries like Three.js or PixiJS.
     // 3. Aggregation/Clustering: Group distant or less important stars into larger nodes.
     // 4. Virtualization: Only render stars currently in the viewport (if panning/zooming is added).
-  }, [starData, isLoading, error]); // Removed MAP_WIDTH, MAP_HEIGHT from deps as they are module-level constants
+  }, [starData, isLoading, error, d3Container]); // Added d3Container to dependencies
 
   if (isLoading) { 
     return (
-      <div className="galactic-activity-map-container">
-        <h1>Galactic Activity Map</h1>
+      // Removed className="galactic-activity-map-container" and h1
+      <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <p>Loading celestial data...</p>
       </div>
     );
   }
   if (error) { 
     return (
-      <div className="galactic-activity-map-container">
-        <h1>Galactic Activity Map</h1>
+      // Removed className="galactic-activity-map-container" and h1
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
         <p style={{ color: 'red' }}>Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="galactic-activity-map-container">
-      <h1>Galactic Activity Map</h1>
-      <div ref={d3Container} style={{ width: MAP_WIDTH, height: MAP_HEIGHT, position: 'relative', margin: '0 auto' }}>
+    // Removed className="galactic-activity-map-container" and h1
+    <>
+      <div ref={d3Container} style={{ width: '100%', height: '100%', position: 'relative' }}>
         {/* SVG is managed by D3 inside this div */}
       </div>
       <div ref={tooltipRef} className="galactic-tooltip" style={{ opacity: 0 }}></div>
-    </div>
+    </>
   );
 };
 

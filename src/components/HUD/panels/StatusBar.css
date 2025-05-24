@@ -1,0 +1,118 @@
+.status-bar {
+  display: flex;
+  justify-content: space-between; /* Distribute items along the bar */
+  align-items: center;
+  padding: 5px 15px; /* Reduced vertical padding for a bar, more horizontal */
+  background-color: rgba(10, 10, 46, 0.9); /* Slightly more opaque for readability */
+  border-top: 1px solid #00F3FF; /* theme.colors.primary */
+  border-bottom: none; /* No bottom border if it's at the screen bottom */
+  border-left: none;
+  border-right: none;
+  border-radius: 0; /* Typically status bars are not rounded or only top-rounded if at bottom */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: 45px; /* Fixed height for the status bar */
+}
+
+.status-bar .status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Spacing between elements within a status item */
+  color: #FFFFFF; /* theme.colors.textPrimary */
+}
+
+.status-bar .user-info .username {
+  font-size: 1.1em;
+  color: #00F3FF; /* theme.colors.primary */
+}
+
+.status-bar .user-info .level {
+  font-size: 0.9em;
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  background-color: rgba(0, 243, 255, 0.2); /* theme.colors.primary alpha */
+  padding: 2px 5px;
+  border-radius: 4px; /* theme.borders.borderRadiusSm */
+}
+
+.status-bar .xp-bar-container .progress-bar-container {
+  margin-top: 0; /* Remove top margin if present from general progress bar styles */
+  border: none; /* Remove border if progress-bar-container had one */
+}
+
+.status-bar .tokens-info {
+  font-size: 1em;
+}
+
+.status-bar .notifications-info .notification-icon {
+  font-size: 1.2em; /* Larger icon */
+  cursor: default; /* If it's not clickable */
+}
+
+.status-bar .notifications-info .notification-count {
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  font-weight: bold;
+  margin-left: -5px; /* Nudge count closer to icon */
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Override general panel title styles if they are inherited due to .hud-panel class */
+.status-bar h4 { 
+  display: none; /* Status bar usually doesn't have a title */
+}
+
+/* Ensure list item styles from HUDPanel.css don't affect status bar items if they are not lists */
+.status-bar .status-item {
+  border-bottom: none;
+  padding: 0;
+}
+.status-bar .status-item:hover {
+  background-color: transparent; /* No hover effect for status items */
+}
+
+/* --- Mobile Responsiveness for StatusBar --- */
+@media (max-width: 768px) {
+  .status-bar {
+    flex-direction: column; /* Stack items vertically */
+    height: auto; /* Auto height to fit content */
+    padding: 8px;
+    align-items: flex-start; /* Align items to the start */
+  }
+
+  .status-bar .status-item {
+    margin-bottom: 5px; /* Add some space between stacked items */
+    width: 100%; /* Make items take full width for clarity */
+  }
+  
+  .status-bar .user-info, 
+  .status-bar .tokens-info,
+  .status-bar .notifications-info {
+    display: flex;
+    justify-content: space-between; /* Space out label and value */
+    width: 100%;
+  }
+
+  .status-bar .xp-bar-container .progress-bar-container {
+    width: 100%; /* Full width XP bar */
+  }
+
+  .status-bar .user-info .username {
+    font-size: 1em;
+  }
+  .status-bar .user-info .level {
+    font-size: 0.8em;
+  }
+  .status-bar .tokens-info {
+    font-size: 0.9em;
+  }
+  .status-bar .notifications-info .notification-icon {
+    font-size: 1em;
+  }
+  .status-bar .notifications-info .notification-count {
+    font-size: 0.9em;
+  }
+}
