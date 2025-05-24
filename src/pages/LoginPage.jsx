@@ -14,7 +14,7 @@ const LoginPage = () => {
     <Box position="relative" width="100vw" height="100vh" overflow="hidden">
 
       {/* Login UI */}
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" >
         <Box
           display="flex"
           flexDirection="column"
@@ -23,11 +23,13 @@ const LoginPage = () => {
           height="100vh"
           position="relative"
           zIndex={1}
+          
         >
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
+            
           >
             <Typography variant="h2" component="h1" align="center" gutterBottom sx={{ 
               color: 'white', 
@@ -51,6 +53,8 @@ const LoginPage = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: 2,
+                background: 'linear-gradient(to right,rgb(22, 42, 65),rgb(89, 13, 156))',
+
               }}
             >
               <Typography variant="h5" component="h2" gutterBottom align="center">
