@@ -9,8 +9,18 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-// Fetch all projects with optional search, pagination, and prioritizing user-created projects
 router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM projects');
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error fetching projects:', err);
+    res.status(500).json({ message: 'Failed to fetch projects' });
+  }
+});
+
+// Fetch all projects with optional search, pagination, and prioritizing user-created projects
+router.get('/personal', async (req, res) => {
     const { search = '', page = 1, auth0Id = '' } = req.query;
   
     try {

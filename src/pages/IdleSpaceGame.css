@@ -1,3 +1,4 @@
+/*
 html, body {
   overflow: hidden;
 }
@@ -86,11 +87,11 @@ html, body {
       inset 0 0 20px rgba(0, 195, 255, 0.1);
     backdrop-filter: blur(4px);
     position: absolute;
-    max-height: 35vh; /* You can tweak this as needed for spacing */
+    max-height: 35vh; /* You can tweak this as needed for spacing 
     overflow-y: auto;
-    overscroll-behavior: contain; /* Prevents bounce/scroll chaining on mobile */
-    -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS */
-    padding-right: 8px; /* Space for custom scrollbar if desired */
+    overscroll-behavior: contain; /* Prevents bounce/scroll chaining on mobile 
+    -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS 
+    padding-right: 8px; /* Space for custom scrollbar if desired 
     margin-left: 10px;
     margin-top: 10px;
     width: 180px;
@@ -284,7 +285,7 @@ html, body {
     animation: exitToBottom 1.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
   }
   
-  /* Moon base styles */
+  /* Moon base styles 
   .moon {
     position: absolute;
     top: 50%;
@@ -299,63 +300,63 @@ html, body {
     filter: drop-shadow(0 0 4px currentColor);
   }
   
-  /* Consistent elliptical orbit animations */
+  /* Consistent elliptical orbit animations 
   @keyframes orbit {
     0% {
       transform: 
         translateX(calc(var(--distance) * 1.5))
         translateY(calc(var(--distance) * var(--y-offset, 0)))
         scale(var(--scale-front, 1));
-      z-index: 6; /* In front of planet */
+      z-index: 6; /* In front of planet 
     }
     24.9% {
       transform: 
         translateX(calc(var(--distance) * 0.2))
         translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
         scale(var(--scale-side, 0.85));
-      z-index: 6; /* Still in front of planet */
+      z-index: 6; /* Still in front of planet 
     }
     25% {
       transform: 
         translateX(0)
         translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
         scale(var(--scale-side, 0.85));
-      z-index: 4; /* Just switched to behind planet */
+      z-index: 4; /* Just switched to behind planet 
     }
     49.9% {
       transform: 
         translateX(calc(var(--distance) * -1.5))
         translateY(calc(var(--distance) * var(--y-offset, 0)))
         scale(var(--scale-back, 0.7));
-      z-index: 4; /* Behind planet */
+      z-index: 4; /* Behind planet 
     }
     50% {
       transform: 
         translateX(calc(var(--distance) * -1.5))
         translateY(calc(var(--distance) * var(--y-offset, 0)))
         scale(var(--scale-back, 0.7));
-      z-index: 4; /* Still behind planet */
+      z-index: 4; /* Still behind planet 
     }
     74.9% {
       transform: 
         translateX(calc(var(--distance) * -0.2))
         translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
         scale(var(--scale-side, 0.85));
-      z-index: 4; /* Still behind planet */
+      z-index: 4; /* Still behind planet 
     }
     75% {
       transform: 
         translateX(0)
         translateY(calc(var(--distance) * calc(var(--y-offset, 0) * 0.5)))
         scale(var(--scale-side, 0.85));
-      z-index: 6; /* Just switched to in front of planet */
+      z-index: 6; /* Just switched to in front of planet
     }
     100% {
       transform: 
         translateX(calc(var(--distance) * 1.5))
         translateY(calc(var(--distance) * var(--y-offset, 0)))
         scale(var(--scale-front, 1));
-      z-index: 6; /* In front of planet */
+      z-index: 6; /* In front of planet 
     }
   }
 
@@ -401,7 +402,7 @@ html, body {
   height: 60px;
 }
 
-/* Hover animation when idle */
+/* Hover animation when idle 
 @keyframes hover {
   0%, 100% {
     transform: translateX(-50%) translateY(0);
@@ -415,7 +416,7 @@ html, body {
   animation: hover 3s ease-in-out infinite;
 }
 
-/* Warp zoom effect when activating warp */
+/* Warp zoom effect when activating warp 
 @keyframes warp-zoom {
   0% {
     transform: translateX(-50%) scale(1);
@@ -433,7 +434,7 @@ html, body {
 }
 
 
-/* Main fuselage */
+/* Main fuselage 
 .spaceship-body {
   width: 100%;
   height: 100%;
@@ -445,7 +446,7 @@ html, body {
   overflow: hidden;
 }
 
-/* Central spine strip */
+/* Central spine strip 
 .body-core {
   position: absolute;
   top: 10%;
@@ -460,7 +461,7 @@ html, body {
   z-index: 3;
 }
 
-/* Cockpit dome */
+/* Cockpit dome 
 .cockpit {
   position: absolute;
   top: 5px;
@@ -475,7 +476,7 @@ html, body {
   border: 1px solid rgba(0, 255, 255, 0.5);
 }
 
-/* Wings */
+/* Wings 
 .spaceship-wing {
   position: absolute;
   top: 50%;
@@ -545,7 +546,7 @@ html, body {
     opacity: 0;
   }
 }
-/* Plasma thruster flame */
+/* Plasma thruster flame 
 .thruster {
   position: absolute;
   bottom: -85px;
@@ -591,7 +592,7 @@ html, body {
 }
 
 
-  /* Keep original star and twinkle styling */
+  /* Keep original star and twinkle styling 
   .star {
     position: absolute;
     width: 2px;
@@ -649,7 +650,7 @@ html, body {
     opacity: 0;
   }
 
-    /* Multicolor variation and random placement */
+    /* Multicolor variation and random placement
     .star:nth-child(odd) {
         background: #00e0ff;
       }

@@ -98,4 +98,4 @@ const useUserProfile = () => {
   return { profile, loading, error };
 };
 
-export default useUserProfile;
+export { useUserProfile };
