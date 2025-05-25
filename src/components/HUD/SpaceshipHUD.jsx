@@ -29,11 +29,11 @@ const SpaceshipHUD = ({ children }) => {
   // Default positions for panels - adjust as needed for initial layout
   // These might need to be more dynamic based on screen size or stored user preferences in a real app
   const defaultPositions = {
-    commandDeck: { x: 50, y: 5 },
-    targetingScanner: { x: 400, y: 5 },
-    missionConsole: { x: 5, y: 150 },
-    commsLog: { x: 5, y: 400 },
-    skillGalaxy: { x: 800, y: 150 } // Example, might be a larger panel
+    commandDeck: { x: -600, y: -250 },
+    targetingScanner: { x: 500, y: -250 },
+    missionConsole: { x: -610, y: 180 },
+    commsLog: { x: 5, y: 350 },
+    skillGalaxy: { x: 750, y: 180 } // Example, might be a larger panel
   };
 
   const settingsPanelStyle = {
