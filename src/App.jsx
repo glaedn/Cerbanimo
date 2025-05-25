@@ -3,7 +3,7 @@ import * as React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import PrivateRoute from './components/PrivateRoute.jsx';
-//import Dashboard from './pages/Dashboard.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 import ProfilePage from './pages/ProfilePage/ProfilePage.jsx';
 import ProjectPages from './pages/ProjectPages.jsx';
 import SiteNav from './pages/SiteNav.jsx'; 
@@ -35,6 +35,14 @@ const App = () => {
         {/* Private Routes */}
         <Route
           path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+         <Route
+          path="/reward-dashboard"
           element={
             <PrivateRoute>
               <RewardDashboard />

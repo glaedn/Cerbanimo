@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import { useRelevantTasks } from '../../../hooks/useRelevantTasks'; // Adjust path
+import useRelevantTasks from '../../../hooks/useRelevantTasks'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 // import './TargetingScanner.css'; // Optional: For specific TargetingScanner styles
 

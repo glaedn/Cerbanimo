@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import { useUserProjects } from '../../../hooks/useUserProjects'; // Adjust path
+import useUserProjects from '../../../hooks/useUserProjects.js';
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
 

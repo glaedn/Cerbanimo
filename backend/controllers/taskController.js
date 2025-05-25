@@ -7,11 +7,8 @@ import {
 const getAllTasks = async () => {
   const query = `
     SELECT 
-      tasks.id AS task_id,
-      tasks.name AS task_name,
-      tasks.id,
-      skills.category AS skill_category
-    FROM tasksa
+      *
+    FROM tasks
     JOIN skills ON tasks.skill_id = skills.id;
   `;
   const result = await pool.query(query);

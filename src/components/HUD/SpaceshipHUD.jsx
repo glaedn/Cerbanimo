@@ -8,7 +8,7 @@ import CommsLog from './panels/CommsLog';
 import StatusBar from './panels/StatusBar';
 import SkillGalaxy from './panels/SkillGalaxy';
 import HUDSettingsPanel from './panels/HUDSettingsPanel';
-import { useWindowSize } from '../../../hooks/useWindowSize'; // Adjust path
+import { useWindowSize } from '../../hooks/useWindowSize.js'; // Adjust path
 
 const SpaceshipHUD = ({ children }) => {
   const { width } = useWindowSize();

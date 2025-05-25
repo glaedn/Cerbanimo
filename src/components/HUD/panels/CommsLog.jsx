@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import { useNotifications } from '../../../hooks/useNotifications'; // Adjust path
+import useNotifications from '../../../hooks/useNotifications'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommsLog.css'; // Optional: For specific CommsLog styles
 

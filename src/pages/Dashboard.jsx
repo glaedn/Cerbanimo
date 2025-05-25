@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
-import GalacticMap from './GalacticMap.jsx';
+import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap.jsx';
 import SpaceshipHUD from '../components/HUD/SpaceshipHUD.jsx'; // Adjusted path
 import './Dashboard.css';
 
@@ -59,7 +59,7 @@ const Dashboard = () => {
 
   return (
     <SpaceshipHUD>
-      <GalacticMap />
+      <GalacticActivityMap />
     </SpaceshipHUD>
   );
 };
