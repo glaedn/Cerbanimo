@@ -60,22 +60,22 @@ const StoryNode = ({
   return (
     <Card className="story-node-card" variant="outlined">
       <CardContent>
-        <Typography variant="h6" className="glow-text neon-purple">
+        <Typography variant="h6" className="story-node-header-label glow-text">
           {task_name}
         </Typography>
-        <Typography variant="subtitle2" className="neon-green">
+        <Typography variant="subtitle2" className="story-node-subheader">
           from project: {project_name}
         </Typography>
 
         <Divider className="neon-divider" />
 
-        <Typography variant="subtitle2" className="neon-blue">
+        <Typography variant="subtitle2" className="story-node-subheader">
           Reflection:
         </Typography>
         <Typography variant="body1" className="reflection-text">
           "{reflection}"
         </Typography>
-        <Typography variant="subtitle2" className="neon-green">
+        <Typography variant="subtitle2" className="story-node-subheader">
           Skill type:
         </Typography>
         <Stack direction="row" spacing={1} className="tag-container">
@@ -83,14 +83,14 @@ const StoryNode = ({
             <Chip
               key={i}
               label={tag.trim()}
-              className="neon-chip neon-green"
+              className="neon-chip neon-chip-green" /* Updated class */
               size="small"
             />
           ))}
         </Stack>
 
         <div className="media-links">
-          <Typography variant="subtitle2" className="neon-orange">
+          <Typography variant="subtitle2" className="story-node-subheader">
             Media Links:
           </Typography>
           {media_urls.map((url, i) => (
@@ -99,7 +99,7 @@ const StoryNode = ({
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="media-link neon-blue"
+              className="media-link" /* Removed neon-blue */
             >
               {url}
             </a>
@@ -107,7 +107,7 @@ const StoryNode = ({
         </div>
 
         <div className="endorsement-section">
-          <Typography variant="subtitle2" className="neon-pink">
+          <Typography variant="subtitle2" className="story-node-subheader">
             Endorsements:
           </Typography>
           {endorsements.map((endorsement, i) => (
@@ -174,7 +174,7 @@ const StoryNode = ({
               <Typography
                 key={i}
                 variant="body2"
-                className="feedback-text neon-purple"
+                className="feedback-text" /* Removed neon-purple */
               >
                 {fb}
               </Typography>

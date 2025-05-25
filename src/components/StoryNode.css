@@ -1,96 +1,201 @@
+/* Base StoryNode Card Styling */
 .story-node-card {
-    background-color: #1C1C1E;
-    border: 1px solid #444444;
-    margin: 1rem 0;
-    padding: 1rem;
-    color: #FFFFFF;
-  }
-  
-  .glow-text {
-    text-shadow: 0 0 8px rgba(0, 243, 255, 0.47);
-  }
-  
-  .neon-purple {
-    color: #9C27B0;
-  }
-  
-  .neon-blue {
-    color: #4DABF7;
-  }
-  
-  .neon-green {
-    color: #00D787;
-  }
-  
-  .neon-orange {
-    color: #FF9F40;
-  }
-  
-  .neon-pink {
-    color: #FF5CA2;
-  }
-  
-  .neon-chip {
-    font-weight: bold;
-  }
-  
-  .neon-divider {
-    margin: 0.5rem 0;
-    border-color: #444444;
-  }
-  
-  .media-links {
-    margin-top: 0.5rem;
-  }
-  
-  .media-link {
-    display: block;
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
-    text-decoration: underline;
-  }
-  
-  .endorsement-section {
-    margin-top: 1rem;
-  }
-  
-  .endorsement {
-    margin-top: 0.25rem;
-    font-size: 0.9rem;
-    color: white;
-  }
-  
-  .feedback-section {
-    margin-top: 0.5rem;
-  }
-  
-  .feedback-text {
-    padding-left: 0.5rem;
-    border-left: 2px solid #9C27B0;
-    margin-bottom: 0.25rem;
-  }
-  
-  .endorsement-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    background: rgba(28, 28, 30, 0.7);
-    padding: 0.5rem;
-    border-radius: 12px;
-    border: 1px solid #444444;
-  }
-  
-  .endorse-input {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  
-  .reflection-text {
-    color: #4DABF7;
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin-top: 1rem;
-    text-align: center;
-  }
+  background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark card */
+  border: 2px solid #00F3FF; /* theme.colors.primary */
+  box-shadow: 0 0 10px #00F3FF66; /* theme.colors.primary with alpha (approx 0.4) */
+  border-radius: 14px; /* Requirement: 14px */
+  padding: 20px; /* Requirement: 20px */
+  margin: 1rem 0; /* Existing margin, 16px if base font is 16px */
+  color: #FFFFFF; /* theme.colors.textPrimary */
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* theme.transitions.medium, theme.transitions.easing */
+  position: relative; /* For positioning the ::after pseudo-element */
+}
+
+/* Animated Line Decorator */
+.story-node-card::after {
+  content: '';
+  position: absolute;
+  top: 85px; /* Positioned below where the header label typically ends. Card padding 20px + ~28px for label height + ~22px for label margin-bottom. */
+  left: 5%; /* Indent from edges */
+  width: 0%; /* Initial width for animation */
+  height: 1px;
+  background-color: #00F3FF; /* theme.colors.primary */
+  box-shadow: 0 0 6px #00F3FFBB, 0 0 10px #00F3FF88; /* theme.colors.primary with alpha for glow */
+  border-radius: 1px; /* Softens the line ends */
+  transition: width 0.4s ease-in-out, opacity 0.3s ease-in-out; /* Adjusted transition */
+  opacity: 0; /* Initially hidden */
+  z-index: 0; /* Ensure it's behind content if necessary, though unlikely here */
+}
+
+.story-node-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 15px #00F3FF88; /* Expanded inner glow on hover (approx 0.53 alpha) */
+}
+
+.story-node-card:hover::after {
+  width: 90%; /* Animate to full width (indented) */
+  opacity: 1; /* Fade in the line */
+}
+
+/* Header Label Styling */
+.story-node-header-label {
+  display: inline-block;
+  padding: 4px 12px; /* Requirement */
+  font-weight: 700; /* theme.typography.fontWeightBold */
+  color: #FFFFFF; /* theme.colors.textPrimary */
+  background: linear-gradient(145deg, #00e5ff, #00bcd4); /* Lighter/darker theme.colors.primary */
+  border-radius: 03px; /* Pill shape */
+  text-transform: uppercase;
+  /* Combined inset and outer glow. Outer glow first for layering. */
+  box-shadow: 0 0 8px #00F3FF88, inset 0 2px 4px rgba(0,0,0,0.3);
+  margin-bottom: 1.5rem!important; /* theme.spacing.md (1.5rem = 12px if base spacing unit 8px, or 24px if base font 16px. Using rem directly) */
+  font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent for headers */
+}
+
+/* Specific Header Label Colors (examples) */
+.story-node-header-label-discovery {
+  background: linear-gradient(145deg, #4DABF7, #3a8bcc); /* theme.colors.accentBlue */
+  box-shadow: 0 0 8px #4DABF788, inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.story-node-header-label-conflict {
+  background: linear-gradient(145deg, #FF5CA2, #e6458f); /* theme.colors.secondary */
+  box-shadow: 0 0 8px #FF5CA288, inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.story-node-header-label-resolution {
+  background: linear-gradient(145deg, #00D787, #00b873); /* theme.colors.accentGreen */
+  box-shadow: 0 0 8px #00D78788, inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Body Content Styling */
+.reflection-text {
+  color: #CCCCCC; /* theme.colors.textSecondary (f0f0f0 is also good, CC is from theme) */
+  font-weight: 400; /* theme.typography.fontWeightRegular */
+  font-size: 1rem; /* theme.typography.fontSizeMd (16px) */
+  margin-top: 1rem; /* Existing */
+  text-align: left;
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase for body text */
+}
+
+.story-node-subheader {
+  color: #AAAAAA; /* Dimmer gray */
+  font-size: 0.875rem; /* theme.typography.fontSizeSm (14px) */
+  font-weight: 700; /* theme.typography.fontWeightBold */
+  text-transform: uppercase;
+  margin-top: 1.5rem; /* theme.spacing.md */
+  margin-bottom: 0.5rem; /* theme.spacing.xs (0.5rem = 4px if base spacing unit 8px, or 8px if base font 16px. Using rem directly) */
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+}
+
+/* MUI Chip or custom tags - "outlined capsules" */
+.neon-chip {
+  font-weight: 500; /* theme.typography.fontWeightMedium */
+  border: 1px solid #4DABF7; /* Default: theme.colors.accentBlue */
+  color: #4DABF7; /* Default: theme.colors.accentBlue */
+  background-color: transparent;
+  padding: 4px 8px; /* theme.spacing.xs (4px) and sm/2 (4px) */
+  border-radius: 16px; /* Capsule shape */
+  font-size: 0.875rem; /* theme.typography.fontSizeSm (14px) */
+  display: inline-block;
+  margin: 4px; /* theme.spacing.xs (4px) */
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+}
+
+/* Example variations for neon-chip if color needs to change based on context */
+.neon-chip-green {
+  border-color: #00D787; /* theme.colors.accentGreen */
+  color: #00D787;
+}
+.neon-chip-pink {
+  border-color: #FF5CA2; /* theme.colors.secondary */
+  color: #FF5CA2;
+}
+
+.media-links { /* Container for media links */
+  margin-top: 0.5rem; /* theme.spacing.xs */
+}
+
+.media-link {
+  display: block;
+  font-size: 0.9rem; /* Close to theme.typography.fontSizeSm */
+  margin-bottom: 0.25rem; /* Half of theme.spacing.xs */
+  color: #FF9F40; /* theme.colors.accentOrange */
+  text-decoration: none;
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+  transition: text-decoration 0.3s ease-in-out, color 0.3s ease-in-out; /* theme.transitions.medium */
+}
+
+.media-link:hover {
+  text-decoration: underline;
+  color: #FFFFFF; /* Brighter on hover */
+}
+
+/* Specific Elements Update */
+.glow-text { /* Reusable or adaptable */
+  text-shadow: 0 0 10px #00F3FF7A; /* theme.effects.glowSubtle(theme.colors.primary) with ~0.5 alpha */
+}
+
+/* Neon color classes - kept for specific text highlights if needed, using theme colors */
+.neon-purple { color: #9C27B0; } /* theme.colors.accentPurple */
+.neon-blue { color: #4DABF7; } /* theme.colors.accentBlue */
+.neon-green { color: #00D787; } /* theme.colors.accentGreen */
+.neon-orange { color: #FF9F40; } /* theme.colors.accentOrange */
+.neon-pink { color: #FF5CA2; } /* theme.colors.secondary */
+
+
+.neon-divider {
+  margin: 1rem 0; /* theme.spacing.sm (1rem = 8px if base unit 8px, or 16px if base font 16px. Using rem) */
+  border: 0;
+  border-top: 1px solid #444444; /* theme.colors.border */
+}
+
+.endorsement-section {
+  margin-top: 1.5rem; /* theme.spacing.md */
+}
+
+.endorsement-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* theme.spacing.xs */
+  margin-top: 0.5rem; /* theme.spacing.xs */
+  /* Using theme.effects.glass styling */
+  backdrop-filter: blur(10px); /* From theme.effects.glass */
+  background-color: rgba(28, 28, 30, 0.75); /* theme.effects.glass.backgroundColor */
+  padding: 1rem; /* theme.spacing.sm */
+  border-radius: 12px; /* theme.borders.borderRadiusLg */
+  border: 1px solid #444444; /* theme.colors.border */
+}
+
+.endorsement { /* Text inside endorsement panel */
+  font-size: 0.875rem; /* theme.typography.fontSizeSm */
+  color: #CCCCCC; /* theme.colors.textSecondary */
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+}
+
+.feedback-section {
+  margin-top: 1rem; /* theme.spacing.sm */
+}
+
+.feedback-text {
+  padding-left: 0.5rem; /* theme.spacing.xs */
+  border-left: 2px solid #9C27B0; /* theme.colors.accentPurple */
+  margin-bottom: 0.5rem; /* theme.spacing.xs */
+  color: #CCCCCC; /* theme.colors.textSecondary */
+  font-style: italic;
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+}
+
+/* Styling for the input area if needed, based on .endorse-input */
+.endorse-input { /* Assuming this might be part of the new design */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* theme.spacing.xs */
+  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+}
+
+/* Ensure any specific text elements like timestamps or usernames also use fontFamilyBase */
+.timestamp, .username { /* General classes for these elements if they exist */
+    font-family: 'Inter', sans-serif;
+    color: #AAAAAA; /* Example color from .story-node-subheader */
+    font-size: 0.875rem; /* theme.typography.fontSizeSm */
+}

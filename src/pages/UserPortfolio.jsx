@@ -5,7 +5,6 @@ import TokenAndSkillSummary from '../components/TokenAndSkillSummary';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import './UserPortfolio.css';
 import { Typography } from '@mui/material';
-import { BookOpen } from 'lucide-react';
 
 const UserPortfolio = ({ userId: propUserId }) => {
   const routeParams = useParams();
@@ -72,7 +71,7 @@ const UserPortfolio = ({ userId: propUserId }) => {
         {/* <FilterPanel filters={filters} setFilters={setFilters} /> */}
         <div className="story-stats">
           <Typography variant="body1" color="secondary">
-            <BookOpen size={18} /> Total Stories: {storyStats.total}
+           Total Stories: {storyStats.total}
           </Typography>
           <Typography variant="body1" color="secondary">
             Recent (30d): {storyStats.recent}
