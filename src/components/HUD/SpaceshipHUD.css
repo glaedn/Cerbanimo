@@ -47,7 +47,7 @@
 .hud-container > .status-bar { /* Target direct child StatusBar */
   width: calc(100% - 20px); /* Consider margins/padding */
   position: absolute;
-  bottom: 10px; /* Adjust to be inside hud-container padding or align with viewport border */
+  bottom: 40px; /* Adjust to be inside hud-container padding or align with viewport border */
   left: 10px; /* Adjust to be inside hud-container padding */
   z-index: 10;
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
