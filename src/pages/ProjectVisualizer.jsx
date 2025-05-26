@@ -8,6 +8,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
+import ReactMarkdown from "react-markdown";
 
 const ProjectVisualizer = () => {
   const svgRef = useRef(null);
@@ -1296,7 +1297,9 @@ const numericUserId = Number(userId);
 
       <div className="project-info">
         <h3>{project?.name}</h3>
-        <p className="project-description">{project?.description}</p>
+        <ReactMarkdown >
+                      {project?.description || ''}
+                      </ReactMarkdown>
         <br />
         <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">

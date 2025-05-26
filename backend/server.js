@@ -163,7 +163,7 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
-app.use('/api/onboarding', jwtCheck, onboardingRoutes);
+app.use('/onboarding', jwtCheck, onboardingRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
