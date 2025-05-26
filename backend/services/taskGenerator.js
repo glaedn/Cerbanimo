@@ -32,7 +32,9 @@ const parseLLMJsonResponse = (text) => {
   }
 
   const jsonString = text.slice(jsonStart, jsonEnd + 1);
-  return JSON.parse(jsonString);
+  const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+  
+  return JSON.parse(cleanJsonString);
 };
 
 const parseLLMTasksResponse = (text) => {
