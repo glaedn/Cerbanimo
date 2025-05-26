@@ -5,7 +5,7 @@ import MissionConsole from './panels/MissionConsole';
 import TargetingScanner from './panels/TargetingScanner';
 import CommsLog from './panels/CommsLog';
 import StatusBar from './panels/StatusBar';
-import SkillGalaxy from './panels/SkillGalaxy';
+import SkillGalaxyPanel from './panels/SkillGalaxyPanel'; // Renamed import
 // import HUDSettingsPanel from './panels/HUDSettingsPanel'; // Removed
 import { useWindowSize } from '../../hooks/useWindowSize.js'; // Adjust path
 
@@ -60,7 +60,7 @@ const SpaceshipHUD = ({ children }) => {
       </div>
 
       <div className={`panel-wrapper skill-galaxy-panel`}>
-        <SkillGalaxy />
+        <SkillGalaxyPanel />
       </div>
       
       {/* Central Map Viewport */}
