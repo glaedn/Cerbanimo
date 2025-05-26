@@ -49,6 +49,8 @@
 .skill-galaxy-panel {
   bottom: 50px; /* Adjusted to leave space for StatusBar */
   right: 10px;
+  max-width: 300px;
+  max-height: 400px;
 }
 /* End Panel Specific Positioning */
 

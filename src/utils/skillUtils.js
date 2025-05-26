@@ -6,7 +6,10 @@
  */
 export const calculateExperienceNeeded = (currentLevel) => {
   if (currentLevel < 0) return 0; // Or handle as an error
-  return (currentLevel + 1) * 100 + 50; // Example: Level 0 needs 50, Level 1 needs 150
+  // For next level, we need exp where level-1 = Math.floor(Math.sqrt(exp / 40))
+  // So: (level-1-1)² * 40 = exp needed
+  // Simplify: (currentLevel-1)² * 40 = exp needed
+  return Math.pow(currentLevel, 2) * 40;
 };
 
 /**
@@ -20,7 +23,11 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
   if (!unlockedUsersInput) return [];
   try {
     let users = [];
-    if (typeof unlockedUsersInput === 'string') {
+    // Check if it's an array-like object first
+    if (unlockedUsersInput && typeof unlockedUsersInput === 'object' && 'length' in unlockedUsersInput) {
+      users = Array.from(unlockedUsersInput);
+      console.log('Parsing unlocked_users as an array:', users);
+    } else if (typeof unlockedUsersInput === 'string') {
       // Attempt to parse it as a top-level JSON array string first
       // e.g., '[{"user_id":1,...}, {"user_id":2,...}]'
       try {
@@ -42,6 +49,7 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
         // Example: '{ "{"user_id":1,"level":1}", "{"user_id":2,"level":2}" }'
         if (unlockedUsersInput.startsWith('{') && unlockedUsersInput.endsWith('}')) {
           const innerContent = unlockedUsersInput.slice(1, -1);
+          console.log('Parsing unlocked_users as a set of JSON strings:', innerContent);
           // This regex attempts to split by '","' but not within JSON strings. It's fragile.
           const potentialJsonStrings = innerContent.split(/,(?![^{]*})/).map(s => s.trim());
           potentialJsonStrings.forEach(str => {
@@ -63,6 +71,7 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
       unlockedUsersInput.forEach(item => {
         if (typeof item === 'string') {
           try {
+            console.log('Parsing unlocked_users item as JSON string:', item);
             users.push(JSON.parse(item));
           } catch (e) {
             console.warn('Failed to parse JSON string in array:', item, e);
@@ -73,10 +82,15 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
       });
     } else if (typeof unlockedUsersInput === 'object') {
         // If it's a single object already
+        // Ensure it's an object with expected properties
         users.push(unlockedUsersInput);
     }
     // Standardize 'exp' vs 'experience'
-    return users.map(u => ({ ...u, experience: u.experience ?? u.exp ?? 0, level: u.level ?? 0 }));
+    return users.map(u => ({
+      ...u,
+      experience: u.experience ?? u.exp ?? 0,
+      level: u.level ?? 0
+    }));
   } catch (error) {
     console.error('Error parsing unlocked_users data:', unlockedUsersInput, error);
     return [];
@@ -100,8 +114,8 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   allSkills.forEach(skill => {
     const parsedUsers = parseUnlockedUsers(skill.unlocked_users);
     const userData = parsedUsers.find(u => u.user_id?.toString() === currentUserId?.toString());
-
     if (userData) {
+      console.log(`User ${currentUserId} has unlocked skill: ${skill.name}`);
       userSkills.push({
         ...skill,
         userLevel: userData.level,
@@ -117,12 +131,29 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   // This means if a user has unlocked a "child" skill, its "parent" should not also be listed as an achieved skill.
   // The parent still exists structurally for the galaxy map but isn't an "endpoint" node for the user.
   const unlockedSkillIds = new Set(userSkills.map(s => s.id));
+  console.log('User Skills:', userSkills);
+  const parentSkills = allSkills.filter(skill => {
+    const isParentOfUnlockedSkill = allSkills.some(otherSkill => 
+          otherSkill.parent_skill_id === skill.id && unlockedSkillIds.has(otherSkill.id)
+      );
+      if (isParentOfUnlockedSkill) {
+        return true;
+      }
+    });
+  console.log('Parent Skills:', parentSkills);
   const skillsToDisplay = userSkills.filter(skill => {
       // Check if this skill is a parent of ANY other skill the user has unlocked.
-      const isParentOfUnlockedSkill = userSkills.some(otherSkill => {
-          return otherSkill.parent_skill_id === skill.id;
-      });
+      const isParentOfUnlockedChild = userSkills.some(childSkill => 
+        childSkill.parent_skill_id === skill.id && 
+        childSkill.userLevel !== undefined && 
+        childSkill.userLevel > 0
+      );
       // If it's a parent of an unlocked skill, it should not be displayed directly as one of "user's skills"
+      if (isParentOfUnlockedChild) { 
+        console.log(`Filtering out parent skill ${skill.name} because it has unlocked children.`);
+        return false;
+      }
+            
       // unless it's a top-level star, which forms the basis of the constellation.
       // The categorization logic below will handle this better.
       // For now, this filter seems to conflict with the star/planet/moon idea if stars are parents.
@@ -133,37 +164,39 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       // So, we will rely on the categorization.
       return true; 
   });
+  console.log('parentSkills:', parentSkills);
 
+  
 
   const categorizedSkills = [];
   const skillMap = new Map(skillsToDisplay.map(s => [s.id, s]));
+  console.log('Skills to display:', skillsToDisplay);
+  // Categorize Stars (top-level skills)
+  if (!skillsToDisplay) return [];  // Early return if no skills
 
   // Categorize Stars (top-level skills)
-  skillsToDisplay.forEach(skill => {
+  parentSkills.forEach(skill => {
+    if (!skill) return;  // Skip if skill is undefined
     if (skill.parent_skill_id === null || skill.parent_skill_id === undefined) {
+      console.log(`Categorizing skill ${skill.name} as a star`);
       categorizedSkills.push({
         ...skill,
         category: 'star',
-        // Stars (top-level skills) don't have a user-specific level as per issue.
-        // However, the issue also says "stars should be neon colors ... representing different skill thresholds (like 1 - 5, ... up to level 20)"
-        // This is contradictory. For now, let's assume if a star is "unlocked" (i.e., one of its children is), it gets a base level or status.
-        // Or, the level here refers to the *highest level achieved in any of its children*.
-        // Given the `unlocked_users` is on the skill itself, a star *can* have a level if users can unlock it directly.
-        // Let's assume `userLevel` on a star means the user has directly interacted with/unlocked aspects of this broad category.
-        // If top-level skills truly have no level, color coding them by level is impossible.
-        // Clarification: "Top-level skills should have no level." - this likely means they don't have their *own* independent level progression track in the same way planets/moons do.
-        // They represent broad categories. Their "level" for color coding might be an aggregation or fixed.
-        // For now, if a star has `userLevel` from `unlocked_users`, we use it. Otherwise, default to 0 for color calculation.
         levelForColor: skill.userLevel || 0, 
       });
     }
   });
 
-  const starIds = new Set(categorizedSkills.filter(s => s.category === 'star').map(s => s.id));
+  //if (!categorizedSkills.length) return [];  // Early return if no stars found
 
+  const starIds = new Set(categorizedSkills.filter(s => s && s.category === 'star').map(s => s.id));  
+  console.log ('skills to display after star categorization:', skillsToDisplay);
   // Categorize Planets (children of stars)
-  skillsToDisplay.forEach(skill => {
-    if (skill.parent_skill_id !== null && starIds.has(skill.parent_skill_id)) {
+  parentSkills.forEach(skill => {
+    if (!skill) return;  // Skip if skill is undefined
+    console.log(`Processing skill ${skill.name} for categorization`);
+    if (skill.parent_skill_id !== null) {
+      console.log(`Categorizing skill ${skill.name} as a planet under star ${skill.parent_skill_id}`);
       categorizedSkills.push({
         ...skill,
         category: 'planet',
@@ -172,21 +205,35 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  const planetIds = new Set(categorizedSkills.filter(s => s.category === 'planet').map(s => s.id));
+  skillsToDisplay.forEach(skill => {
+    if (!skill) return;
+    console.log(`Categorizing skill ${skill.name} as a planet under star ${skill.parent_skill_id}`);
+    // if the skill is child of a star
+    if (skill.parent_skill_id !== null && starIds.has(skill.parent_skill_id)) {
+    categorizedSkills.push({
+        ...skill,
+        category: 'planet',
+        levelForColor: skill.userLevel,
+      });
+    }
+  });
+
+
+    const planetIds = new Set(categorizedSkills.filter(s => s && s.category === 'planet').map(s => s.id));
 
   // Categorize Moons (children of planets)
   skillsToDisplay.forEach(skill => {
+    if (!skill) return;  // Skip if skill is undefined
     if (skill.parent_skill_id !== null && planetIds.has(skill.parent_skill_id)) {
-      // Ensure it's not already categorized as a star or planet (edge case: a skill being both a child and a parent in the list)
-      if (!starIds.has(skill.id) && !planetIds.has(skill.id)) {
         categorizedSkills.push({
           ...skill,
           category: 'moon',
           levelForColor: skill.userLevel,
         });
-      }
+        console.log(`Categorizing skill ${skill.name} as a moon under planet ${skill.parent_skill_id}`);
     }
   });
+
   
   // The filtering rule: "remove all skills where the user is ... the parent of a skill that has the user in the unlocked_users column"
   // This means if a skill is a parent to *any other displayed skill*, it should be removed *if it's not a star*.
@@ -201,6 +248,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   // The current star/planet/moon categorization should suffice.
   // Let's ensure no duplicates if a skill could be matched by multiple categories (though current logic prevents this).
   const finalSkills = Array.from(new Map(categorizedSkills.map(s => [s.id, s])).values());
-
+  console.log('Final categorized skills:', finalSkills);
   return finalSkills;
 };

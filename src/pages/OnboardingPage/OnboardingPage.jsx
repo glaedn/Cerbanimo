@@ -53,8 +53,9 @@ const OnboardingPage = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        setSkillsOptions(response.data.skills || []);
-        setInterestsOptions(response.data.interests || []);
+        setSkillsOptions(response.data.skillsPool || []);
+        setInterestsOptions(response.data.interestsPool || []);
+        console.log('Fetched skill and interest options:', response.data);
       } catch (err) {
         console.error('Error fetching options:', err);
         setError('Failed to load skill and interest options. Please try refreshing.');
@@ -112,7 +113,7 @@ const OnboardingPage = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`http://localhost:4000/api/onboarding/initiate`, formData, {
+      const response = await axios.post(`http://localhost:4000/onboarding/initiate`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -242,7 +243,7 @@ const OnboardingPage = () => {
             '&.Mui-disabled': { bgcolor: theme.colors.secondary } 
           }}
         >
-          {loading ? 'Loading...' : 'Complete Profile'}
+          {loading ? "Loading..." : 'Complete Profile'}
         </Button>
       </Paper>
     </Box>
