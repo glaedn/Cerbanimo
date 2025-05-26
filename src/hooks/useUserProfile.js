@@ -81,7 +81,7 @@ const useUserProfile = () => {
           experience: profileData.experience || { total_xp: 0, current_level: 0, xp_for_next_level: 0 },
           skills: userSkills,
           // Check for token balance, if not found, use placeholder
-          tokens: profileData.tokens !== undefined ? profileData.tokens : 100, // Placeholder 100 if not present
+          tokens: profileData.cotokens !== undefined ? profileData.cotokens : 100, // Placeholder 100 if not present
         });
 
       } catch (err) {
