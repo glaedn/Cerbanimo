@@ -288,3 +288,11 @@
   
   /* Removed HUDSettingsPanel specific mobile styles as the component is removed */
 }
+
+.command-deck {
+  max-width: 400px;
+}
+
+.comms-log {
+  max-width: 300px;
+} 

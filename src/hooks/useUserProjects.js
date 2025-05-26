@@ -73,7 +73,7 @@ const useUserProjects = (userId) => {
                 activeTasks,
                 completedTasks,
                 progress,
-                xpGained: 'N/A', // Placeholder
+                token_pool: proj.token_pool || 0,
               };
             } catch (taskError) {
               console.error(`Error fetching tasks for project ${proj.id}:`, taskError);

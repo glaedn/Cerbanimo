@@ -72,27 +72,33 @@ const useRelevantTasks = (userId) => {
             .filter(skill => skill !== null);
         }
         
-        const filteredTasks = allTasks.filter(task => {
-          const isUrgent = task.status && task.status.toLowerCase().includes('urgent');
-          
-          let skillMatch = false;
-          if (task.skill_id && userSkills.length > 0) {
-            const requiredSkill = userSkills.find(userSkill => userSkill.id === task.skill_id);
-            if (requiredSkill && (task.skill_level === undefined || requiredSkill.level >= task.skill_level)) {
-              // If task.skill_level is not defined, any level match is okay. Otherwise, check level.
-              skillMatch = true;
+        // First filter tasks based on urgency and skills
+        const filteredTasks = allTasks
+          // Remove duplicates by task.id first
+          .filter((task, index, self) => 
+            index === self.findIndex(t => t.id === task.id)
+          )
+          .filter(task => {
+            const isUrgent = task.status && task.status.toLowerCase().includes('urgent');
+            
+            let skillMatch = false;
+            if (task.skill_id && userSkills.length > 0) {
+              const requiredSkill = userSkills.find(userSkill => userSkill.id === task.skill_id);
+              if (requiredSkill && (task.skill_level === undefined || requiredSkill.level >= task.skill_level)) {
+          skillMatch = true;
+              }
             }
-          }
-          return isUrgent || skillMatch;
-        }).map(task => ({
-          id: task.id,
-          name: task.name,
-          status: task.status || 'Unknown',
-          requiredSkillId: task.skill_id || null,
-          requiredSkillLevel: task.skill_level === undefined ? 'Any' : task.skill_level, // Handle undefined skill_level
-          skillMatchPercent: (task.skill_id && userSkills.find(us => us.id === task.skill_id)) ? 100 : 'N/A', // Placeholder
-          timeSensitivity: task.status && task.status.toLowerCase().includes('urgent') ? 'High' : 'Normal', // Placeholder
-        }));
+            return isUrgent || skillMatch;
+          })
+          .map(task => ({
+            id: task.id,
+            name: task.name,
+            status: task.status || 'Unknown',
+            requiredSkillId: task.skill_id || null,
+            requiredSkillLevel: task.skill_level === undefined ? 'Any' : task.skill_level,
+            skillMatchPercent: (task.skill_id && userSkills.find(us => us.id === task.skill_id)) ? 100 : 'N/A',
+            timeSensitivity: task.status && task.status.toLowerCase().includes('urgent') ? 'High' : 'Normal',
+          }));
         
         setRelevantTasks(filteredTasks);
 
