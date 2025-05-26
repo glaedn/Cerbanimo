@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import useAssignedTasks from '../../../hooks/useAssignedTasks'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
@@ -7,11 +7,27 @@ import './MissionConsole.css'; // Optional: For specific MissionConsole styles
 const MissionConsole = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { assignedTasks, loading: tasksLoading, error: tasksError } = useAssignedTasks(profile?.id);
+  const [isMinimized, setIsMinimized] = useState(false);
 
-  if (profileLoading || tasksLoading) return <div className="hud-panel mission-console">Loading Mission Console...</div>;
-  if (profileError) return <div className="hud-panel mission-console">Error loading profile: {profileError.message}</div>;
-  if (tasksError) return <div className="hud-panel mission-console">Error loading tasks: {tasksError.message}</div>;
-  if (!profile) return <div className="hud-panel mission-console">User profile not available.</div>;
+  const toggleMinimize = (e) => {
+    if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
+      e.stopPropagation();
+    }
+    setIsMinimized(!isMinimized);
+  };
+
+  if (profileLoading || tasksLoading) {
+    return <div className="hud-panel mission-console">Loading Mission Console...</div>;
+  }
+  if (profileError) {
+    return <div className="hud-panel mission-console">Error loading profile: {profileError.message}</div>;
+  }
+  if (tasksError) {
+    return <div className="hud-panel mission-console">Error loading tasks: {tasksError.message}</div>;
+  }
+  if (!profile) {
+    return <div className="hud-panel mission-console">User profile not available.</div>;
+  }
 
   const getStatusColor = (status) => {
     const s = status.toLowerCase();
@@ -21,30 +37,37 @@ const MissionConsole = () => {
   };
 
   return (
-    <div className="hud-panel mission-console">
-      <div className="hud-panel-header">
+    <div className={`hud-panel mission-console ${isMinimized ? 'minimized' : ''}`}>
+      <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
         <h4>Mission Console (Assigned Tasks)</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Mission Console" : "Minimize Mission Console"}>
+          {isMinimized ? '+' : '-'}
+        </button>
       </div>
-      {assignedTasks.length > 0 ? (
-        <ul>
-          {assignedTasks.map(task => (
-            <li key={task.id} className="task-item">
-              <div className="task-info">
-                <span className="task-name">{task.name}</span> ({task.projectName})
-                <br />
-                Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
-                {task.timeRemaining !== 'N/A' && <span> - Time Left: {task.timeRemaining}</span>}
-              </div>
-              <div className="task-actions">
-                <button onClick={() => console.log('View task', task.id)}>View</button>
-                <button onClick={() => console.log('Submit proof for task', task.id)}>Submit Proof</button>
-                <button onClick={() => console.log('Drop task', task.id)}>Drop</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No tasks currently assigned.</p>
+      {!isMinimized && (
+        <div className="hud-panel-content">
+          {assignedTasks.length > 0 ? (
+            <ul>
+              {assignedTasks.map(task => (
+                <li key={task.id} className="task-item">
+                  <div className="task-info">
+                    <span className="task-name">{task.name}</span> ({task.projectName})
+                    <br />
+                    Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
+                    {task.timeRemaining !== 'N/A' && <span> - Time Left: {task.timeRemaining}</span>}
+                  </div>
+                  <div className="task-actions">
+                    <button onClick={() => console.log('View task', task.id)}>View</button>
+                    <button onClick={() => console.log('Submit proof for task', task.id)}>Submit Proof</button>
+                    <button onClick={() => console.log('Drop task', task.id)}>Drop</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No tasks currently assigned.</p>
+          )}
+        </div>
       )}
     </div>
   );
