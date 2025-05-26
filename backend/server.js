@@ -24,6 +24,7 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
+import onboardingRoutes from './routes/onboarding.js';
 
 // Import database table creation functions
 //import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
@@ -162,6 +163,7 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
+app.use('/api/onboarding', jwtCheck, onboardingRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {

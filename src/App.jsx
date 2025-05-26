@@ -22,6 +22,7 @@ import UserPortfolio from './pages/UserPortfolio.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import GalacticActivityMap from './components/GalacticActivityMap/GalacticActivityMap.jsx';
+import OnboardingPage from './pages/OnboardingPage/OnboardingPage';
 
 
 const App = () => {
@@ -33,6 +34,14 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Private Routes */}
+        <Route
+          path="/onboarding"
+          element={
+            <PrivateRoute>
+              <OnboardingPage />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

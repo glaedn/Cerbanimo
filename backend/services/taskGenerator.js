@@ -5,18 +5,78 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Shared JSON parsing helper
-const parseLLMResponse = (text) => {
-  const jsonStart = text.indexOf('{');
-  const jsonEnd = text.lastIndexOf('}');
-  const jsonString = text.slice(jsonStart, jsonEnd + 1);
+const parseLLMJsonResponse = (text) => {
+  // Look for the start of the JSON object or array
+  let jsonStart = text.indexOf('{');
+  const arrayStart = text.indexOf('[');
 
-  const data = JSON.parse(jsonString);
-
-  if (!data.tasks || !Array.isArray(data.tasks)) {
-    throw new Error('Tasks array missing or invalid');
+  if (jsonStart === -1 || (arrayStart !== -1 && arrayStart < jsonStart)) {
+    jsonStart = arrayStart;
   }
 
+  if (jsonStart === -1) {
+    throw new Error('No JSON object/array found in response');
+  }
+
+  // Look for the end of the JSON object or array
+  // Consider the case where the JSON might be an object or an array
+  let jsonEnd = -1;
+  if (text.charAt(jsonStart) === '{') {
+    jsonEnd = text.lastIndexOf('}');
+  } else if (text.charAt(jsonStart) === '[') {
+    jsonEnd = text.lastIndexOf(']');
+  }
+  
+  if (jsonEnd === -1 || jsonEnd < jsonStart) {
+    throw new Error('Valid JSON object/array end not found in response');
+  }
+
+  const jsonString = text.slice(jsonStart, jsonEnd + 1);
+  return JSON.parse(jsonString);
+};
+
+const parseLLMTasksResponse = (text) => {
+  const data = parseLLMJsonResponse(text);
+  if (!data.tasks || !Array.isArray(data.tasks)) {
+    throw new Error('Tasks array missing or invalid in LLM response');
+  }
   return data.tasks;
+};
+
+export const generateProjectIdea = async (skills, interests) => {
+  // Format skills and interests for the prompt
+  const skillsString = JSON.stringify(skills);
+  const interestsString = JSON.stringify(interests);
+
+  const prompt = `
+Context Parameters Provided:
+
+Skills: ${skillsString}
+Interests: ${interestsString}
+
+Instructions for AI Generation:
+
+"Using the provided skills and interests, generate a unique project name that reflects this synergy. Then create a descriptive project plan whose scope utilizes those skills towards advancing those interests as much as possible. Try to limit the scope to mostly needing only the skills the user has listed. Format your response as JSON with keys Name and Description."
+`;
+
+  try {
+    console.log("Generating project idea with prompt:", prompt);
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    console.log("LLM response for project idea:", responseText);
+
+    // Parse the JSON response
+    const projectIdea = parseLLMJsonResponse(responseText);
+    
+    if (!projectIdea.Name || !projectIdea.Description) {
+      throw new Error('LLM response missing Name or Description for project idea.');
+    }
+
+    return projectIdea; // Should be { Name: "...", Description: "..." }
+  } catch (error) {
+    console.error('Error generating project idea:', error);
+    throw new Error(`Failed to generate project idea: ${error.message}`);
+  }
 };
 
 export const autoGenerateSubtasks = async (tasks,projectName, projectDescription, tags, creator_id) => {
@@ -543,10 +603,10 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   console.log('LLM response:', text);
   // Attempt to safely parse JSON from LLM output
   try {
-    return parseLLMResponse(text);
+    return parseLLMTasksResponse(text); // Use the more specific parser for tasks
   } catch (err) {
-    console.error('Failed to parse LLM response:', text);
-    throw new Error('Failed to parse tasks from LLM output');
+    console.error('Failed to parse LLM response for subtasks:', text);
+    throw new Error('Failed to parse tasks from LLM output for subtasks');
   }
 };
 
@@ -1054,9 +1114,21 @@ const text = result.response.text();
 console.log('LLM response (generateSubtasks):', text);
 
 try {
-  return parseLLMResponse(text);
+  // Assuming autoGenerateTasks also expects a "tasks" array in a root object
+  const parsedData = parseLLMJsonResponse(text); 
+  if (!parsedData.tasks || !Array.isArray(parsedData.tasks)) {
+     // If the root object itself is the tasks array, this needs adjustment
+     // For now, sticking to the pattern observed in parseLLMTasksResponse
+    throw new Error('Tasks array missing or invalid in LLM response for autoGenerateTasks');
+  }
+  // The prompt for autoGenerateTasks expects a specific structure with "projects" and "tasks" keys.
+  // The parseLLMJsonResponse will return the whole object.
+  // The original parseLLMResponse was returning data.tasks.
+  // Let's assume for now the calling code of autoGenerateTasks expects the full {projects: [], tasks: []} object.
+  // If it only needs tasks, then it should be: return parsedData.tasks;
+  return parsedData; // Return the full parsed object as per the prompt's expected output format
 } catch (err) {
-  console.error('Failed to parse LLM response:', text);
-  throw new Error('Failed to parse subtasks from LLM output');
+  console.error('Failed to parse LLM response for autoGenerateTasks:', text);
+  throw new Error('Failed to parse subtasks from LLM output for autoGenerateTasks');
 }
 };
