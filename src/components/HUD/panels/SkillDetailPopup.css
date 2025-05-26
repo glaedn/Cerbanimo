@@ -1,0 +1,60 @@
+.skill-detail-popup-overlay {
+  position: absolute; /* Relative to the SkillGalaxyPanel or its nearest positioned ancestor */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Ensure it's above other HUD elements */
+}
+
+.skill-detail-popup-content {
+  padding: var(--theme-spacing-lg, 2rem); /* Consistent theme spacing */
+  border-radius: var(--theme-borders-borderRadiusMd, 8px); /* Already themed */
+  border: 1px solid var(--theme-colors-border, #444444); /* Already themed */
+  box-shadow: var(--theme-effects-glowSubtle, 0 0 10px rgba(0,0,0,0.5)) var(--theme-colors-primary, #00F3FF); /* Themed shadow */
+  min-width: 300px;
+  max-width: 500px;
+  position: relative; 
+  font-family: var(--theme-typography-fontFamilyBase, 'Inter', sans-serif); /* Already themed */
+  color: var(--theme-colors-textSecondary, #CCCCCC); /* Default text color for popup */
+}
+
+.skill-detail-popup-close {
+  position: absolute;
+  top: var(--theme-spacing-sm, 0.5rem);
+  right: var(--theme-spacing-sm, 0.5rem);
+  background: none;
+  border: none;
+  font-size: var(--theme-typography-fontSizeLg, 1.25rem); /* Consistent theme typography */
+  color: var(--theme-colors-textPrimary, #FFFFFF); /* Ensure close button is visible */
+  cursor: pointer;
+  padding: var(--theme-spacing-xs, 0.25rem);
+  line-height: 1; /* Prevents button being too tall */
+}
+
+.skill-detail-popup-close:hover {
+  color: var(--theme-colors-secondary, #FF5CA2); /* Hover color for close button */
+}
+
+
+.skill-detail-popup-content h3 {
+  margin-top: 0;
+  font-family: var(--theme-typography-fontFamilyAccent, 'Orbitron', sans-serif); /* Already themed */
+  margin-bottom: var(--theme-spacing-md, 1.5rem); /* Consistent theme spacing */
+  color: var(--theme-colors-primary, #00F3FF); /* Title color */
+}
+
+.skill-detail-popup-content p {
+  margin-bottom: var(--theme-spacing-sm, 1rem); /* Consistent theme spacing */
+  line-height: 1.6;
+  font-size: var(--theme-typography-fontSizeSm, 0.875rem); /* Standardize p font size */
+}
+
+.skill-detail-popup-content strong {
+  color: var(--theme-colors-accentBlue, #4DABF7); /* Already themed */
+  font-weight: var(--theme-typography-fontWeightMedium, 500);
+}
