@@ -51,7 +51,7 @@ const StatusBar = () => {
       </div>
 
       <div className="status-item tokens-info">
-        <span style={{ fontFamily: accentFont }}>Tokens:</span> {profile.tokens}
+        <span style={{ fontFamily: accentFont }}>Galactic Credits:</span> {profile.tokens}
       </div>
       
       <div className="status-item notifications-info">

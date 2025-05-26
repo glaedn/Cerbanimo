@@ -105,7 +105,7 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, experience
+      SELECT id, username, skills, interests, profile_picture, cotokens
       FROM users
       WHERE auth0_id = $1;
     `;
