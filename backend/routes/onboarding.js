@@ -1,19 +1,13 @@
-const express = require('express');
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import pg from 'pg';
+import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
+
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const pg = require('pg');
-const { generateProjectIdea, autoGenerateTasks } = require('../services/taskGenerator.js');
-
+const { Pool } = pg;
 // Configure PostgreSQL pool
-const pool = new pg.Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
-
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -101,10 +95,14 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
         
         // Update unlocked_users for existing skill if user not already present
         if (existingSkillResult.rows.length > 0) { // Only update if skill was existing, new skill already has user
-            const userInSkill = currentUnlockedUsers.find(u => u.user_id === internalUserId);
+            // Parse existing array properly
+            let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers : 
+                             currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
+            
+            const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
             if (!userInSkill) {
-                currentUnlockedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
-                await client.query('UPDATE skills SET unlocked_users = $1 WHERE id = $2', [JSON.stringify(currentUnlockedUsers), skillId]);
+                parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
+                await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
             }
         }
         processedSkills.push({ id: skillId, name: skillName });
@@ -133,14 +131,14 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 
     // 5. Update User's Skills and Interests in users table
     await client.query(
-      'UPDATE users SET skills = $1, interests = $2 WHERE id = $3',
-      [JSON.stringify(processedSkills), JSON.stringify(processedInterests), internalUserId]
+      'UPDATE users SET skills = $1::jsonb[], interests = $2::jsonb[] WHERE id = $3',
+      [processedSkills, processedInterests, internalUserId]
     );
 
     // 5. Update User's Skills and Interests in users table (Done before project generation)
     await client.query(
-      'UPDATE users SET skills = $1, interests = $2 WHERE id = $3',
-      [JSON.stringify(processedSkills), JSON.stringify(processedInterests), internalUserId]
+      'UPDATE users SET skills = $1::text[], interests = $2::text[] WHERE id = $3',
+      [processedSkills.map(s => JSON.stringify(s)), processedInterests.map(i => JSON.stringify(i)), internalUserId]
     );
 
     // --- Project and Task Generation ---
@@ -234,4 +232,4 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

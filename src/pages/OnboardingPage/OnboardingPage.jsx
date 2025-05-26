@@ -15,7 +15,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { theme } from '../../styles/theme'; // Custom theme
+import theme from '../../styles/theme'; // Custom theme
 import './OnboardingPage.css';
 
 const VisuallyHiddenInput = styled('input')({
@@ -48,13 +48,14 @@ const OnboardingPage = () => {
     const fetchOptions = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/profile/options`, {
+        const response = await axios.get(`http://localhost:4000/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        setSkillsOptions(response.data.skills || []);
-        setInterestsOptions(response.data.interests || []);
+        setSkillsOptions(response.data.skillsPool || []);
+        setInterestsOptions(response.data.interestsPool || []);
+        console.log('Fetched skill and interest options:', response.data);
       } catch (err) {
         console.error('Error fetching options:', err);
         setError('Failed to load skill and interest options. Please try refreshing.');
@@ -112,7 +113,7 @@ const OnboardingPage = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/onboarding/initiate`, formData, {
+      const response = await axios.post(`http://localhost:4000/onboarding/initiate`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -242,7 +243,7 @@ const OnboardingPage = () => {
             '&.Mui-disabled': { bgcolor: theme.colors.secondary } 
           }}
         >
-          {loading ? <CircularProgress size={24} sx={{color: theme.colors.textPrimary}} /> : 'Complete Profile'}
+          {loading ? "Loading..." : 'Complete Profile'}
         </Button>
       </Paper>
     </Box>

@@ -32,7 +32,7 @@ const AuthWrapper = ({ children }) => {
           try {
             console.log('Attempting to save user to database:', user.sub);
             await axios.post(
-              `${process.env.REACT_APP_API_URL}/auth/save-user`,
+              `http://localhost:4000/auth/save-user`,
               {
                 sub: user.sub,
                 email: user.email,
@@ -52,7 +52,7 @@ const AuthWrapper = ({ children }) => {
         setProfileLoading(true);
         try {
           console.log('Fetching profile for onboarding check:', user.sub);
-          const profileResponse = await axios.get(`${process.env.REACT_APP_API_URL}/profile`, {
+          const profileResponse = await axios.get(`http://localhost:4000/profile`, {
             params: {
               sub: user.sub,
               email: user.email,
@@ -92,9 +92,14 @@ const AuthWrapper = ({ children }) => {
           !profileData.skills || profileData.skills.length < 3 ||
           !profileData.interests || profileData.interests.length < 3;
 
-        if (needsOnboarding) {
+        // Only redirect to onboarding if not coming from there and still needs onboarding
+        if (needsOnboarding && (!location.state?.fromOnboarding || location.state?.checkProfile)) {
           console.log('User needs onboarding. Profile:', profileData, 'Redirecting...');
           navigate('/onboarding');
+        } else if (location.state?.fromOnboarding && !needsOnboarding) {
+          // If coming from onboarding and profile is complete, navigate to projects
+          console.log('Onboarding complete, navigating to projects');
+          navigate('/projects');
         } else {
           console.log('User does not need onboarding. Profile:', profileData);
         }
