@@ -1,90 +1,130 @@
 .hud-container {
-  position: relative; /* For positioning HUD panels later */
+  position: relative;
   width: 100%;
-  height: 100vh; /* Full viewport height */
-  overflow: hidden; /* Prevent scrollbars if panels go outside */
+  height: 100vh;
+  overflow: hidden;
   background-color: #0A0A2E; /* From theme.colors.backgroundDefault */
-  display: flex;
-  flex-direction: column; /* Main axis for map and status bar */
-  justify-content: center; /* This will center the map viewport if side/top panels are absolute */
-  align-items: center; /* This will center the map viewport if side/top panels are absolute OR if map is the main flex item */
+  /* display: flex; Removed to allow absolute positioning of panels */
+  /* flex-direction: column; */
+  /* justify-content: center; */
+  /* align-items: center; */
 }
 
-/* Removed .hud-top-panels and .hud-side-panels as react-draggable will handle positions */
-
-.panel-wrapper { /* Wrapper for Draggable component's child */
-  position: absolute; /* Needed for Draggable to correctly position based on its own logic */
-  z-index: 10; 
+.panel-wrapper {
+  position: absolute; /* Panels are positioned absolutely */
+  z-index: 10;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
   transform: scale(1);
-  /* display: block; */ /* Or inline-block, if needed, but div is block by default */
 }
 
 .panel-wrapper.hidden {
   opacity: 0;
-  transform: scale(0.95); /* Example: shrinks slightly when hiding */
-  /* visibility: hidden; */ /* Alternative to pointer-events if issues persist */
-  pointer-events: none; /* Crucial: prevents interaction with hidden panels */
+  transform: scale(0.95);
+  pointer-events: none;
 }
 
+/* Panel Specific Positioning */
+.command-deck-panel {
+  top: 10px;
+  left: 10px;
+}
+
+.targeting-scanner-panel {
+  top: 10px;
+  right: 10px;
+}
+
+.mission-console-panel {
+  bottom: 50px; /* Adjusted to leave space for StatusBar */
+  left: 10px;
+}
+
+.comms-log-panel {
+  bottom: 50px; /* Adjusted to leave space for StatusBar */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.skill-galaxy-panel {
+  bottom: 50px; /* Adjusted to leave space for StatusBar */
+  right: 10px;
+}
+/* End Panel Specific Positioning */
 
 .hud-map-viewport {
   border: 2px solid #00F3FF; /* theme.colors.primary for a subtle frame */
   box-shadow: 0 0 15px #00F3FF, inset 0 0 15px #00F3FF; /* theme.effects.glowStrong(theme.colors.primary) */
-  width: calc(100% - 40px); 
-  height: calc(100% - 40px); 
-  max-width: 1600px; /* Optional: max width for very large screens */
-  max-height: 1000px; /* Optional: max height */
-  position: relative; /* For potential overlays on the map */
-  background: rgba(0,0,0,0.1); /* Slight dark tint for depth */
-  flex-grow: 1; 
-  margin: auto; 
+  /* Adjust width and height to account for panels, or use margins on panels */
+  width: calc(100% - 220px); /* Example: 10px padding + 200px panel width on each side */
+  height: calc(100% - 120px); /* Example: 10px padding + 100px panel height top/bottom */
+  max-width: 1600px; 
+  max-height: 1000px;
+  position: absolute; /* Centering with absolute positioning */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.1);
 }
 
-/* Styling for StatusBar to be at the bottom - This stays as StatusBar is not draggable */
-/* Ensure the .status-bar class from HUDPanel.css is targeted or make this more specific */
-.hud-container > .status-bar { /* Target direct child StatusBar */
-  width: calc(100% - 20px); /* Consider margins/padding */
+/* Styling for StatusBar */
+.hud-container > .status-bar {
+  width: calc(100% - 20px);
   position: absolute;
-  bottom: 40px; /* Adjust to be inside hud-container padding or align with viewport border */
-  left: 10px; /* Adjust to be inside hud-container padding */
-  z-index: 10;
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  bottom: 10px; /* Closer to the edge */
+  left: 10px;
+  z-index: 10; /* Ensure it's above map but can be below panels if needed */
+  box-sizing: border-box;
 }
 
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
   .hud-container {
-    /* Ensure it allows scrolling for panels if they overflow */
-    /* overflow-y: auto; was here, but might be better on a dedicated panel container if map is fixed */
-    /* For now, let's assume panels stack and might make page scrollable */
+    overflow-y: auto; /* Allow scrolling for stacked panels */
   }
-
-  .hud-map-viewport {
-    min-height: 40vh; /* Adjusted from 50vh to leave more space for panels */
-    width: 100%; /* Full width on mobile */
-    border-left: none;
-    border-right: none;
-    border-radius: 0; 
-    margin-top: 0; /* Map at the top */
-    height: auto; /* Adjust height as needed, or set fixed if panels scroll separately */
-    /* flex-grow: 0; remove flex-grow if panels are to stack below */
-  }
-
+  
   .panel-wrapper {
-    transform: none !important; 
-    width: 95%;
-    margin: 10px auto !important; /* Center panels, !important to override inline styles */
-    position: relative !important; /* Override Draggable inline styles */
-    left: auto !important; 
-    top: auto !important; 
-    /* display: block; by default div is block, so this is often not needed */
-    z-index: 1; /* Lower z-index than fixed elements like settings button or status bar */
+    position: relative; /* Stack panels in normal document flow on mobile */
+    width: calc(100% - 20px); /* Full width with some margin */
+    margin: 10px;
+    left: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    transform: none; /* Reset transform */
+    z-index: 1; /* Reset z-index for stacking */
   }
 
-  /* If HUDSettingsPanel is fixed, its wrapper might need adjustment */
-  /* Example: .hud-settings-panel-wrapper-mobile { ... } */
-  /* This is handled in SpaceshipHUD.jsx for its fixed wrapper */
-
+  /* Reset specific panel positions for mobile stacking */
+  .command-deck-panel,
+  .targeting-scanner-panel,
+  .mission-console-panel,
+  .comms-log-panel,
+  .skill-galaxy-panel {
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+  }
+  
+  .hud-map-viewport {
+    position: relative; /* No longer absolute to allow stacking */
+    width: calc(100% - 20px); /* Full width with margin */
+    height: 50vh; /* Or a fixed height, e.g., 300px */
+    margin: 10px;
+    top: auto;
+    left: auto;
+    transform: none; /* Reset transform */
+    /* order: -1; /* Optionally move map to top in flex context if HUD container was flex */
+  }
+  
+  /* Adjust StatusBar for mobile if needed, might be fine if panels stack above it */
+  .hud-container > .status-bar {
+    position: relative; /* Stack with other elements */
+    bottom: auto;
+    left: auto;
+    width: calc(100% - 20px);
+    margin: 10px;
+  }
 }
