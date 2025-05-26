@@ -19,7 +19,6 @@ const parseLLMJsonResponse = (text) => {
   }
 
   // Look for the end of the JSON object or array
-  // Consider the case where the JSON might be an object or an array
   let jsonEnd = -1;
   if (text.charAt(jsonStart) === '{') {
     jsonEnd = text.lastIndexOf('}');
@@ -32,6 +31,8 @@ const parseLLMJsonResponse = (text) => {
   }
 
   const jsonString = text.slice(jsonStart, jsonEnd + 1);
+  
+  // Clean the string of any control characters before parsing
   const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
   
   return JSON.parse(cleanJsonString);

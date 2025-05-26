@@ -1,5 +1,5 @@
 .skill-detail-popup-overlay {
-  position: absolute; /* Relative to the SkillGalaxyPanel or its nearest positioned ancestor */
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -8,7 +8,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Ensure it's above other HUD elements */
+  z-index: 10000; /* Higher z-index since it's now at document root */
 }
 
 .skill-detail-popup-content {
@@ -19,6 +19,7 @@
   min-width: 300px;
   max-width: 500px;
   position: relative; 
+  overflow: visible;
   font-family: var(--theme-typography-fontFamilyBase, 'Inter', sans-serif); /* Already themed */
   color: var(--theme-colors-textSecondary, #CCCCCC); /* Default text color for popup */
 }
@@ -29,17 +30,26 @@
   right: var(--theme-spacing-sm, 0.5rem);
   background: none;
   border: none;
-  font-size: var(--theme-typography-fontSizeLg, 1.25rem); /* Consistent theme typography */
-  color: var(--theme-colors-textPrimary, #FFFFFF); /* Ensure close button is visible */
+  font-size: var(--theme-typography-fontSizeLg, 1.25rem);
+  color: var(--theme-colors-textPrimary, #FFFFFF);
   cursor: pointer;
   padding: var(--theme-spacing-xs, 0.25rem);
-  line-height: 1; /* Prevents button being too tall */
+  line-height: 1;
+  z-index: 10;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease; /* Add transition back */
 }
 
 .skill-detail-popup-close:hover {
-  color: var(--theme-colors-secondary, #FF5CA2); /* Hover color for close button */
+  background-color: var(--theme-colors-secondary, #FF5CA2);
+  color: var(--theme-colors-textPrimary, #FFFFFF);
+  border-radius: 50%;
+  transform: scale(1.1); /* Add slight scale effect */
 }
-
 
 .skill-detail-popup-content h3 {
   margin-top: 0;

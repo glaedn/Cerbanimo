@@ -1,13 +1,14 @@
+
 .skill-galaxy-panel {
-  width: 100%;
+  width: 500px;;
   height: 100%;
-  background-color: var(--theme-colors-backgroundPaper, #1C1C1E);
   color: var(--theme-colors-textPrimary, #FFFFFF);
-  padding: var(--theme-spacing-md, 1.5rem); /* Consistent theme spacing */
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+} 
+.skill-galaxy-panel.minimized {
+  max-height: 40px; /* Height of just the header */
+  position: absolute;
+  bottom: 0; /* Position at bottom */
+  left: 0;
 }
 
 .skill-galaxy-panel-loading,

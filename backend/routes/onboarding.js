@@ -8,7 +8,6 @@ const router = express.Router();
 const { Pool } = pg;
 // Configure PostgreSQL pool
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
-
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -96,7 +95,7 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
         
         // Update unlocked_users for existing skill if user not already present
         if (existingSkillResult.rows.length > 0) { // Only update if skill was existing, new skill already has user
-// Parse existing array properly
+            // Parse existing array properly
             let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers : 
                              currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
             
@@ -234,5 +233,3 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 });
 
 export default router;
-
-
