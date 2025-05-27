@@ -83,7 +83,8 @@
     background-color: rgba(10, 10, 46, 0.7);
     border-radius: 10px;
     padding: 15px;
-    max-height: 300px;
+    max-height: 400px;
+    overflow-y: auto;
     margin-bottom: 10px;
     transition: transform 0.2s ease-in-out;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
@@ -92,6 +93,26 @@
 .project-card:hover {
     transform: scale(1.02);
     background: rgba(0, 243, 255, 0.1);
+}
+
+/* Custom Scrollbar */
+.project-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.project-card::-webkit-scrollbar-track {
+    background: rgba(0, 243, 255, 0.2);
+    border-radius: 5px;
+}
+
+.project-card::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00F3FF, #4DABF7);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
+}
+
+.project-card::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
 /* Project Title (inside card) - this selector is identical to page title, be careful */
