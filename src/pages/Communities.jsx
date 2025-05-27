@@ -158,53 +158,53 @@ return (
                                 onClick={() => {
                                     setSelectedCommunity(community);
                                     fetchCommunityProjects(community.id);
-                                }}
-                            >
-                                View Projects
-                            </button>
-                            <button
-                                className="join-button"
-                                onClick={() => joinCommunity(community.id)}
-                            >
-                                Join Community
-                            </button>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
-                    <p>No communities found. Try adjusting your search or create a new community.</p>
-                </div>
-            )}
-        </div>
-
-        <div className="pagination-container">
-            <button
-                className="pagination-button"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={page === 1}
-            >
-                Previous
-            </button>
-            <span className="page-text">Page {page}</span>
-            <button
-                className="pagination-button"
-                onClick={() => setPage((prev) => prev + 1)}
-            >
-                Next
-            </button>
-        </div>
-
-        {selectedCommunity && (
-            <div className="community-popup-overlay">
-                <div className="community-popup">
-                    <h2>Projects in {selectedCommunity.name}</h2>
-                    <div className="community-projects-list">
-                        {communityProjects.length > 0 ? communityProjects.map((project) => (
-                            <div key={project.id} className="project-card">
-                                <h3>{project.name}</h3>
-                                <p>{project.description}</p>
+                                  }}
+                                >
+                                  View Projects
+                                </button>
                                 <button
+                                  className="join-button"
+                                  onClick={() => navigate(`/communityhub/${community.id}`)}
+                                >
+                                  View Community
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
+                            <p>No communities found. Try adjusting your search or create a new community.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pagination-container">
+                        <button
+                          className="pagination-button"
+                          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                          disabled={page === 1}
+                        >
+                          Previous
+                        </button>
+                        <span className="page-text">Page {page}</span>
+                        <button
+                          className="pagination-button"
+                          onClick={() => setPage((prev) => prev + 1)}
+                        >
+                          Next
+                        </button>
+                      </div>
+
+                      {selectedCommunity && (
+                        <div className="community-popup-overlay">
+                          <div className="community-popup">
+                            <h2>Projects in {selectedCommunity.name}</h2>
+                            <div className="community-projects-list">
+                              {communityProjects.length > 0 ? communityProjects.map((project) => (
+                                <div key={project.id} className="project-card">
+                                  <h3>{project.name}</h3>
+                                  <p>{project.description}</p>
+                                  <button
                                     className="open-project-button"
                                     onClick={() => {
                                         navigate(`/visualizer/${project.id}`);

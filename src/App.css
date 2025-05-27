@@ -2,6 +2,26 @@
   text-align: center;
 }
 
+/* Custom Scrollbar */
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 243, 255, 0.2);
+  border-radius: 5px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00F3FF, #4DABF7);
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #4DABF7, #00F3FF);
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
