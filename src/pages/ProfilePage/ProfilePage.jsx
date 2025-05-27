@@ -76,39 +76,35 @@ const ProfilePage = () => {
             },
           });
 
-          const fetchedProfileData = {
+            const fetchedProfileData = {
             id: profileResponse.data.id,
             username: profileResponse.data.username || '',
             skills: (profileResponse.data.skills || []).map(skill => {
-              // Handle different potential formats
               if (typeof skill === 'string') {
-                try {
-                  if (skill.startsWith('{') && skill.includes('"name"')) {
-                    return JSON.parse(skill);
-                  }
-                  return { name: skill };
-                } catch (e) {
-                  return { name: skill };
-                }
+              try {
+                return JSON.parse(skill);
+              } catch (e) {
+                return { name: skill };
+              }
               }
               return skill;
             }),
             interests: (profileResponse.data.interests || []).map(interest => {
               if (typeof interest === 'string') {
                 try {
-                  if (interest.startsWith('{') && interest.includes('"name"')) {
-                    return JSON.parse(interest);
-                  }
-                  return { name: interest };
+                  const parsed = JSON.parse(interest);
+                  console.log('Parsed interest:', parsed); // Debugging
+                  return { name: parsed.name || parsed };
                 } catch (e) {
+                  console.log('Error parsing interest:', e);
                   return { name: interest };
                 }
               }
-              return interest;
+              return { name: interest.name || interest };
             }),
             experience: profileResponse.data.experience || [],
             profile_picture: profileResponse.data.profile_picture || '',
-          };
+            };
           setProfileData(fetchedProfileData);
 
 
@@ -119,7 +115,9 @@ const ProfilePage = () => {
           });
           setSkillsPool(optionsResponse.data.skillsPool);
           // Transform interest strings into objects with name property
-          setInterestsPool(optionsResponse.data.interestsPool.map(interest => ({ name: interest })));
+          setInterestsPool(optionsResponse.data.interestsPool.map(interest => 
+            typeof interest === 'object' ? interest : { name: interest }
+          ));
           console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);
