@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography } from '@mui/material';
 import './ProjectPages.css';
+import ReactMarkdown from 'react-markdown';
 
 const ProjectPages = () => {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -169,7 +170,7 @@ const ProjectPages = () => {
         {projects.map((project) => (
           <div key={project.id} className="project-card">
             <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</Typography>
+            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>Tags: {project.tags.join(', ')}</Typography>
             <Button
               variant="contained"
