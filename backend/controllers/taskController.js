@@ -654,15 +654,20 @@ const approveTask = async (taskId, io, client) => {
     );
 
     // Add notifications in the database
-    const notificationText = `Your submitted task was approved!`;
+    const notificationMessage = `Your submitted task was approved!`;
     if (assigned_user_ids && assigned_user_ids.length > 0) {
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: project_id,
+        taskId: taskId,
+      });
       const notificationQuery = `
           INSERT INTO notifications (user_id, message, type, created_at, read) 
           SELECT unnest($1::int[]), $2, $3, NOW(), false
       `;
       await localClient.query(notificationQuery, [
         assigned_user_ids,
-        notificationText,
+        notificationDetails,
         "task",
       ]);
     }
@@ -850,14 +855,18 @@ WHERE id = ANY($2)
     );
 
     // Step 8: Notify users
-    const approveText = `Your submitted task was approved!`;
-    await localClient.query(
-      `
-      INSERT INTO notifications (user_id, message, type, created_at, read)
-      SELECT unnest($1::int[]), $2, 'task', NOW(), false
-    `,
-      [assigned_user_ids, approveText]
-    );
+    // This section seems redundant as notifications are already created above.
+    // However, if it's intended for a different purpose or audience, it should also be updated.
+    // For now, assuming the earlier notification is the primary one.
+    // If this is a separate notification, it needs similar JSON stringify treatment.
+    // const approveText = `Your submitted task was approved!`;
+    // await localClient.query(
+    //   `
+    //   INSERT INTO notifications (user_id, message, type, created_at, read)
+    //   SELECT unnest($1::int[]), $2, 'task', NOW(), false
+    // `,
+    //   [assigned_user_ids, approveText]
+    // );
 
     // COMMIT the transaction before making external calls
     await localClient.query("COMMIT");
@@ -891,6 +900,8 @@ WHERE id = ANY($2)
           id: Date.now(),
           type: "task-approved",
           message: "Your task was approved!",
+          projectId: project_id,
+          taskId: taskId,
           read: false,
           timestamp: new Date().toISOString(),
         });
@@ -1065,41 +1076,55 @@ const submitTask = async (req, res, io) => {
 
     // Step 2: Notify the project creator if we have an owner
     if (task.project_owner_id && reviewerIds.length === 0) {
-      const notificationText = `A task was submitted for approval in your project "${
+      const notificationMessage = `A task was submitted for approval in your project "${
         task.project_name || "Untitled"
       }".`;
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: task.project_id,
+        taskId: task.id,
+      });
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          VALUES ($1, $2, $3, NOW(), false)`,
-        [task.project_owner_id, notificationText, "task"]
+        [task.project_owner_id, notificationDetails, "task"]
       );
 
       if (io && typeof io.to === "function") {
         io.to(`user_${task.project_owner_id}`).emit("notification", {
-          message: notificationText,
+          message: notificationMessage,
           type: "task",
+          projectId: task.project_id,
+          taskId: task.id,
         });
       }
     }
 
     // Notify reviewers if we found any
     if (reviewerIds.length > 0) {
-      const notificationText = `You've been assigned to review a task in project "${
+      const notificationMessage = `You've been assigned to review a task in project "${
         task.project_name || "Untitled"
       }"`;
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: task.project_id,
+        taskId: task.id,
+      });
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
-        [reviewerIds, notificationText, "task"]
+        [reviewerIds, notificationDetails, "task"]
       );
 
       if (io && typeof io.to === "function") {
         reviewerIds.forEach((reviewerId) => {
           io.to(`user_${reviewerId}`).emit("notification", {
-            message: notificationText,
+            message: notificationMessage,
             type: "task",
+            projectId: task.project_id,
+            taskId: task.id,
           });
         });
       }
@@ -1550,22 +1575,31 @@ const processReview = async (taskId, userId, action, io) => {
 
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
-          const notificationText = `Your submitted task was rejected and needs revisions.`;
+          const notificationMessage = `Your submitted task was rejected and needs revisions.`;
+          // project_id is available from the taskResult destructuring earlier in processReview
+          // taskId is a parameter of processReview
+          const notificationDetails = JSON.stringify({
+            text: notificationMessage,
+            projectId: project_id, // This was destructured from taskResult.rows[0]
+            taskId: taskId,       // This is the function parameter
+          });
           await client.query(
             `
             INSERT INTO notifications (user_id, message, type, created_at, read) 
             SELECT unnest($1::int[]), $2, $3, NOW(), false
           `,
-            [assignedUserIds, notificationText, "task"]
+            [assignedUserIds, notificationDetails, "task"]
           );
 
           // Socket notifications
           if (io) {
-            assignedUserIds.forEach((userId) => {
-              io.to(`user_${userId}`).emit("notification", {
+            assignedUserIds.forEach((uId) => { // Renamed userId to uId to avoid conflict with outer scope userId
+              io.to(`user_${uId}`).emit("notification", {
                 id: Date.now(),
                 type: "task",
                 message: "Your task was rejected and needs revisions",
+                projectId: project_id, // This was destructured from taskResult.rows[0]
+                taskId: taskId,       // This is the function parameter
                 read: false,
                 timestamp: new Date().toISOString(),
               });

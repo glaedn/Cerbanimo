@@ -15,24 +15,55 @@ const NotificationProvider = ({ children }) => {
   const [levelNotificationData, setLevelNotificationData] = useState(null);
   const [showLevelNotification, setShowLevelNotification] = useState(false);
 
+  // Helper function to parse notification messages
+  const parseNotificationMessage = (notif) => {
+    let parsedJson;
+    const originalMsg = notif.message;
+
+    try {
+      parsedJson = JSON.parse(originalMsg);
+    } catch (e) {
+      parsedJson = null;
+    }
+
+    if (parsedJson && typeof parsedJson === 'object' && parsedJson.text) {
+      return {
+        ...notif,
+        messageText: parsedJson.text,
+        projectId: parsedJson.projectId,
+        taskId: parsedJson.taskId,
+        originalMessage: originalMsg,
+      };
+    } else {
+      return {
+        ...notif,
+        messageText: originalMsg,
+        projectId: null,
+        taskId: null,
+        originalMessage: originalMsg,
+      };
+    }
+  };
 
   // Replace both handlers with this single version
 useEffect(() => {
   if (!socket) return;
 
-  const handleNotification = (notification) => {
-    console.log("Received notification:", notification);
+  const handleNotification = (incomingNotification) => {
+    console.log("Received raw notification:", incomingNotification);
+    const parsedNotification = parseNotificationMessage(incomingNotification);
+    console.log("Parsed notification:", parsedNotification);
     
     setNotifications(prev => {
       // Prevent duplicates
-      if (prev.some(n => n.id === notification.id)) return prev;
+      if (prev.some(n => n.id === parsedNotification.id)) return prev;
       
       // Add to beginning of array
-      return [notification, ...prev];
+      return [parsedNotification, ...prev];
     });
     
     // Only increment if not read
-    if (!notification.read) {
+    if (!parsedNotification.read) {
       setUnreadCount(prev => prev + 1);
     }
   };
@@ -94,13 +125,16 @@ useEffect(() => {
         console.log('Notifications response:', res.data);
         
         // Check if notifications array exists in the response
-        const notificationsData = res.data.notifications || [];
-        console.log('Parsed notifications:', notificationsData);
+        const rawNotificationsData = res.data.notifications || [];
+        console.log('Raw notifications from fetch:', rawNotificationsData);
+
+        const parsedNotificationsData = rawNotificationsData.map(parseNotificationMessage);
+        console.log('Parsed notifications from fetch:', parsedNotificationsData);
         
-        setNotifications(notificationsData);
+        setNotifications(parsedNotificationsData);
         
         // Count unread notifications
-        const unreadNotifications = notificationsData.filter(n => !n.read);
+        const unreadNotifications = parsedNotificationsData.filter(n => !n.read);
         setUnreadCount(unreadNotifications.length);
       } catch (err) {
         console.error('Error fetching notifications:', err);

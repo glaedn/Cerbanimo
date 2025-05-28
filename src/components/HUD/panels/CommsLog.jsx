@@ -1,22 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
+import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
 
-const sampleActivities = [
-  "Selena approved Sable Vale's task, 'Setup 2-D Collision Detection'",
-  "User 'NovaSpark' completed the 'Optimize Shield Harmonics' challenge.",
-  "New project 'Project Chimera' has been initiated by 'Admin'.",
-  "'Raptor7' joined the 'Galactic Cartography' community.",
-  "Automated System: Database backup completed successfully.",
-  "User 'StarLord' just reached Level 5 in Piloting.",
-  "Community 'Cosmic Engineers' published a new resource: 'Advanced Warp Drive schematics'.",
-  "Task 'Deploy Navigation Beacons' is nearing its deadline.",
-  "User 'CyberWrench' submitted proof for 'Refactor Legacy Comms Array'.",
-  "Security Alert: Unusual login attempt detected from Sector Gamma-7."
-];
+const getNotificationIcon = (type) => {
+  let iconText = "[>]"; // Default icon
+  if (!type) type = 'default'; // Handle undefined type
+
+  switch (type.toLowerCase()) { // Use toLowerCase for case-insensitive matching
+    case 'task-approved':
+      iconText = "[+]";
+      break;
+    case 'task-rejected':
+      iconText = "[-]";
+      break;
+    case 'task-submitted': // If you anticipate this type
+      iconText = "[!]";
+      break;
+    case 'task': // For generic tasks
+      iconText = "[T]";
+      break;
+    // Add more cases as needed for other notification types you expect
+  }
+  return <span style={{ marginRight: '8px' }}>{iconText}</span>;
+};
 
 const CommsLog = () => {
-  const [activityLog, setActivityLog] = useState([]);
+  const { notifications } = useNotifications(); // Consuming the context
   const [isMinimized, setIsMinimized] = useState(false);
 
   const toggleMinimize = (e) => {
@@ -27,33 +38,14 @@ const CommsLog = () => {
     setIsMinimized(!isMinimized);
   };
 
-  useEffect(() => {
-    // Add initial activities without waiting for the first interval
-    const initialActivities = [];
-    for (let i = 0; i < 3; i++) {
-        const randomIndex = Math.floor(Math.random() * sampleActivities.length);
-        // Ensure no duplicates in initial load if possible, or just pick random
-        initialActivities.unshift(sampleActivities[randomIndex]); 
-    }
-    setActivityLog(initialActivities.slice(0,3));
+  // Removed the useEffect hook that used sampleActivities and setInterval
+  // Removed activityLog state, will use notifications directly
 
+  // Removed the useEffect hook that used sampleActivities and setInterval
+  // Removed activityLog state, will use notifications directly
 
-    const intervalId = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * sampleActivities.length);
-      const newActivity = sampleActivities[randomIndex];
-      
-      setActivityLog(prevLog => {
-        // Prevent adding the exact same message consecutively
-        if (prevLog.length > 0 && prevLog[0] === newActivity) {
-          return prevLog;
-        }
-        const updatedLog = [newActivity, ...prevLog];
-        return updatedLog.slice(0, 3); // Keep only the latest 3
-      });
-    }, 5000); // Every 5 seconds
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []); // Empty dependency array means this effect runs once on mount
+  // Display all notifications, no longer slicing for the latest 3
+  // const latestNotifications = notifications ? notifications.slice(0, 3) : [];
 
   return (
     <div className={`hud-panel comms-log ${isMinimized ? 'minimized' : ''}`}>
@@ -64,17 +56,32 @@ const CommsLog = () => {
         </button>
       </div>
       {!isMinimized && (
-        <div className="hud-panel-content">
-          {activityLog.length > 0 ? (
+        <div className="hud-panel-content" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+          {notifications === null || notifications === undefined ? ( // Check if notifications context is not yet available
+            <p>Loading comms...</p>
+          ) : notifications.length > 0 ? ( // Check full notifications array
             <ul>
-              {activityLog.map((activity, index) => (
-                <li key={index} className="activity-item"> {/* Using 'activity-item' for potential styling */}
-                  {activity}
-                </li>
-              ))}
+              {notifications.map((notification) => { // Map over full notifications array
+                const icon = getNotificationIcon(notification.type); // Get the icon
+                return (
+                  <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
+                    {icon} {/* Render the icon */}
+                    {notification.projectId && notification.taskId ? (
+                      <Link 
+                        to={`/visualizer/${notification.projectId}/${notification.taskId}`} 
+                        style={{ textDecoration: 'underline', color: '#8db8ff' }} // Styling for clickable link
+                      >
+                        {notification.messageText}
+                      </Link>
+                    ) : (
+                      notification.messageText // Displaying parsed messageText
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p>Initializing activity feed...</p> 
+            <p>No new activity.</p> 
           )}
         </div>
       )}
