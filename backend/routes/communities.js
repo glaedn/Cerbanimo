@@ -52,7 +52,7 @@ async function calculateVoteWeight(
     const weight = tokenRows.reduce(
       (sum, row) => sum + parseFloat(row.tokens),
       0
-    );
+    ) || 1;
     return { weight };
   } else {
     // Calculate total vote weight across all users in the community
@@ -71,7 +71,8 @@ async function calculateVoteWeight(
       [communityId]
     );
 
-    const totalPossibleWeight = parseFloat(rows[0]?.total_tokens || 0);
+    const totalPossibleWeight = parseFloat(rows[0]?.total_tokens || 
+      (await client.query('SELECT ARRAY_LENGTH(members, 1) FROM communities WHERE id = $1', [communityId])).rows[0]?.array_length || 1);
     return { totalPossibleWeight };
   }
 }
@@ -420,7 +421,7 @@ router.post("/:communityId/vote/:projectId", async (req, res) => {
          WHERE id = $2`,
         [projectId, communityId]
       );
-      await client.query(`UPDATE projects SET token_pool = 250 WHERE id = $1`, [
+      await client.query(`UPDATE projects SET token_pool = 400 WHERE id = $1`, [
         projectId,
       ]);
     }
