@@ -4,6 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 import './SiteNav.css';
 import { Badge, IconButton, Menu, MenuItem, Button, Modal, Paper, Box, Snackbar, Alert, Typography } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import CancelIcon from '@mui/icons-material/Cancel';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import InfoIcon from '@mui/icons-material/Info';
 import { useNotifications } from "./NotificationProvider";
 import IdleSpaceGame from './IdleSpaceGame';
 import LevelNotification from '../components/LevelNotification/LevelNotification';
@@ -33,6 +38,23 @@ const SiteNav = () => {
     const [demoNewXP, setDemoNewXP] = useState(0);
     const [demoPreviousLevel, setDemoPreviousLevel] = useState(1);
     const [demoNewLevel, setDemoNewLevel] = useState(1);
+
+    const getSiteNavNotificationIcon = (type) => {
+      if (!type) type = 'default'; // Handle undefined type
+    
+      switch (type.toLowerCase()) { // Use toLowerCase for case-insensitive matching
+        case 'task-approved':
+          return <TaskAltIcon style={{ marginRight: '8px' }} />;
+        case 'task-rejected':
+          return <CancelIcon style={{ marginRight: '8px' }} />;
+        case 'task-submitted':
+          return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
+        case 'task':
+          return <ListAltIcon style={{ marginRight: '8px' }} />;
+        default:
+          return <InfoIcon style={{ marginRight: '8px' }} />;
+      }
+    };
 
     const handleGainXP = () => {
         setDemoPreviousXP(demoNewXP);
@@ -152,14 +174,18 @@ const SiteNav = () => {
                         {recentNotifications.length === 0 ? (
                             <MenuItem className="notification-menu">No new notifications</MenuItem>
                         ) : (
-                            recentNotifications.map((notif, index) => (
-                                <MenuItem
-                                    key={index}
-                                    className={`notification-item ${notif.read ? 'read' : 'unread'}`}
-                                >
-                                    {notif.message}
-                                </MenuItem>
-                            ))
+                            recentNotifications.map((notif, index) => {
+                                const icon = getSiteNavNotificationIcon(notif.type);
+                                return (
+                                    <MenuItem
+                                        key={index}
+                                        className={`notification-item ${notif.read ? 'read' : 'unread'}`}
+                                    >
+                                        {icon}
+                                        {notif.message}
+                                    </MenuItem>
+                                );
+                            })
                         )}
                     </Menu>
                 </div>

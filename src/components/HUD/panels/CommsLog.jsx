@@ -3,27 +3,27 @@ import { Link } from 'react-router-dom'; // Import Link
 import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import CancelIcon from '@mui/icons-material/Cancel';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import InfoIcon from '@mui/icons-material/Info';
 
 const getNotificationIcon = (type) => {
-  let iconText = "[>]"; // Default icon
   if (!type) type = 'default'; // Handle undefined type
 
   switch (type.toLowerCase()) { // Use toLowerCase for case-insensitive matching
     case 'task-approved':
-      iconText = "[+]";
-      break;
+      return <TaskAltIcon style={{ marginRight: '8px' }} />;
     case 'task-rejected':
-      iconText = "[-]";
-      break;
+      return <CancelIcon style={{ marginRight: '8px' }} />;
     case 'task-submitted': // If you anticipate this type
-      iconText = "[!]";
-      break;
+      return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
     case 'task': // For generic tasks
-      iconText = "[T]";
-      break;
-    // Add more cases as needed for other notification types you expect
+      return <ListAltIcon style={{ marginRight: '8px' }} />;
+    default:
+      return <InfoIcon style={{ marginRight: '8px' }} />;
   }
-  return <span style={{ marginRight: '8px' }}>{iconText}</span>;
 };
 
 const CommsLog = () => {
