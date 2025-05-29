@@ -1082,7 +1082,7 @@ const submitTask = async (req, res, io) => {
       const notificationDetails = JSON.stringify({
         text: notificationMessage,
         projectId: task.project_id,
-        taskId: task.id,
+        taskId: taskId,
       });
 
       await client.query(
@@ -1111,6 +1111,11 @@ const submitTask = async (req, res, io) => {
         projectId: task.project_id,
         taskId: task.id,
       });
+      console.log(
+        "Inserting notifications for reviewers:",
+        reviewerIds,
+        notificationDetails
+      );
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
@@ -1124,7 +1129,7 @@ const submitTask = async (req, res, io) => {
             message: notificationMessage,
             type: "task",
             projectId: task.project_id,
-            taskId: task.id,
+            taskId: taskId,
           });
         });
       }
