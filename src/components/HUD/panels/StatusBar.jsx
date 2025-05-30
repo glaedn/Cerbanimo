@@ -4,6 +4,7 @@ import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
 
+
 const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
 

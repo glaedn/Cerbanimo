@@ -1,7 +1,9 @@
 .hud-container {
   position: relative;
+  top: 0px;
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 60px);
+  box-sizing: border-box;
   overflow: hidden;
   background-color: #0A0A2E; /* From theme.colors.backgroundDefault */
   /* display: flex; Removed to allow absolute positioning of panels */
@@ -73,7 +75,7 @@
 .hud-container > .status-bar {
   width: calc(100% - 20px);
   position: absolute;
-  bottom: 10px; /* Closer to the edge */
+  bottom: 0px; /* Closer to the edge */
   left: 10px;
   z-index: 10; /* Ensure it's above map but can be below panels if needed */
   box-sizing: border-box;
@@ -83,6 +85,7 @@
 @media (max-width: 768px) {
   .hud-container {
     overflow-y: auto; /* Allow scrolling for stacked panels */
+    padding-bottom: 50px;
   }
   
   .panel-wrapper {
@@ -123,10 +126,14 @@
   
   /* Adjust StatusBar for mobile if needed, might be fine if panels stack above it */
   .hud-container > .status-bar {
-    position: relative; /* Stack with other elements */
-    bottom: auto;
-    left: auto;
-    width: calc(100% - 20px);
-    margin: 10px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%; /* Make it span the full width */
+    margin: 0; /* Reset any margins */
+    padding: 10px; /* Add some padding for content within the status bar */
+    background-color: #0A0A2E; /* Use a background color from the theme, e.g., backgroundDefault */
+    z-index: 100; /* Ensure it's above other content */
+    box-sizing: border-box; /* Include padding in the width/height */
   }
 }
