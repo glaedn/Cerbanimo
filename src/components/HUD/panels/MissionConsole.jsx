@@ -51,7 +51,7 @@ const MissionConsole = () => {
               {assignedTasks.map(task => (
                 <li key={task.id} className="task-item">
                   <div className="task-info">
-                    <span className="task-name">{task.name}</span> ({task.projectName})
+                    <span className="task-name">{task.name}</span> <br/> ({task.projectName})
                     <br />
                     Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
                     {task.timeRemaining !== 'N/A' && <span> - Time Left: {task.timeRemaining}</span>}

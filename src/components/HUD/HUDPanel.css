@@ -72,27 +72,6 @@
   pointer-events: none; 
 }
 
-/* Custom Scrollbar */
-/*
-.hud-container .hud-panel::-webkit-scrollbar {
-  width: 6px;
-}
-
-.hud-container .hud-panel::-webkit-scrollbar-track {
-  background: rgba(0, 243, 255, 0.2);
-  border-radius: 5px;
-}
-
-.hud-container .hud-panel::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #00F3FF, #4DABF7);
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
-}
-
-.hud-container .hud-panel::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #4DABF7, #00F3FF);
-}
-*/
 @keyframes rippleAnim {
   to {
     transform: scale(4);
