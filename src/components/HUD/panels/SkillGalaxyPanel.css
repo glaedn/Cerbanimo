@@ -84,3 +84,17 @@
   font-size: var(--theme-typography-fontSizeMd, 1rem);
   margin-bottom: var(--theme-spacing-sm, 0.5rem);
 }
+
+.level-label {
+  fill: var(--theme-colors-textSecondary, #bbb);
+  font-size: 9px; /* Base size, JS handles scaling on zoom */
+  text-anchor: middle;
+  pointer-events: none;
+  font-family: var(--theme-typography-fontFamilyAccent, 'Orbitron', sans-serif); /* Consistent with node-label */
+  paint-order: stroke; /* Halo effect for readability */
+  stroke: var(--theme-colors-backgroundDefault, #0A0A2E); /* Match node-label halo color */
+  stroke-width: 2px; /* Slightly smaller halo than node-label's 3px */
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  transition: font-size var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out); /* Smooth font size changes on zoom */
+}

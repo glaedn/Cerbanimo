@@ -41,10 +41,13 @@ const SkillGalaxyPanel = () => {
   const [d3Links, setD3Links] = useState([]);
   const svgRef = useRef(null);
   const [simulation, setSimulation] = useState(null);
-  const [activeStar, setActiveStar] = useState(null);
+  const fixedStarPositionsRef = useRef(new Map()); // For persisting star fx/fy values
+  const initialZoomAppliedRef = useRef(false); // To track if initial overview zoom is applied
+  const [forceDataUpdate, setForceDataUpdate] = useState(false); // To trigger data reprocessing
   const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const panelRef = useRef(null);
+
   // Add debug logging
   console.log('SkillGalaxyPanel render:', {
     skillsLoading,
@@ -94,27 +97,54 @@ const SkillGalaxyPanel = () => {
       console.log('Processing skills for userId:', userId);
       
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
-      setProcessedSkills(skillsForGalaxy);
+      // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
       console.log("Processed skills for galaxy:", skillsForGalaxy);
 
-      const nodes = skillsForGalaxy.map(skill => ({
-        id: skill.id.toString(),
-        name: skill.name,
-        parent: skill.parent_skill_id ? skill.parent_skill_id.toString() : null,
-        level: skill.userLevel,
-        experience: skill.userExperience,
-        experienceNeeded: skill.experienceNeededForNextLevel,
-        levelForColor: skill.levelForColor !== undefined ? skill.levelForColor : (skill.category === 'star' ? 0 : skill.userLevel),
-        category: skill.category || 'star', // Make sure category is set
-        originalData: skill
-      }));
+      // Filter out skills with null or undefined IDs before mapping
+      const validSkillsForGalaxy = skillsForGalaxy.filter(skill => {
+        if (skill && skill.id != null) { // Check for null or undefined ID
+          return true;
+        }
+        console.warn('[D3 Data Prep] Filtered out skill due to missing/null ID:', skill);
+        return false;
+      });
+      
+      if (validSkillsForGalaxy.length !== skillsForGalaxy.length) {
+        console.warn(`[D3 Data Prep] Original skillsForGalaxy count: ${skillsForGalaxy.length}, Valid count after ID filter: ${validSkillsForGalaxy.length}`);
+      }
 
-      const links = [];
+      // When creating new nodes, apply fx/fy from fixedStarPositionsRef for stars
+      const newNodes = validSkillsForGalaxy.map(skill => {
+        let fx = null, fy = null;
+        if (skill.category === 'star') {
+          const fixedPos = fixedStarPositionsRef.current.get(skill.id.toString()); // ID is now guaranteed non-null
+          if (fixedPos) {
+            fx = fixedPos.fx;
+            fy = fixedPos.fy;
+          }
+        }
+        return {
+          id: skill.id.toString(), // skill.id is non-null here
+          name: skill.name || "Unnamed Skill", // Fallback for name
+          parent: skill.parent_skill_id ? skill.parent_skill_id.toString() : null,
+          level: skill.userLevel,
+          userLevel: skill.userLevel, // Ensure userLevel is present for level text display
+          experience: skill.userExperience,
+          experienceNeeded: skill.experienceNeededForNextLevel,
+          levelForColor: skill.levelForColor !== undefined ? skill.levelForColor : (skill.category === 'star' ? 0 : skill.userLevel),
+          category: skill.category || 'star', // Make sure category is set
+          originalData: skill,
+          fx, // Apply stored fixed position
+          fy, // Apply stored fixed position
+        };
+      });
+
+      const newLinks = [];
       skillsForGalaxy.forEach(skill => {
         if (skill.parent_skill_id) {
-          const parentExists = skillsForGalaxy.find(s => s.id === skill.parent_skill_id);
+          const parentExists = skillsForGalaxy.find(s => s.id === skill.parent_skill_id); // Check against current skillsForGalaxy
           if (parentExists) {
-            links.push({
+            newLinks.push({
               source: skill.parent_skill_id.toString(),
               target: skill.id.toString(),
               id: `link-${skill.parent_skill_id}-${skill.id}`
@@ -123,18 +153,24 @@ const SkillGalaxyPanel = () => {
         }
       });
 
-      console.log('Created nodes:', nodes);
-      console.log('Created links:', links);
+      console.log('Created/Updated d3Nodes:', newNodes.filter(n=>n.fx).length > 0 ? newNodes.filter(n=>n.fx) : newNodes);
+      console.log('Created/Updated d3Links:', newLinks);
       
-      setD3Nodes(nodes);
-      setD3Links(links);
+      setD3Nodes(newNodes);
+      setD3Links(newLinks);
+      // Update processedSkills state if other parts of the component rely on it directly
+      // For now, assuming d3Nodes is the primary derived state for rendering the galaxy
+      setProcessedSkills(skillsForGalaxy); 
+
+
     } else {
       console.log('Clearing nodes - conditions not met');
-      setD3Nodes([]);
-      setD3Links([]);
-      setProcessedSkills([]);
+      // Clear nodes and links if they exist
+      if (d3Nodes.length > 0) setD3Nodes([]);
+      if (d3Links.length > 0) setD3Links([]);
+      if (processedSkills.length > 0) setProcessedSkills([]);
     }
-  }, [allSkills, skillsLoading, isAuthenticated, user, profile]);
+  }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
 
   useEffect(() => {
     console.log('D3 rendering effect triggered:', {
@@ -181,48 +217,44 @@ const SkillGalaxyPanel = () => {
       if (defs.select(`#${gradientId}`).empty()) {
         const gradient = defs.append('radialGradient')
           .attr('id', gradientId)
-          .attr('cx', '50%').attr('cy', '50%')
-          .attr('r', '50%');
-        gradient.append('stop').attr('offset', '0%').attr('stop-color', d3.color(color).brighter(0.8).formatHex());
-        gradient.append('stop').attr('offset', '50%').attr('stop-color', color);
-        gradient.append('stop').attr('offset', '100%').attr('stop-color', d3.color(color).darker(0.5).formatHex());
+          .attr('cx', '50%') // Center of the gradient
+          .attr('cy', '50%')
+          .attr('r', '50%') // Radius of the gradient, relative to the circle it's applied to
+          .attr('fx', '40%') // Focal point X (shifted from cx for a highlight effect)
+          .attr('fy', '40%'); // Focal point Y (shifted from cy for a highlight effect)
+
+        // Define more contrasted stops for a pronounced effect
+        gradient.append('stop')
+          .attr('offset', '0%') // Innermost part of the gradient (focal point)
+          .attr('stop-color', d3.color(color).brighter(1.8).formatHex()); // Very bright highlight
+
+        gradient.append('stop')
+          .attr('offset', '25%') // Transition from highlight to a slightly brighter base
+          .attr('stop-color', d3.color(color).brighter(0.7).formatHex());
+        
+        gradient.append('stop')
+          .attr('offset', '50%') // Base color
+          .attr('stop-color', color);
+
+        gradient.append('stop')
+          .attr('offset', '100%') // Outermost part of the gradient
+          .attr('stop-color', d3.color(color).darker(0.8).formatHex()); // Darker edge for depth
       }
     });
 
     const mainGroup = svg.append('g').attr('class', 'everything');
 
-    // Filter nodes to display
-    let displayNodes = d3Nodes.filter(n => n.category === 'star' || !n.category); // Include nodes without category as stars
-    let displayLinks = [];
+    // Always display all nodes and links from d3Nodes and d3Links
+    const displayNodes = d3Nodes;
+    const displayLinks = d3Links;
 
-    console.log('Display nodes (stars only):', displayNodes);
-
-    if (activeStar) {
-      const childrenOfActiveStar = d3Nodes.filter(n => n.originalData.parent_skill_id?.toString() === activeStar.id);
-      const grandChildrenOfActiveStar = d3Nodes.filter(n => {
-        const parentPlanet = childrenOfActiveStar.find(c => c.id === n.originalData.parent_skill_id?.toString());
-        return parentPlanet !== undefined;
-      });
-      
-      const activeStarNode = d3Nodes.find(n => n.id === activeStar.id);
-      if (activeStarNode) {
-        displayNodes = Array.from(new Set([activeStarNode, ...childrenOfActiveStar, ...grandChildrenOfActiveStar].filter(Boolean)));
-      }
-      
-      const activeStarChildrenIds = childrenOfActiveStar.map(n => n.id);
-      const grandChildrenIds = grandChildrenOfActiveStar.map(n => n.id);
-
-      displayLinks = d3Links.filter(l => {
-        const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-        const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-        
-        return (sourceId === activeStar.id && activeStarChildrenIds.includes(targetId)) ||
-               (activeStarChildrenIds.includes(sourceId) && grandChildrenIds.includes(targetId));
-      });
+    console.log('Displaying global constellation.');
+    console.log('Final display nodes count:', displayNodes.length);
+    console.log('Final display links count:', displayLinks.length);
+    if(displayNodes.length < 15 && displayNodes.length > 0) { // Log details if few nodes, but not if zero
+        console.log('Final display nodes (details):', displayNodes.map(n => ({id: n.id, name: n.name, category: n.category, fx: n.fx, parent: n.parent })));
+        console.log('Final display links (details):', displayLinks.map(l => ({source: l.source.id || l.source, target: l.target.id || l.target})));
     }
-
-    console.log('Final display nodes:', displayNodes);
-    console.log('Final display links:', displayLinks);
 
     // Create or update simulation
     const currentSim = simulation || d3.forceSimulation();
@@ -246,6 +278,15 @@ const SkillGalaxyPanel = () => {
       .attr('stroke-width', 1.5);
 
     // Add nodes
+    console.log('[D3 Debug] displayNodes count for .data():', displayNodes.length);
+    if (displayNodes.length > 0) {
+      console.log('[D3 Debug] First displayNode details:', displayNodes[0] ? { id: displayNodes[0].id, name: displayNodes[0].name, category: displayNodes[0].category, levelForColor: displayNodes[0].levelForColor, userLevel: displayNodes[0].userLevel, fx: displayNodes[0].fx, fy: displayNodes[0].fy, parent: displayNodes[0].parent?.toString() } : "Node[0] is undefined");
+      // Check for missing IDs, which is critical for the data join
+      const nodesWithMissingIds = displayNodes.filter(n => n.id === undefined || n.id === null);
+      if (nodesWithMissingIds.length > 0) {
+        console.error(`[D3 Debug] ${nodesWithMissingIds.length} nodes have missing IDs! Example:`, nodesWithMissingIds[0]);
+      }
+    }
     const node = mainGroup.append('g')
       .attr('class', 'nodes')
       .selectAll('g.node-group')
@@ -259,35 +300,43 @@ const SkillGalaxyPanel = () => {
 
           group.append('circle')
             .attr('r', d => {
-              const category = d.category || 'star';
-              return category === 'star' ? 25 : (category === 'planet' ? 15 : 8);
+              const category = d.category || 'star'; // Default to 'star' if undefined, though category should always be defined by processSkillDataForGalaxy
+              const radius = category === 'star' ? 25 : (category === 'planet' ? 15 : 8);
+              if (d.id === undefined || d.name === undefined) console.log('[D3 Debug] Problematic node data for radius:', d);
+              console.log(`[D3 Debug] Node ID: ${d.id}, Name: ${d.name}, Category: ${d.category}, Calculated Category: ${category}, Radius: ${radius}`);
+              if (radius <= 0 || isNaN(radius)) console.error(`[D3 Debug] Invalid radius for ${d.id}: ${radius}`);
+              return radius;
             })
             .style('fill', d => {
               const category = d.category || 'star';
-              if (category === 'star') return getStarGradientUrl(d.levelForColor);
-              
-              let parentStar = null;
-              if (category === 'planet') {
-                parentStar = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
-              } else if (category === 'moon') {
-                const parentPlanet = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && n.category === 'planet');
-                if (parentPlanet) {
-                  parentStar = d3Nodes.find(n => n.id === parentPlanet.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
+              let fillColor;
+              if (category === 'star') {
+                fillColor = getStarGradientUrl(d.levelForColor);
+                console.log(`[D3 Debug] Star ${d.name} (ID: ${d.id}), levelForColor: ${d.levelForColor}, Fill: ${fillColor}`);
+              } else {
+                let parentStar = null;
+                if (category === 'planet') {
+                  parentStar = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
+                } else if (category === 'moon') {
+                  const parentPlanet = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && n.category === 'planet');
+                  if (parentPlanet) {
+                    parentStar = d3Nodes.find(n => n.id === parentPlanet.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
+                  }
                 }
+                const baseColor = parentStar ? getStarColor(parentStar.levelForColor) : theme.colors.primary;
+                fillColor = memoizedGetPastelColor(baseColor, category === 'planet' ? 0.7 : 0.85);
+                console.log(`[D3 Debug] ${category} ${d.name} (ID: ${d.id}), parentStar: ${parentStar?.name}, baseColor: ${baseColor}, Fill: ${fillColor}`);
               }
-              const baseColor = parentStar ? getStarColor(parentStar.levelForColor) : theme.colors.primary;
-              return memoizedGetPastelColor(baseColor, category === 'planet' ? 0.7 : 0.85);
+              if (!fillColor || fillColor === "none") console.error(`[D3 Debug] Invalid fill for ${d.id}: ${fillColor}`);
+              return fillColor;
             })
             .style('stroke', theme.colors.border || '#666')
             .style('stroke-width', 1)
             .on('click', (event, d_clicked) => {
               event.stopPropagation();
-              const category = d_clicked.category || 'star';
-              if (category === 'star') {
-                setActiveStar(prevActiveStar => prevActiveStar?.id === d_clicked.id ? null : d_clicked);
-              } else {
-                setSelectedSkillForPopup(d_clicked);
-              }
+              // All nodes, including stars, will now open the popup
+              setSelectedSkillForPopup(d_clicked);
+              console.log('Node clicked, opening popup for:', d_clicked.name);
             });
 
           group.append('text')
@@ -304,10 +353,45 @@ const SkillGalaxyPanel = () => {
             })
             .style('text-anchor', 'middle')
             .style('pointer-events', 'none'); // Prevent text from interfering with clicks
+          
+          // Add level text for stars, planets, and moons
+          group.filter(d => 
+            (d.category === 'star' && d.levelForColor > 0) ||
+            ((d.category === 'planet' || d.category === 'moon') && d.userLevel > 0)
+          )
+            .append('text')
+            .attr('class', 'level-label')
+            .text(d => {
+              if (d.category === 'star') return `Lvl ${d.levelForColor}`;
+              return `Lvl ${d.userLevel}`;
+            })
+            .attr('dy', d => {
+              if (d.category === 'star') return 25 + 10; // Star radius (25) + padding
+              if (d.category === 'planet') return 15 + 10; // Planet radius (15) + padding
+              return 8 + 10; // Moon radius (8) + padding
+            });
+            // Styling is handled by .level-label class in SkillGalaxyPanel.css
 
           return group;
         },
-        update => update,
+        update => {
+          // Ensure level text is updated if data changes
+          update.selectAll('.level-label')
+            .filter(d => 
+              (d.category === 'star' && d.levelForColor > 0) ||
+              ((d.category === 'planet' || d.category === 'moon') && d.userLevel > 0)
+            )
+            .text(d => {
+              if (d.category === 'star') return `Lvl ${d.levelForColor}`;
+              return `Lvl ${d.userLevel}`;
+            })
+            .attr('dy', d => { // Also update dy in case category could change (unlikely here but good practice)
+              if (d.category === 'star') return 25 + 10;
+              if (d.category === 'planet') return 15 + 10;
+              return 8 + 10;
+            });
+          return update;
+        },
         exit => exit.transition().duration(300).style('opacity', 0).remove()
       );
 
@@ -320,38 +404,114 @@ const SkillGalaxyPanel = () => {
         .attr('y2', d => d.target.y);
       node.attr('transform', d => `translate(${d.x},${d.y})`);
     });
-
-    // Add zoom behavior
+    
+    // Define zoom behavior
     const zoomBehavior = d3.zoom()
-      .scaleExtent([0.2, 5])
+      .scaleExtent([0.1, 5]) // Allow more zoom out
       .on('zoom', (event) => {
         mainGroup.attr('transform', event.transform);
         const currentZoom = event.transform.k;
-        mainGroup.selectAll('.node-label')
-          .style('font-size', d => {
-            const category = d.category || 'star';
-            const baseSize = category === 'star' ? 14 : 10;
+        mainGroup.selectAll('.node-label, .level-label')
+          .style('font-size', function(d) { 
+            const isLevelLabel = d3.select(this).classed('level-label');
+            let baseSize = isLevelLabel ? 9 : (d.category === 'star' ? 14 : 10);
             let newSize = baseSize / currentZoom;
-            if (category === 'star') {
-              newSize = Math.max(newSize, baseSize * 0.7);
-            } else {
-              newSize = Math.max(newSize, baseSize * 0.5);
-            }
+            if (isLevelLabel) newSize = Math.max(newSize, baseSize * 0.4);
+            else if (d.category === 'star') newSize = Math.max(newSize, baseSize * 0.7);
+            else newSize = Math.max(newSize, baseSize * 0.5);
             return newSize + 'px';
           })
           .style('display', currentZoom < 0.25 ? 'none' : 'block');
       });
-    
-    svg.call(zoomBehavior);
-    
+    svg.call(zoomBehavior); // Initialize zoom behavior on the SVG element
+
+    // Handle initial zoom and star fixing when simulation ends
+    currentSim.on('end.fixStars', () => {
+      console.log('Global simulation ended. Applying initial zoom and fixing star positions.');
+      const svgWidth = parseFloat(svg.attr('width'));
+      const svgHeight = parseFloat(svg.attr('height'));
+
+      if (!initialZoomAppliedRef.current) {
+        if (displayNodes.length > 0) {
+          const starNodesData = displayNodes.filter(d => d.category === 'star');
+          if (starNodesData.length > 0) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            starNodesData.forEach(d => {
+              if (d.x < minX) minX = d.x;
+              if (d.x > maxX) maxX = d.x;
+              if (d.y < minY) minY = d.y;
+              if (d.y > maxY) maxY = d.y;
+            });
+
+            const dataWidth = maxX - minX;
+            const dataHeight = maxY - minY;
+            const padding = 80; 
+
+            let k = 0.75; // Default scale if calculation is tricky (e.g. single node)
+            let tx = svgWidth / 2;
+            let ty = svgHeight / 2;
+
+            if (dataWidth > 0 && dataHeight > 0) { // Multiple stars with spread
+                const scaleX = (svgWidth - padding * 2) / dataWidth;
+                const scaleY = (svgHeight - padding * 2) / dataHeight;
+                k = Math.min(scaleX, scaleY, 1); // Cap at 1, allow zoom out more (e.g. min of 0.2)
+                 k = Math.max(k, 0.2); // ensure not too zoomed out if graph is tiny
+
+                const midX = minX + dataWidth / 2;
+                const midY = minY + dataHeight / 2;
+                tx = svgWidth / 2 - k * midX;
+                ty = svgHeight / 2 - k * midY;
+            } else if (starNodesData.length === 1) { // Single star
+                tx = svgWidth / 2 - k * starNodesData[0].x;
+                ty = svgHeight / 2 - k * starNodesData[0].y;
+            }
+            // If dataWidth or dataHeight is 0 (e.g. all stars in a line, or single star), k might need adjustment or use default
+            
+            const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(k);
+            console.log('Applying initial calculated zoom transform:', initialTransform);
+            svg.transition().duration(750).call(zoomBehavior.transform, initialTransform);
+          } else {
+             console.log('No stars found for initial zoom calculation, applying zoomIdentity.');
+             svg.call(zoomBehavior.transform, d3.zoomIdentity);
+          }
+        } else {
+           console.log('No nodes to display, applying zoomIdentity.');
+           svg.call(zoomBehavior.transform, d3.zoomIdentity);
+        }
+        initialZoomAppliedRef.current = true;
+      }
+
+      // Fix star positions after initial zoom has been determined/applied
+      let refActuallyUpdated = false;
+      const tolerance = 0.001;
+      displayNodes.forEach(dNode => {
+        if (dNode.category === 'star') {
+          const currentFixedPos = fixedStarPositionsRef.current.get(dNode.id);
+          if (!currentFixedPos || Math.abs(currentFixedPos.fx - dNode.x) > tolerance || Math.abs(currentFixedPos.fy - dNode.y) > tolerance) {
+            fixedStarPositionsRef.current.set(dNode.id, { fx: dNode.x, fy: dNode.y });
+            refActuallyUpdated = true;
+          }
+          dNode.fx = dNode.x;
+          dNode.fy = dNode.y;
+        }
+      });
+
+      if (refActuallyUpdated) {
+        console.log("Forcing data update due to fixedStarPositionsRef update after initial zoom/fix.");
+        setForceDataUpdate(prev => !prev);
+      }
+    });
+        
     // Start simulation
     currentSim.alpha(0.3).restart();
 
     return () => {
       currentSim.stop();
+      currentSim.on('end.fixStars', null); // Clean up the specific event listener
     };
-
-  }, [d3Nodes, d3Links, activeStar, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor]);
+    // Removed setD3Nodes from deps. Added fixedStarPositionsRef (though as a ref, it doesn't trigger updates itself).
+    // Key dependencies are d3Nodes, d3Links, and simulation. activeStar removed.
+  }, [d3Nodes, d3Links, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor, fixedStarPositionsRef, setForceDataUpdate]);
 
   if (skillsLoading) {
     return (
