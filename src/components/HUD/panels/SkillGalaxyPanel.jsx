@@ -48,18 +48,6 @@ const SkillGalaxyPanel = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const panelRef = useRef(null);
 
-  // Add debug logging
-  console.log('SkillGalaxyPanel render:', {
-    skillsLoading,
-    skillsError,
-    allSkillsLength: allSkills?.length,
-    processedSkillsLength: processedSkills?.length,
-    d3NodesLength: d3Nodes?.length,
-    isAuthenticated,
-    userId: user?.sub,
-    profileId: profile?.id
-  });
-
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
       e.stopPropagation();
@@ -84,21 +72,12 @@ const SkillGalaxyPanel = () => {
   const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
 
   useEffect(() => {
-    console.log('Data processing effect triggered:', {
-      skillsLoading,
-      allSkillsLength: allSkills?.length,
-      isAuthenticated,
-      userSub: user?.sub,
-      profileId: profile?.id
-    });
 
     if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && user?.sub) {
       const userId = profile?.id || user.sub; // Fallback to user.sub if profile.id not available
-      console.log('Processing skills for userId:', userId);
-      
+
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
       // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
-      console.log("Processed skills for galaxy:", skillsForGalaxy);
 
       // Filter out skills with null or undefined IDs before mapping
       const validSkillsForGalaxy = skillsForGalaxy.filter(skill => {
@@ -153,9 +132,6 @@ const SkillGalaxyPanel = () => {
         }
       });
 
-      console.log('Created/Updated d3Nodes:', newNodes.filter(n=>n.fx).length > 0 ? newNodes.filter(n=>n.fx) : newNodes);
-      console.log('Created/Updated d3Links:', newLinks);
-      
       setD3Nodes(newNodes);
       setD3Links(newLinks);
       // Update processedSkills state if other parts of the component rely on it directly
@@ -173,10 +149,6 @@ const SkillGalaxyPanel = () => {
   }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
 
   useEffect(() => {
-    console.log('D3 rendering effect triggered:', {
-      d3NodesLength: d3Nodes?.length,
-      svgRefCurrent: !!svgRef.current
-    });
 
     if (d3Nodes.length === 0 || !svgRef.current) {
       if (svgRef.current) {
@@ -195,9 +167,7 @@ const SkillGalaxyPanel = () => {
     const containerRect = container.getBoundingClientRect();
     const width = containerRect.width || 800;
     const height = containerRect.height || 600;
-    
-    console.log('SVG dimensions:', { width, height });
-    
+
     // Set SVG dimensions explicitly
     svg.attr('width', width).attr('height', height);
 
@@ -248,9 +218,6 @@ const SkillGalaxyPanel = () => {
     const displayNodes = d3Nodes;
     const displayLinks = d3Links;
 
-    console.log('Displaying global constellation.');
-    console.log('Final display nodes count:', displayNodes.length);
-    console.log('Final display links count:', displayLinks.length);
     if(displayNodes.length < 15 && displayNodes.length > 0) { // Log details if few nodes, but not if zero
         console.log('Final display nodes (details):', displayNodes.map(n => ({id: n.id, name: n.name, category: n.category, fx: n.fx, parent: n.parent })));
         console.log('Final display links (details):', displayLinks.map(l => ({source: l.source.id || l.source, target: l.target.id || l.target})));
@@ -278,9 +245,7 @@ const SkillGalaxyPanel = () => {
       .attr('stroke-width', 1.5);
 
     // Add nodes
-    console.log('[D3 Debug] displayNodes count for .data():', displayNodes.length);
     if (displayNodes.length > 0) {
-      console.log('[D3 Debug] First displayNode details:', displayNodes[0] ? { id: displayNodes[0].id, name: displayNodes[0].name, category: displayNodes[0].category, levelForColor: displayNodes[0].levelForColor, userLevel: displayNodes[0].userLevel, fx: displayNodes[0].fx, fy: displayNodes[0].fy, parent: displayNodes[0].parent?.toString() } : "Node[0] is undefined");
       // Check for missing IDs, which is critical for the data join
       const nodesWithMissingIds = displayNodes.filter(n => n.id === undefined || n.id === null);
       if (nodesWithMissingIds.length > 0) {
@@ -302,18 +267,13 @@ const SkillGalaxyPanel = () => {
             .attr('r', d => {
               const category = d.category || 'star'; // Default to 'star' if undefined, though category should always be defined by processSkillDataForGalaxy
               const radius = category === 'star' ? 25 : (category === 'planet' ? 15 : 8);
-              if (d.id === undefined || d.name === undefined) console.log('[D3 Debug] Problematic node data for radius:', d);
-              console.log(`[D3 Debug] Node ID: ${d.id}, Name: ${d.name}, Category: ${d.category}, Calculated Category: ${category}, Radius: ${radius}`);
-              if (radius <= 0 || isNaN(radius)) console.error(`[D3 Debug] Invalid radius for ${d.id}: ${radius}`);
               return radius;
             })
             .style('fill', d => {
               const category = d.category || 'star';
               let fillColor;
               if (category === 'star') {
-                fillColor = getStarGradientUrl(d.levelForColor);
-                console.log(`[D3 Debug] Star ${d.name} (ID: ${d.id}), levelForColor: ${d.levelForColor}, Fill: ${fillColor}`);
-              } else {
+                fillColor = getStarGradientUrl(d.levelForColor);              } else {
                 let parentStar = null;
                 if (category === 'planet') {
                   parentStar = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
@@ -325,7 +285,6 @@ const SkillGalaxyPanel = () => {
                 }
                 const baseColor = parentStar ? getStarColor(parentStar.levelForColor) : theme.colors.primary;
                 fillColor = memoizedGetPastelColor(baseColor, category === 'planet' ? 0.7 : 0.85);
-                console.log(`[D3 Debug] ${category} ${d.name} (ID: ${d.id}), parentStar: ${parentStar?.name}, baseColor: ${baseColor}, Fill: ${fillColor}`);
               }
               if (!fillColor || fillColor === "none") console.error(`[D3 Debug] Invalid fill for ${d.id}: ${fillColor}`);
               return fillColor;
@@ -336,7 +295,6 @@ const SkillGalaxyPanel = () => {
               event.stopPropagation();
               // All nodes, including stars, will now open the popup
               setSelectedSkillForPopup(d_clicked);
-              console.log('Node clicked, opening popup for:', d_clicked.name);
             });
 
           group.append('text')
@@ -427,7 +385,6 @@ const SkillGalaxyPanel = () => {
 
     // Handle initial zoom and star fixing when simulation ends
     currentSim.on('end.fixStars', () => {
-      console.log('Global simulation ended. Applying initial zoom and fixing star positions.');
       const svgWidth = parseFloat(svg.attr('width'));
       const svgHeight = parseFloat(svg.attr('height'));
 
@@ -468,14 +425,11 @@ const SkillGalaxyPanel = () => {
             // If dataWidth or dataHeight is 0 (e.g. all stars in a line, or single star), k might need adjustment or use default
             
             const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(k);
-            console.log('Applying initial calculated zoom transform:', initialTransform);
             svg.transition().duration(750).call(zoomBehavior.transform, initialTransform);
           } else {
-             console.log('No stars found for initial zoom calculation, applying zoomIdentity.');
              svg.call(zoomBehavior.transform, d3.zoomIdentity);
           }
         } else {
-           console.log('No nodes to display, applying zoomIdentity.');
            svg.call(zoomBehavior.transform, d3.zoomIdentity);
         }
         initialZoomAppliedRef.current = true;

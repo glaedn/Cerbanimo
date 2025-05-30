@@ -16,8 +16,14 @@ const StatusBar = () => {
   if (!profile || !profile.skills) return <div className="hud-panel status-bar">User data or skills unavailable.</div>;
   
   // Calculate Total Global Experience from profile.skills
-  // Assuming each skill in profile.skills has an 'experience' property
-  const totalGlobalExp = profile.skills.reduce((sum, skill) => sum + (skill.experience || 0), 0);
+  // Parse unlocked_users JSON strings and sum up experience values
+  const totalGlobalExp = profile.skills.reduce((sum, skill) => {
+    if (!skill.unlocked_users) return sum;
+    const unlockedUsers = skill.unlocked_users.map(user => JSON.parse(user));
+    const currentUserExp = unlockedUsers.find(user => user.user_id === profile.id)?.experience || 0;
+    console.log(`Skill: ${skill.name}, Current User Experience: ${currentUserExp}`);
+    return sum + currentUserExp;
+  }, 0);
 
   const currentLevel = Math.floor(Math.sqrt(totalGlobalExp / 40)) + 1;
 

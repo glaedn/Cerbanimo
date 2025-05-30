@@ -65,7 +65,10 @@ body {
   pointer-events: none; /* So it doesn't interfere with mouse events on stars */
   box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* Neon glow for tooltip box */
   white-space: nowrap; /* Prevent line breaks in tooltip content */
-  transition: opacity 0.2s; /* Smooth fade in/out */
+  /* MODIFIED PART START */
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  transform: translate(-10px, -10px) scale(0.95); /* Initial state (when opacity is 0) */
+  /* MODIFIED PART END */
   z-index: 100; /* Ensure it's above other elements */
 }
 
@@ -128,4 +131,29 @@ body {
 
   }
 
+}
+
+@keyframes sonarPing {
+  0% {
+    r: 0; /* Start from a small or zero radius */
+    opacity: 0.8;
+    stroke-width: 3px; /* Initial stroke width */
+  }
+  70% { /* Control point for stroke-width and opacity */
+    opacity: 0.4;
+    stroke-width: 1px;
+  }
+  100% {
+    r: 30px; /* Expand to a larger radius (adjust as needed) */
+    opacity: 0;
+    stroke-width: 0;
+  }
+}
+
+.sonar-ping-effect {
+  fill: none;
+  /* stroke is set dynamically in JS */
+  animation: sonarPing 2s infinite ease-out;
+  /* transform-origin: center; No longer needed if not using transform */
+  pointer-events: none; /* Keep this */
 }

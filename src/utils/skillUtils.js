@@ -26,7 +26,6 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
     // Check if it's an array-like object first
     if (unlockedUsersInput && typeof unlockedUsersInput === 'object' && 'length' in unlockedUsersInput) {
       users = Array.from(unlockedUsersInput);
-      console.log('Parsing unlocked_users as an array:', users);
     } else if (typeof unlockedUsersInput === 'string') {
       // Attempt to parse it as a top-level JSON array string first
       // e.g., '[{"user_id":1,...}, {"user_id":2,...}]'
@@ -49,7 +48,6 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
         // Example: '{ "{"user_id":1,"level":1}", "{"user_id":2,"level":2}" }'
         if (unlockedUsersInput.startsWith('{') && unlockedUsersInput.endsWith('}')) {
           const innerContent = unlockedUsersInput.slice(1, -1);
-          console.log('Parsing unlocked_users as a set of JSON strings:', innerContent);
           // This regex attempts to split by '","' but not within JSON strings. It's fragile.
           const potentialJsonStrings = innerContent.split(/,(?![^{]*})/).map(s => s.trim());
           potentialJsonStrings.forEach(str => {
@@ -71,7 +69,6 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
       unlockedUsersInput.forEach(item => {
         if (typeof item === 'string') {
           try {
-            console.log('Parsing unlocked_users item as JSON string:', item);
             users.push(JSON.parse(item));
           } catch (e) {
             console.warn('Failed to parse JSON string in array:', item, e);
@@ -109,8 +106,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     return [];
   }
 
-  console.log("Starting skill processing for user:", currentUserId);
-
   const allSkillsMap = new Map();
   allSkills.forEach(skill => {
     allSkillsMap.set(skill.id, { ...skill });
@@ -123,7 +118,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     const parsedUsers = parseUnlockedUsers(skill.unlocked_users);
     const userData = parsedUsers.find(u => u.user_id?.toString() === currentUserId?.toString());
     if (userData) {
-      console.log(`User ${currentUserId} has unlocked skill: ${skill.name} (ID: ${skill.id}) with level ${userData.level}`);
       skillsToProcess.set(skill.id, {
         ...skill,
         userLevel: userData.level,
@@ -134,8 +128,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  console.log(`Found ${skillsToProcess.size} skills unlocked by user.`);
-
   // Add necessary parent skills for hierarchy completion
   // Iterate over a copy of keys if modifying the map during iteration, or use a temporary array.
   const skillsToConsiderForParents = Array.from(skillsToProcess.values());
@@ -145,7 +137,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       if (!skillsToProcess.has(current.parent_skill_id)) {
         const parentSkill = allSkillsMap.get(current.parent_skill_id);
         if (parentSkill) {
-          console.log(`Adding structural parent skill: ${parentSkill.name} (ID: ${parentSkill.id})`);
           skillsToProcess.set(parentSkill.id, {
             ...parentSkill,
             userLevel: 0, // Default for structural parents not unlocked by user
@@ -166,7 +157,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
   
-  console.log(`Total skills after adding structural parents: ${skillsToProcess.size}`);
 
   const processedSkillsArray = Array.from(skillsToProcess.values());
   const skillHierarchy = new Map(processedSkillsArray.map(s => [s.id, { ...s, children: [], category: 'unknown' }]));
@@ -184,45 +174,37 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  console.log("Pass 0: Children arrays built.");
   skillHierarchy.forEach(s => { if(s.children.length > 0) console.log(`Skill ${s.name} has ${s.children.length} children.`) });
 
 
   // Pass 1: Categorize Stars
-  console.log("Starting Pass 1: Categorize Stars");
   skillHierarchy.forEach(skillNode => {
     if (skillNode.parent_skill_id === null || skillNode.parent_skill_id === undefined) {
       skillNode.category = 'star';
-      console.log(`  Categorized ${skillNode.name} (ID: ${skillNode.id}) as star.`);
     }
   });
 
   // Pass 2: Categorize Planets
-  console.log("Starting Pass 2: Categorize Planets");
   skillHierarchy.forEach(skillNode => {
     if (skillNode.parent_skill_id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode && parentNode.category === 'star') {
         skillNode.category = 'planet';
-        console.log(`  Categorized ${skillNode.name} (ID: ${skillNode.id}) as planet (parent: ${parentNode.name}).`);
       }
     }
   });
 
   // Pass 3: Categorize Moons
-  console.log("Starting Pass 3: Categorize Moons");
   skillHierarchy.forEach(skillNode => {
     if (skillNode.parent_skill_id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode && parentNode.category === 'planet') {
         skillNode.category = 'moon';
-        console.log(`  Categorized ${skillNode.name} (ID: ${skillNode.id}) as moon (parent: ${parentNode.name}).`);
       }
     }
   });
   
   // Final check for uncategorized skills (e.g. children of moons, true orphans)
-  console.log("Final Categorization Check:");
   skillHierarchy.forEach(skillNode => {
     if (skillNode.category === 'unknown') {
       console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}, parent ID: ${skillNode.parent_skill_id}) remains uncategorized (category: 'unknown'). This could be a child of a moon or an orphan with an unresolved parent link.`);
@@ -233,7 +215,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
   
-  console.log("Skill categorization complete.");
   skillHierarchy.forEach(s => console.log(`Skill: ${s.name} (ID: ${s.id}), Category: ${s.category}, Parent: ${s.parent_skill_id || 'None'}, UserUnlocked: ${s.isUnlockedByUser}, Level: ${s.userLevel}`));
 
 
@@ -244,24 +225,20 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
     if (skill.category === 'star') {
       let starLevelSum = skill.isUnlockedByUser ? skill.userLevel : 0; // Start with star's own level if unlocked
-      console.log(`Calculating level for star: ${skill.name} (ID: ${skill.id}). Initial level (own): ${starLevelSum}`);
 
       // Traverse children (planets) and grandchildren (moons)
       skill.children.forEach(planet => { // planets
         if (planet.isUnlockedByUser) {
           starLevelSum += planet.userLevel;
-          console.log(`  Adding planet ${planet.name} (ID: ${planet.id}) level ${planet.userLevel}. Current sum: ${starLevelSum}`);
         }
         const planetNode = skillHierarchy.get(planet.id); // Get full planet node with its children
         planetNode.children.forEach(moon => { // moons
           if (moon.isUnlockedByUser) {
             starLevelSum += moon.userLevel;
-            console.log(`    Adding moon ${moon.name} (ID: ${moon.id}) level ${moon.userLevel}. Current sum: ${starLevelSum}`);
           }
         });
       });
       calculatedLevel = starLevelSum;
-      console.log(`Final calculated level for star ${skill.name} (ID: ${skill.id}): ${calculatedLevel}`);
     }
     
     finalOutputSkills.push({
@@ -279,6 +256,5 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     return rest;
   });
 
-  console.log("Final processed skills for galaxy:", cleanedFinalOutputSkills.map(s => ({id: s.id, name: s.name, category: s.category, userLevel: s.userLevel, levelForColor: s.levelForColor })));
   return cleanedFinalOutputSkills;
 };
