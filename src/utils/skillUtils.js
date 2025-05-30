@@ -174,9 +174,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  skillHierarchy.forEach(s => { if(s.children.length > 0) console.log(`Skill ${s.name} has ${s.children.length} children.`) });
-
-
   // Pass 1: Categorize Stars
   skillHierarchy.forEach(skillNode => {
     if (skillNode.parent_skill_id === null || skillNode.parent_skill_id === undefined) {
@@ -214,8 +211,6 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}) is categorized as ${skillNode.category} but its parent (ID: ${skillNode.parent_skill_id}) is missing from skillHierarchy.`);
     }
   });
-  
-  skillHierarchy.forEach(s => console.log(`Skill: ${s.name} (ID: ${s.id}), Category: ${s.category}, Parent: ${s.parent_skill_id || 'None'}, UserUnlocked: ${s.isUnlockedByUser}, Level: ${s.userLevel}`));
 
 
   // Calculate levelForColor

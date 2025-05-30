@@ -251,9 +251,7 @@ const GalacticActivityMap = () => {
         .style("cursor", "pointer"); // Optional: show pointer cursor
 
       eventCircles
-        .on("mouseover", (event, d) => {
-          console.log("--- Tooltip Mouseover START ---"); // Log start
-          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
+        .on("mouseover", (event, d) => {          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
           tooltipD3.style("transform", "translate(0px, 0px) scale(1)"); // Use tooltipD3
           tooltipD3 // Use tooltipD3
             .html(`
@@ -276,51 +274,40 @@ const GalacticActivityMap = () => {
           const winWidth = window.innerWidth;
           const winHeight = window.innerHeight;
 
-          console.log("Tooltip Dimensions:", { tooltipWidth, tooltipHeight });
-          console.log("Window Dimensions:", { winWidth, winHeight });
-          console.log("Mouse Position (event.pageX, event.pageY):", { pageX: event.pageX, pageY: event.pageY });
 
           const offsetX = 15 // Default offset X
           const offsetY = 15 // Default offset Y
-          console.log("Offsets (Default):", { offsetX, offsetY });
 
           let ttLeft = event.pageX + offsetX;
           let ttTop = event.pageY + offsetY;
-          console.log("Initial ttLeft, ttTop:", { ttLeft, ttTop });
 
           const flipOffsetX = 5; // Offset when flipped to the left
           const flipOffsetY = 5; // Offset when flipped to the top (places bottom of tooltip 5px above cursor)
 
           // Adjust if tooltip goes off the right edge
           if (ttLeft + tooltipWidth > winWidth) {
-            console.log("Tooltip would go off RIGHT edge. Flipping to left of cursor.");
             ttLeft = event.pageX - tooltipWidth - flipOffsetX; // Use flipOffsetX
           }
 
           // Adjust if tooltip goes off the bottom edge
           if (ttTop + tooltipHeight > winHeight) {
-            console.log("Tooltip would go off BOTTOM edge. Flipping to top of cursor.");
             ttTop = event.pageY - tooltipHeight - flipOffsetY; // Use flipOffsetY
           }
 
           // (Optional) Prevent going off left/top edges if adjustments were aggressive
           // This logic might need to use flipOffsetX/Y as well if it results in better positioning
           if (ttLeft < 0) {
-            console.log("Tooltip would go off LEFT edge (after flip or initial). Adjusting.");
             ttLeft = flipOffsetX; // Position with some padding from the left edge
           }
           if (ttTop < 0) {
-            console.log("Tooltip would go off TOP edge (after flip or initial). Adjusting.");
             ttTop = flipOffsetY; // Position with some padding from the top edge
           }
           
-          console.log("Final ttLeft, ttTop:", { ttLeft, ttTop });
           // Adaptive positioning logic END
 
           tooltipD3 // Use tooltipD3
             .style("left", ttLeft + "px")
             .style("top", ttTop + "px");
-          console.log("--- Tooltip Mouseover END ---"); // Log end
         })
         .on("mouseout", () => {
           tooltipD3.transition().duration(500).style("opacity", 0); // Use tooltipD3
