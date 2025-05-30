@@ -60,7 +60,7 @@ const TargetingScanner = () => {
                   Match: {task.skillMatchPercent}% | Sensitivity: {task.timeSensitivity}
                   </div>
                   <div className="task-actions">
-                  {task.assigned_user_ids?.includes(profile.id) ? (
+                  {task.assigned_user_ids?.includes(Number(profile.id)) ? (
                   <button 
                   style={{ backgroundColor: '#ff4444', borderColor: '#ff4444', color: '#0A0A2E' }}
                   onClick={async () => {
