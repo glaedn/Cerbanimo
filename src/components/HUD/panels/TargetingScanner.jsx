@@ -8,7 +8,7 @@ import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
 
 const TargetingScanner = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { relevantTasks, loading: tasksLoading, error: tasksError } = useRelevantTasks(profile?.id);
+  const { relevantTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useRelevantTasks(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const toggleMinimize = (e) => {
@@ -77,6 +77,7 @@ const TargetingScanner = () => {
                     }
                     );
                     alert(`Task "${task.name}" dropped successfully!`);
+                    refetchTasks(); // Refetch tasks after dropping
                   } catch (error) {
                     console.error('Error dropping task:', error);
                     // Handle error appropriately
@@ -105,6 +106,7 @@ const TargetingScanner = () => {
                     );
                     if (response.status === 200) {
                       alert(`Task "${task.name}" accepted successfully!`);
+                      refetchTasks(); // Refetch tasks after accepting
                     }
                   } catch (error) {
                     console.error('Error accepting task:', error);
