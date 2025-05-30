@@ -56,10 +56,10 @@ const CommandDeck = () => {
               <div className="project-info">
 
                 <span className="project-name">{p.name}</span>
-
+                <br />
                 <span className="project-details">
 
-                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} | Credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
+                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> Credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
 
                 </span>
 

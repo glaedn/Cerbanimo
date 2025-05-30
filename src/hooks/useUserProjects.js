@@ -62,7 +62,8 @@ const useUserProjects = (userId) => {
               const tasks = tasksResponse.data;
               const taskCount = tasks.length;
               const completedTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'completed' || t.status.toLowerCase() === 'archived')).length;
-              const activeTasks = taskCount - completedTasks;
+                const inactiveTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'inactive-assigned' || t.status.toLowerCase() === 'inactive-unassigned')).length;
+                const activeTasks = taskCount - completedTasks - inactiveTasks;
               const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
 
               return {
