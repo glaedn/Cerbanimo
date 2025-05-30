@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import "./GalacticActivityMap.css";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
 // Performance Note:
@@ -13,11 +14,12 @@ const MAP_HEIGHT = window.innerHeight * 0.8;
 
 const GalacticActivityMap = () => {
   const d3Container = useRef(null);
-  const tooltipRef = useRef(null);
+  // const tooltipRef = useRef(null); // Removed: Tooltip will be managed by D3 and appended to body
   const [starData, setStarData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
   // Helper functions (getStarColor, getStarRadius, getStarBrightness)
   // Performance Note: These functions are called per star during rendering or updates.
@@ -142,6 +144,20 @@ const GalacticActivityMap = () => {
 
   // useEffect for D3 rendering
   useEffect(() => {
+    // --- Tooltip Management with D3 START ---
+    // Remove any old tooltip managed by this instance
+    d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+
+    // Create the new tooltip attached to the body
+    const tooltipD3 = d3.select("body")
+      .append("div")
+      .attr("class", "galactic-tooltip galactic-tooltip-managed-by-d3") // Add a specific class for removal
+      .style("opacity", 0)
+      .style("position", "absolute") // Crucial: ensure it's absolutely positioned
+      .style("pointer-events", "none") // Crucial: ensure it doesn't intercept mouse events
+      .style("z-index", 1000); // Ensure it's on top
+    // --- Tooltip Management with D3 END ---
+
     if (d3Container.current && !isLoading && !error && starData.length > 0) {
       const { clientWidth, clientHeight } = d3Container.current;
       setMapDimensions({ width: clientWidth, height: clientHeight });
@@ -198,7 +214,7 @@ const GalacticActivityMap = () => {
         y: Math.random() * MAP_HEIGHT,
       })); // Important: simulation is stopped after ticks.
 
-      const stars = svg
+      const visualStars = svg
         .selectAll(".star")
         .data(randomizedStarData, (d) => d.id) // Keying data by d.id is good for object constancy.
         .enter()
@@ -219,13 +235,27 @@ const GalacticActivityMap = () => {
         .style("filter", "url(#glow)")
         .style("animation-delay", () => `${Math.random() * 3}s`);
 
-        
-      const tooltip = d3.select(tooltipRef.current);
+      // const tooltip = d3.select(tooltipRef.current); // Replaced by tooltipD3
+      const tooltip = tooltipD3; // Use the D3 managed tooltip
 
-      stars
+      const eventCircles = svg
+        .selectAll(".star-event-radius") 
+        .data(randomizedStarData, (d) => d.id)
+        .enter()
+        .append("circle")
+        .attr("class", "star-event-radius")
+        .attr("cx", (d) => d.x)
+        .attr("cy", (d) => d.y)
+        .attr("r", (d) => getStarRadius(d) + 10) // Increased radius
+        .style("fill", "transparent") 
+        .style("cursor", "pointer"); // Optional: show pointer cursor
+
+      eventCircles
         .on("mouseover", (event, d) => {
-          tooltip.transition().duration(200).style("opacity", 0.9);
-          tooltip
+          console.log("--- Tooltip Mouseover START ---"); // Log start
+          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
+          tooltipD3.style("transform", "translate(0px, 0px) scale(1)"); // Use tooltipD3
+          tooltipD3 // Use tooltipD3
             .html(`
               <div class="tooltip-name">${d.name} (${d.type})</div>
               <div class="tooltip-status">Status: ${d.status}</div>
@@ -233,22 +263,111 @@ const GalacticActivityMap = () => {
                 d.lastActivity
               ).toLocaleDateString()}</div>
               <div class="tooltip-contributors">Contributors: ${d.contributors}</div>
-            `)
-            .style("left", event.pageX + 10 + "px")
-            .style("top", event.pageY - 28 + "px");
+            `);
+
+          // Adaptive positioning logic START
+          const tooltipNode = tooltipD3.node(); // Use tooltipD3
+          if (!tooltipNode) {
+            console.error("Tooltip node not found!"); // Should not happen
+            return;
+          }
+          const tooltipWidth = tooltipNode.offsetWidth;
+          const tooltipHeight = tooltipNode.offsetHeight;
+          const winWidth = window.innerWidth;
+          const winHeight = window.innerHeight;
+
+          console.log("Tooltip Dimensions:", { tooltipWidth, tooltipHeight });
+          console.log("Window Dimensions:", { winWidth, winHeight });
+          console.log("Mouse Position (event.pageX, event.pageY):", { pageX: event.pageX, pageY: event.pageY });
+
+          const offsetX = 15 // Default offset X
+          const offsetY = 15 // Default offset Y
+          console.log("Offsets (Default):", { offsetX, offsetY });
+
+          let ttLeft = event.pageX + offsetX;
+          let ttTop = event.pageY + offsetY;
+          console.log("Initial ttLeft, ttTop:", { ttLeft, ttTop });
+
+          const flipOffsetX = 5; // Offset when flipped to the left
+          const flipOffsetY = 5; // Offset when flipped to the top (places bottom of tooltip 5px above cursor)
+
+          // Adjust if tooltip goes off the right edge
+          if (ttLeft + tooltipWidth > winWidth) {
+            console.log("Tooltip would go off RIGHT edge. Flipping to left of cursor.");
+            ttLeft = event.pageX - tooltipWidth - flipOffsetX; // Use flipOffsetX
+          }
+
+          // Adjust if tooltip goes off the bottom edge
+          if (ttTop + tooltipHeight > winHeight) {
+            console.log("Tooltip would go off BOTTOM edge. Flipping to top of cursor.");
+            ttTop = event.pageY - tooltipHeight - flipOffsetY; // Use flipOffsetY
+          }
+
+          // (Optional) Prevent going off left/top edges if adjustments were aggressive
+          // This logic might need to use flipOffsetX/Y as well if it results in better positioning
+          if (ttLeft < 0) {
+            console.log("Tooltip would go off LEFT edge (after flip or initial). Adjusting.");
+            ttLeft = flipOffsetX; // Position with some padding from the left edge
+          }
+          if (ttTop < 0) {
+            console.log("Tooltip would go off TOP edge (after flip or initial). Adjusting.");
+            ttTop = flipOffsetY; // Position with some padding from the top edge
+          }
+          
+          console.log("Final ttLeft, ttTop:", { ttLeft, ttTop });
+          // Adaptive positioning logic END
+
+          tooltipD3 // Use tooltipD3
+            .style("left", ttLeft + "px")
+            .style("top", ttTop + "px");
+          console.log("--- Tooltip Mouseover END ---"); // Log end
         })
         .on("mouseout", () => {
-          tooltip.transition().duration(500).style("opacity", 0);
+          tooltipD3.transition().duration(500).style("opacity", 0); // Use tooltipD3
+          tooltipD3.style("transform", "translate(-10px, -10px) scale(0.95)"); // Use tooltipD3
+        })
+        .on("click", (event, d) => {
+          const [type, idOnly] = d.id.split('-'); 
+
+          if (type === "task") {
+            const projectId = d.raw_data.project_id;
+            if (projectId) {
+              navigate(`/visualizer/${projectId}/${idOnly}`);
+            } else {
+              console.error("Project ID not found for task:", d);
+            }
+          } else if (type === "project") {
+            navigate(`/visualizer/${idOnly}/`);
+          } else if (type === "community") {
+            navigate(`/communityhub/${idOnly}`);
+          }
         });
+
+      // Create sonar ping effect for urgent tasks
+      const urgentStarsData = randomizedStarData.filter(d => d.status.toLowerCase().includes("urgent"));
+
+      svg.selectAll(".sonar-ping-effect")
+         .data(urgentStarsData, (d) => d.id) // Use urgent stars data
+         .enter()
+         .append("circle")
+         .attr("class", "sonar-ping-effect")
+         .attr("cx", (d) => d.x)
+         .attr("cy", (d) => d.y)
+         .attr("r", 0) // Set initial radius to 0, as per new animation's 0% state
+         .attr("fill", "none") 
+         .attr("stroke", (d) => getStarColor(d)) // Use star's urgent color
+         .style("pointer-events", "none");
 
       // Performance Note: Pulsing animations.
       // Applying to all 'active'/'urgent' stars. If this becomes too many,
       // consider limiting the number of simultaneously pulsing stars or simplifying the animation.
       // D3 transitions are generally efficient for this.
-      stars.each(function (d) {
+      visualStars.each(function (d) { // Ensure this uses visualStars
         const starElement = d3.select(this);
         const status = d.status.toLowerCase();
-        if (status.startsWith("active") || status.includes("urgent")) {
+        // If a star is urgent, it gets the CSS sonar.
+        // If it's just active (not urgent), it gets JS pulse.
+        if (status.startsWith("active") && !status.includes("urgent")) { 
           pulse(starElement, getStarRadius(d));
         }
       });
@@ -280,8 +399,13 @@ const GalacticActivityMap = () => {
     // 2. WebGL: For even better performance and 3D capabilities, libraries like Three.js or PixiJS.
     // 3. Aggregation/Clustering: Group distant or less important stars into larger nodes.
     // 4. Virtualization: Only render stars currently in the viewport (if panning/zooming is added).
+
+    // Return a cleanup function for when the component unmounts
+    return () => {
+      d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+    };
   
-  }, [starData, isLoading, error]); // Removed MAP_WIDTH, MAP_HEIGHT from deps as they are module-level constants
+  }, [starData, isLoading, error, navigate]); // Added navigate to dependency array
 
   if (isLoading) {
     return (
@@ -313,11 +437,11 @@ const GalacticActivityMap = () => {
       >
         {/* SVG is managed by D3 inside this div */}
       </div>
-      <div
+      {/* <div
         ref={tooltipRef}
         className="galactic-tooltip"
         style={{ opacity: 0 }}
-      ></div>
+      ></div> */} {/* Tooltip is now managed by D3 and appended to body */}
     </div>
   );
 };
