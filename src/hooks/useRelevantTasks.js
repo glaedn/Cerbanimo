@@ -52,6 +52,7 @@ const useRelevantTasks = (userId) => {
         ]);
 
         const allTasks = tasksResponse.data;
+        console.log('All Tasks:', allTasks);
         const skillsPool = optionsResponse.data.skillsPool;
         const userProfile = profileResponse.data; // Contains user's actual ID `userProfile.id`
 
@@ -93,13 +94,15 @@ const useRelevantTasks = (userId) => {
           .map(task => ({
             id: task.id,
             name: task.name,
+            skill_name: task.skill_name || null,
             status: task.status || 'Unknown',
+            assigned_user_ids: task.assigned_user_ids || [],
             requiredSkillId: task.skill_id || null,
             requiredSkillLevel: task.skill_level === undefined ? 'Any' : task.skill_level,
             skillMatchPercent: (task.skill_id && userSkills.find(us => us.id === task.skill_id)) ? 100 : 'N/A',
             timeSensitivity: task.status && task.status.toLowerCase().includes('urgent') ? 'High' : 'Normal',
           }));
-        
+        console.log('Filtered Relevant Tasks:', filteredTasks);
         setRelevantTasks(filteredTasks);
 
       } catch (err) {
