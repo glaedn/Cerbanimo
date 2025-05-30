@@ -7,7 +7,8 @@ import {
 const getAllTasks = async () => {
   const query = `
     SELECT 
-      *
+      tasks.*,
+      skills.name as skill_name
     FROM tasks
     JOIN skills ON tasks.skill_id = skills.id;
   `;
