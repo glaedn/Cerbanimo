@@ -68,3 +68,53 @@
   color: var(--theme-colors-accentBlue, #4DABF7); /* Already themed */
   font-weight: var(--theme-typography-fontWeightMedium, 500);
 }
+
+/* Styles for Constituent Skills Section */
+.constituent-skills-section {
+  margin-top: var(--theme-spacing-md, 1.5rem);
+  padding-top: var(--theme-spacing-sm, 1rem);
+  border-top: 1px solid var(--theme-colors-border, #444444);
+}
+
+.constituent-skills-title {
+  /* color is set inline via theme.colors.accentHue1 in JSX */
+  font-size: var(--theme-typography-fontSizeMd, 1rem); /* e.g., 1rem */
+  margin-bottom: var(--theme-spacing-sm, 0.75rem);
+  font-weight: var(--theme-typography-fontWeightMedium, 500);
+}
+
+.constituent-skills-list {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.constituent-skill-item {
+  font-size: var(--theme-typography-fontSizeSm, 0.875rem); /* e.g., 0.875rem */
+  margin-bottom: var(--theme-spacing-xs, 0.5rem);
+  /* Uses default text color from .skill-detail-popup-content */
+}
+
+.constituent-skill-item .constituent-skill-category {
+  font-style: italic;
+  color: var(--theme-colors-textDisabled, #888888); /* Subtler color for category */
+  margin-left: var(--theme-spacing-xs, 0.25rem);
+}
+
+/* Progress Bar Styles (if used for non-star skills) */
+.skill-progress-bar-container {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--theme-colors-backgroundVariant, #333333); /* Themed background */
+  margin-top: var(--theme-spacing-xs, 0.25rem);
+  margin-bottom: var(--theme-spacing-sm, 1rem);
+  overflow: hidden; 
+}
+
+.skill-progress-bar {
+  height: 100%;
+  border-radius: 4px; /* Match container for smooth look */
+  background-color: var(--theme-colors-primary, #00F3FF); /* Themed fill */
+  transition: width 0.3s ease-in-out;
+}
