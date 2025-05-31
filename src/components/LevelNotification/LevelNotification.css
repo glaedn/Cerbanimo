@@ -1,30 +1,31 @@
 /* General container for the whole notification area */
-/* General container for the whole notification area */
 .level-notification-container {
     position: fixed;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 1050;
-    padding: 20px; /* Increased padding */
-    background-color: #FFFFFF; /* Cleaner white background */
-    border-radius: 16px; /* Softer corners */
-    width: 380px; /* Slightly wider */
-    max-width: 95%; /* Responsive for smaller screens */
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12); /* More subtle, modern shadow */
+    padding: 18px; /* Adjusted padding */
+    background-color: rgba(10, 10, 46, 0.85); /* Dark HUD panel */
+    border: 1px solid #00F3FF; /* Primary cyan border */
+    border-radius: 8px; /* Standard border-radius */
+    width: 360px; /* Adjusted width */
+    max-width: 90%;
+    box-shadow: 0 0 10px #00F3FF7A, inset 0 0 8px rgba(0, 243, 255, 0.2); /* Cyan glow */
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Modern system font stack */
+    color: #FFFFFF; /* Default white text */
+    font-family: 'Inter', sans-serif; /* Base HUD font */
 }
 
-/* Fade-in and slide-up animation for the entire notification */
+/* Fade-in and slide-up animation */
 .notification-fade-in {
-    animation: fadeInAndSlideUpAnimation 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; /* Smoother easing */
+    animation: fadeInAndSlideUpAnimation 0.5s ease-out forwards;
 }
 
 @keyframes fadeInAndSlideUpAnimation {
     0% {
         opacity: 0;
-        transform: translateY(30px) translateX(-50%); /* Start a bit lower */
+        transform: translateY(25px) translateX(-50%);
     }
     100% {
         opacity: 1;
@@ -32,26 +33,35 @@
     }
 }
 
-/* Skill Message & Level Up Message Styling (Combined as it's one Paper component in JSX) */
-/* The .level-up-message class is on the Paper component from MUI */
+/* Skill Message & Level Up Message Area (Paper component in JSX) */
+/* Class .level-up-message is on the Paper component */
 .level-up-message {
-    /* background-color: #E8F5E9; /* Very light green for general skill messages or a neutral like #F8F9FA */
-    /* color: #333; /* Darker text for readability */
-    /* padding: 16px; */ /* Adjusted via sx prop in JSX now */
-    /* border-radius: 12px; */ /* Softer corners, also sx prop */
-    /* box-shadow: 0 2px 8px rgba(0,0,0,0.08); */ /* Lighter shadow for internal elements */
-    text-align: center;
-    /* margin-bottom: 16px; */ /* sx prop */
-    animation: contentAppearAnimation 0.7s ease-out forwards; /* Generic content appearance */
+    /* Background is transparent or handled by sx prop for conditional styling in JSX */
+    /* sx={{ backgroundColor: 'transparent', p: 1, textAlign: 'center' }} */
+    /* Padding and margin-bottom are handled by sx props in JSX */
+    text-align: center; /* Ensures text within Typography is centered */
+    animation: contentAppearAnimation 0.6s ease-out 0.2s forwards; /* Delayed start for content */
+    opacity: 0; /* Start hidden for animation */
 }
 
-/* Specific styling for Level Up text can be done via Typography sx props or more specific classes if needed */
-/* For example, if Typography for "Level Up!" has a specific class or style */
+/* Typography inside .level-up-message will be styled by sx props primarily */
+/* Example: Titles (Level Up, Skill Name) */
+/* .level-up-title { */
+    /* font-family: 'Orbitron', sans-serif; */
+    /* color: #00F3FF; */ /* Primary Cyan */
+    /* text-shadow: 0 0 5px #00F3FF; */ /* Cyan Glow */
+/* } */
 
-@keyframes contentAppearAnimation { /* Renamed from levelUpAnimation for broader use */
+/* Example: Descriptive text (XP Gained in...) */
+/* .level-up-description { */
+    /* font-family: 'Inter', sans-serif; */
+    /* color: #E0E0E0; */ /* Slightly off-white */
+/* } */
+
+@keyframes contentAppearAnimation {
     0% {
         opacity: 0;
-        transform: scale(0.9) translateY(10px);
+        transform: scale(0.95) translateY(5px);
     }
     100% {
         opacity: 1;
@@ -59,12 +69,12 @@
     }
 }
 
-/* XP Bar Section - wrapper for bar and XP text */
+/* XP Bar Section */
 .xp-bar-section {
-    padding: 12px; /* Adjusted padding */
-    background-color: transparent; /* Make it transparent if container has bg */
-    border-radius: 10px; /* Softer corners for this section */
-    margin-top: 10px; /* Ensure spacing from the message paper above */
+    padding: 10px 5px; /* Adjusted padding */
+    background-color: rgba(0,0,0,0.2); /* Subtle darker shade */
+    border-radius: 6px;
+    margin-top: 12px; /* Spacing from message paper */
 }
 
 .xp-bar-display-container {
@@ -72,8 +82,7 @@
     align-items: center;
 }
 
-/* LinearProgress itself is styled via MUI sx props for background and bar color.
-   This CSS targets the textual display over it. */
+/* Textual progress over the bar */
 .textual-progress-display {
     position: absolute;
     top: 0;
@@ -83,37 +92,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #333; /* Darker text for better contrast on light progress bar */
-    font-family: 'Menlo', 'Monaco', 'Consolas', "Courier New", monospace; /* Monospaced font */
-    font-size: 0.85em; /* Slightly smaller */
-    font-weight: 500; /* Medium weight */
+    font-family: 'Inter', sans-serif; /* Or Monospace like 'Roboto Mono' */
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #0A0A2E; /* Dark text to contrast with cyan bar */
+    /* Alternative: Bright white text with strong dark shadow if bar is dark or varied */
+    /* color: #FFFFFF; */
+    /* text-shadow: 0 0 3px #000000, 0 0 5px #000000; */
     pointer-events: none;
-    /* text-shadow: none; */ /* Removed shadow for cleaner look, ensure bar color gives enough contrast */
 }
 
-/* Styling for level numbers and XP text */
-/* Using sx props for Typography in the JSX is preferred for MUI components.
-   These are fallbacks or can be used if sx props are not sufficient. */
-.xp-bar-display-container .MuiTypography-root,
-.xp-bar-section .MuiTypography-root {
-    text-align: center;
-    color: #555; /* Consistent text color */
+/* Styling for Lvl numbers and XP text (around the bar) */
+.xp-bar-display-container .MuiTypography-root {
+    font-family: 'Inter', sans-serif; /* Consistent font */
+    color: #E0E0E0; /* Off-white for readability */
 }
 
-/* Example of how LinearProgress track and bar could be targeted if not using sx props,
-   though sx is preferred for MUI:
-.MuiLinearProgress-root {
-    background-color: #E9ECEF !important;
+.xp-bar-section .MuiTypography-root[variant="body2"] { /* Specifically target XP text */
+    font-family: 'Inter', sans-serif;
+    color: #A0A0A0; /* Dimmer white/grey for XP text */
+    font-size: 0.85rem;
+    margin-top: 6px;
 }
-.MuiLinearProgress-bar {
-    background-color: #007bff !important; / Primary blue or theme color
-}
-*/
 
-/* Legacy class, can be removed if not used */
+
+/* Unused legacy class */
 .level-text {
-    /* This class seems unused based on the JSX, can be removed. */
-    /* text-align: center; */
-    /* margin-bottom: 8px; */
-    /* font-weight: bold; */
+    /* display: none; */ /* Can be removed */
 }

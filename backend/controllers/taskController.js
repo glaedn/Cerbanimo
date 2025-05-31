@@ -653,6 +653,7 @@ const approveTask = async (taskId, io, client) => {
       [skill_id]
     );
     const skillName = skillNameQuery.rows[0]?.name || "Unknown Skill";
+    console.log("Fetched skillName:", skillName);
 
     console.log(
       "Assigned users:",
@@ -767,6 +768,7 @@ const approveTask = async (taskId, io, client) => {
       });
       const room = `user_${user_id}`;
       console.log(`Emitting to ${room}`);
+      console.log("Emitting levelUpdate to room:", room, "with payload:", { previousXP, newXP, previousLevel, newLevel, skillName });
       io.to(room).emit("levelUpdate", {
         previousXP,
         newXP,
