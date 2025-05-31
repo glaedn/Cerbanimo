@@ -9,52 +9,72 @@ const generateProgressText = (progress, totalChars = 10) => {
     return '='.repeat(numEquals) + '-'.repeat(numDashes);
 };
 
+const getXPForLevel = (level) => {
+    if (level <= 1) return 0;
+    return 40 * Math.pow(level - 1, 2);
+};
+
 const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillName }) => {
     console.log("LevelNotification received props:", { previousXP, newXP, previousLevel, newLevel, skillName });
     const [isVisible, setIsVisible] = useState(false);
-    const [currentXPProgress, setCurrentXPProgress] = useState(previousXP || 0);
-    const [textualProgress, setTextualProgress] = useState(generateProgressText(previousXP || 0));
+    const [currentXPProgress, setCurrentXPProgress] = useState(0); // Initialize with 0, effect will set actual start
+    const [textualProgress, setTextualProgress] = useState(generateProgressText(0));
     const [showLevelUp, setShowLevelUp] = useState(false);
     
     const hideTimerRef = useRef(null);
 
-    // Main effect for visibility, animation triggering, and auto-hide
     useEffect(() => {
-        // Only trigger if there's a meaningful change.
-        // Check if newXP or newLevel is defined and different from previous state or if it's an initial valid trigger.
-        // This condition might need refinement based on how props are expected to update.
-        // For now, let's assume any change in newXP or newLevel should re-trigger.
-        if (newXP !== undefined && newLevel !== undefined) {
-            
+        // Ensure all props are defined before proceeding
+        if (typeof newXP === 'number' && typeof newLevel === 'number' && typeof previousXP === 'number' && typeof previousLevel === 'number') {
             setIsVisible(true);
-            setShowLevelUp(newLevel > previousLevel);
+            const didLevelUp = newLevel > previousLevel;
+            setShowLevelUp(didLevelUp);
 
-            // Reset progress to previousXP then schedule update to newXP to re-trigger animation
-            setCurrentXPProgress(previousXP || 0);
-            setTextualProgress(generateProgressText(previousXP || 0));
+            const currentLevelForBar = newLevel; // Bar always shows progress for the current level (newLevel)
+            const nextLevelForBar = newLevel + 1;
 
-            // Short delay to allow React to process state update and re-render if necessary
-            // before starting the animation to newXP.
-            const animationTriggerTimeout = setTimeout(() => {
-                setCurrentXPProgress(newXP);
-                setTextualProgress(generateProgressText(newXP));
-            }, 50); // 50ms delay
+            const xpAtCurrentLevelStart = getXPForLevel(currentLevelForBar);
+            const xpAtNextLevelStart = getXPForLevel(nextLevelForBar);
+            const totalXPInLevelBand = xpAtNextLevelStart - xpAtCurrentLevelStart;
 
-            // Clear previous hide timer if it exists
-            if (hideTimerRef.current) {
-                clearTimeout(hideTimerRef.current);
+            let animStartPercent = 0;
+            if (!didLevelUp) { // No level up, calculate progress within the same level band
+                const xpAtPrevLevelActualStart = getXPForLevel(previousLevel); // previousLevel is same as currentLevelForBar here
+                const xpAtNextFromPrevActualStart = getXPForLevel(previousLevel + 1); // nextLevelForBar
+                const totalXPInPrevActualBand = xpAtNextFromPrevActualStart - xpAtPrevLevelActualStart;
+
+                if (totalXPInPrevActualBand > 0) {
+                    animStartPercent = ((previousXP - xpAtPrevLevelActualStart) / totalXPInPrevActualBand) * 100;
+                } else if (previousXP >= xpAtPrevLevelActualStart) { // handles case where totalXPInPrevActualBand is 0 (e.g. max level)
+                    animStartPercent = 100;
+                }
+            } else { // Leveled up, start animation from 0 for the new level's progress display
+                animStartPercent = 0;
             }
+            animStartPercent = Math.max(0, Math.min(animStartPercent, 100));
 
-            // Set new timer to hide the notification
-            hideTimerRef.current = setTimeout(() => {
-                setIsVisible(false);
-            }, 4000); // Hide after 4 seconds
+            let targetDisplayPercent = 0;
+            if (totalXPInLevelBand > 0) {
+                targetDisplayPercent = ((newXP - xpAtCurrentLevelStart) / totalXPInLevelBand) * 100;
+            } else if (newXP >= xpAtCurrentLevelStart) { // At max level or XP formula makes band 0
+                targetDisplayPercent = 100;
+            }
+            targetDisplayPercent = Math.max(0, Math.min(targetDisplayPercent, 100));
 
-            return () => {
-                clearTimeout(animationTriggerTimeout); // Clear animation trigger timeout as well
-            };
+            setCurrentXPProgress(animStartPercent);
+            setTextualProgress(generateProgressText(animStartPercent));
+
+            const animationTimeout = setTimeout(() => {
+                setCurrentXPProgress(targetDisplayPercent);
+                setTextualProgress(generateProgressText(targetDisplayPercent));
+            }, 50);
+
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = setTimeout(() => setIsVisible(false), 6000);
+
+            return () => clearTimeout(animationTimeout);
         }
-    }, [newXP, newLevel, previousXP, previousLevel]); // Dependencies that trigger the notification
+    }, [newXP, newLevel, previousXP, previousLevel]);
 
     // Cleanup timer on component unmount
     useEffect(() => {
@@ -136,7 +156,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillNa
                         color: '#00F3FF', // Cyan for level numbers
                         fontSize: '0.9rem',
                     }}>
-                        LVL {previousLevel}
+                        Lvl {newLevel}
                     </Typography>
                     <Box sx={{ flexGrow: 1, position: 'relative', height: '22px' /* Slightly thicker bar */ }}>
                         <LinearProgress 
@@ -164,7 +184,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillNa
                         color: '#00F3FF', // Cyan for level numbers
                         fontSize: '0.9rem',
                     }}>
-                        LVL {newLevel}
+                        Lvl {newLevel + 1}
                     </Typography>
                 </Box>
                 <Typography variant="body2" sx={{
