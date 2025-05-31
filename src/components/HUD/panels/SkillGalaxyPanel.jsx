@@ -285,27 +285,17 @@ const SkillGalaxyPanel = () => {
             .style('fill', d => {
               const category = d.category || 'star';
               let fillColor;
-              if (category === 'star') {
-                fillColor = getStarGradientUrl(d.levelForColor); // Stars use gradients based on their aggregated levelForColor
-              } else { // For planets, moons, satellites
-                // Dependencies use their own userLevel to determine their base color
-                const actualLevel = d.userLevel || 0; // Use their own userLevel
-                const baseColorForDependency = getStarColor(actualLevel); // Get color based on its own level
 
-                // Apply pastel effect. Adjust lightness factors as needed.
-                // These factors can remain the same or be tweaked if the new color system requires it.
-                let lightnessFactor = 0.8; // Default pastel factor
-                if (category === 'planet') lightnessFactor = 0.7;
-                else if (category === 'moon') lightnessFactor = 0.85;
-                else if (category === 'satellite') lightnessFactor = 0.95;
+              // All categories will now use gradients based on their respective levels.
+              // Stars use 'levelForColor' (aggregated from children).
+              // Dependencies use their own 'userLevel'.
+              const levelForColoring = (category === 'star') ? (d.levelForColor || 0) : (d.userLevel || 0);
 
-                fillColor = memoizedGetPastelColor(baseColorForDependency, lightnessFactor);
-              }
+              fillColor = getStarGradientUrl(levelForColoring); // Use gradients for all
 
               if (!fillColor || fillColor === "none") {
-                console.error(`[D3 Debug] Invalid fill for node ${d.id} (${d.name}, category: ${category}): ${fillColor}. Defaulting to primary.`);
-                // Provide a fallback color to ensure visibility if logic fails
-                fillColor = theme.colors.primary;
+                console.error(`[D3 Debug] Invalid fill for node ${d.id} (${d.name}, category: ${category}): ${fillColor}. Defaulting to primary gradient.`);
+                fillColor = getStarGradientUrl(0); // Default to base gradient
               }
               return fillColor;
             })
@@ -502,10 +492,15 @@ const SkillGalaxyPanel = () => {
             return newSize + 'px';
           })
           .style('display', function(d) { // MODIFIED PART
+            // const currentZoom = event.transform.k; // currentZoom is already defined in the outer scope
             if (d.category === 'star') {
-              return currentZoom < 0.5 ? 'none' : 'block';
-            } else { // For planets, moons, and future satellites
+              // Star labels should be visible longer when zooming out.
+              // Hide star labels if currentZoom is less than 0.125 (more zoomed out)
               return currentZoom < 0.125 ? 'none' : 'block';
+            } else { // For planets, moons, and satellites
+              // Other labels should require more zooming in to be visible.
+              // Hide other labels if currentZoom is less than 0.5
+              return currentZoom < 0.5 ? 'none' : 'block';
             }
           });
       });
