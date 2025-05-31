@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Chip } from '@mui/material';
 import './ProjectPages.css';
 import ReactMarkdown from 'react-markdown';
+import useSkillData from '../hooks/useSkillData';
 
 const ProjectPages = () => {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -19,6 +20,7 @@ const ProjectPages = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { allSkills } = useSkillData();
   
   // Fetch user profile for skills
   const fetchUserProfile = async () => {
@@ -266,17 +268,29 @@ const ProjectPages = () => {
                 console.log(`Current user ID:`, userProfile.id);
                 console.log(`Is Assigned:`, isAssigned);
 
+                const skillName = allSkills.find(skill => Number(skill.id) === Number(task.skill_id))?.name || 'Unknown Skill';
                 return (
                   <div key={task.id} className="task-card">
                     <Typography variant="subtitle1" sx={{ color: 'primary.main' }}>{task.name}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{task.description}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{task.description}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {task.status}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {task.skill_level})</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} tokens</Typography>
                     <Button
                       variant="contained"
                       size="small"
-                      sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black' }}
+                      sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black', mr: 1 }}
                       onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
                     >
                       {isAssigned ? 'Drop' : 'Accept'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+                      onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
+                    >
+                      View Task
                     </Button>
                   </div>
                 );
