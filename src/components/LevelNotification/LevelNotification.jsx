@@ -9,7 +9,7 @@ const generateProgressText = (progress, totalChars = 10) => {
     return '='.repeat(numEquals) + '-'.repeat(numDashes);
 };
 
-const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel }) => {
+const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillName }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentXPProgress, setCurrentXPProgress] = useState(previousXP || 0);
     const [textualProgress, setTextualProgress] = useState(generateProgressText(previousXP || 0));
@@ -71,19 +71,25 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel }) => {
 
     return (
         // Adding a fade-in animation class for when it becomes visible
-        <Box className="level-notification-container notification-fade-in"> 
-            {showLevelUp && (
-                <Paper elevation={4} className="level-up-message"> {/* Animation is on this class */}
-                    <Typography variant="h3" component="div" sx={{ fontWeight: 'bold' }}>
-                        {newLevel}
+        <Box className="level-notification-container notification-fade-in">
+            <Paper elevation={4} className="level-up-message" sx={{ mb: 2, p: 1, textAlign: 'center' }}>
+                {showLevelUp ? (
+                    <>
+                        <Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
+                            {skillName || 'Skill'} Leveled Up!
+                        </Typography>
+                        <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
+                            Level {newLevel}
+                        </Typography>
+                    </>
+                ) : (
+                    <Typography variant="h6" component="div">
+                        XP Gained in {skillName || 'Skill'}
                     </Typography>
-                    <Typography variant="h5" component="div">
-                        Level Up!
-                    </Typography>
-                </Paper>
-            )}
+                )}
+            </Paper>
 
-            <Box className="xp-bar-section" sx={{ mt: showLevelUp ? 2 : 0 }}>
+            <Box className="xp-bar-section">
                 <Box className="xp-bar-display-container" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                     <Typography variant="body2" sx={{ minWidth: 35, textAlign: 'center', mr: 1 }}>
                         Lvl {previousLevel}
@@ -103,7 +109,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel }) => {
                     </Typography>
                 </Box>
                 <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
-                    XP: {previousXP || 0} - {newXP || 0}
+                    XP: {previousXP || 0} → {newXP || 0}
                 </Typography>
             </Box>
         </Box>

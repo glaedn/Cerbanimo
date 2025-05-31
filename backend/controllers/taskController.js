@@ -647,6 +647,13 @@ const approveTask = async (taskId, io, client) => {
       creator_id,
     } = taskResult.rows[0];
 
+    // Fetch skill name
+    const skillNameQuery = await localClient.query(
+      `SELECT name FROM skills WHERE id = $1`,
+      [skill_id]
+    );
+    const skillName = skillNameQuery.rows[0]?.name || "Unknown Skill";
+
     console.log(
       "Assigned users:",
       assigned_user_ids,
@@ -765,6 +772,7 @@ const approveTask = async (taskId, io, client) => {
         newXP,
         previousLevel,
         newLevel,
+        skillName,
       });
     }
 
