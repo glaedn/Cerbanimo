@@ -696,87 +696,91 @@ const approveTask = async (taskId, io, client) => {
       return { error: "Skill not found for this task", status: 404 };
     }
 
-    let unlockedUsers = skillsResult.rows[0].unlocked_users || [];
-    let updatedUsers = [];
-
-    if (unlockedUsers.length === 1 && unlockedUsers[0] === null) {
-      unlockedUsers = [];
-    }
+    let rawUnlockedUsers = skillsResult.rows[0].unlocked_users || [];
+    console.log("Initial raw unlockedUsers from DB:", JSON.stringify(rawUnlockedUsers));
 
     const calculateLevel = (exp) => {
       return Math.floor(Math.sqrt(exp / 40)) + 1;
     };
 
-    for (const userId of assigned_user_ids) {
-      let found = false;
-
-      for (let entry of unlockedUsers) {
-        let parsedEntry;
-        try {
-          parsedEntry = typeof entry === "string" ? JSON.parse(entry) : entry;
-          if (typeof parsedEntry === "string")
-            parsedEntry = JSON.parse(parsedEntry);
-          if (typeof parsedEntry === "string") {
-            parsedEntry = JSON.parse(
-              parsedEntry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, "")
-            );
-          }
-        } catch (err) {
-          console.error("Error parsing entry:", err, "Entry:", entry);
-          continue;
+    let parsedSkillEntries = [];
+    if (Array.isArray(rawUnlockedUsers)) {
+        for (const entry of rawUnlockedUsers) {
+            if (entry === null && rawUnlockedUsers.length === 1) continue; // Skip if it's a single null entry placeholder
+            console.log("Parsing raw entry:", entry, "type:", typeof entry);
+            let parsedEntry;
+            try {
+                if (typeof entry === 'string') {
+                    try {
+                        parsedEntry = JSON.parse(entry);
+                    } catch (e1) {
+                        console.log("Simple JSON.parse failed for entry, trying replacement parse. Error:", e1.message, "Entry:", entry);
+                        parsedEntry = JSON.parse(entry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, ""));
+                    }
+                } else {
+                    parsedEntry = entry; // Assume it's already an object
+                }
+                if (parsedEntry && typeof parsedEntry.user_id !== 'undefined') { // Basic validation
+                    parsedSkillEntries.push(parsedEntry);
+                } else {
+                    console.error("Parsed entry is invalid or missing user_id:", parsedEntry, "Original entry:", entry);
+                }
+            } catch (err) {
+                console.error("Error parsing entry for DB:", entry, "Error:", err.message);
+                // Decide if to keep unparseable but potentially valid non-JSON string entries, or skip.
+                // For now, skipping if it's meant to be JSON and fails. If it could be a simple user_id string, handle differently.
+            }
         }
-
-        if (parsedEntry.user_id === userId) {
-          found = true;
-          parsedEntry.experience += rewardPerUser;
-          parsedEntry.level = calculateLevel(parsedEntry.experience);
-          updatedUsers.push(parsedEntry);
-        } else {
-          updatedUsers.push(parsedEntry);
-        }
-      }
-
-      if (!found) {
-        const newEntry = {
-          user_id: userId,
-          experience: rewardPerUser,
-          level: calculateLevel(rewardPerUser),
-        };
-        updatedUsers.push(newEntry);
-      }
     }
+    console.log("Initial parsedSkillEntries:", JSON.stringify(parsedSkillEntries));
+
+    const skillEntryMap = new Map(parsedSkillEntries.map(entry => [entry.user_id, entry]));
+    console.log("Created skillEntryMap:", JSON.stringify(Array.from(skillEntryMap.entries())));
+
+    for (const userId of assigned_user_ids) {
+      let previousXP = 0, previousLevel = 1, newXP = 0, newLevel = 1; // Default for new users
+
+      const existingEntry = skillEntryMap.get(userId);
+      console.log("For userId:", userId, "existingEntry found in map:", !!existingEntry);
+
+      if (existingEntry) {
+        previousXP = existingEntry.exp;
+        previousLevel = existingEntry.level;
+
+        existingEntry.exp += rewardPerUser;
+        existingEntry.level = calculateLevel(existingEntry.exp);
+
+        newXP = existingEntry.exp;
+        newLevel = existingEntry.level;
+
+        skillEntryMap.set(userId, existingEntry); // Update the map
+        console.log("Updated existingEntry for userId:", userId, { previousXP, previousLevel, newXP, newLevel, updatedData: existingEntry });
+      } else {
+        // New user for this skill
+        newXP = rewardPerUser;
+        newLevel = calculateLevel(rewardPerUser);
+        // previousXP and previousLevel remain 0 and 1 respectively as initialized
+        const newSkillEntry = { user_id: userId, exp: newXP, level: newLevel };
+        skillEntryMap.set(userId, newSkillEntry); // Add the new entry to the map
+        console.log("Created newSkillEntry for userId:", userId, { previousXP, previousLevel, newXP, newLevel, entryData: newSkillEntry });
+      }
+
+      if (!skillName) { // skillName is fetched once before this loop
+          console.error("skillName is undefined before emitting socket event for userId:", userId);
+      }
+
+      const room = `user_${userId}`;
+      console.log("Emitting levelUpdate to room:", room, "for userId:", userId, "with payload:", { previousXP, newXP, previousLevel, newLevel, skillName });
+      io.to(room).emit("levelUpdate", { previousXP, newXP, previousLevel, newLevel, skillName });
+    }
+
+    const finalUpdatedSkillEntries = Array.from(skillEntryMap.values());
+    console.log("Final finalUpdatedSkillEntries for DB update:", JSON.stringify(finalUpdatedSkillEntries));
 
     await localClient.query(
       `UPDATE skills SET unlocked_users = $1 WHERE id = $2`,
-      [updatedUsers, skill_id]
+      [finalUpdatedSkillEntries, skill_id]
     );
-
-    // After level and XP updates are finalized
-    for (const user of updatedUsers) {
-      const { user_id, experience, level } = user;
-
-      const previousLevel = calculateLevel(experience - rewardPerUser);
-      const previousXP = experience - rewardPerUser;
-      const newXP = experience;
-      const newLevel = level;
-
-      console.log("Emitting levelUpdate for", user_id, {
-        previousXP,
-        newXP,
-        previousLevel,
-        newLevel,
-      });
-      const room = `user_${user_id}`;
-      console.log(`Emitting to ${room}`);
-      console.log("Emitting levelUpdate to room:", room, "with payload:", { previousXP, newXP, previousLevel, newLevel, skillName });
-      io.to(room).emit("levelUpdate", {
-        previousXP,
-        newXP,
-        previousLevel,
-        newLevel,
-        skillName,
-      });
-    }
 
     // Step 5: Update users with tokens and experience logs
     await localClient.query(
