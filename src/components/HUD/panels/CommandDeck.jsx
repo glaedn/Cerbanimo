@@ -55,11 +55,11 @@ const CommandDeck = () => {
 
               <div className="project-info">
 
-                <span className="project-name">{p.name}</span>
+                <a className="project-name" href={`/visualizer/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.name}</a>
                 <br />
                 <span className="project-details">
 
-                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> Credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
+                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
 
                 </span>
 
