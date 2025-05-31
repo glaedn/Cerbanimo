@@ -1,6 +1,6 @@
 /* Community Creation Page - Space Game Theme */
 .community-creation-container {
-    padding: 0 20px 20px 20px;
+    padding: 60px 20px 20px 20px;
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
@@ -10,7 +10,7 @@
     flex-direction: column;
     align-items: center;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 /* Title Styling */
