@@ -1,16 +1,25 @@
 /* Project Creation Page - Space Game Theme */
+.project-creation-background {
+    background: radial-gradient(circle, #0A0A2E, #000000);
+    height: 100vh;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Ensure it stays behind other elements */
+}
+
 .project-creation-container {
     padding: 20px;
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
-    background: radial-gradient(circle, #0A0A2E, #000000);
     height: calc(100vh - 60px);
     display: flex;
     flex-direction: column;
     align-items: center;
     overflow-y: auto;
-    margin-top: 60px;
+    padding-top: 80px;
 }
 
 /* Title Styling */
