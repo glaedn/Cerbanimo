@@ -97,6 +97,8 @@ async function checkAndAwardBadges(userId) {
                 case "Lunar Visionary": // Ensure this name matches the 'name' column in the 'badges' table
                     qualifies = await checkLunarVisionary(userId, createdUserTasksWithAssignees);
                     break;
+                case "Space Cowboy":
+                    qualifies = await checkSpaceCowboy(userId, userAccountData);
                 case "Supernova Survivor": // Ensure this name matches the 'name' column in the 'badges' table
                     qualifies = await checkSupernovaSurvivor(userId, userAccountData);
                     break;
@@ -342,6 +344,16 @@ async function checkLunarVisionary(userId, createdTasksWithAssignees) {
     }
     return false;
 }
+
+/** 
+ * Checks if the user qualifies for Space Cowboy.
+ * A Space Cowboy is a user who has completed the onboarding process. This means they will have a username and at least 3 skills and interests.
+ * @param {number} userId - The ID of the user.
+ * @param {object|null} userAccountData - Object containing user's `created_at` or null.
+ * @returns {boolean}
+ */
+
+
 
 /**
  * Checks if the user qualifies for Supernova Survivor.
