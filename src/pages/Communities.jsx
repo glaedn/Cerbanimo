@@ -153,15 +153,6 @@ return (
                             </span>
                         </div>
                         <div className="community-actions">
-                            <button
-                                className="view-projects-button"
-                                onClick={() => {
-                                    setSelectedCommunity(community);
-                                    fetchCommunityProjects(community.id);
-                                  }}
-                                >
-                                  View Projects
-                                </button>
                                 <button
                                   className="join-button"
                                   onClick={() => navigate(`/communityhub/${community.id}`)}
