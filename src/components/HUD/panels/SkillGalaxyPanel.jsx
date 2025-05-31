@@ -285,14 +285,14 @@ const SkillGalaxyPanel = () => {
             .style('fill', d => {
               const category = d.category || 'star';
               let fillColor;
-
+              
               // All categories will now use gradients based on their respective levels.
               // Stars use 'levelForColor' (aggregated from children).
               // Dependencies use their own 'userLevel'.
               const levelForColoring = (category === 'star') ? (d.levelForColor || 0) : (d.userLevel || 0);
-
+              
               fillColor = getStarGradientUrl(levelForColoring); // Use gradients for all
-
+              
               if (!fillColor || fillColor === "none") {
                 console.error(`[D3 Debug] Invalid fill for node ${d.id} (${d.name}, category: ${category}): ${fillColor}. Defaulting to primary gradient.`);
                 fillColor = getStarGradientUrl(0); // Default to base gradient
@@ -394,7 +394,7 @@ const SkillGalaxyPanel = () => {
               .style('stroke', theme.colors.border || '#666')
               .style('stroke-width', 1.5)
               .style('stroke-opacity', 0.6); // Default stroke opacity for links
-
+            
             mainGroup.selectAll('.nodes .node-group').style('opacity', 1);
           });
 
@@ -417,7 +417,7 @@ const SkillGalaxyPanel = () => {
               if (d.category === 'moon') return 8 + 10;
               return 5 + 8; // Satellite radius (5) + padding
             });
-
+          
           // Ensure fill style is also updated for existing nodes if their data changes
           update.select('circle')
             .style('fill', d => {
@@ -436,7 +436,7 @@ const SkillGalaxyPanel = () => {
           update.on('mouseenter', function(event, d_hovered) {
             // 'this' refers to the G element hovered
             const allLinks = mainGroup.selectAll('.links line');
-            const allNodes = mainGroup.selectAll('.nodes .node-group');
+            const allNodes = mainGroup.selectAll('.nodes .node-group'); 
 
             const constellationIds = new Set();
             const getConstellationIds = (nodeId) => {
@@ -509,7 +509,7 @@ const SkillGalaxyPanel = () => {
             // Star labels: visible when more zoomed out (hide if currentZoom < 0.125)
             if (d.category === 'star') {
               return currentZoom < 0.125 ? 'none' : 'block';
-            } else {
+            } else { 
             // Planet, Moon, Satellite labels: require more zooming in (hide if currentZoom < 0.5)
               return currentZoom < 0.5 ? 'none' : 'block';
             }
