@@ -13,6 +13,7 @@
   /* scrollbar-width: thin; */
   /* scrollbar-color: var(--color-primary) rgba(var(--color-background-paper-rgb), 0.5); */
   transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out; /* Added for smooth minimize */
+  box-sizing: border-box; /* ADD THIS LINE */
 }
 
 

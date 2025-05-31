@@ -200,14 +200,23 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       }
     }
   });
-  
-  // Final check for uncategorized skills (e.g. children of moons, true orphans)
+
+  // ADD THIS NEW PASS: Categorize Satellites (children of Moons)
   skillHierarchy.forEach(skillNode => {
+    if (skillNode.parent_skill_id) {
+      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+      if (parentNode && parentNode.category === 'moon') {
+        skillNode.category = 'satellite'; // New category
+      }
+    }
+  });
+  
+  // Final check for uncategorized skills
+  skillHierarchy.forEach(skillNode => {
+    // Update the warning message if 'unknown' is still possible for other reasons
     if (skillNode.category === 'unknown') {
-      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}, parent ID: ${skillNode.parent_skill_id}) remains uncategorized (category: 'unknown'). This could be a child of a moon or an orphan with an unresolved parent link.`);
+      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}, parent ID: ${skillNode.parent_skill_id}) remains uncategorized. This could be an orphan with an unresolved parent link or a new unhandled depth.`);
     } else if (skillNode.parent_skill_id && !skillHierarchy.has(skillNode.parent_skill_id) && skillNode.category !== 'star') {
-      // This case should ideally be caught by the structural issue warning earlier
-      // but if it was categorized by some chance and its parent is missing, it's an issue.
       console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}) is categorized as ${skillNode.category} but its parent (ID: ${skillNode.parent_skill_id}) is missing from skillHierarchy.`);
     }
   });

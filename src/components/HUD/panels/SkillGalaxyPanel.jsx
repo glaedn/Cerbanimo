@@ -56,18 +56,23 @@ const SkillGalaxyPanel = () => {
   };
 
   const getStarColor = React.useCallback((level) => {
-    if (level >= 15) return theme.colors.secondary;
-    if (level >= 10) return theme.colors.accentGreen;
-    if (level >= 5) return theme.colors.accentOrange;
-    return theme.colors.primary;
+    if (level >= 20) return theme.colors.accentPurple || '#800080'; // Purple for 20+
+    if (level >= 10) return theme.colors.secondary; // Pink for 10-19 (assuming secondary is pink)
+    if (level >= 5) return theme.colors.accentGreen; // Green for 5-9
+    // For levels 1-4, use primary. If level 0 should have a different default, adjust.
+    // Assuming level 0 means "not achieved enough for distinct color" or "base color".
+    // If skills only show color from level 1:
+    if (level >= 1) return theme.colors.primary; // Blue for 1-4
+    return theme.colors.primary; // Default for level 0 or uncolored
   }, [theme.colors]);
 
   const getStarGradientUrl = React.useCallback((level) => {
-    if (level >= 15) return 'url(#star-gradient-1)';
-    if (level >= 10) return 'url(#star-gradient-2)';
-    if (level >= 5) return 'url(#star-gradient-3)';
-    return 'url(#star-gradient-0)';
-  }, []);
+    if (level >= 20) return 'url(#star-gradient-3)'; // Corresponds to accentPurple
+    if (level >= 10) return 'url(#star-gradient-2)'; // Corresponds to secondary (pink)
+    if (level >= 5) return 'url(#star-gradient-1)';  // Corresponds to accentGreen
+    if (level >= 1) return 'url(#star-gradient-0)';  // Corresponds to primary (blue)
+    return 'url(#star-gradient-0)'; // Default for level 0 or uncolored
+  }, []); // No theme dependencies needed here as it maps to fixed IDs
 
   const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
 
@@ -180,9 +185,15 @@ const SkillGalaxyPanel = () => {
     }
 
     // Define gradients
-    const starColors = [theme.colors.primary, theme.colors.secondary, theme.colors.accentGreen, theme.colors.accentOrange];
+    // const starColors = [theme.colors.primary, theme.colors.secondary, theme.colors.accentGreen, theme.colors.accentOrange]; // OLD
+    const newStarColors = [
+      theme.colors.primary,    // For levels 1-4 (index 0)
+      theme.colors.accentGreen, // For levels 5-9 (index 1)
+      theme.colors.secondary,   // For levels 10-19 (index 2)
+      theme.colors.accentPurple || '#800080' // For levels 20+ (index 3)
+    ];
     
-    starColors.forEach((color, i) => {
+    newStarColors.forEach((color, i) => {
       const gradientId = `star-gradient-${i}`;
       if (defs.select(`#${gradientId}`).empty()) {
         const gradient = defs.append('radialGradient')
@@ -242,7 +253,8 @@ const SkillGalaxyPanel = () => {
       .data(displayLinks, d => d.id)
       .join('line')
       .attr('stroke', theme.colors.border || '#666')
-      .attr('stroke-width', 1.5);
+      .attr('stroke-width', 1.5)
+      .style('stroke-opacity', 0.6); // Set initial link opacity
 
     // Add nodes
     if (displayNodes.length > 0) {
@@ -265,28 +277,36 @@ const SkillGalaxyPanel = () => {
 
           group.append('circle')
             .attr('r', d => {
-              const category = d.category || 'star'; // Default to 'star' if undefined, though category should always be defined by processSkillDataForGalaxy
-              const radius = category === 'star' ? 25 : (category === 'planet' ? 15 : 8);
+              const category = d.category || 'star';
+              // Add 'satellite' category with a smaller radius
+              const radius = category === 'star' ? 25 : (category === 'planet' ? 15 : (category === 'moon' ? 8 : 5)); // Added satellite radius
               return radius;
             })
             .style('fill', d => {
               const category = d.category || 'star';
               let fillColor;
               if (category === 'star') {
-                fillColor = getStarGradientUrl(d.levelForColor);              } else {
-                let parentStar = null;
-                if (category === 'planet') {
-                  parentStar = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
-                } else if (category === 'moon') {
-                  const parentPlanet = d3Nodes.find(n => n.id === d.originalData.parent_skill_id?.toString() && n.category === 'planet');
-                  if (parentPlanet) {
-                    parentStar = d3Nodes.find(n => n.id === parentPlanet.originalData.parent_skill_id?.toString() && (n.category === 'star' || !n.category));
-                  }
-                }
-                const baseColor = parentStar ? getStarColor(parentStar.levelForColor) : theme.colors.primary;
-                fillColor = memoizedGetPastelColor(baseColor, category === 'planet' ? 0.7 : 0.85);
+                fillColor = getStarGradientUrl(d.levelForColor); // Stars use gradients based on their aggregated levelForColor
+              } else { // For planets, moons, satellites
+                // Dependencies use their own userLevel to determine their base color
+                const actualLevel = d.userLevel || 0; // Use their own userLevel
+                const baseColorForDependency = getStarColor(actualLevel); // Get color based on its own level
+
+                // Apply pastel effect. Adjust lightness factors as needed.
+                // These factors can remain the same or be tweaked if the new color system requires it.
+                let lightnessFactor = 0.8; // Default pastel factor
+                if (category === 'planet') lightnessFactor = 0.7;
+                else if (category === 'moon') lightnessFactor = 0.85;
+                else if (category === 'satellite') lightnessFactor = 0.95;
+
+                fillColor = memoizedGetPastelColor(baseColorForDependency, lightnessFactor);
               }
-              if (!fillColor || fillColor === "none") console.error(`[D3 Debug] Invalid fill for ${d.id}: ${fillColor}`);
+
+              if (!fillColor || fillColor === "none") {
+                console.error(`[D3 Debug] Invalid fill for node ${d.id} (${d.name}, category: ${category}): ${fillColor}. Defaulting to primary.`);
+                // Provide a fallback color to ensure visibility if logic fails
+                fillColor = theme.colors.primary;
+              }
               return fillColor;
             })
             .style('stroke', theme.colors.border || '#666')
@@ -302,7 +322,8 @@ const SkillGalaxyPanel = () => {
             .text(d => d.name)
             .attr('dy', d => {
               const category = d.category || 'star';
-              return category === 'star' ? -30 : (category === 'planet' ? -20 : -12);
+              // Adjust dy for satellites
+              return category === 'star' ? -30 : (category === 'planet' ? -20 : (category === 'moon' ? -12 : -9)); // Added satellite dy
             })
             .style('fill', theme.colors.textPrimary || '#fff')
             .style('font-size', d => {
@@ -315,7 +336,7 @@ const SkillGalaxyPanel = () => {
           // Add level text for stars, planets, and moons
           group.filter(d => 
             (d.category === 'star' && d.levelForColor > 0) ||
-            ((d.category === 'planet' || d.category === 'moon') && d.userLevel > 0)
+            ((d.category === 'planet' || d.category === 'moon' || d.category === 'satellite') && d.userLevel > 0) // Added satellite
           )
             .append('text')
             .attr('class', 'level-label')
@@ -324,11 +345,68 @@ const SkillGalaxyPanel = () => {
               return `Lvl ${d.userLevel}`;
             })
             .attr('dy', d => {
-              if (d.category === 'star') return 25 + 10; // Star radius (25) + padding
-              if (d.category === 'planet') return 15 + 10; // Planet radius (15) + padding
-              return 8 + 10; // Moon radius (8) + padding
+              if (d.category === 'star') return 25 + 10;
+              if (d.category === 'planet') return 15 + 10;
+              if (d.category === 'moon') return 8 + 10;
+              return 5 + 8; // Satellite radius (5) + padding for level label
             });
             // Styling is handled by .level-label class in SkillGalaxyPanel.css
+
+          group.on('mouseenter', function(event, d_hovered) {
+            // 'this' refers to the G element hovered
+            const allLinks = mainGroup.selectAll('.links line');
+            const allNodes = mainGroup.selectAll('.nodes .node-group'); // Get all node groups
+
+            // Get all IDs in the constellation of the hovered node
+            const constellationIds = new Set();
+            const getConstellationIds = (nodeId) => {
+              const currentNode = d3Nodes.find(n => n.id === nodeId);
+              if (!currentNode || constellationIds.has(nodeId)) return;
+              constellationIds.add(nodeId);
+
+              // Add parent
+              if (currentNode.parent) { // Assuming parent stores ID string
+                getConstellationIds(currentNode.parent);
+              }
+              // Add children (need to find them from d3Nodes based on parent_skill_id)
+              d3Nodes.forEach(n => {
+                if (n.parent === nodeId) {
+                  getConstellationIds(n.id);
+                }
+              });
+            };
+
+            getConstellationIds(d_hovered.id);
+
+            // Style links
+            allLinks.style('stroke', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 'white' : (theme.colors.border || '#666');
+              })
+              .style('stroke-width', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 3 : 1.5;
+              })
+              .style('stroke-opacity', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 1 : 0.6;
+              });
+
+            // Optionally, style nodes (e.g., make non-constellation nodes less prominent)
+            allNodes.style('opacity', n_data => constellationIds.has(n_data.id) ? 1 : 0.3);
+
+          })
+          .on('mouseleave', function(event, d_hovered) {
+            mainGroup.selectAll('.links line')
+              .style('stroke', theme.colors.border || '#666')
+              .style('stroke-width', 1.5)
+              .style('stroke-opacity', 0.6); // Default stroke opacity for links
+
+            mainGroup.selectAll('.nodes .node-group').style('opacity', 1);
+          });
 
           return group;
         },
@@ -337,7 +415,7 @@ const SkillGalaxyPanel = () => {
           update.selectAll('.level-label')
             .filter(d => 
               (d.category === 'star' && d.levelForColor > 0) ||
-              ((d.category === 'planet' || d.category === 'moon') && d.userLevel > 0)
+              ((d.category === 'planet' || d.category === 'moon' || d.category === 'satellite') && d.userLevel > 0) // Added satellite
             )
             .text(d => {
               if (d.category === 'star') return `Lvl ${d.levelForColor}`;
@@ -346,8 +424,52 @@ const SkillGalaxyPanel = () => {
             .attr('dy', d => { // Also update dy in case category could change (unlikely here but good practice)
               if (d.category === 'star') return 25 + 10;
               if (d.category === 'planet') return 15 + 10;
-              return 8 + 10;
+              if (d.category === 'moon') return 8 + 10;
+              return 5 + 8; // Satellite radius (5) + padding
             });
+
+          // Also attach hover handlers to updated nodes
+          update.on('mouseenter', function(event, d_hovered) {
+            // 'this' refers to the G element hovered
+            const allLinks = mainGroup.selectAll('.links line');
+            const allNodes = mainGroup.selectAll('.nodes .node-group');
+
+            const constellationIds = new Set();
+            const getConstellationIds = (nodeId) => {
+              const currentNode = d3Nodes.find(n => n.id === nodeId);
+              if (!currentNode || constellationIds.has(nodeId)) return;
+              constellationIds.add(nodeId);
+              if (currentNode.parent) getConstellationIds(currentNode.parent);
+              d3Nodes.forEach(n => {
+                if (n.parent === nodeId) getConstellationIds(n.id);
+              });
+            };
+            getConstellationIds(d_hovered.id);
+
+            allLinks.style('stroke', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 'white' : (theme.colors.border || '#666');
+              })
+              .style('stroke-width', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 3 : 1.5;
+              })
+              .style('stroke-opacity', l => {
+                const sourceInConstellation = constellationIds.has(l.source.id || l.source);
+                const targetInConstellation = constellationIds.has(l.target.id || l.target);
+                return (sourceInConstellation && targetInConstellation) ? 1 : 0.6;
+              });
+            allNodes.style('opacity', n_data => constellationIds.has(n_data.id) ? 1 : 0.3);
+          })
+          .on('mouseleave', function(event, d_hovered) {
+            mainGroup.selectAll('.links line')
+              .style('stroke', theme.colors.border || '#666')
+              .style('stroke-width', 1.5)
+              .style('stroke-opacity', 0.6);
+            mainGroup.selectAll('.nodes .node-group').style('opacity', 1);
+          });
           return update;
         },
         exit => exit.transition().duration(300).style('opacity', 0).remove()
@@ -379,7 +501,13 @@ const SkillGalaxyPanel = () => {
             else newSize = Math.max(newSize, baseSize * 0.5);
             return newSize + 'px';
           })
-          .style('display', currentZoom < 0.25 ? 'none' : 'block');
+          .style('display', function(d) { // MODIFIED PART
+            if (d.category === 'star') {
+              return currentZoom < 0.5 ? 'none' : 'block';
+            } else { // For planets, moons, and future satellites
+              return currentZoom < 0.125 ? 'none' : 'block';
+            }
+          });
       });
     svg.call(zoomBehavior); // Initialize zoom behavior on the SVG element
 
