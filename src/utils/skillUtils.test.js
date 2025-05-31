@@ -15,7 +15,7 @@ describe('skillUtils', () => {
 
     it('should correctly categorize skills including satellites', () => {
       const processed = processSkillDataForGalaxy(baseSkills, mockUserId);
-
+      
       const star1 = processed.find(s => s.id === 's1');
       const planet1 = processed.find(s => s.id === 'p1');
       const moon1 = processed.find(s => s.id === 'm1');
@@ -26,11 +26,11 @@ describe('skillUtils', () => {
       expect(planet1?.category).toBe('planet');
       expect(moon1?.category).toBe('moon');
       expect(satellite1?.category).toBe('satellite');
-
+      
       // p2 is not unlocked by mockUserId and is not a direct parent of an unlocked skill by mockUserId.
       // Based on current processSkillDataForGalaxy logic, it should not be included.
       const planet2Processed = processed.find(s => s.id === 'p2');
-      expect(planet2Processed).toBeUndefined();
+      expect(planet2Processed).toBeUndefined(); 
       // If planet2 were to be included structurally, the following would be tested:
       // expect(planet2?.category).toBe('planet');
       // expect(planet2?.userLevel).toBe(0);
@@ -46,14 +46,14 @@ describe('skillUtils', () => {
 
       // Star levelForColor = star's own level + planet children levels + moon grandchildren levels.
       // s1 (5) + p1 (3) + m1 (2) = 10. Sat1 (1) is not included in star's sum based on current logic.
-      expect(star1?.levelForColor).toBe(10);
+      expect(star1?.levelForColor).toBe(10); 
 
       // Dependencies use their own userLevel for their levelForColor
       expect(planet1?.levelForColor).toBe(planet1?.userLevel);
       expect(moon1?.levelForColor).toBe(moon1?.userLevel);
       expect(satellite1?.levelForColor).toBe(satellite1?.userLevel);
     });
-
+    
     it('includes structural parent skills not directly unlocked by user', () => {
       const skillsWithStructuralParent = [
         { id: 's3', name: 'Star Skill 3 (Not by User)', parent_skill_id: null, unlocked_users: `[{"user_id":"anotherUser","level":5,"exp":100}]` },
@@ -73,10 +73,10 @@ describe('skillUtils', () => {
       expect(planet3?.category).toBe('planet');
       expect(planet3?.userLevel).toBe(3);
       expect(planet3?.isUnlockedByUser).toBe(true);
-
+      
       // Star3's levelForColor = sum of its children unlocked by user (p3 level 3)
       // + its own level IF it were unlocked by user (which is 0 here). So, just p3's level.
-      expect(star3?.levelForColor).toBe(3);
+      expect(star3?.levelForColor).toBe(3); 
     });
   });
 
@@ -85,7 +85,7 @@ describe('skillUtils', () => {
       expect(calculateExperienceNeeded(0)).toBe(0);
     });
     it('should calculate experience correctly for positive levels', () => {
-      expect(calculateExperienceNeeded(1)).toBe(40);
+      expect(calculateExperienceNeeded(1)).toBe(40); 
       expect(calculateExperienceNeeded(2)).toBe(160);
       expect(calculateExperienceNeeded(10)).toBe(4000);
     });
