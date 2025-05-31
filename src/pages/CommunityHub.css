@@ -4,7 +4,7 @@
     flex-direction: column;
     min-height: 100vh;
     align-items: center;
-    padding: 20px;
+    padding: 0px 20px 20px 20px;
     background-color: #0A0A2E;
     color: #FFFFFF;
 }
@@ -13,7 +13,7 @@
     color: #00F3FF;
     text-align: center;
     margin-bottom: 10px;
-    padding: 20px;
+    padding: 0 20px 20px 20px;
     text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
