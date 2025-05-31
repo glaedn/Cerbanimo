@@ -129,14 +129,15 @@ const ProjectCreation = () => {
   };
 
   return (
-    <Box className="project-creation-container">
+    <div className="project-creation-background">
+    <Box className="project-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
       <Typography variant="h4" className="form-title">
         Create a New Project
       </Typography>
       <TextField
         label="Project Name"
         variant="outlined"
-        fullWidth
+        sx={{ width: '100%' }}
         value={name}
         onChange={(e) => setName(e.target.value)}
         margin="normal"
@@ -158,6 +159,7 @@ const ProjectCreation = () => {
         value={selectedTags}
         onChange={(event, newValue) => setSelectedTags(newValue)}
         freeSolo
+        sx={{ width: '100%' }}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -201,6 +203,7 @@ const ProjectCreation = () => {
         Create Project
       </Button>
     </Box>
+    </div>
   );
 };
 

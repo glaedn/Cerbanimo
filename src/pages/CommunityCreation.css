@@ -1,4 +1,9 @@
 /* Community Creation Page - Space Game Theme */
+
+.html, body {
+    overflow: hidden;
+}
+
 .community-creation-container {
     padding: 20px;
     color: #FFFFFF;
@@ -11,7 +16,7 @@
     align-items: center;
     position: relative;
     overflow-y: auto;
-    margin-top: 60px;
+    padding-top: 60px;
 }
 
 /* Title Styling */
