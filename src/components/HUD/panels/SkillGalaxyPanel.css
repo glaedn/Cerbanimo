@@ -1,7 +1,7 @@
 
 .skill-galaxy-panel {
-  width: 500px;;
-  height: 100%;
+  max-width: 300px;
+  height: 98%;
   overflow: hidden;
   color: var(--theme-colors-textPrimary, #FFFFFF);
 } 
