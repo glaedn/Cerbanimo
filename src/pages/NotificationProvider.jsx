@@ -148,8 +148,10 @@ useEffect(() => {
     if (!socket) return;
 
     const handleLevelUpdate = (data) => {
-      console.log("Received levelUpdate:", data); // Add this
+      console.log("Received levelUpdate event with data:", data);
       const { previousXP, newXP, previousLevel, newLevel, skillName } = data;
+      console.log("Destructured levelUpdate data:", { skillName, previousXP, newXP, previousLevel, newLevel });
+      console.log("Setting levelNotificationData with:", { previousXP, newXP, previousLevel, newLevel, skillName });
       setLevelNotificationData({ previousXP, newXP, previousLevel, newLevel, skillName });
       setShowLevelNotification(true);
       setTimeout(() => setShowLevelNotification(false), 6000);
@@ -242,14 +244,19 @@ return (
     }}
   >
     {showLevelNotification && levelNotificationData && (
-      <LevelNotification
-        previousXP={levelNotificationData.previousXP}
-        newXP={levelNotificationData.newXP}
-        previousLevel={levelNotificationData.previousLevel}
-        newLevel={levelNotificationData.newLevel}
-        skillName={levelNotificationData.skillName}
-        onClose={() => setShowLevelNotification(false)}
-      />
+      (() => {
+        console.log("Passing props to LevelNotification:", { previousXP: levelNotificationData?.previousXP, newXP: levelNotificationData?.newXP, previousLevel: levelNotificationData?.previousLevel, newLevel: levelNotificationData?.newLevel, skillName: levelNotificationData?.skillName });
+        return (
+          <LevelNotification
+            previousXP={levelNotificationData.previousXP}
+            newXP={levelNotificationData.newXP}
+            previousLevel={levelNotificationData.previousLevel}
+            newLevel={levelNotificationData.newLevel}
+            skillName={levelNotificationData.skillName}
+            onClose={() => setShowLevelNotification(false)}
+          />
+        );
+      })()
     )}
     {children}
   </NotificationContext.Provider>

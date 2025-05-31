@@ -10,6 +10,7 @@ const generateProgressText = (progress, totalChars = 10) => {
 };
 
 const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillName }) => {
+    console.log("LevelNotification received props:", { previousXP, newXP, previousLevel, newLevel, skillName });
     const [isVisible, setIsVisible] = useState(false);
     const [currentXPProgress, setCurrentXPProgress] = useState(previousXP || 0);
     const [textualProgress, setTextualProgress] = useState(generateProgressText(previousXP || 0));
@@ -72,43 +73,107 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillNa
     return (
         // Adding a fade-in animation class for when it becomes visible
         <Box className="level-notification-container notification-fade-in">
-            <Paper elevation={4} className="level-up-message" sx={{ mb: 2, p: 1, textAlign: 'center' }}>
+            <Paper
+                elevation={0} // HUD panels typically don't have material shadow, glow is from CSS
+                className="level-up-message" // CSS class for animation and base styling
+                sx={{
+                    backgroundColor: 'transparent', // Or a very subtle rgba(10,20,50,0.3)
+                    p: 1.5, // Padding
+                    mb: 1.5, // Margin bottom
+                    textAlign: 'center',
+                }}
+            >
                 {showLevelUp ? (
                     <>
-                        <Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
-                            {skillName || 'Skill'} Leveled Up!
+                        <Typography
+                            variant="h5"
+                            component="div"
+                            sx={{
+                                fontFamily: '"Orbitron", sans-serif',
+                                fontWeight: 'bold',
+                                color: '#FF5CA2', // Secondary pink for emphasis
+                                textShadow: '0 0 6px #FF5CA2, 0 0 3px #FF5CA2', // Pink glow
+                                mb: 0.5,
+                            }}
+                        >
+                            {skillName || 'SKILL'} LEVELED UP!
                         </Typography>
-                        <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-                            Level {newLevel}
+                        <Typography
+                            variant="h4"
+                            component="div"
+                            sx={{
+                                fontFamily: '"Orbitron", sans-serif',
+                                fontWeight: 'bold',
+                                color: '#00F3FF', // Primary Cyan
+                                textShadow: '0 0 7px #00F3FF',
+                            }}
+                        >
+                            LEVEL {newLevel}
                         </Typography>
                     </>
                 ) : (
-                    <Typography variant="h6" component="div">
-                        XP Gained in {skillName || 'Skill'}
+                    <Typography
+                        variant="h6"
+                        component="div"
+                        sx={{
+                            fontFamily: '"Inter", sans-serif',
+                            color: '#E0E0E0', // Slightly off-white
+                            fontWeight: '500',
+                        }}
+                    >
+                        XP GAINED IN {skillName || 'SKILL'}
                     </Typography>
                 )}
             </Paper>
 
             <Box className="xp-bar-section">
                 <Box className="xp-bar-display-container" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Typography variant="body2" sx={{ minWidth: 35, textAlign: 'center', mr: 1 }}>
-                        Lvl {previousLevel}
+                    <Typography variant="body2" sx={{
+                        minWidth: 50, // Adjusted width
+                        textAlign: 'center',
+                        mr: 1.5, // Adjusted margin
+                        fontFamily: '"Orbitron", sans-serif',
+                        color: '#00F3FF', // Cyan for level numbers
+                        fontSize: '0.9rem',
+                    }}>
+                        LVL {previousLevel}
                     </Typography>
-                    <Box sx={{ flexGrow: 1, position: 'relative', height: '20px' }}>
+                    <Box sx={{ flexGrow: 1, position: 'relative', height: '22px' /* Slightly thicker bar */ }}>
                         <LinearProgress 
                             variant="determinate" 
                             value={currentXPProgress} 
-                            sx={{ height: '100%', borderRadius: '10px', backgroundColor: '#e0e0e0' }} 
+                            sx={{
+                                height: '100%',
+                                borderRadius: '4px', // Sharper HUD-like radius
+                                backgroundColor: 'rgba(0, 243, 255, 0.2)', // Faint cyan track
+                                '& .MuiLinearProgress-bar': {
+                                    backgroundColor: '#00F3FF', // Solid cyan bar
+                                    borderRadius: '4px',
+                                }
+                            }}
                         />
                         <Typography variant="body2" className="textual-progress-display">
                             {textualProgress}
                         </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ minWidth: 35, textAlign: 'center', ml: 1 }}>
-                        Lvl {newLevel}
+                    <Typography variant="body2" sx={{
+                        minWidth: 50, // Adjusted width
+                        textAlign: 'center',
+                        ml: 1.5, // Adjusted margin
+                        fontFamily: '"Orbitron", sans-serif',
+                        color: '#00F3FF', // Cyan for level numbers
+                        fontSize: '0.9rem',
+                    }}>
+                        LVL {newLevel}
                     </Typography>
                 </Box>
-                <Typography variant="body2" sx={{ textAlign: 'center', mt: 1 }}>
+                <Typography variant="body2" sx={{
+                    textAlign: 'center',
+                    mt: 0.75, // Adjusted margin
+                    fontFamily: '"Inter", sans-serif',
+                    color: '#A0A0A0', // Dimmer white/grey for XP text
+                    fontSize: '0.8rem',
+                }}>
                     XP: {previousXP || 0} → {newXP || 0}
                 </Typography>
             </Box>
