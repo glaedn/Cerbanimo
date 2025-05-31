@@ -2,12 +2,13 @@
 .community-hub {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: calc(100vh - 60px);
     align-items: center;
-    padding: 60px 20px 20px 20px;
+    padding: 20px;
     background-color: #0A0A2E;
     color: #FFFFFF;
     overflow-y: auto;
+    margin-top: 60px;
 }
 
 .hub-title {
