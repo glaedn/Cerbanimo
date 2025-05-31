@@ -7,7 +7,7 @@ body {
 
 .galactic-activity-map-container {
   width: 100%;
-  height: 100vh; /* Full viewport height */
+  height: 98%; /* Full viewport height */
   background-color: #00001a; /* Dark space blue/black */
   color: #fff;
   display: flex;
@@ -86,24 +86,7 @@ body {
   font-size: 12px;
 }
 
-
-@keyframes starTwinkle {
-
-  0%, 100% { opacity: 0.8; }
-
-  50% { opacity: 1; }
-
-}
-
-
-
-.star {
-
-  animation: starTwinkle 2s infinite ease-in-out;
-
-}
-
-
+/* Removed starTwinkle animation and its application to .star */
 
 .pulse-ring {
 
@@ -156,4 +139,16 @@ body {
   animation: sonarPing 2s infinite ease-out;
   /* transform-origin: center; No longer needed if not using transform */
   pointer-events: none; /* Keep this */
+}
+
+@keyframes starFadeTwinkle {
+  0% { filter: brightness(100%); }
+  25% { filter: brightness(120%); }
+  50% { filter: brightness(125%); }
+  75% { filter: brightness(120%); }
+  100% { filter: brightness(100%); }
+}
+
+.star-is-twinkling {
+  animation: starFadeTwinkle 0.8s ease-in-out;
 }

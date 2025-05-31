@@ -9,8 +9,6 @@ import axios from "axios";
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
 // For a dynamically resizing map, consider using useState and useEffect with a ResizeObserver
 // to update these dimensions and trigger a re-render/re-layout.
-const MAP_WIDTH = window.innerWidth * 0.9;
-const MAP_HEIGHT = window.innerHeight * 0.8;
 
 const GalacticActivityMap = () => {
   const d3Container = useRef(null);
@@ -144,6 +142,7 @@ const GalacticActivityMap = () => {
 
   // useEffect for D3 rendering
   useEffect(() => {
+    window.twinkleTimeoutIds = window.twinkleTimeoutIds || [];
     // --- Tooltip Management with D3 START ---
     // Remove any old tooltip managed by this instance
     d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
@@ -210,8 +209,8 @@ const GalacticActivityMap = () => {
       // Avoid running the simulation continuously if not needed.
       const randomizedStarData = starData.map((d) => ({
         ...d,
-        x: Math.random() * MAP_WIDTH,
-        y: Math.random() * MAP_HEIGHT,
+        x: Math.random() * clientWidth,
+        y: Math.random() * clientHeight,
       })); // Important: simulation is stopped after ticks.
 
       const visualStars = svg
@@ -349,30 +348,46 @@ const GalacticActivityMap = () => {
       // Applying to all 'active'/'urgent' stars. If this becomes too many,
       // consider limiting the number of simultaneously pulsing stars or simplifying the animation.
       // D3 transitions are generally efficient for this.
+      const allStarD3Elements = [];
       visualStars.each(function (d) { // Ensure this uses visualStars
         const starElement = d3.select(this);
-        const status = d.status.toLowerCase();
-        // If a star is urgent, it gets the CSS sonar.
-        // If it's just active (not urgent), it gets JS pulse.
-        if (status.startsWith("active") && !status.includes("urgent")) { 
-          pulse(starElement, getStarRadius(d));
-        }
+        allStarD3Elements.push(starElement); 
       });
 
-      function pulse(element, originalRadius) {
-        function repeat() {
-          element
-            .transition()
-            .duration(1000)
-            .attr("r", originalRadius * 1.3)
-            .transition()
-            .duration(1000)
-            .attr("r", originalRadius)
-            .on("end", repeat);
-        }
-        repeat();
+      // Clear previous interval and timeouts for general star shine
+      if (window.starTwinkleIntervalId) {
+        clearInterval(window.starTwinkleIntervalId);
+      }
+      window.twinkleTimeoutIds.forEach(clearTimeout); // Clear all stored timeouts
+      window.twinkleTimeoutIds = []; // Reset the array
+
+      if (allStarD3Elements.length > 0) {
+        window.starTwinkleIntervalId = setInterval(() => {
+          const validStars = allStarD3Elements.filter(el => el.node() && el.node().parentNode);
+          const shuffledStars = [...validStars].sort(() => 0.5 - Math.random());
+          const count = Math.max(1, Math.floor(validStars.length * 0.20));
+          const candidateStars = shuffledStars.slice(0, count);
+
+          candidateStars.forEach(starEl => {
+            const randomIndividualDelay =  Math.random() * 20000; // Between 5s and 34.5s
+            const outerTimeoutId = setTimeout(() => {
+              if (starEl.node() && starEl.node().parentNode && !starEl.classed('star-is-twinkling')) {
+                starEl.classed('star-is-twinkling', true);
+                const innerTimeoutId = setTimeout(() => {
+                  starEl.classed('star-is-twinkling', false);
+                  window.twinkleTimeoutIds = window.twinkleTimeoutIds.filter(id => id !== innerTimeoutId);
+                }, 800); // Animation duration (0.8s)
+                window.twinkleTimeoutIds.push(innerTimeoutId);
+              }
+              window.twinkleTimeoutIds = window.twinkleTimeoutIds.filter(id => id !== outerTimeoutId);
+            }, randomIndividualDelay);
+            window.twinkleTimeoutIds.push(outerTimeoutId);
+          });
+        }, 20000); // Interval for initiating twinkles (e.g., every 15 seconds)
       }
 
+    /* PULSE FUNCTION ENTIRELY REMOVED 
+    */
     } else if (d3Container.current && (isLoading || error)) {
       let svg = d3.select(d3Container.current).select("svg");
       if (!svg.empty()) {
@@ -389,7 +404,17 @@ const GalacticActivityMap = () => {
 
     // Return a cleanup function for when the component unmounts
     return () => {
+      // Clear D3 managed tooltip
       d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+
+      // Clear general star twinkle interval and timeouts
+      if (window.starTwinkleIntervalId) {
+        clearInterval(window.starTwinkleIntervalId);
+      }
+      if (window.twinkleTimeoutIds) { // Check if array exists
+        window.twinkleTimeoutIds.forEach(clearTimeout);
+        window.twinkleTimeoutIds = []; 
+      }
     };
   
   }, [starData, isLoading, error, navigate]); // Added navigate to dependency array
@@ -416,10 +441,11 @@ const GalacticActivityMap = () => {
       <div
         ref={d3Container}
         style={{
-          width: MAP_WIDTH,
-          height: MAP_HEIGHT,
+          width: "100%",
+          height: "100%",
           position: "relative",
           margin: "0 auto",
+          boxSizing: "border-box",
         }}
       >
         {/* SVG is managed by D3 inside this div */}

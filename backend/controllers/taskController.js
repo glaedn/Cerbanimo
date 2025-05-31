@@ -1211,7 +1211,14 @@ const dropTask = async (taskId, userId) => {
         console.log(
           "Last assigned user dropping task, updating status to unassigned"
         );
-        newStatus = currentStatus.includes("-unassigned")
+        if (currentStatus === "submitted") {
+          await client.query("ROLLBACK");
+          throw new Error("User is the last assigned user on a submitted task and cannot be removed");
+        }
+
+        newStatus = currentStatus === "completed" 
+          ? "completed"
+          : currentStatus.includes("-unassigned")
           ? currentStatus
           : currentStatus.includes("-assigned")
           ? currentStatus.replace("-assigned", "-unassigned")
