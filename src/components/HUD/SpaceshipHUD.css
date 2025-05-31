@@ -57,18 +57,18 @@
 /* End Panel Specific Positioning */
 
 .hud-map-viewport {
+  box-sizing: border-box;
   border: 2px solid #00F3FF; /* theme.colors.primary for a subtle frame */
   box-shadow: 0 0 15px #00F3FF, inset 0 0 15px #00F3FF; /* theme.effects.glowStrong(theme.colors.primary) */
-  /* Adjust width and height to account for panels, or use margins on panels */
-  width: calc(100% - 220px); /* Example: 10px padding + 200px panel width on each side */
-  height: calc(100% - 120px); /* Example: 10px padding + 100px panel height top/bottom */
   max-width: 1600px; 
   max-height: 1000px;
-  position: absolute; /* Centering with absolute positioning */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: absolute; 
+  top: 70px;
+  bottom: 115px;
+  left: 220px;
+  right: 220px;
   background: rgba(0,0,0,0.1);
+  /* width, height, and transform removed for new top/bottom/left/right positioning */
 }
 
 /* Styling for StatusBar */
@@ -85,7 +85,8 @@
 @media (max-width: 768px) {
   .hud-container {
     overflow-y: auto; /* Allow scrolling for stacked panels */
-    padding-bottom: 50px;
+    /* Adjusted padding-bottom to ensure content doesn't hide behind fixed StatusBar (assuming StatusBar max height ~80px + 10px margin) */
+    padding-bottom: 0px;
   }
   
   .panel-wrapper {
@@ -116,12 +117,15 @@
   .hud-map-viewport {
     position: relative; /* No longer absolute to allow stacking */
     width: calc(100% - 20px); /* Full width with margin */
-    height: 50vh; /* Or a fixed height, e.g., 300px */
+    height: 400px; /* Or a fixed height, e.g., 300px */
     margin: 10px;
     top: auto;
     left: auto;
+    right: auto;
     transform: none; /* Reset transform */
     /* order: -1; /* Optionally move map to top in flex context if HUD container was flex */
+    box-sizing: border-box; /* Ensure padding/border don't expand viewport size */
+    overflow: hidden; /* Prevent content from spilling out */
   }
   
   /* Adjust StatusBar for mobile if needed, might be fine if panels stack above it */
