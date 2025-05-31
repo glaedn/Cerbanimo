@@ -418,6 +418,20 @@ const SkillGalaxyPanel = () => {
               return 5 + 8; // Satellite radius (5) + padding
             });
 
+          // Ensure fill style is also updated for existing nodes if their data changes
+          update.select('circle')
+            .style('fill', d => {
+              const category = d.category || 'star';
+              const levelForColoring = (category === 'star') ? (d.levelForColor || 0) : (d.userLevel || 0);
+              let fillColor = getStarGradientUrl(levelForColoring);
+
+              if (!fillColor || fillColor === "none") {
+                console.error(`[D3 Debug] Invalid fill for updating node ${d.id} (${d.name}, category: ${category}): ${fillColor}. Defaulting to base gradient.`);
+                fillColor = getStarGradientUrl(0); // Default to base gradient
+              }
+              return fillColor;
+            });
+
           // Also attach hover handlers to updated nodes
           update.on('mouseenter', function(event, d_hovered) {
             // 'this' refers to the G element hovered
@@ -491,15 +505,12 @@ const SkillGalaxyPanel = () => {
             else newSize = Math.max(newSize, baseSize * 0.5);
             return newSize + 'px';
           })
-          .style('display', function(d) { // MODIFIED PART
-            // const currentZoom = event.transform.k; // currentZoom is already defined in the outer scope
+          .style('display', function(d) { // THIS IS THE CRITICAL LOGIC TO RE-APPLY
+            // Star labels: visible when more zoomed out (hide if currentZoom < 0.125)
             if (d.category === 'star') {
-              // Star labels should be visible longer when zooming out.
-              // Hide star labels if currentZoom is less than 0.125 (more zoomed out)
               return currentZoom < 0.125 ? 'none' : 'block';
-            } else { // For planets, moons, and satellites
-              // Other labels should require more zooming in to be visible.
-              // Hide other labels if currentZoom is less than 0.5
+            } else {
+            // Planet, Moon, Satellite labels: require more zooming in (hide if currentZoom < 0.5)
               return currentZoom < 0.5 ? 'none' : 'block';
             }
           });
