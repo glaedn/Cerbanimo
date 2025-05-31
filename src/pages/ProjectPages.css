@@ -293,6 +293,35 @@
     box-shadow: 0 0 8px rgba(0, 243, 255, 0.4); /* Updated */
 }
 
+/* Styling for the new Typography elements within the task card */
+.task-popup .task-card .MuiTypography-body2 { /* Targets MUI Typography with body2 variant */
+    margin-bottom: 8px; /* Add some space below each info item */
+    font-size: 0.9rem; /* Slightly smaller font for details */
+}
+
+/* Ensure the task description also has a consistent bottom margin if not already handled by sx prop */
+.task-popup .task-card .MuiTypography-body2:last-of-type {
+    margin-bottom: 12px; /* More space before the buttons */
+}
+
+/* Container for task card buttons */
+.task-popup .task-card > .MuiButton-root { /* Direct MUI Button children */
+    margin-top: 8px; /* Add some space above the buttons if they wrap or are stacked */
+}
+
+/* Styling for the "View Task" button (MUI outlined) */
+.task-popup .task-card .MuiButton-outlined {
+    background-color: transparent;
+    border-color: #00F3FF; /* Neon blue border */
+    color: #00F3FF; /* Neon blue text */
+}
+
+.task-popup .task-card .MuiButton-outlined:hover {
+    background-color: rgba(0, 243, 255, 0.1); /* Slight neon blue background on hover */
+    border-color: #4DABF7;
+    color: #4DABF7;
+}
+
 
 .accept-button {
     padding: 8px 15px;
