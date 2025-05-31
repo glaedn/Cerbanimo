@@ -149,8 +149,8 @@ useEffect(() => {
 
     const handleLevelUpdate = (data) => {
       console.log("Received levelUpdate:", data); // Add this
-      const { previousXP, newXP, previousLevel, newLevel } = data;
-      setLevelNotificationData({ previousXP, newXP, previousLevel, newLevel });
+      const { previousXP, newXP, previousLevel, newLevel, skillName } = data;
+      setLevelNotificationData({ previousXP, newXP, previousLevel, newLevel, skillName });
       setShowLevelNotification(true);
       setTimeout(() => setShowLevelNotification(false), 6000);
     };
@@ -247,6 +247,7 @@ return (
         newXP={levelNotificationData.newXP}
         previousLevel={levelNotificationData.previousLevel}
         newLevel={levelNotificationData.newLevel}
+        skillName={levelNotificationData.skillName}
         onClose={() => setShowLevelNotification(false)}
       />
     )}
