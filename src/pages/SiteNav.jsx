@@ -346,6 +346,15 @@ const SiteNav = () => {
               >
                 Declare a Need
               </Button>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/transaction-history" ? "active" : ""
+                }`}
+                to="/transaction-history"
+                onClick={closeSidebar}
+              >
+                Transaction History
+              </Link>
             </>
           )}
         </div>

@@ -24,7 +24,11 @@ router.post('/', authenticate, async (req, res) => {
     recurring_details = null,
     owner_user_id = req.user.id, // Set to authenticated user's ID
     owner_community_id = null,
-    status = 'available'
+    status = 'available',
+    tags = null,
+    constraints = null,
+    duration_type = null,
+    duration_details = null
   } = payload;
   console.log('Creating resource with payload:', payload);
 
@@ -38,14 +42,16 @@ router.post('/', authenticate, async (req, res) => {
       `INSERT INTO resources (name, description, category, quantity, condition, 
                             availability_window_start, availability_window_end, 
                             location_text, latitude, longitude, is_recurring, 
-                            recurring_details, owner_user_id, owner_community_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                            recurring_details, owner_user_id, owner_community_id, status,
+                            tags, constraints, duration_type, duration_details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        RETURNING *`,
       [
         name, description, category, quantity, condition,
         availability_window_start, availability_window_end,
         location_text, latitude, longitude, is_recurring,
-        recurring_details, owner_user_id, owner_community_id, status
+        recurring_details, owner_user_id, owner_community_id, status,
+        tags, constraints, duration_type, duration_details
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -57,25 +63,88 @@ router.post('/', authenticate, async (req, res) => {
 
 // GET /resources - Get all available resources with optional filters
 router.get('/', async (req, res) => {
-  const { category, status, is_recurring } = req.query;
-  let query = 'SELECT * FROM resources WHERE 1=1';
-  const queryParams = [];
+  const {
+    category, status, is_recurring, tags, duration_type,
+    min_lat, max_lat, min_lon, max_lon,
+    verified_owner,
+    availability_start_after, availability_end_before, available_now
+  } = req.query;
+
+  let queryParams = [];
   let paramIndex = 1;
 
+  let query = `
+    WITH resources_with_verification AS (
+      SELECT
+        r.*,
+        COALESCE(u_owner.verified_status, c_owner.verified_status, FALSE) AS owner_is_verified
+      FROM resources r
+      LEFT JOIN users u_owner ON r.owner_user_id = u_owner.id
+      LEFT JOIN communities c_owner ON r.owner_community_id = c_owner.id
+    )
+    SELECT * FROM resources_with_verification r_wv
+    WHERE 1=1
+  `;
+
   if (category) {
-    query += ` AND category = $${paramIndex++}`;
+    query += ` AND r_wv.category = $${paramIndex++}`;
     queryParams.push(category);
   }
   if (status) {
-    query += ` AND status = $${paramIndex++}`;
+    query += ` AND r_wv.status = $${paramIndex++}`;
     queryParams.push(status);
-  }
-  if (is_recurring !== undefined) {
-    query += ` AND is_recurring = $${paramIndex++}`;
-    queryParams.push(is_recurring);
+  } else {
+    // Default to 'available' resources if no status filter is provided
+    query += ` AND r_wv.status = 'available'`;
   }
 
-  query += ' ORDER BY created_at DESC'; // Default sort
+  if (is_recurring !== undefined) {
+    query += ` AND r_wv.is_recurring = $${paramIndex++}`;
+    queryParams.push(is_recurring === 'true' || is_recurring === true);
+  }
+
+  if (tags) {
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    if (tagsArray.length > 0) {
+      query += ` AND r_wv.tags && $${paramIndex++}`;
+      queryParams.push(tagsArray);
+    }
+  }
+
+  if (duration_type) {
+    query += ` AND r_wv.duration_type = $${paramIndex++}`;
+    queryParams.push(duration_type);
+  }
+
+  // Bounding box location filter
+  if (min_lat && max_lat && min_lon && max_lon) {
+    query += ` AND r_wv.latitude BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+    queryParams.push(parseFloat(min_lat), parseFloat(max_lat));
+    query += ` AND r_wv.longitude BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+    queryParams.push(parseFloat(min_lon), parseFloat(max_lon));
+  }
+
+  // Verified owner filter
+  if (verified_owner === 'true') {
+    query += ` AND r_wv.owner_is_verified = TRUE`;
+  }
+
+  // Availability window filters
+  if (available_now === 'true') {
+    query += ` AND (r_wv.availability_window_start IS NULL OR r_wv.availability_window_start <= NOW())`;
+    query += ` AND (r_wv.availability_window_end IS NULL OR r_wv.availability_window_end >= NOW())`;
+  } else {
+    if (availability_start_after) {
+      query += ` AND (r_wv.availability_window_start IS NULL OR r_wv.availability_window_start >= $${paramIndex++})`;
+      queryParams.push(availability_start_after);
+    }
+    if (availability_end_before) {
+      query += ` AND (r_wv.availability_window_end IS NULL OR r_wv.availability_window_end <= $${paramIndex++})`;
+      queryParams.push(availability_end_before);
+    }
+  }
+
+  query += ' ORDER BY r_wv.created_at DESC'; // Default sort
 
   try {
     const result = await pool.query(query, queryParams);
@@ -143,7 +212,11 @@ router.put('/:resourceId', authenticate, async (req, res) => {
     recurring_details,
     user_id,
     owner_community_id, // owner_user_id is not updatable directly, tied to creator
-    status
+    status,
+    tags,
+    constraints,
+    duration_type,
+    duration_details
   } = req.body;
  const currentUserId = parseInt(user_id);
   if (!name) { // Basic validation
@@ -170,9 +243,10 @@ router.put('/:resourceId', authenticate, async (req, res) => {
       SET name = $1, description = $2, category = $3, quantity = $4, condition = $5,
           availability_window_start = $6, availability_window_end = $7,
           location_text = $8, latitude = $9, longitude = $10, is_recurring = $11,
-          recurring_details = $12, owner_community_id = $13, status = $14
+          recurring_details = $12, owner_community_id = $13, status = $14,
+          tags = $15, constraints = $16, duration_type = $17, duration_details = $18
           -- updated_at is handled by the trigger
-      WHERE id = $15
+      WHERE id = $19
       RETURNING *
     `;
     const values = [
@@ -180,6 +254,7 @@ router.put('/:resourceId', authenticate, async (req, res) => {
       availability_window_start, availability_window_end,
       location_text, latitude, longitude, is_recurring,
       recurring_details, owner_community_id, status,
+      tags, constraints, duration_type, duration_details,
       resourceId
     ];
 

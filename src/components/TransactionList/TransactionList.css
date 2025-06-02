@@ -1,0 +1,65 @@
+/* src/components/TransactionList/TransactionList.css */
+
+.transaction-list-item {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  /* background-color: #f9f9f9; Applied via MUI Paper/ListItem sx for consistency */
+}
+
+.transaction-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.transaction-list-item .status-chip {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* Example status colors - can be more dynamic in JS */
+.status-pending_provider_acceptance {
+  background-color: #ffc107 !important; /* Amber */
+  color: #000 !important;
+}
+.status-pending_receiver_acceptance {
+  background-color: #ffc107 !important; /* Amber */
+  color: #000 !important;
+}
+.status-accepted {
+  background-color: #28a745 !important; /* Green */
+  color: #fff !important;
+}
+.status-fulfilled {
+  background-color: #17a2b8 !important; /* Info Blue */
+  color: #fff !important;
+}
+.status-cancelled_by_provider,
+.status-cancelled_by_receiver,
+.status-declined_by_provider,
+.status-declined_by_receiver {
+  background-color: #dc3545 !important; /* Red */
+  color: #fff !important;
+}
+
+.transaction-list-item .MuiListItemText-secondary {
+  font-size: 0.875rem;
+}
+
+.transaction-list-item .MuiButton-root {
+  margin-left: auto; /* Pushes button to the right if in CardActions or similar */
+}
+
+.transaction-list-container .MuiCircularProgress-root {
+  display: block;
+  margin: 40px auto;
+}
+
+.transaction-list-container .MuiAlert-root {
+  margin: 20px;
+}
+
+.transaction-list-container .empty-transactions-message {
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+  color: #666;
+}

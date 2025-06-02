@@ -18,7 +18,11 @@ router.post('/', authenticate, async (req, res) => {
     location_text,
     latitude,
     longitude,
-    status // Default is 'open' in schema
+    status, // Default is 'open' in schema
+    tags,
+    constraints,
+    duration_type,
+    duration_details
   } = req.body;
   console.log('Received data:', req.body);
   console.log('id passed in the req:', req.user.id);
@@ -53,13 +57,15 @@ router.post('/', authenticate, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO needs (name, description, category, quantity_needed, urgency, 
                           requestor_user_id, requestor_community_id, required_before_date, 
-                          location_text, latitude, longitude, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                          location_text, latitude, longitude, status,
+                          tags, constraints, duration_type, duration_details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING *`,
       [
         name, description, category, quantity_needed, urgency,
         requestor_user_id, requestor_community_id, required_before_date,
-        location_text, latitude, longitude, status
+        location_text, latitude, longitude, status,
+        tags, constraints, duration_type, duration_details
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -71,28 +77,71 @@ router.post('/', authenticate, async (req, res) => {
 
 // GET /needs - Get all needs with optional filters
 router.get('/', async (req, res) => {
-  const { category, urgency, status } = req.query;
-  let query = 'SELECT * FROM needs WHERE 1=1';
-  const queryParams = [];
+  const {
+    category, urgency, status, tags, duration_type,
+    min_lat, max_lat, min_lon, max_lon,
+    verified_owner
+  } = req.query;
+
+  let queryParams = [];
   let paramIndex = 1;
 
+  // Start with a CTE for owner verification status to simplify the main query
+  let query = `
+    WITH needs_with_verification AS (
+      SELECT
+        n.*,
+        COALESCE(u_owner.verified_status, c_owner.verified_status, FALSE) AS owner_is_verified
+      FROM needs n
+      LEFT JOIN users u_owner ON n.requestor_user_id = u_owner.id
+      LEFT JOIN communities c_owner ON n.requestor_community_id = c_owner.id
+    )
+    SELECT * FROM needs_with_verification n_wv
+    WHERE 1=1
+  `;
+
   if (category) {
-    query += ` AND category = $${paramIndex++}`;
+    query += ` AND n_wv.category = $${paramIndex++}`;
     queryParams.push(category);
   }
   if (urgency) {
-    query += ` AND urgency = $${paramIndex++}`;
+    query += ` AND n_wv.urgency = $${paramIndex++}`;
     queryParams.push(urgency);
   }
   if (status) {
-    query += ` AND status = $${paramIndex++}`;
+    query += ` AND n_wv.status = $${paramIndex++}`;
     queryParams.push(status);
   } else {
-    // Default to open needs if no status filter is provided
-    query += ` AND (status = 'open' OR status IS NULL)`; // Assuming NULL status also means open
+    query += ` AND (n_wv.status = 'open' OR n_wv.status IS NULL)`;
   }
 
-  query += ' ORDER BY created_at DESC'; // Default sort
+  if (tags) {
+    const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    if (tagsArray.length > 0) {
+      query += ` AND n_wv.tags && $${paramIndex++}`; // Overlap operator for arrays
+      queryParams.push(tagsArray);
+    }
+  }
+
+  if (duration_type) {
+    query += ` AND n_wv.duration_type = $${paramIndex++}`;
+    queryParams.push(duration_type);
+  }
+
+  // Bounding box location filter
+  if (min_lat && max_lat && min_lon && max_lon) {
+    query += ` AND n_wv.latitude BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+    queryParams.push(parseFloat(min_lat), parseFloat(max_lat));
+    query += ` AND n_wv.longitude BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+    queryParams.push(parseFloat(min_lon), parseFloat(max_lon));
+  }
+
+  // Verified owner filter
+  if (verified_owner === 'true') {
+    query += ` AND n_wv.owner_is_verified = TRUE`;
+  }
+
+  query += ' ORDER BY n_wv.created_at DESC'; // Default sort
 
   try {
     const result = await pool.query(query, queryParams);
@@ -157,7 +206,11 @@ router.put('/:needId', authenticate, async (req, res) => {
     location_text,
     latitude,
     longitude,
-    status
+    status,
+    tags,
+    constraints,
+    duration_type,
+    duration_details
   } = req.body;
 
   if (!name) { // Basic validation
@@ -183,14 +236,16 @@ router.put('/:needId', authenticate, async (req, res) => {
     const updateQuery = `
       UPDATE needs 
       SET name = $1, description = $2, category = $3, quantity_needed = $4, urgency = $5,
-          required_before_date = $6, location_text = $7, latitude = $8, longitude = $9, status = $10
+          required_before_date = $6, location_text = $7, latitude = $8, longitude = $9, status = $10,
+          tags = $11, constraints = $12, duration_type = $13, duration_details = $14
           -- updated_at is handled by the trigger
-      WHERE id = $11
+      WHERE id = $15
       RETURNING *
     `;
     const values = [
       name, description, category, quantity_needed, urgency,
       required_before_date, location_text, latitude, longitude, status,
+      tags, constraints, duration_type, duration_details,
       needId
     ];
 
