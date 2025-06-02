@@ -109,7 +109,7 @@ Tasks to granularize:
 ${formattedTasks}
 
 Here are the rules:
-- All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
+- All IDs (project IDs, task IDs) must be **unique, sequential integers starting at 1**.
 - Maintain **relationships**: 
   - "project_id" in tasks must match the corresponding project's new ID.
   - "skill_id" in tasks must match the correct skill's existing ID.

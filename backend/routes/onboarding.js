@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import pg from 'pg';
 import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
+import { checkAndAwardBadges } from '../services/badgeService.js';
 
 const router = express.Router();
 const { Pool } = pg;
@@ -213,6 +214,16 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    if (internalUserId) { // Ensure internalUserId is available
+        try {
+            console.log(`Onboarding complete for user ${internalUserId}, initiating badge check.`);
+            await checkAndAwardBadges(internalUserId);
+        } catch (badgeError) {
+            console.error(`Error during badge check for user ${internalUserId} after onboarding:`, badgeError);
+            // Do not let badge errors fail the onboarding response, as onboarding itself was successful.
+        }
+    }
     
     // Refetch the user to return complete data
     const finalUserResult = await client.query('SELECT id, username, profile_picture, skills, interests FROM users WHERE id = $1', [internalUserId]);

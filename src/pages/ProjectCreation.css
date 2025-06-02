@@ -1,13 +1,5 @@
 /* Project Creation Page - Space Game Theme */
-.project-creation-background {
-    background: radial-gradient(circle, #0A0A2E, #000000);
-    height: 100vh;
-    width: 100%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: -1; /* Ensure it stays behind other elements */
-}
+
 
 .project-creation-container {
     padding: 20px;

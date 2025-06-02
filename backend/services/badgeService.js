@@ -99,6 +99,7 @@ async function checkAndAwardBadges(userId) {
                     break;
                 case "Space Cowboy":
                     qualifies = await checkSpaceCowboy(userId, userAccountData);
+                    break; // Added break statement
                 case "Supernova Survivor": // Ensure this name matches the 'name' column in the 'badges' table
                     qualifies = await checkSupernovaSurvivor(userId, userAccountData);
                     break;
@@ -349,11 +350,46 @@ async function checkLunarVisionary(userId, createdTasksWithAssignees) {
  * Checks if the user qualifies for Space Cowboy.
  * A Space Cowboy is a user who has completed the onboarding process. This means they will have a username and at least 3 skills and interests.
  * @param {number} userId - The ID of the user.
- * @param {object|null} userAccountData - Object containing user's `created_at` or null.
+ * @param {object|null} userAccountData - Object containing user's `username`, `skills`, `interests`.
  * @returns {boolean}
  */
+async function checkSpaceCowboy(userId, userAccountData) {
+    console.log(`User ${userId}: Checking for Space Cowboy. Account data: ${JSON.stringify(userAccountData)}`);
 
+    if (!userAccountData) {
+        console.log(`User ${userId}: Space Cowboy check failed - no userAccountData.`);
+        return false;
+    }
 
+    // Validate username
+    if (typeof userAccountData.username !== 'string' || userAccountData.username.trim() === '') {
+        console.log(`User ${userId}: Space Cowboy check failed - invalid username: ${userAccountData.username}`);
+        return false;
+    }
+
+    // Validate skills
+    if (!Array.isArray(userAccountData.skills)) {
+        console.log(`User ${userId}: Space Cowboy check failed - skills is not an array: ${JSON.stringify(userAccountData.skills)}`);
+        return false;
+    }
+
+    // Validate interests
+    if (!Array.isArray(userAccountData.interests)) {
+        console.log(`User ${userId}: Space Cowboy check failed - interests is not an array: ${JSON.stringify(userAccountData.interests)}`);
+        return false;
+    }
+
+    const hasEnoughSkills = userAccountData.skills.length >= 3;
+    const hasEnoughInterests = userAccountData.interests.length >= 3;
+
+    if (hasEnoughSkills && hasEnoughInterests) {
+        console.log(`User ${userId} qualifies for Space Cowboy. Username: ${userAccountData.username}, Skills: ${userAccountData.skills.length}, Interests: ${userAccountData.interests.length}`);
+        return true;
+    } else {
+        console.log(`User ${userId} does not qualify for Space Cowboy. Username: ${userAccountData.username}, Skills: ${userAccountData.skills.length} (needs >=3), Interests: ${userAccountData.interests.length} (needs >=3)`);
+        return false;
+    }
+}
 
 /**
  * Checks if the user qualifies for Supernova Survivor.
@@ -409,11 +445,11 @@ async function checkAncientArtifact(userId, userAccountData) {
 async function getUserAccountData(userId) {
     console.log(`Fetching account data for user ${userId}`);
     try {
-        const query = `SELECT created_at FROM users WHERE id = $1;`;
+        const query = `SELECT username, skills, interests, created_at FROM users WHERE id = $1;`;
         const { rows } = await pool.query(query, [userId]);
         if (rows.length > 0) {
             console.log(`Account data found for user ${userId}: ${JSON.stringify(rows[0])}`);
-            return { created_at: rows[0].created_at };
+            return rows[0]; // Return the direct row object
         } else {
             console.log(`No account data found for user ${userId}.`);
             return null;
@@ -518,26 +554,70 @@ async function getSkillCategories(skillIds) {
         console.log('getSkillCategories: No skill IDs provided.');
         return new Map();
     }
+
+    const uniqueSkillIds = Array.from(new Set(skillIds.filter(id => id != null)));
+    if (uniqueSkillIds.length === 0) {
+        console.log('getSkillCategories: No valid unique skill IDs after filtering.');
+        return new Map();
+    }
+
+    const skillCategoriesMap = new Map();
+
     try {
-        // Ensure skillIds are unique and non-null for the query
-        const uniqueSkillIds = Array.from(new Set(skillIds.filter(id => id != null)));
-        if (uniqueSkillIds.length === 0) {
-            console.log('getSkillCategories: No valid unique skill IDs after filtering.');
-            return new Map();
+        const allSkillsResult = await pool.query('SELECT id, name, parent_skill_id FROM skills');
+        if (allSkillsResult.rows.length === 0) {
+            console.warn('getSkillCategories: No skills found in the database.');
+            return new Map(); // No skills to map, so categories can't be determined.
         }
 
-        const query = `SELECT id, category FROM skills WHERE id = ANY($1::int[]);`;
-        const { rows } = await pool.query(query, [uniqueSkillIds]);
-        
-        const skillCategoriesMap = new Map();
-        for (const row of rows) {
-            skillCategoriesMap.set(row.id, row.category);
+        const allSkillsMap = new Map();
+        for (const skill of allSkillsResult.rows) {
+            allSkillsMap.set(skill.id, skill);
         }
-        console.log(`Fetched categories for ${skillCategoriesMap.size} skills of ${uniqueSkillIds.length} requested.`);
+
+        for (const targetSkillId of uniqueSkillIds) {
+            let currentId = targetSkillId;
+            const path = new Set(); // For cycle detection in the current traversal for targetSkillId
+
+            while (currentId != null) {
+                if (path.has(currentId)) {
+                    console.error(`Cycle detected for skill ID ${targetSkillId} starting at ${currentId}. Cannot determine root category.`);
+                    skillCategoriesMap.set(targetSkillId, 'Error: Cycle'); // Mark as error
+                    currentId = null; // Break from while loop
+                    continue;
+                }
+                path.add(currentId);
+
+                const skillNode = allSkillsMap.get(currentId);
+
+                if (!skillNode) {
+                    console.error(`Orphaned skill or broken chain for target ${targetSkillId} at ID ${currentId}. Cannot determine root category.`);
+                    skillCategoriesMap.set(targetSkillId, 'Error: Orphan'); // Mark as error
+                    currentId = null; // Break from while loop
+                    continue;
+                }
+
+                if (skillNode.parent_skill_id == null) {
+                    skillCategoriesMap.set(targetSkillId, skillNode.name); // Root found, category is its name
+                    currentId = null; // Break from while loop
+                    continue;
+                }
+                currentId = skillNode.parent_skill_id; // Go up to the parent
+            }
+
+            if (!skillCategoriesMap.has(targetSkillId)) {
+                 console.warn(`Could not determine root category for skill ID ${targetSkillId}. It might be an orphan without explicit error marking, or part of a structure that doesn't lead to a NULL parent without a cycle.`);
+                 skillCategoriesMap.set(targetSkillId, 'Unknown Category'); // Default if no root found
+            }
+        }
+        console.log(`Processed categories for ${uniqueSkillIds.length} skills. Found ${skillCategoriesMap.size} mappings.`);
         return skillCategoriesMap;
+
     } catch (error) {
-        console.error('Error fetching skill categories:', error);
-        return new Map(); // Return an empty map in case of error
+        console.error('Error in getSkillCategories:', error);
+        // For any other error, return an empty map or rethrow, depending on desired handling.
+        // For now, returning an empty map for consistency on error.
+        return new Map();
     }
 }
 
