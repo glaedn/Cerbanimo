@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from "axios"; // Keep for existing, or switch to apiFetch
 import apiFetch from "../../utils/api"; // For new fetches
 import ResourceFilterPanel from "../ResourceFilterPanel"; // Import the filter panel
-import { Box, CircularProgress, Alert, Paper, Typography, Drawer } from '@mui/material'; // For UI elements
+import { Box, CircularProgress, Alert, Paper, Typography, Drawer, TextField } from '@mui/material'; // For UI elements
 import FilterListIcon from '@mui/icons-material/FilterList';
 import IconButton from '@mui/material/IconButton';
 
@@ -24,7 +24,7 @@ const GalacticActivityMap = () => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0(); // Added isAuthenticated
   const navigate = useNavigate();
   const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
-
+  
   const [filters, setFilters] = useState({
     category: '',
     tags: '', // Store as string, convert to array for API
@@ -32,7 +32,7 @@ const GalacticActivityMap = () => {
     verified_owner: false,
     duration_type: '',
     // Bounding box for map, managed internally by map interactions
-    min_lat: null, max_lat: null, min_lon: null, max_lon: null,
+    min_lat: null, max_lat: null, min_lon: null, max_lon: null, 
   });
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
@@ -51,7 +51,7 @@ const GalacticActivityMap = () => {
         return "#D3D3D3"; // LightGrey for other resources
     }
     // Existing logic for tasks, projects, communities
-    if (status.includes("urgent")) return "#ff0000";
+    if (status.includes("urgent")) return "#ff0000"; 
     if (status.includes("completed") || status.includes("archived")) return "#ff69b4";
     if (status.includes("submitted")) return "#ffa500";
     if (status.startsWith("active")) return "#00ff00";
@@ -63,7 +63,7 @@ const GalacticActivityMap = () => {
     const now = new Date();
     const lastActivity = item.lastActivity || item.updated_at || item.created_at || Date.now();
     const ageDays = (now - new Date(lastActivity)) / (1000 * 60 * 60 * 24);
-
+    
     let baseRadius;
     switch(item.type) {
         case "task": baseRadius = 0.5; break;
@@ -76,7 +76,7 @@ const GalacticActivityMap = () => {
 
     const status = item.status ? item.status.toLowerCase() : '';
     if (status.includes("urgent") || item.urgency === "critical" || item.urgency === "high") baseRadius *= 1.3;
-
+    
     const ageScale = Math.max(0.4, 1 - ageDays / 60);
     let contributors = item.contributors || 0;
     if (item.type === 'need' && item.quantity_needed) contributors = parseFloat(item.quantity_needed) || 1; // Use quantity for needs
@@ -100,7 +100,7 @@ const GalacticActivityMap = () => {
     try {
       const token = await getAccessTokenSilently();
       const config = { headers: { Authorization: `Bearer ${token}` } };
-
+      
       // Construct query parameters from filters state
       const queryParams = new URLSearchParams();
       if (filters.category) queryParams.append('category', filters.category);
@@ -112,7 +112,7 @@ const GalacticActivityMap = () => {
       if (filters.max_lat) queryParams.append('max_lat', filters.max_lat);
       if (filters.min_lon) queryParams.append('min_lon', filters.min_lon);
       if (filters.max_lon) queryParams.append('max_lon', filters.max_lon);
-
+      
       const queryString = queryParams.toString();
 
       // Use axios for existing, apiFetch for new ones or migrate all
@@ -174,7 +174,7 @@ const GalacticActivityMap = () => {
           raw_data: resource,
         });
       });
-
+      
       setStarData(processedData);
     } catch (err) {
       setError(err.message || "Failed to fetch data");
@@ -193,7 +193,7 @@ const GalacticActivityMap = () => {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
     // fetchData will be called by the useEffect watching 'filters' state.
   }, []);
-
+  
   // Placeholder for map bounds change handling
   // This would be called by the D3 map component when zoom/pan occurs
   const handleMapBoundsChange = useCallback((bounds) => {
@@ -235,7 +235,7 @@ const GalacticActivityMap = () => {
       // If no valid lat/lon data, use random placement within clientWidth/clientHeight
       const useRandomPlacement = !latExtent[0] || !lonExtent[0];
 
-      const xScale = useRandomPlacement ?
+      const xScale = useRandomPlacement ? 
                        () => Math.random() * clientWidth :
                        d3.scaleLinear().domain(lonExtent).range([50, clientWidth - 50]); // Add padding
       const yScale = useRandomPlacement ?
@@ -294,7 +294,7 @@ const GalacticActivityMap = () => {
         .attr("cy", d => d.finalY)
         .attr("r", d => getStarRadius(d) + 10)
         .style("fill", "transparent").style("cursor", "pointer");
-
+      
       eventCircles.on("mouseover", (event, d) => {
         tooltipD3.transition().duration(200).style("opacity", .9);
         let tooltipContent = `<div class="tooltip-name">${d.name} (${d.type})</div>`;
@@ -304,7 +304,7 @@ const GalacticActivityMap = () => {
         if (d.contributors) tooltipContent += `<div class="tooltip-contributors">Contributors: ${d.contributors}</div>`;
         if (d.quantity_needed) tooltipContent += `<div>Quantity Needed: ${d.quantity_needed}</div>`;
         if (d.quantity) tooltipContent += `<div>Quantity: ${d.quantity}</div>`;
-
+        
         tooltipD3.html(tooltipContent)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 28) + "px");
@@ -389,7 +389,7 @@ const GalacticActivityMap = () => {
 
   return (
     <div className="galactic-activity-map-container">
-      <IconButton
+      <IconButton 
         onClick={toggleFilterDrawer(true)}
         sx={{position: 'absolute', top: 10, left: 10, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.7)'}}
       >
