@@ -64,6 +64,76 @@ const OnboardingPage = () => {
     fetchOptions();
   }, [getAccessTokenSilently]);
 
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        const { data: profileData } = await axios.get(`http://localhost:4000/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log('Fetched profile data:', profileData);
+        if (profileData) {
+          setUsername(profileData.username || '');
+          if (profileData.profile_picture) {
+            let imagePath = profileData.profile_picture;
+            // Replace backslashes with forward slashes for URL compatibility
+            imagePath = imagePath.replace(/\\/g, '/');
+            // Construct the full URL
+            // Ensure no double slashes if profileData.profile_picture might already start with a slash
+            const baseUrl = 'http://localhost:4000';
+            if (imagePath.startsWith('/')) {
+                setProfilePicturePreview(`${baseUrl}${imagePath}`);
+            } else {
+                setProfilePicturePreview(`${baseUrl}/${imagePath}`);
+            }
+          } else {
+            setProfilePicturePreview(''); // Default to empty or a placeholder if no picture
+          }
+          // Ensure skills and interests are in the format [{name: 'skill1'}, {name: 'skill2'}]
+          // The backend is expected to send [{id: 1, name: "React"}, ...]
+          // If they are just strings, they need to be mapped.
+          // The Autocomplete expects objects with a 'name' property.
+          if (profileData.skills && Array.isArray(profileData.skills)) {
+            const parsedSkills = profileData.skills.map(skillString => {
+                try {
+                    return JSON.parse(skillString); // This should result in objects like {id: 1, name: "SkillA"}
+                } catch (e) {
+                    console.error("Failed to parse skill string:", skillString, e);
+                    return null; // Or some default/error representation
+                }
+            }).filter(skill => skill && skill.name); // Filter out nulls and ensure 'name' property exists
+            setSkills(parsedSkills);
+          } else {
+            setSkills([]); // Default to empty array if no skills data
+          }
+
+          if (profileData.interests && Array.isArray(profileData.interests)) {
+            const parsedInterests = profileData.interests.map(interestString => {
+                try {
+                    // The interest objects might just have a 'name', e.g., {"name":"Art"}
+                    // Or they could have an 'id' too, e.g., {"id":123,"name":"Art"}
+                    return JSON.parse(interestString); 
+                } catch (e) {
+                    console.error("Failed to parse interest string:", interestString, e);
+                    return null;
+                }
+            }).filter(interest => interest && interest.name); // Filter out nulls and ensure 'name' property exists
+            setInterests(parsedInterests);
+          } else {
+            setInterests([]); // Default to empty array if no interests data
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching profile data:', err);
+        // Not setting a user-facing error for this, as it's pre-population
+        // setError('Failed to load existing profile data.'); 
+      }
+    };
+    fetchProfileData();
+  }, [getAccessTokenSilently]);
+
   const handleProfilePictureChange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -123,9 +193,19 @@ const OnboardingPage = () => {
       // Navigate to dashboard or a specific project page if ID is available
       // For now, navigating to dashboard
       if (response.data.project && response.data.project.projectId) {
-        navigate(`/project/${response.data.project.projectId}`);
+        navigate(`/visualizer/${response.data.project.projectId}`, { 
+                state: { 
+                    onboardingJustCompleted: true, 
+                    updatedUserFromOnboarding: response.data.user 
+                } 
+            });
       } else {
-        navigate('/dashboard');
+        navigate('/dashboard', { 
+                state: { 
+                    onboardingJustCompleted: true, 
+                    updatedUserFromOnboarding: response.data.user 
+                } 
+            });
       }
     } catch (err) {
       console.error('Onboarding error:', err);

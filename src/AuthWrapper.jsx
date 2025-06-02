@@ -96,6 +96,24 @@ const AuthWrapper = ({ children }) => {
   ]);
 
   useEffect(() => {
+    if (location.state?.onboardingJustCompleted) {
+      console.log("AuthWrapper: Onboarding just completed. Processing state data.");
+      if (location.state.updatedUserFromOnboarding) {
+          console.log("AuthWrapper: Updating profileData with data from onboarding state.", location.state.updatedUserFromOnboarding);
+          setProfileData(location.state.updatedUserFromOnboarding); 
+      }
+      // Clear the flags to prevent reprocessing and ensure the effect can run cleanly next time.
+      // This navigation will cause the effect to run again.
+      navigate(location.pathname, { 
+          replace: true, 
+          state: { 
+              ...location.state, 
+              onboardingJustCompleted: false, 
+              updatedUserFromOnboarding: null // Clear the user data from state
+          } 
+      });
+      return; // Exit this run of the effect.
+    }
     // Conditions for checking onboarding:
     // 1. Auth0 is not loading & Profile is not loading.
     // 2. User is authenticated.
@@ -139,6 +157,7 @@ const AuthWrapper = ({ children }) => {
     navigate,
     location.pathname,
     auth0Loading,
+    location.state, // Added location.state as a dependency
   ]);
 
   return <>{children}</>;
