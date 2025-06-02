@@ -8,7 +8,6 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
-import ReactMarkdown from "react-markdown";
 
 const ProjectVisualizer = () => {
   const svgRef = useRef(null);
@@ -17,14 +16,8 @@ const ProjectVisualizer = () => {
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
-  const {
-    tasks,
-    skills,
-    project,
-    handleTaskAction,
-    fetchTasks,
-    updateProject,
-  } = useProjectTasks(projectId, user);
+  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
+    useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeNode, setActiveNode] = useState(null);
@@ -42,8 +35,7 @@ const ProjectVisualizer = () => {
   const hoverTimeout = useRef(null);
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
-  const [showCommunityProposalPopup, setShowCommunityProposalPopup] =
-    useState(false);
+  const [showCommunityProposalPopup, setShowCommunityProposalPopup] = useState(false);
   const [userCommunities, setUserCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -67,34 +59,32 @@ const ProjectVisualizer = () => {
     );
   }, [tasks]);
 
+
   const fetchUserCommunities = async () => {
     if (!userId) {
-      console.log("No userId available");
+      console.log('No userId available');
       return;
     }
-
+    
     try {
       const token = await getAccessTokenSilently({
         audience: "http://localhost:4000",
         scope: "openid profile email",
       });
-
-      const response = await fetch(
-        `http://localhost:4000/communities/user/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+  
+      const response = await fetch(`http://localhost:4000/communities/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch communities: ${errorText}`);
       }
-
+  
       const data = await response.json();
-
+      
       if (Array.isArray(data)) {
         setUserCommunities(data);
       } else {
@@ -107,9 +97,7 @@ const ProjectVisualizer = () => {
 
   // Function to handle granularization of tasks
   const handleGranularizeTasks = async (projectId) => {
-    const confirm = window.confirm(
-      "Are you sure? This will delete and replace ALL tasks in the project."
-    );
+    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the project.');
     if (!confirm) return;
 
     setLoading(true);
@@ -119,39 +107,38 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(
-        `http://localhost:4000/tasks/${projectId}/granularize`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ projectId }),
-        }
-      );
+      const response = await fetch(`http://localhost:4000/tasks/${projectId}/granularize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ projectId }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to granularize task: ${errorText}`);
       }
-
+      
       const data = await response.json();
 
       if (data.success) {
         // Refresh tasks after successful granularization
         await fetchTasks();
-        alert("Task granularization successful!");
+        alert('Task granularization successful!');
       } else {
-        alert("Task granularization failed: " + data.error);
+        alert('Task granularization failed: ' + data.error);
       }
     } catch (error) {
-      console.error("Error granularizing task:", error);
-      alert("Error granularizing task: " + error.message);
+      console.error('Error granularizing task:', error);
+      alert('Error granularizing task: ' + error.message);
     } finally {
       setLoading(false);
     }
+  
   };
+
 
   // Add useEffect to handle initial communities fetch
   useEffect(() => {
@@ -162,35 +149,35 @@ const ProjectVisualizer = () => {
 
   const handleSubmitCommunityProposal = async () => {
     if (!selectedCommunity) return;
-
+  
     try {
       const token = await getAccessTokenSilently({
         audience: "http://localhost:4000",
         scope: "openid profile email",
       });
-
+  
       const response = await fetch(
         `http://localhost:4000/communities/${selectedCommunity.id}/submit/${projectId}`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
+  
       if (!response.ok) {
-        throw new Error("Failed to submit proposal");
+        throw new Error('Failed to submit proposal');
       }
-
+  
       // Update the project to mark it as a community project
       updateProject({ community_id: selectedCommunity.id });
-
+      
       // Close the popup and navigate to the community hub
       setShowCommunityProposalPopup(false);
       window.location.href = `/communityhub/${selectedCommunity.id}`;
     } catch (error) {
-      console.error("Error submitting proposal:", error);
+      console.error('Error submitting proposal:', error);
     }
   };
 
@@ -199,32 +186,30 @@ const ProjectVisualizer = () => {
       const token = await getAccessTokenSilently({
         audience: "http://localhost:4000",
         scope: "openid profile email",
-      }); // Use the token for authorized request
+      });// Use the token for authorized request
 
-      const response = await fetch(
-        `http://localhost:4000/projects/${projectId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ tags: newTags }),
-        }
-      );
-
+      const response = await fetch(`http://localhost:4000/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tags: newTags }),
+      });
+  
       if (!response.ok) {
-        throw new Error("Failed to update tags");
+        throw new Error('Failed to update tags');
       }
-
+  
       // Update the UI immediately without waiting for a refresh
       updateProject({ tags: newTags });
-
+      
       // No need to call fetchProject() since we've already updated the UI
     } catch (error) {
-      console.error("Error updating tags:", error);
+      console.error('Error updating tags:', error);
     }
   };
+
 
   useEffect(() => {
     const fetchInterests = async () => {
@@ -234,70 +219,75 @@ const ProjectVisualizer = () => {
           scope: "openid profile email",
         });
 
-        const response = await fetch("http://localhost:4000/profile/options", {
+        const response = await fetch('http://localhost:4000/profile/options', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error("Failed to fetch interests");
+          throw new Error('Failed to fetch interests');
         }
 
         const data = await response.json();
         setInterests(data.interestsPool || []);
       } catch (error) {
-        console.error("Error fetching interests:", error);
+        console.error('Error fetching interests:', error);
       }
     };
 
     fetchInterests();
+    
   }, [getAccessTokenSilently]);
 
+  
   // Modify your fetchTasks call to preserve the category
-  const refreshTasks = async () => {
-    const currentCategory = activeCategory; // Save before refresh
-    const currentSkillId = activeSkillId;
+const refreshTasks = async () => {
+  const currentCategory = activeCategory; // Save before refresh
+  const currentSkillId = activeSkillId;
+  
+  await fetchTasks();
+  
+  // Restore the active category after refresh
+  if (currentCategory) {
+    setActiveCategory(currentCategory);
+    setActiveSkillId(currentSkillId);
+  }
+};
 
-    await fetchTasks();
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const token = await getAccessTokenSilently({
+        audience: "http://localhost:4000",
+        scope: "openid profile email",
+      });
 
-    // Restore the active category after refresh
-    if (currentCategory) {
-      setActiveCategory(currentCategory);
-      setActiveSkillId(currentSkillId);
+      const response = await fetch('http://localhost:4000/profile/userId', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+
+      const data = await response.json();
+      setUserId(data.id);
+      
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = await getAccessTokenSilently({
-          audience: "http://localhost:4000",
-          scope: "openid profile email",
-        });
+  if (user) {
+    fetchProfile();
+  }
+}, [user, getAccessTokenSilently]);
 
-        const response = await fetch("http://localhost:4000/profile/userId", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-
-        const data = await response.json();
-        setUserId(data.id);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
-    }
-  }, [user, getAccessTokenSilently]);
 
   useEffect(() => {
     return () => {
@@ -311,18 +301,18 @@ const ProjectVisualizer = () => {
   const categorizedTasks = useMemo(() => {
     // First create the all-tasks entry
     const taskMap = {
-      "All Tasks": [...tasks], // Include all tasks
+      "All Tasks": [...tasks] // Include all tasks
     };
-
+  
     // Then add the skill-specific categories
     const filteredSkills = skills.filter((skill) =>
       tasks.some((task) => task.skill_id === skill.id)
     );
-
+  
     filteredSkills.forEach((skill) => {
       taskMap[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
     });
-
+  
     return taskMap;
   }, [tasks, skills]);
 
@@ -334,7 +324,7 @@ const ProjectVisualizer = () => {
     dependencies: [],
     skill_id: 0,
     project_id: projectId,
-    reward_tokens: 10,
+    reward_tokens: 10
   };
 
   // local modal control here
@@ -399,17 +389,17 @@ const ProjectVisualizer = () => {
       project_id: projectId,
       skill_id: currentSkill?.id || "",
     };
-
+    
     // If dependencyId exists, create both the numeric dependencies array
     // and the named version needed for display
     if (dependencyId) {
       const depTask = allTasks[dependencyId];
       form.dependencies = [parseInt(dependencyId, 10)];
-      form.dependenciesWithNames = depTask
-        ? [{ id: parseInt(dependencyId, 10), name: depTask.name }]
-        : [];
+      form.dependenciesWithNames = depTask ? [
+        { id: parseInt(dependencyId, 10), name: depTask.name }
+      ] : [];
     }
-
+    
     setTaskForm(form);
     setShowTaskPopup(true);
   };
@@ -450,11 +440,9 @@ const ProjectVisualizer = () => {
     if (linksGroupRef.current) {
       linksGroupRef.current
         .selectAll(".link")
-        .attr("stroke", (d) =>
-          d.targetStatus === "completed" ? "#FF69B4" : "#999"
-        );
+        .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
     }
-  };
+  }
 
   const getNodeStroke = (status) => {
     if (status === "active-unassigned" || status === "active-assigned")
@@ -489,14 +477,15 @@ const ProjectVisualizer = () => {
   // Store the zoom object in a ref to maintain it across renders
   const zoomRef = useRef(null);
 
-  // Modify this useEffect to only set initial values when there are no current values
-  useEffect(() => {
-    // Only set initial values if both activeCategory and activeSkillId are not set
-    if (!activeCategory) {
-      setActiveCategory("All Tasks");
-      setActiveSkillId(null);
-    }
-  }, [skills, tasks]); // Dependencies remain the same
+// Modify this useEffect to only set initial values when there are no current values
+useEffect(() => {
+  // Only set initial values if both activeCategory and activeSkillId are not set
+  if (!activeCategory) {
+    setActiveCategory("All Tasks");
+    setActiveSkillId(null);
+  }
+}, [skills, tasks]); // Dependencies remain the same
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -567,10 +556,10 @@ const ProjectVisualizer = () => {
 
   useEffect(() => {
     if (!svgRef.current) return;
-
+    
     // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
-
+    
     // Exit early if no data
     if (data.length === 0) return;
 
@@ -636,20 +625,20 @@ const ProjectVisualizer = () => {
 
     // Find root nodes - different logic for All Tasks view vs skill-specific views
     const rootNodes = data
-      .filter((node) => {
-        if (activeCategory === "All Tasks") {
-          // For All Tasks view, a root node has no dependencies at all
-          return node.dependencies.length === 0;
-        } else {
-          // For skill-specific views
-          const internalDeps = node.dependencies.filter((depId) => {
-            const depTask = allTasks[depId];
-            return depTask && depTask.skill_id === activeSkillId;
-          });
-          return internalDeps.length === 0;
-        }
-      })
-      .map((node) => node.id);
+    .filter((node) => {
+      if (activeCategory === "All Tasks") {
+        // For All Tasks view, a root node has no dependencies at all
+        return node.dependencies.length === 0;
+      } else {
+        // For skill-specific views
+        const internalDeps = node.dependencies.filter((depId) => {
+          const depTask = allTasks[depId];
+          return depTask && depTask.skill_id === activeSkillId;
+        });
+        return internalDeps.length === 0;
+      }
+    })
+    .map((node) => node.id);
 
     const handleNodeClick = (event, d) => {
       event.stopPropagation(); // Prevent click bubbling
@@ -737,75 +726,76 @@ const ProjectVisualizer = () => {
     });
 
     // 1. First create your links array with IDs for reference
-    const links = [];
-    let linkId = 0; // Give each link a unique ID
+const links = [];
+let linkId = 0; // Give each link a unique ID
 
-    data.forEach((source) => {
-      const sourceNode = graph[source.id];
-      if (!sourceNode) return;
+data.forEach((source) => {
+  const sourceNode = graph[source.id];
+  if (!sourceNode) return;
 
-      // For All Tasks view, include all dependencies
-      if (activeCategory === "All Tasks") {
-        source.dependencies.forEach((depId) => {
-          const targetNode = graph[depId];
-          if (targetNode) {
-            links.push({
-              id: `link-${linkId++}`, // Unique ID for reference
-              source: sourceNode,
-              target: targetNode,
-              type: "internal",
-              targetStatus: targetNode.status, // Store the actual status string
-            });
-          }
-        });
-      } else {
-        // For skill-specific views
-        const internalDeps = source.dependencies.filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id === activeSkillId;
-        });
-
-        internalDeps.forEach((depId) => {
-          const targetNode = graph[depId];
-          if (targetNode) {
-            links.push({
-              id: `link-${linkId++}`, // Unique ID for reference
-              source: sourceNode,
-              target: targetNode,
-              type: "internal",
-              targetStatus: targetNode.status, // Store the actual status string
-            });
-          }
+  // For All Tasks view, include all dependencies
+  if (activeCategory === "All Tasks") {
+    source.dependencies.forEach((depId) => {
+      const targetNode = graph[depId];
+      if (targetNode) {
+        links.push({
+          id: `link-${linkId++}`, // Unique ID for reference
+          source: sourceNode,
+          target: targetNode,
+          type: "internal",
+          targetStatus: targetNode.status // Store the actual status string
         });
       }
     });
+  } else {
+    // For skill-specific views
+    const internalDeps = source.dependencies.filter((depId) => {
+      const depTask = allTasks[depId];
+      return depTask && depTask.skill_id === activeSkillId;
+    });
 
-    // 2. Now create the link elements
-    const linkElements = linksGroup
-      .selectAll(".link")
-      .data(links)
-      .enter()
-      .append("path")
-      .attr("id", (d) => d.id) // Set the unique ID
-      .attr("class", "link")
-      .attr("fill", "none")
-      .attr("stroke", "#999") // Default color - we'll update specific ones in the next step
-      .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
-      .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
-      .attr("d", (d) => {
-        return `M${d.source.x},${d.source.y} C${d.source.x},${
-          (d.source.y + d.target.y) / 2
-        } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
-          d.target.y
-        }`;
-      });
-
-    // 3. Now go through and update the colors for completed tasks directly
-    links.forEach((link) => {
-      if (link.targetStatus === "completed") {
-        d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
+    internalDeps.forEach((depId) => {
+      const targetNode = graph[depId];
+      if (targetNode) {
+        links.push({
+          id: `link-${linkId++}`, // Unique ID for reference  
+          source: sourceNode,
+          target: targetNode,
+          type: "internal",
+          targetStatus: targetNode.status // Store the actual status string
+        });
       }
     });
+  }
+});
+
+// 2. Now create the link elements
+const linkElements = linksGroup
+  .selectAll(".link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("id", d => d.id) // Set the unique ID
+  .attr("class", "link")
+  .attr("fill", "none")
+  .attr("stroke", "#999") // Default color - we'll update specific ones in the next step
+  .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
+  .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
+  .attr("d", (d) => {
+    return `M${d.source.x},${d.source.y} C${d.source.x},${
+      (d.source.y + d.target.y) / 2
+    } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
+      d.target.y
+    }`;
+  });
+
+// 3. Now go through and update the colors for completed tasks directly
+links.forEach(link => {
+  if (link.targetStatus === "completed") {
+    d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
+  }
+});
+
 
     // Only process external dependencies if we're not in All Tasks view
     if (activeCategory !== "All Tasks") {
@@ -822,7 +812,7 @@ const ProjectVisualizer = () => {
             type: "depends-on",
             taskInfo: allTasks[depId],
           }));
-
+    
         // Get external dependents (things that depend on this node)
         const externalDependents = Object.values(allTasks)
           .filter(
@@ -836,14 +826,11 @@ const ProjectVisualizer = () => {
             type: "depended-by",
             taskInfo: task,
           }));
-
+    
         // Limit to MAX_EXTERNAL_DEPS dependencies of each type
         const limitedDeps = externalDeps.slice(0, MAX_EXTERNAL_DEPS);
-        const limitedDependents = externalDependents.slice(
-          0,
-          MAX_EXTERNAL_DEPS
-        );
-
+        const limitedDependents = externalDependents.slice(0, MAX_EXTERNAL_DEPS);
+        
         // Draw external dependency links first (under nodes)
         // Position external dependencies in a row above the node
         limitedDeps.forEach((dep, index) => {
@@ -1009,6 +996,7 @@ const ProjectVisualizer = () => {
       .attr("fill", (d) =>
         d.status.includes("unassigned") ? "#000000" : "#FFFFFF"
       );
+    
 
     // Add the orange "+" nodes in edit mode
     if (isEditMode) {
@@ -1052,10 +1040,11 @@ const ProjectVisualizer = () => {
   ]);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
-  useEffect(() => {
+
+    useEffect(() => {
     if (taskId && !popupLaunched) {
       // Find the task in the tasks array
-      const task = tasks.find((t) => t.id === parseInt(taskId, 10));
+      const task = tasks.find(t => t.id === parseInt(taskId, 10));
       if (task) {
         // Set the current task and skill
         setTaskForm(task);
@@ -1063,7 +1052,7 @@ const ProjectVisualizer = () => {
         setActiveSkillId(task.skill_id);
         setShowTaskPopup(true);
         // Find and set the active category (skill name)
-        const skill = skills.find((s) => s.id === task.skill_id);
+        const skill = skills.find(s => s.id === task.skill_id);
         if (skill) {
           setActiveCategory(skill.name);
         }
@@ -1073,9 +1062,9 @@ const ProjectVisualizer = () => {
 
   // Add these debug logs right before the TaskEditor component in the return statement
 
-  // Show the comparison that's happening
-  const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
-  const numericUserId = Number(userId);
+// Show the comparison that's happening
+const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
+const numericUserId = Number(userId);
   return (
     <div
       className="skill-hierarchy-container"
@@ -1096,9 +1085,7 @@ const ProjectVisualizer = () => {
           {/* Add the All Tasks tab first */}
           <button
             key="all-tasks"
-            className={`tab all-tasks ${
-              activeCategory === "All Tasks" ? "active" : ""
-            }`}
+            className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
             onClick={() => {
               setActiveCategory("All Tasks");
               setActiveSkillId(null); // No specific skill for All Tasks view
@@ -1120,9 +1107,7 @@ const ProjectVisualizer = () => {
                   activeCategory === category.name ? "active" : ""
                 }`}
                 onClick={() => {
-                  const skillId = skills.find(
-                    (s) => s.name === category.name
-                  )?.id;
+                  const skillId = skills.find(s => s.name === category.name)?.id;
                   setActiveCategory(category.name);
                   setActiveSkillId(skillId);
                 }}
@@ -1142,7 +1127,7 @@ const ProjectVisualizer = () => {
                 setTaskForm({
                   ...initialForm,
                   project_id: projectId,
-                  skill_id: "", // No skill pre-selected
+                  skill_id: "" // No skill pre-selected
                 });
                 setShowTaskPopup(true);
               }}
@@ -1177,15 +1162,15 @@ const ProjectVisualizer = () => {
               </button>
             )}
             {!projectIsActive && (
-              <button
-                className={`new-task-button ${loading ? "disabled" : ""}`}
-                onClick={() => {
-                  handleGranularizeTasks(projectId);
-                }}
-                disabled={loading}
-              >
-                {loading ? "Granularizing..." : "Granularize all project tasks"}
-              </button>
+            <button
+              className={`new-task-button ${loading ? 'disabled' : ''}`}
+              onClick={() => {
+                handleGranularizeTasks(projectId);
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Granularizing...' : 'Granularize all project tasks'}
+            </button>
             )}
             {project?.community_id === null && (
               <button
@@ -1207,6 +1192,7 @@ const ProjectVisualizer = () => {
             </button>
           </div>
         )}
+
       </div>
 
       {hoveredNode && (
@@ -1310,7 +1296,7 @@ const ProjectVisualizer = () => {
 
       <div className="project-info">
         <h3>{project?.name}</h3>
-        <ReactMarkdown>{project?.description || ""}</ReactMarkdown>
+        <p className="project-description">{project?.description}</p>
         <br />
         <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">
@@ -1374,42 +1360,42 @@ const ProjectVisualizer = () => {
                   InputProps={{
                     ...params.InputProps,
                     style: {
-                      color: "white",
-                      backgroundColor: "#222",
-                      borderRadius: "4px",
-                      padding: "4px",
+                      color: 'white',
+                      backgroundColor: '#222',
+                      borderRadius: '4px',
+                      padding: '4px',
                     },
                   }}
                   sx={{
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": {
-                        borderColor: "transparent",
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: 'transparent',
                       },
-                      "&:hover fieldset": {
-                        borderColor: "#555",
+                      '&:hover fieldset': {
+                        borderColor: '#555',
                       },
-                      "&.Mui-focused fieldset": {
-                        borderColor: "#4dabf7",
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#4dabf7',
                       },
                     },
                   }}
                 />
               )}
               sx={{
-                "& .MuiAutocomplete-popupIndicator": { color: "white" },
-                "& .MuiAutocomplete-clearIndicator": { color: "white" },
+                '& .MuiAutocomplete-popupIndicator': { color: 'white' },
+                '& .MuiAutocomplete-clearIndicator': { color: 'white' },
               }}
               componentsProps={{
                 paper: {
                   sx: {
-                    backgroundColor: "#222",
-                    color: "white",
-                    "& .MuiAutocomplete-option": {
+                    backgroundColor: '#222',
+                    color: 'white',
+                    '& .MuiAutocomplete-option': {
                       '&[aria-selected="true"]': {
-                        backgroundColor: "rgba(77, 171, 247, 0.3)",
+                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
                       },
                       '&[aria-selected="true"].Mui-focused': {
-                        backgroundColor: "rgba(77, 171, 247, 0.3)",
+                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
                       },
                     },
                   },
@@ -1447,7 +1433,7 @@ const ProjectVisualizer = () => {
         taskForm={taskForm}
         setTaskForm={setTaskForm}
         onSubmit={async (formData) => {
-          const action = formData.id ? "update" : "create";
+          const action = formData.id ? 'update' : 'create'; 
           const result = await handleTaskAction(formData, action);
           if (!result.error) {
             await refreshTasks();
@@ -1459,9 +1445,7 @@ const ProjectVisualizer = () => {
         isEdit={isEditMode}
         currentUser={user}
         projectCreatorId={project?.creator_id}
-        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(
-          Number(userId)
-        )}
+        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
       />
 
       <div className="legend">
@@ -1528,9 +1512,9 @@ const ProjectVisualizer = () => {
                     />
                   )}
                   sx={{
-                    margin: "20px 0",
-                    "& .MuiAutocomplete-popupIndicator": { color: "#00f3ff" },
-                    "& .MuiAutocomplete-clearIndicator": { color: "#00f3ff" },
+                    margin: '20px 0',
+                    '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+                    '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
                   }}
                 />
 
