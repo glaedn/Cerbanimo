@@ -24,6 +24,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import GalacticActivityMap from "./components/GalacticActivityMap/GalacticActivityMap.jsx";
 import OnboardingPage from "./pages/OnboardingPage/OnboardingPage";
 import AuthWrapper from "./AuthWrapper.jsx";
+import TransactionHistoryPage from "./pages/TransactionHistoryPage.jsx"; // Import the new page
 
 const App = () => {
   return (
@@ -164,6 +165,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <GalacticActivityMap />
+              </PrivateRoute>
+            }
+          />
+          {/* New Route for Transaction History */}
+          <Route
+            path="/transaction-history"
+            element={
+              <PrivateRoute>
+                <TransactionHistoryPage />
               </PrivateRoute>
             }
           />

@@ -1,0 +1,117 @@
+/* Basic styling for ResourcePulseView */
+.resource-pulse-view {
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  background-color: #f0f2f5; /* Light grey background */
+  color: #333; /* Dark grey text */
+}
+
+.resource-pulse-view h2 {
+  color: #0056b3; /* Blue heading */
+  border-bottom: 2px solid #0056b3;
+  padding-bottom: 10px;
+  margin-top: 30px;
+}
+
+.resource-pulse-view .loading,
+.resource-pulse-view .error {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.2em;
+}
+
+.resource-pulse-view .error {
+  color: #D8000C; /* Red for errors */
+  background-color: #FFD2D2; /* Light red background */
+  border: 1px solid #D8000C;
+  border-radius: 5px;
+}
+
+.matches-section {
+  margin-bottom: 30px;
+}
+
+.original-item-container {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.original-item-container h3 {
+  color: #333;
+  margin-top: 0;
+  font-size: 1.3em;
+}
+
+.original-item-container p {
+  font-size: 0.9em;
+  color: #555;
+}
+
+.no-matches {
+  color: #777;
+  font-style: italic;
+}
+
+/* Basic styling for MatchCard */
+.match-card {
+  background-color: #e9f5ff; /* Light blue background for cards */
+  border: 1px solid #b3d7ff; /* Blue border */
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.match-card h4 {
+  margin-top: 0;
+  color: #004085; /* Darker blue for card titles */
+}
+
+.match-card p {
+  font-size: 0.9em;
+  margin-bottom: 8px;
+}
+
+.match-card .tags {
+  font-size: 0.8em;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.match-card .tags span {
+  background-color: #007bff;
+  color: white;
+  padding: 3px 7px;
+  border-radius: 12px;
+  margin-right: 5px;
+  font-size: 0.9em;
+}
+
+.match-card .score {
+  font-weight: bold;
+  color: #28a745; /* Green for score */
+  margin-bottom: 10px;
+}
+
+.match-card button {
+  background-color: #007bff; /* Primary blue */
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.9em;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.match-card button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}

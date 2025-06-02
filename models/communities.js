@@ -9,6 +9,7 @@ const createCommunitiesTable = async () => {
         members INTEGER[] DEFAULT '{}',
         proposals INTEGER[] DEFAULT '{}',
         approved_projects INTEGER[] DEFAULT '{}',
+        verified_status BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
