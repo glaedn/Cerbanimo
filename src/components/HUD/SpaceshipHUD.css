@@ -32,14 +32,26 @@
   left: 10px;
 }
 
+.command-deck {
+  max-height: 40vh!important;
+}
+
 .targeting-scanner-panel {
   top: 10px;
   right: 10px;
 }
 
+.targeting-scanner {
+    max-height: 40vh!important;
+}
+
 .mission-console-panel {
   bottom: 50px; /* Adjusted to leave space for StatusBar */
   left: 10px;
+}
+
+.mission-console {
+  max-height: 40vh!important;
 }
 
 .comms-log-panel {
@@ -52,7 +64,7 @@
   bottom: 50px; /* Adjusted to leave space for StatusBar */
   right: 10px;
   max-width: 300px;
-  max-height: 400px;
+  max-height: 40vh;
 }
 /* End Panel Specific Positioning */
 
