@@ -41,6 +41,7 @@ const TaskEditor = ({
     (taskForm.status || "").toLowerCase().includes("submitted")
   );
 
+  const effectiveIsEdit = taskForm.status === "completed" ? false : isEdit;
  
   const [platformUserId, setPlatformUserId] = useState(null);
   const isAssigned = taskForm.assigned_user_ids?.length > 0;
@@ -375,12 +376,12 @@ const TaskEditor = ({
               <TextField
                 className="cyber-input"
                 label="TASK NAME"
-                variant="outlined"
+                variant="outlined" // Ensure outlined variant
                 value={taskForm.name}
                 onChange={(e) =>
                   setTaskForm({ ...taskForm, name: e.target.value })
                 }
-                disabled={!isEdit}
+                disabled={!effectiveIsEdit}
               />
 
               <TextField
@@ -388,22 +389,25 @@ const TaskEditor = ({
                 label="DESCRIPTION"
                 multiline
                 rows={4}
+                variant="outlined" // Ensure outlined variant
                 value={taskForm.description}
                 onChange={(e) =>
                   setTaskForm({ ...taskForm, description: e.target.value })
                 }
-                disabled={!isEdit}
+                disabled={!effectiveIsEdit}
               />
 
               <div className="cyber-skill-section">
-                <div className="cyber-select">
+                <div className="cyber-select"> {/* Keep cyber-select for MuiInputLabel-root targeting if still needed, or ensure label is styled by cyber-input's label style */}
                   <InputLabel>SKILL CATEGORY</InputLabel>
                   <Select
                     value={taskForm.skill_id}
+                    variant="outlined" // Ensure outlined variant
+                    MenuProps={{ className: "cyber-select-menu" }} // For dropdown styling
                     onChange={(e) =>
                       setTaskForm({ ...taskForm, skill_id: e.target.value })
                     }
-                    disabled={!isEdit}
+                    disabled={!effectiveIsEdit}
                   >
                     <MenuItem value="">
                       <em>SELECT SKILL MODULE</em>
@@ -420,6 +424,7 @@ const TaskEditor = ({
                   className="cyber-input skill-level"
                   label="SKILL LVL"
                   type="number"
+                  variant="outlined" // Ensure outlined variant
                   value={taskForm.skill_level || 0}
                   onChange={(e) =>
                     setTaskForm({
@@ -428,19 +433,22 @@ const TaskEditor = ({
                     })
                   }
                   InputProps={{ inputProps: { min: 0 } }}
-                  disabled={!isEdit}
+                  disabled={!effectiveIsEdit}
                 />
               </div>
 
-              <div className="cyber-dependencies">
-                <InputLabel>DEPENDENCIES</InputLabel>
+              <div className="cyber-section-container"> {/* Updated class */}
+                <InputLabel className="cyber-section-label">DEPENDENCIES</InputLabel> {/* Updated class */}
                 <Box
                   sx={{ display: "flex", gap: 1, alignItems: "center", mt: 1 }}
                 >
                   <Select
+                    className="cyber-select" // Added for select specific styling if needed
+                    variant="outlined" // Ensure outlined variant
                     value={selectedDependency}
+                    MenuProps={{ className: "cyber-select-menu" }} // For dropdown styling
                     onChange={(e) => setSelectedDependency(e.target.value)}
-                    disabled={!isEdit || loadingDependencies}
+                    disabled={!effectiveIsEdit || loadingDependencies}
                     sx={{ flexGrow: 1 }}
                   >
                     <MenuItem value="">
@@ -458,9 +466,10 @@ const TaskEditor = ({
                       ))}
                   </Select>
                   <Button
+                    className="cyber-button add-dependency-button" // Added specific class for styling if general .cyber-button isn't enough
                     onClick={handleAddDependency}
-                    disabled={!selectedDependency || !isEdit}
-                    variant="outlined"
+                    disabled={!selectedDependency || !effectiveIsEdit}
+                    // variant="outlined" // Variant is less important due to custom styling
                   >
                     ADD
                   </Button>
@@ -468,19 +477,19 @@ const TaskEditor = ({
 
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
                   {loadingDependencies ? (
-                    <Chip label="Loading dependencies..." />
+                    <Chip label="Loading dependencies..." className="cyber-chip" /> // Updated class
                   ) : (
                     taskForm.dependenciesWithNames?.map((dep) => (
                       <Chip
                         key={dep.id}
                         label={dep.name}
                         onDelete={
-                          isEdit
+                          effectiveIsEdit
                             ? () => handleRemoveDependency(dep.id)
                             : undefined
                         }
-                        color="primary"
-                        variant="outlined"
+                        className="cyber-chip" // Updated class
+                        // variant="outlined" // Variant is less important
                       />
                     )) ||
                     taskForm.dependencies?.map((depId) => (
@@ -488,37 +497,36 @@ const TaskEditor = ({
                         key={depId}
                         label={`Task ${depId}`}
                         onDelete={
-                          isEdit
+                          effectiveIsEdit
                             ? () => handleRemoveDependency(depId)
                             : undefined
                         }
-                        color="primary"
-                        variant="outlined"
+                        className="cyber-chip" // Updated class
+                        // variant="outlined"
                       />
                     ))
                   )}
                 </Box>
               </div>
-              <div className="cyber-assigned-users">
-                <InputLabel>ASSIGNED OPERATORS</InputLabel>
+              <div className="cyber-section-container"> {/* Updated class */}
+                <InputLabel className="cyber-section-label">ASSIGNED OPERATORS</InputLabel> {/* Updated class */}
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
                   {taskForm.assigned_user_ids?.map((userId, index) => (
                     <Chip
                       key={index}
                       label={`Operator ${userId}`}
-                      color="secondary"
-                      variant="outlined"
+                      className="cyber-chip" // Updated class
                       onDelete={
-                        isEdit ? () => handleRemoveAssignee(userId) : undefined
+                        effectiveIsEdit ? () => handleRemoveAssignee(userId) : undefined
                       }
                     />
                   ))}
                   {taskForm.assigned_user_ids?.length === 0 && (
-                    <Chip label="No assigned operators" variant="outlined" />
+                    <Chip label="No assigned operators" className="cyber-chip" /> // Updated class
                   )}
                 </Box>
               </div>
-              <div className="cyber-checkboxes">
+              <div className="cyber-checkboxes"> {/* This class is used for specific Checkbox child styling */}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -539,7 +547,7 @@ const TaskEditor = ({
 
                         setTaskForm({ ...taskForm, status: finalStatus });
                       }}
-                      disabled={!isEdit || isUrgent}
+                      disabled={!effectiveIsEdit || isUrgent}
                       sx={{
                         color: "#00f3ff", // Color when unchecked
                         "&.Mui-checked": {
@@ -563,7 +571,7 @@ const TaskEditor = ({
                         color: "#00f3ff",
                         "&.Mui-checked": { color: "#ff003c" },
                       }}
-                      disabled={!isEdit}
+                      disabled={!effectiveIsEdit}
                     />
                   }
                   label="EMERGENCY PROTOCOL"
@@ -574,6 +582,7 @@ const TaskEditor = ({
                 className="cyber-input"
                 label="REWARD TOKENS"
                 type="number"
+                variant="outlined" // Ensure outlined variant
                 value={taskForm.reward_tokens}
                 onChange={(e) =>
                   setTaskForm({
@@ -582,20 +591,20 @@ const TaskEditor = ({
                   })
                 }
                 InputProps={{ inputProps: { min: 0 } }}
-                disabled={!isEdit}
+                disabled={!effectiveIsEdit}
               />
 
               <div className="cyber-button-group">
                 {isEdit ? (
                   <>
                     <Button
-                      className="cyber-button"
+                      className="cyber-button primary" // Updated class
                       onClick={handleSubmit}
-                      variant="contained"
+                      disabled={!effectiveIsEdit}
                     >
                       SAVE TO DATACORE
                     </Button>
-                    <Button className="cyber-button cancel" onClick={onClose}>
+                    <Button className="cyber-button cancel" onClick={onClose}> {/* Updated class */}
                       TERMINATE EDIT
                     </Button>
                   </>
@@ -604,11 +613,10 @@ const TaskEditor = ({
                     {!isEdit && (
                       <>
                         <Button
-                          className={`cyber-button ${
-                            userIsAssigned ? "cancel" : ""
+                          className={`cyber-button ${ // Base class
+                            userIsAssigned ? "drop-task" : "accept-task" // Specific classes for color
                           }`}
                           onClick={handleTaskAction}
-                          variant="contained"
                           disabled={
                             isSubmitted ||
                             taskForm.status?.includes("completed")
@@ -619,33 +627,40 @@ const TaskEditor = ({
                         
                         {(taskForm.status !== "submitted" && userIsAssigned) && (
   <Box mt={2}>
-    <h4>Reflection (Summarize your work)</h4>
+    {/* These h4 and TextField for reflection/proof might need their own styling if not covered by general modal text/input styles */}
+    <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Reflection (Summarize your work)</h4>
     <TextField
-      className="cyber-input"
+      className="cyber-input" // Use existing input styling
       label="Reflection"
+      variant="outlined"
       multiline
+      disabled={taskForm.status?.includes("completed")}
       rows={4}
       value={taskForm.reflection}
       onChange={(e) =>
         setTaskForm({ ...taskForm, reflection: e.target.value })
       }
     />
-    <h4>Proof of Work</h4>
+    <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>Proof of Work</h4>
     {proofLinks.map((link, index) => (
       <Box key={index} display="flex" alignItems="center" mb={1}>
         <TextField
-          className ="cyber-input"
+          className ="cyber-input" // Use existing input styling
+          variant="outlined"
           fullWidth
+          disabled={taskForm.status?.includes("completed")}
           label={`Link ${index + 1}`}
           value={link}
           onChange={(e) => handleProofChange(index, e.target.value)}
         />
         {proofLinks.length > 1 && (
-          <Button onClick={() => handleRemoveProofLink(index)}>Remove</Button>
+          <Button className="proof-link-button" 
+          disabled={taskForm.status?.includes("completed")}
+          onClick={() => handleRemoveProofLink(index)}>Remove</Button>
         )}
       </Box>
     ))}
-    <Button variant="outlined" onClick={handleAddProofLink}>
+    <Button className="cyber-button primary" style={{marginTop: '0.5rem'}} variant="outlined" disabled={taskForm.status?.includes("completed")} onClick={handleAddProofLink}>
       Add Proof of Work
     </Button>
   </Box>
@@ -653,12 +668,11 @@ const TaskEditor = ({
 
                         {userIsAssigned && !isSubmitted && (
                           <Button
-                            className="cyber-button"
+                            className="cyber-button submit-task" // Updated class
                             onClick={handleTaskSubmission}
-                            variant="contained"
                             disabled={
                               proofLinks.length === 0 ||
-                              proofLinks.some((link) => link.trim() === "")
+                              proofLinks.some((link) => link.trim() === "" || taskForm.status?.includes("completed"))
                             }
                           >
                             SUBMIT TASK
@@ -671,30 +685,36 @@ const TaskEditor = ({
                       isSubmitted && (
                         <>
                         <Box mt={2}>
-                          <h4>Submitted Reflection</h4>
+                          <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Submitted Reflection</h4>
                           <Box
                             sx={{
-                              background: "#181c24",
-                              color: "#00f3ff",
+                              background: "rgba(0, 20, 40, 0.7)", // Consistent dark background
+                              color: "#00F3FF",
                               borderRadius: 1,
+                              border: "1px solid #00F3FF",
                               p: 2,
                               mb: 2,
-                              fontFamily: "monospace",
+                              fontFamily: "'Inter', sans-serif", // Content font
                               whiteSpace: "pre-wrap",
+                              maxHeight: '150px',
+                              overflowY: 'auto',
                             }}
                           >
                             {taskForm.reflection}
                           </Box>
-                          <h4>Proof of Work links (must review)</h4>
+                          <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>Proof of Work links (must review)</h4>
                           <Box
                             sx={{
-                              background: "#181c24",
-                              color: "#00f3ff",
+                              background: "rgba(0, 20, 40, 0.7)", // Consistent dark background
+                              color: "#00F3FF",
                               borderRadius: 1,
+                              border: "1px solid #00F3FF",
                               p: 2,
                               mb: 2,
-                              fontFamily: "monospace",
+                              fontFamily: "'Inter', sans-serif", // Content font
                               whiteSpace: "pre-wrap",
+                              maxHeight: '150px',
+                              overflowY: 'auto',
                             }}
                           >
                             {Array.isArray(taskForm.proof_of_work_links)
@@ -706,7 +726,7 @@ const TaskEditor = ({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{
-                                          color: "#00f3ff",
+                                          color: "#FF5CA2", // Accent color for links
                                           textDecoration: "underline",
                                           wordBreak: "break-all",
                                         }}
@@ -720,13 +740,13 @@ const TaskEditor = ({
                           </Box>
                         </Box>
                           <Button
-                            className="cyber-button approve"
+                            className="cyber-button approve" // Updated class
                             onClick={() => handleApproval(true)}
                           >
                             APPROVE
                           </Button>
                           <Button
-                            className="cyber-button reject"
+                            className="cyber-button reject" // Updated class
                             onClick={() => handleApproval(false)}
                           >
                             REJECT
@@ -734,7 +754,7 @@ const TaskEditor = ({
                         </>
                       )}
 
-                    <Button className="cyber-button neutral" onClick={onClose}>
+                    <Button className="cyber-button neutral" onClick={onClose}> {/* Updated class */}
                       CLOSE
                     </Button>
                   </>
