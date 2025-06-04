@@ -4,18 +4,24 @@ const createNeedsTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS needs (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      title VARCHAR(255) NOT NULL,
+      name VARCHAR(255) NOT NULL, -- Renamed from 'title'
       description TEXT NOT NULL,
-      skill_ids INTEGER[] DEFAULT '{}', -- Array of skill IDs (FK to skills.id)
-      community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
-      project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
-      status VARCHAR(50) DEFAULT 'open', -- e.g., 'open', 'in_progress', 'fulfilled', 'closed', 'expired'
+      category VARCHAR(100), -- Added
+      quantity_needed INTEGER DEFAULT 1, -- Added
       urgency VARCHAR(50) DEFAULT 'medium', -- e.g., 'low', 'medium', 'high', 'critical'
-      location_requirements TEXT, -- e.g., 'remote', 'on-site at X', 'flexible'
+      status VARCHAR(50) DEFAULT 'open', -- e.g., 'open', 'in_progress', 'fulfilled', 'closed', 'expired'
+      requestor_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- Renamed from user_id, now nullable due to check constraint
+      requestor_community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL, -- Renamed from community_id
+      project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+      skill_ids INTEGER[] DEFAULT '{}', -- Array of skill IDs (FK to skills.id)
+      required_before_date DATE, -- Added
+      location_text TEXT, -- Added, replacing/clarifying 'location_requirements'
+      latitude NUMERIC, -- Added
+      longitude NUMERIC, -- Added
       fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT check_requestor CHECK (requestor_user_id IS NOT NULL OR requestor_community_id IS NOT NULL) -- Added
     );
   `;
 
@@ -41,10 +47,12 @@ const createNeedsTable = async () => {
   `;
 
   const indexesQuery = `
-    CREATE INDEX IF NOT EXISTS idx_needs_user_id ON needs(user_id);
-    CREATE INDEX IF NOT EXISTS idx_needs_community_id ON needs(community_id);
+    CREATE INDEX IF NOT EXISTS idx_needs_requestor_user_id ON needs(requestor_user_id); -- Renamed
+    CREATE INDEX IF NOT EXISTS idx_needs_requestor_community_id ON needs(requestor_community_id); -- Renamed
     CREATE INDEX IF NOT EXISTS idx_needs_project_id ON needs(project_id);
     CREATE INDEX IF NOT EXISTS idx_needs_status ON needs(status);
+    CREATE INDEX IF NOT EXISTS idx_needs_urgency ON needs(urgency); -- Added
+    CREATE INDEX IF NOT EXISTS idx_needs_category ON needs(category); -- Added
     CREATE INDEX IF NOT EXISTS idx_needs_skill_ids ON needs USING GIN(skill_ids);
   `;
 
