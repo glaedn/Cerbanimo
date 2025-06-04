@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "./Homepage.css";
+import GalacticActivityMap from "../components/GalacticActivityMap/GalacticActivityMap.jsx";
 
 export default function Homepage() {
   // Get the navigate function from React Router
@@ -14,6 +15,11 @@ export default function Homepage() {
   return (
     <div className="homepage">
       <section className="hero">
+        <GalacticActivityMap 
+          showLoadingText={false} 
+          enableTooltips={false} 
+          enableClicks={false} 
+        />
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -10,7 +10,7 @@ import axios from "axios";
 // For a dynamically resizing map, consider using useState and useEffect with a ResizeObserver
 // to update these dimensions and trigger a re-render/re-layout.
 
-const GalacticActivityMap = () => {
+const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   // const tooltipRef = useRef(null); // Removed: Tooltip will be managed by D3 and appended to body
   const [starData, setStarData] = useState([]);
@@ -169,7 +169,7 @@ const GalacticActivityMap = () => {
 
       svg
         .attr("viewBox", `0 0 ${clientWidth} ${clientHeight}`)
-        .attr("preserveAspectRatio", "xMidYMid meet")
+        .attr("preserveAspectRatio", "xMidYMin meet")
         .attr("width", "100%")
         .attr("height", "100%");
 
@@ -247,10 +247,10 @@ const GalacticActivityMap = () => {
         .attr("cy", (d) => d.y)
         .attr("r", (d) => getStarRadius(d) + 10) // Increased radius
         .style("fill", "transparent") 
-        .style("cursor", "pointer"); // Optional: show pointer cursor
+        .style("cursor", enableClicks ? "pointer" : "default"); // Conditional cursor
 
-      eventCircles
-        .on("mouseover", (event, d) => {          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
+      if (enableTooltips) {
+        eventCircles.on("mouseover", (event, d) => {          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
           tooltipD3.style("transform", "translate(0px, 0px) scale(1)"); // Use tooltipD3
           tooltipD3 // Use tooltipD3
             .html(`
@@ -307,12 +307,15 @@ const GalacticActivityMap = () => {
           tooltipD3 // Use tooltipD3
             .style("left", ttLeft + "px")
             .style("top", ttTop + "px");
-        })
-        .on("mouseout", () => {
+        });
+        eventCircles.on("mouseout", () => {
           tooltipD3.transition().duration(500).style("opacity", 0); // Use tooltipD3
           tooltipD3.style("transform", "translate(-10px, -10px) scale(0.95)"); // Use tooltipD3
-        })
-        .on("click", (event, d) => {
+        });
+      }
+
+      if (enableClicks) {
+        eventCircles.on("click", (event, d) => {
           const [type, idOnly] = d.id.split('-'); 
 
           if (type === "task") {
@@ -416,16 +419,19 @@ const GalacticActivityMap = () => {
         window.twinkleTimeoutIds = []; 
       }
     };
-  
-  }, [starData, isLoading, error, navigate]); // Added navigate to dependency array
+  }}, [starData, isLoading, error, navigate, enableTooltips, enableClicks]);
 
   if (isLoading) {
-    return (
-      <div className="galactic-activity-map-container">
-        <h1>Galactic Activity Map</h1>
-        <p>Loading celestial data...</p>
-      </div>
-    );
+    if (showLoadingText) {
+      return (
+        <div className="galactic-activity-map-container">
+          <h1>Galactic Activity Map</h1>
+          <p>Loading celestial data...</p>
+        </div>
+      );
+    } else {
+      return null; // Or a minimal loader like <div className="galactic-activity-map-container" style={{ minHeight: '100px' }}></div>
+    }
   }
   if (error) {
     return (
@@ -444,7 +450,7 @@ const GalacticActivityMap = () => {
           width: "100%",
           height: "100%",
           position: "relative",
-          margin: "0 auto",
+          // margin: "0 auto", // Removed
           boxSizing: "border-box",
         }}
       >
