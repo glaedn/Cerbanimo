@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js'); // Adjusted path
+const pool = require('../backend/db.js'); // Adjusted path
 
 // User schema with tasks relationship
 const createUserTable = async () => {
@@ -23,7 +23,7 @@ const createUserTable = async () => {
   `;
 
   const triggerQuery = `
-    CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+    CREATE OR REPLACE FUNCTION trigger_set_user_timestamp()
     RETURNS TRIGGER AS $$
     BEGIN
       NEW.updated_at = NOW();
@@ -31,18 +31,25 @@ const createUserTable = async () => {
     END;
     $$ LANGUAGE plpgsql;
 
-    CREATE TRIGGER set_user_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION trigger_set_timestamp();
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_user_updated_at' AND tgrelid = 'users'::regclass) THEN
+        CREATE TRIGGER set_user_updated_at
+        BEFORE UPDATE ON users
+        FOR EACH ROW
+        EXECUTE FUNCTION trigger_set_user_timestamp();
+      END IF;
+    END
+    $$;
   `;
 
   try {
     await pool.query(userTableQuery);
+    console.log('PostgreSQL: Users table created or already exists.'); // Separated log
     await pool.query(triggerQuery);
-    console.log('PostgreSQL: Users table created or already exists, and trigger set_user_updated_at created.');
+    console.log('PostgreSQL: Users updated_at trigger created or already exists.');
   } catch (err) {
-    console.error('PostgreSQL: Error creating tables or trigger:', err);
+    console.error('PostgreSQL: Error creating users table or trigger:', err); // Unified error message
   }
 };
 

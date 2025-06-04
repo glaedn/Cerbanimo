@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js'); // Standardized path
+const pool = require('../backend/db.js'); // Standardized path
 
 const createNeedsTable = async () => {
   const tableQuery = `

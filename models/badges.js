@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js');
+const pool = require('../backend/db.js');
 
 const createBadgesTable = async () => {
   const badgesTableQuery = `
