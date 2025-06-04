@@ -5,18 +5,20 @@ const createUserTable = async () => {
   const userTableQuery = `
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
+      auth0_id TEXT UNIQUE NOT NULL,
       username VARCHAR(50) UNIQUE NOT NULL,
       email VARCHAR(100) UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      profile_picture TEXT,
+      bio TEXT,
+      skills JSONB,
+      interests JSONB,
+      badges JSONB,
       cotokens NUMERIC DEFAULT 0,
       experience JSONB DEFAULT '[]'::jsonb,
       token_ledger JSONB DEFAULT '[]'::jsonb,
-      profile_picture_url TEXT,
-      bio TEXT,
-      interests TEXT[] DEFAULT '{}',
-      roles TEXT[] DEFAULT '{"user"}'::text[]
+      roles TEXT[] DEFAULT '{"user"}'::text[],
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
 

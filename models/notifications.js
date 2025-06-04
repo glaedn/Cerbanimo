@@ -6,10 +6,11 @@ const createNotificationsTable = async () => {
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL, -- e.g., 'task_assigned', 'task_approved', 'mention', 'badge_awarded'
-      message TEXT NOT NULL, -- Simple text message for now, can be extended to JSONB if more structure is needed.
+      message_details JSONB NOT NULL, -- Changed from 'message TEXT'
       link_entity_type VARCHAR(50), -- e.g., 'task', 'project', 'user_profile', 'community'
       link_entity_id INTEGER,
-      read_at TIMESTAMP WITH TIME ZONE, -- Null if unread, timestamp when read
+      is_read BOOLEAN NOT NULL DEFAULT FALSE, -- Replaces/clarifies 'read_at' for primary read status
+      read_at TIMESTAMP WITH TIME ZONE, -- Optional, for when it was read
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- For internal use, if notifications themselves can be updated
     );
@@ -38,7 +39,7 @@ const createNotificationsTable = async () => {
 
   const indexesQuery = `
     CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-    CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at);
+    CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read); -- New index
   `;
 
   try {
