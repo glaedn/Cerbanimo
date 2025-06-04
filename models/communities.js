@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js'); // Assuming shared pool
+const pool = require('../backend/db.js'); // Assuming shared pool
 
 const createCommunitiesTable = async () => {
     const communityTableQuery = `
@@ -17,7 +17,7 @@ const createCommunitiesTable = async () => {
     `;
 
     const triggerQuery = `
-      CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+      CREATE OR REPLACE FUNCTION trigger_set_community_timestamp()
       RETURNS TRIGGER AS $$
       BEGIN
         NEW.updated_at = NOW();
@@ -25,17 +25,23 @@ const createCommunitiesTable = async () => {
       END;
       $$ LANGUAGE plpgsql;
 
-      CREATE TRIGGER set_community_updated_at
-      BEFORE UPDATE ON communities
-      FOR EACH ROW
-      EXECUTE FUNCTION trigger_set_timestamp();
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_community_updated_at' AND tgrelid = 'communities'::regclass) THEN
+          CREATE TRIGGER set_community_updated_at
+          BEFORE UPDATE ON communities
+          FOR EACH ROW
+          EXECUTE FUNCTION trigger_set_community_timestamp();
+        END IF;
+      END
+      $$;
     `;
 
     try {
       await pool.query(communityTableQuery);
       console.log('PostgreSQL: Communities table created or already exists.');
       await pool.query(triggerQuery);
-      console.log('PostgreSQL: Trigger set_community_updated_at created for communities table.');
+      console.log('PostgreSQL: Communities updated_at trigger created or already exists.');
     } catch (err) {
       console.error('PostgreSQL: Error creating communities table or trigger:', err);
     }

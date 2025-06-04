@@ -1,9 +1,9 @@
-const pool = require('../../backend/db.js'); // Path relative to models/
+const pool = require('../backend/db.js'); // Path relative to models/
 
 const createStoryNodesTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS story_nodes (
-      id SERIAL PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Changed from SERIAL
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
       project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,

@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js'); // Assuming models are in models/ and db.js is in backend/
+const pool = require('../backend/db.js'); // Assuming models are in models/ and db.js is in backend/
 
 const createSkillsTable = async () => {
   const tableQuery = `

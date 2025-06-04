@@ -1,4 +1,4 @@
-const pool = require('../../backend/db.js'); // Path relative to models/
+const pool = require('../backend/db.js'); // Path relative to models/
 
 const createNotificationsTable = async () => {
   const tableQuery = `

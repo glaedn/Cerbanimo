@@ -45,24 +45,6 @@ router.get('/user/:id/chronicle', async (req, res) => {
 });
   
 
-// POST /story-node/:id/endorse
-router.post('/story-node/:id/endorse', async (req, res) => {
-  const storyNodeId = req.params.id;
-  const { endorser_id, emoji, badge, comment } = req.body;
-  const id = uuidv4();
-  try {
-    const result = await db.query(
-      `INSERT INTO endorsements (id, story_node_id, endorser_id, emoji, badge, comment, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
-      [id, storyNodeId, endorser_id, emoji, badge, comment]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create endorsement' });
-  }
-});
-
 // GET /community/:id/chronicle-feed
 router.get('/community/:id/chronicle-feed', async (req, res) => {
     const { id: projectId } = req.params;

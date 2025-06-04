@@ -1,5 +1,4 @@
-const { Pool } = require('pg');
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+const pool = require('../backend/db.js');
 
 const createEndorsementsTable = async () => {
   const query = `
@@ -10,6 +9,7 @@ const createEndorsementsTable = async () => {
       emoji TEXT,
       badge TEXT,
       comment TEXT,
+      multiplier DECIMAL(3, 2) DEFAULT 1.0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       
       UNIQUE (story_node_id, endorser_id)
