@@ -10,9 +10,9 @@ html, body {
   }
   
   .homepage {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0A0A2E, #1C1C1E);
-    color: #FFFFFF;
+    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+    background: #0A0A2E; /* theme.colors.backgroundDefault */
+    color: #FFFFFF; /* theme.colors.textPrimary */
     height: calc(100% - 60px);
     display: flex;
     flex-direction: column;
@@ -57,17 +57,21 @@ html, body {
   }
   
   .hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: flex; /* Reverted to flex */
+    flex-direction: column; /* Added */
+    align-items: center; /* Added */
+    justify-content: center; /* Added */
     padding: 20px max(8vw, 40px) 60px max(8vw, 40px);
-    background: radial-gradient(circle at center, #1f1f47, #0e0e2c);
-    position: relative;
+    background: transparent; /* Ensure map is visible */
+    position: relative; /* For z-indexing context and absolute positioning of map */
     overflow: hidden;
+    text-align: center; /* Ensures text within the centered block is also centered */
+    /* place-items: center; Removed */
   }
   
   /* Add subtle animated background elements */
+  /* This ::before might need adjustment if it was for the flex container.
+     For now, assuming it's a general background effect and might still work or be removed if problematic. */
   .hero::before {
     content: '';
     position: absolute;
@@ -81,44 +85,47 @@ html, body {
   }
   
   .hero h1 {
+    font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
     font-size: 3.5rem;
     margin-bottom: 1.5rem;
-    color: #FFFFFF;
-    text-shadow: 0 0 15px rgba(156, 39, 176, 0.47);
-    position: relative;
-    z-index: 1;
+    color: #FFFFFF; /* theme.colors.textPrimary */
+    text-shadow: 0 0 15px #FF5CA2; /* theme.effects.glowStrong(theme.colors.secondary) */
+    position: relative; /* Ensures it's above the map */
+    z-index: 1; /* Ensures it's above the map */
   }
   
   .hero p {
+    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
     font-size: 1.4rem;
     max-width: 700px;
-    color: #CCCCCC;
+    color: #CCCCCC; /* theme.colors.textSecondary */
     margin-bottom: 2rem;
-    position: relative;
-    z-index: 1;
+    position: relative; /* Ensures it's above the map */
+    z-index: 1; /* Ensures it's above the map */
     line-height: 1.5;
   }
   
-  .cta-button {
+  .hero > .cta-button { /* Targeting .cta-button as a direct child of .hero */
     margin-top: 2rem;
     padding: 14px 32px;
+    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
     font-size: 1.1rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #9C27B0, #FF5CA2);
+    background: linear-gradient(135deg, #9C27B0, #FF5CA2); /* theme.colors.accentPurple, theme.colors.secondary */
     border: none;
-    border-radius: 8px;
-    color: #FFFFFF;
+    border-radius: 8px; /* theme.borders.borderRadiusMd */
+    color: #FFFFFF; /* theme.colors.textPrimary */
     cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 1;
-    box-shadow: 0 4px 20px rgba(156, 39, 176, 0.4);
+    transition: all 0.3s ease; /* theme.transitions.medium */
+    position: relative; /* Ensures it's above the map */
+    z-index: 1; /* Ensures it's above the map */
+    box-shadow: 0 4px 20px #9C27B066; /* theme.colors.accentPurple with opacity */
   }
   
-  .cta-button:hover {
-    background: linear-gradient(135deg, #B048C8, #FF79B8);
+  .hero > .cta-button:hover {
+    background: linear-gradient(135deg, #B048C8, #FF79B8); /* Darker shades for hover */
     transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(156, 39, 176, 0.6);
+    box-shadow: 0 6px 25px #9C27B099; /* theme.colors.accentPurple with more opacity */
   }
   
   .features {
@@ -129,12 +136,12 @@ html, body {
     padding: 0 max(5vw, 20px);
   }
   
-  .feature-card {
-    background: linear-gradient(145deg, #1C1C1E, #0A0A2E);
+  .feature-card { /* Corresponds to .feature in JSX */
+    background: linear-gradient(145deg, #1C1C1E, #0A0A2E); /* theme.colors.backgroundPaper, theme.colors.backgroundDefault */
     padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 12px; /* theme.borders.borderRadiusLg */
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3); /* Softer shadow with theme consideration */
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* theme.transitions.medium */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -150,50 +157,64 @@ html, body {
     left: 0;
     width: 100%;
     height: 4px;
-    background: linear-gradient(90deg, #9C27B0, #00F3FF);
+    background: linear-gradient(90deg, #00F3FF, #FF5CA2); /* theme.colors.primary, theme.colors.secondary */
     opacity: 0.8;
   }
   
   .feature-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4); /* Slightly more pronounced shadow */
   }
   
-  .feature-card h3 {
-    color: #FFFFFF;
-    margin-bottom: 16px;
+  .feature-card h3 { /* Assuming h2 from JSX is styled as h3 here */
+    font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+    color: #FFFFFF; /* theme.colors.textPrimary */
+    margin-bottom: 16px; /* theme.spacing.lg */
     font-size: 1.5rem;
     width: 100%;
   }
   
   .feature-card p {
-    color: #CCCCCC;
-    font-size: 1rem;
+    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+    color: #CCCCCC; /* theme.colors.textSecondary */
+    font-size: 1rem; /* theme.typography.fontSizeMd */
     line-height: 1.6;
   }
   
-  .mission {
+  .mission { /* This class is not used in HomePage.jsx, .vision is used instead */
     font-size: 1.2rem;
     line-height: 1.8;
-    color: #ddddf5;
+    color: #ddddf5; /* This was a custom color, update to theme.colors.textSecondary */
     max-width: 900px;
     margin: 0 auto;
     padding: 0 max(5vw, 20px);
   }
 
-  .vision {
-    background: linear-gradient(to bottom, rgba(28, 28, 30, 0.7), rgba(10, 10, 46, 0.7));
-    border-radius: 16px;
+  .vision { /* Styles for the .vision section */
+    background: #1C1C1E; /* theme.colors.backgroundPaper */
+    border-radius: 12px; /* theme.borders.borderRadiusLg */
     padding: 40px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     margin: 40px auto;
     position: relative;
     overflow: hidden;
   }
+  
+  .vision h2 {
+    font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
+    color: #FFFFFF; /* theme.colors.textPrimary */
+  }
+
+  .vision p {
+    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
+    color: #CCCCCC; /* theme.colors.textSecondary */
+  }
+
   /* Make the mission section more visually distinct */
-  .mission-section {
-    background: linear-gradient(to bottom, rgba(28, 28, 30, 0.7), rgba(10, 10, 46, 0.7));
-    border-radius: 16px;
+  /* This class is not used in HomePage.jsx, .vision is used instead */
+  .mission-section { 
+    background: linear-gradient(to bottom, #1C1C1E, #0A0A2E); /* theme.colors.backgroundPaper, theme.colors.backgroundDefault */
+    border-radius: 12px; /* theme.borders.borderRadiusLg */
     padding: 40px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     margin: 40px auto;
@@ -222,14 +243,42 @@ html, body {
     flex-shrink: 0;
     padding: 0px 20px 10px 0px;
     text-align: center;
-    font-size: 0.95rem;
-    color: #CCCCCC;
-    background-color: #000000;
+    font-size: 0.95rem; /* theme.typography.fontSizeSm */
+    color: #CCCCCC; /* theme.colors.textSecondary */
+    background-color: #000000; /* theme.colors.backgroundBlack */
     position: relative;
     margin-top: auto;
     width: 100%;
-    border-top: 1px solid rgba(156, 39, 176, 0.2);
+    border-top: 1px solid #444444; /* theme.colors.border */
   }
+
+/* Styles for GalacticActivityMap positioning */
+  /* Remove .hero-background-wrapper styles as the element is removed */
+
+  .hero > .galactic-activity-map-container { /* Targeting map as direct child of .hero */
+    /* grid-column: 1 / -1; Removed */
+    /* grid-row: 1 / -1; Removed */
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0; 
+    z-index: 0; /* Behind hero's textual content */
+    overflow: hidden; 
+    margin: 0; 
+    padding: 0; 
+    display: flex; /* Added */
+    align-items: stretch; /* Added */
+    justify-content: stretch; /* Added */
+  }
+
+  /* .hero styles are now flexbox.
+     The .galactic-activity-map-container is absolutely positioned to fill .hero.
+     The textual content (h1, p, button) is centered by .hero's flex properties.
+     The textual elements get position:relative, z-index:1.
+     The .hero's padding creates the inset for the textual content.
+     The `place-items: center` on .hero centers the textual content block.
+  */
   
   @media (max-width: 768px) {
     .hero h1 {
