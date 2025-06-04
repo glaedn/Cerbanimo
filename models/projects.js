@@ -1,53 +1,69 @@
-const { Pool } = require('pg');
-//const mongoose = require('mongoose');
+const pool = require('../../backend/db.js'); // Ensure this path is correct relative to models/
 
-// PostgreSQL connection
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
-
-// PostgreSQL Project Table Schema
-const createProjectTable = async () => {
-  const query = `
-    CREATE TABLE IF NOT EXISTS public.projects (
-      id integer NOT NULL GENERATED ALWAYS AS IDENTITY,
-      name character varying(100) NOT NULL,
-      description text,
-      task_group_ids integer[] DEFAULT '{}',
-      user_ids integer[] DEFAULT '{}',
-      creator_id integer,
-      tags text[] DEFAULT '{}',
-      created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-      token_pool integer DEFAULT 80,
-      used_tokens integer DEFAULT 0,
-      reserved_tokens integer DEFAULT 0,
-      community_id integer REFERENCES communities(id) ON DELETE SET NULL,
-      community_votes JSONB DEFAULT '{}' -- stores { "user_id": true/false }
+const createProjectsTable = async () => {
+  const tableQuery = `
+    CREATE TABLE IF NOT EXISTS projects (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Can be NULL if creator account is deleted
+      community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
+      token_pool NUMERIC DEFAULT 0,
+      used_tokens NUMERIC DEFAULT 0,
+      reserved_tokens NUMERIC DEFAULT 0,
+      status VARCHAR(50) DEFAULT 'planning', -- e.g., 'planning', 'recruiting', 'active', 'completed', 'on_hold', 'cancelled'
+      tags TEXT[] DEFAULT '{}',
+      visibility VARCHAR(50) DEFAULT 'public', -- e.g., 'public', 'private', 'community_only'
+      start_date DATE,
+      end_date DATE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
+
+  // Removed task_group_ids and user_ids as these are better handled via tasks and their assignments.
+  // community_votes might be a separate table or handled by a different mechanism if complex.
+
+  const triggerQuery = `
+    CREATE OR REPLACE FUNCTION trigger_set_project_timestamp()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_project_updated_at') THEN
+        CREATE TRIGGER set_project_updated_at
+        BEFORE UPDATE ON projects
+        FOR EACH ROW
+        EXECUTE FUNCTION trigger_set_project_timestamp();
+      END IF;
+    END
+    $$;
+  `;
+
+  const indexesQuery = `
+    CREATE INDEX IF NOT EXISTS idx_projects_creator_id ON projects(creator_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_community_id ON projects(community_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+    CREATE INDEX IF NOT EXISTS idx_projects_tags ON projects USING GIN(tags); -- GIN index for array operations
+  `;
+
   try {
-    await pool.query(query);
-    console.log('PostgreSQL: Projects table created or already exists');
+    await pool.query(tableQuery);
+    console.log('PostgreSQL: Projects table created or already exists.');
+    await pool.query(triggerQuery);
+    console.log('PostgreSQL: Projects updated_at trigger created or already exists.');
+    await pool.query(indexesQuery);
+    console.log('PostgreSQL: Indexes on projects table created or ensured.');
   } catch (err) {
-    console.error('PostgreSQL: Error creating projects table:', err);
+    console.error('PostgreSQL: Error creating projects table, trigger, or indexes:', err);
   }
 };
 
-
-// MongoDB Project Schema
-//const projectSchema = new mongoose.Schema({
-//  name: { type: String, required: true },
-//  description: { type: String },
-//  taskGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'TaskGroup' }], // Reference to Task Groups
-//  users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Reference to Users
-//  creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to Creator
-//  tags: [{ type: String }], // Array of tags
-//  createdAt: { type: Date, default: Date.now },
-//});
-
-// MongoDB Project Model
-const Project = mongoose.model('Project', projectSchema);
-
-// Consolidated Exports
 module.exports = {
-  createProjectTable, // PostgreSQL
-  //Project, // MongoDB
+  createProjectsTable,
 };

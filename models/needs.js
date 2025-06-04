@@ -1,60 +1,65 @@
-const pool = require('../db'); // Assuming db.js contains the PostgreSQL pool configuration
+const pool = require('../../backend/db.js'); // Standardized path
 
 const createNeedsTable = async () => {
-  const query = `
+  const tableQuery = `
     CREATE TABLE IF NOT EXISTS needs (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      description TEXT,
-      category VARCHAR(100),
-      quantity_needed VARCHAR(100),
-      urgency VARCHAR(50) DEFAULT 'medium',
-      requestor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      requestor_community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
-      status VARCHAR(50) DEFAULT 'open',
-      required_before_date TIMESTAMP,
-      location_text VARCHAR(255),
-      latitude DECIMAL(9,6),
-      longitude DECIMAL(9,6),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      description TEXT NOT NULL,
+      skill_ids INTEGER[] DEFAULT '{}', -- Array of skill IDs (FK to skills.id)
+      community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
+      project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+      status VARCHAR(50) DEFAULT 'open', -- e.g., 'open', 'in_progress', 'fulfilled', 'closed', 'expired'
+      urgency VARCHAR(50) DEFAULT 'medium', -- e.g., 'low', 'medium', 'high', 'critical'
+      location_requirements TEXT, -- e.g., 'remote', 'on-site at X', 'flexible'
+      fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
-  try {
-    await pool.query(query);
-    console.log('Needs table created successfully');
-  } catch (err) {
-    console.error('Error creating needs table:', err);
-    throw err;
-  }
-};
 
-const createNeedsUpdatedAtTrigger = async () => {
   const triggerQuery = `
-    CREATE OR REPLACE FUNCTION update_updated_at_column()
+    CREATE OR REPLACE FUNCTION trigger_set_need_timestamp()
     RETURNS TRIGGER AS $$
     BEGIN
-      NEW.updated_at = CURRENT_TIMESTAMP;
+      NEW.updated_at = NOW();
       RETURN NEW;
     END;
     $$ LANGUAGE plpgsql;
 
-    DROP TRIGGER IF EXISTS needs_updated_at_trigger ON needs;
-    CREATE TRIGGER needs_updated_at_trigger
-    BEFORE UPDATE ON needs
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_need_updated_at') THEN
+        CREATE TRIGGER set_need_updated_at
+        BEFORE UPDATE ON needs
+        FOR EACH ROW
+        EXECUTE FUNCTION trigger_set_need_timestamp();
+      END IF;
+    END
+    $$;
   `;
+
+  const indexesQuery = `
+    CREATE INDEX IF NOT EXISTS idx_needs_user_id ON needs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_needs_community_id ON needs(community_id);
+    CREATE INDEX IF NOT EXISTS idx_needs_project_id ON needs(project_id);
+    CREATE INDEX IF NOT EXISTS idx_needs_status ON needs(status);
+    CREATE INDEX IF NOT EXISTS idx_needs_skill_ids ON needs USING GIN(skill_ids);
+  `;
+
   try {
+    await pool.query(tableQuery);
+    console.log('PostgreSQL: Needs table created or already exists.');
     await pool.query(triggerQuery);
-    console.log('Needs updated_at trigger created successfully');
+    console.log('PostgreSQL: Needs updated_at trigger created or already exists.');
+    await pool.query(indexesQuery);
+    console.log('PostgreSQL: Indexes on needs table created or ensured.');
   } catch (err) {
-    console.error('Error creating needs updated_at trigger:', err);
-    throw err;
+    console.error('PostgreSQL: Error creating needs table, trigger, or indexes:', err);
   }
 };
 
 module.exports = {
   createNeedsTable,
-  createNeedsUpdatedAtTrigger,
 };
