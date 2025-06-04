@@ -8,7 +8,7 @@
     padding: 0.5rem; /* Reduced padding as border provides some spacing */
     width: 90%;
     max-width: 700px; /* Slightly wider for more complex forms */
-    max-height: 90vh;
+    max-height: 70vh;
     border-radius: 8px; /* Specified border-radius */
     font-family: 'Inter', sans-serif; /* Default font for modal content */
     color: #00F3FF; /* Primary text color */

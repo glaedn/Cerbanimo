@@ -19,7 +19,8 @@
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #4DABF7, #00F3FF);
+    background: #FF5CA2; /* Magenta on hover */
+    box-shadow: 0 0 5px #FF5CA2;
 }
 
 .App-logo {

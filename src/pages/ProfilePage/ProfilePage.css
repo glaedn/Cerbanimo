@@ -31,7 +31,8 @@
 }
 
 .profile-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #4DABF7, #00F3FF);
+    background: #FF5CA2; /* Magenta on hover */
+    box-shadow: 0 0 5px #FF5CA2;
 }
 
 /* Profile Title */
@@ -129,24 +130,6 @@
     box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* Updated shadow color */
 }
 
-.profile-experience-container::-webkit-scrollbar {
-    width: 10px;
-}
-
-.profile-experience-container::-webkit-scrollbar-track {
-    background: rgba(0, 243, 255, 0.2);
-    border-radius: 5px;
-}
-
-.profile-experience-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00F3FF, #4DABF7);
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
-}
-
-.profile-experience-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #4DABF7, #00F3FF);
-}
 
   /* Task Browser Wrapper */
   .task-browser-wrapper {
