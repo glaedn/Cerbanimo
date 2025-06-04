@@ -1,190 +1,383 @@
+/* General Modal Styling */
 .cyber-modal {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: linear-gradient(145deg, #0a0a2e, #000000);
-    padding: 2rem;
+    background: rgba(10, 10, 46, 0.9); /* Dark, slightly transparent blue */
+    padding: 0.5rem; /* Reduced padding as border provides some spacing */
     width: 90%;
-    max-width: 600px;
+    max-width: 700px; /* Slightly wider for more complex forms */
     max-height: 90vh;
-    border-radius: 5px;
-    font-family: 'Orbitron', sans-serif;
-    color: #00f3ff;
-  }
-  
-  .cyber-border {
+    border-radius: 8px; /* Specified border-radius */
+    font-family: 'Inter', sans-serif; /* Default font for modal content */
+    color: #00F3FF; /* Primary text color */
+    border: 1px solid #00F3FF; /* Specified border */
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5); /* Specified box-shadow */
+}
+
+.cyber-border {
     position: relative;
-    padding: 2rem;
-    border: 2px solid #00f3ff;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+    padding: 1.5rem; /* Padding inside the main border */
     height: 100%;
-    overflow: hidden; /* Contains the scanline effect */
-  }
-  
-  .cyber-content {
-    max-height: calc(90vh - 6rem);
+    overflow: hidden; /* Contains the scanline effect if any */
+    /* The main border is now on .cyber-modal, so this can be adjusted or removed if not needed for other effects */
+}
+
+.cyber-content {
+    max-height: calc(90vh - 3rem - 40px); /* Adjust based on padding */
     overflow-y: auto;
-    padding-right: 0.5rem; /* Give space for scrollbar */
-  }
-  
-  /* Custom scrollbar styling */
-  .cyber-content::-webkit-scrollbar {
+    padding-right: 10px; /* Space for scrollbar */
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom scrollbar styling (verify consistency) */
+.cyber-content::-webkit-scrollbar {
     width: 8px;
-  }
-  
-  .cyber-content::-webkit-scrollbar-track {
-    background: rgba(0, 10, 30, 0.6);
-    border: 1px solid #00f3ff;
-  }
-  
-  .cyber-content::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00f3ff, #0011ff);
-    border-radius: 2px;
-    border: 1px solid #00f3ff;
-    box-shadow: 0 0 5px rgba(0, 243, 255, 0.8);
-  }
-  
-  .cyber-content::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #00f3ff, #001aff);
-    box-shadow: 0 0 8px rgba(0, 243, 255, 1);
-  }
-  
-  .cyber-title {
+}
+
+.cyber-content::-webkit-scrollbar-track {
+    background: rgba(10, 10, 46, 0.8); /* Dark track */
+    border: 1px solid #00F3FF;
+    border-radius: 4px;
+}
+
+.cyber-content::-webkit-scrollbar-thumb {
+    background: #00F3FF; /* Cyan thumb */
+    border-radius: 4px;
+    border: 1px solid rgba(10, 10, 46, 0.8);
+}
+
+.cyber-content::-webkit-scrollbar-thumb:hover {
+    background: #FF5CA2; /* Magenta on hover */
+    box-shadow: 0 0 5px #FF5CA2;
+}
+
+/* Title Styling */
+.cyber-title {
     text-align: center;
-    margin-bottom: 2rem;
-    font-size: 1.5rem;
+    margin-bottom: 1.5rem; /* Adjusted margin */
+    font-family: 'Orbitron', sans-serif; /* Specified font */
+    font-size: 1.6rem; /* Adjusted font size */
+    color: #00F3FF; /* Specified color */
+    text-shadow: 0 0 10px #00F3FF; /* Specified shadow */
     text-transform: uppercase;
     letter-spacing: 2px;
-    text-shadow: 0 0 10px #00f3ff;
-  }
-  
-  .cyber-form {
+    border-bottom: 1px solid #FF5CA2; /* Pink accent border */
+    padding-bottom: 10px; /* Padding for the border */
+}
+
+.cyber-form {
     display: grid;
     gap: 1.5rem;
-  }
-  
-  .cyber-skill-section {
+}
+
+/* Input Fields & Select General Styling */
+.cyber-input .MuiOutlinedInput-root,
+.cyber-select .MuiOutlinedInput-root {
+    font-family: 'Inter', sans-serif !important; /* Input text font */
+    color: #00F3FF !important; /* Input text color */
+    background-color: rgba(0, 20, 40, 0.7) !important; /* Input background */
+    border-radius: 4px;
+}
+
+.cyber-input .MuiOutlinedInput-notchedOutline,
+.cyber-select .MuiOutlinedInput-notchedOutline {
+    border-color: #00F3FF !important; /* Border color */
+    border-width: 1px !important; /* HUD-like border width */
+}
+
+.cyber-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline,
+.cyber-select .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: #00F3FF !important;
+    box-shadow: 0 0 8px #00F3FF !important; /* Glow on hover */
+}
+
+.cyber-input .MuiInputLabel-root,
+.cyber-select .MuiInputLabel-root {
+    color: #00F3FF !important;
+    font-family: 'Orbitron', sans-serif !important; /* Label font */
+    text-transform: uppercase !important;
+    font-size: 0.8rem !important;
+}
+
+/* Specific for Select */
+.cyber-select .MuiSvgIcon-root { /* Dropdown arrow */
+    color: #00F3FF !important;
+}
+
+/* Styling for dropdown menu */
+.MuiMenu-paper.cyber-select-menu { /* Add this class to Select's MenuProps */
+    background-color: #0a0a2e !important;
+    border: 1px solid #00F3FF !important;
+    color: #00F3FF !important;
+    border-radius: 4px;
+}
+
+.MuiMenu-paper.cyber-select-menu .MuiMenuItem-root {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.9rem;
+}
+
+.MuiMenu-paper.cyber-select-menu .MuiMenuItem-root:hover {
+    background-color: rgba(0, 243, 255, 0.1) !important;
+}
+.MuiMenu-paper.cyber-select-menu .MuiMenuItem-root.Mui-selected {
+    background-color: rgba(0, 243, 255, 0.2) !important;
+}
+
+
+.cyber-skill-section {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: 3fr 1fr; /* Adjust ratio as needed */
     gap: 1rem;
-    align-items: flex-start; /* Fix vertical alignment */
-  }
-  
-  .cyber-input .MuiOutlinedInput-root {
-    color: #00f3ff;
-    font-family: 'Orbitron', sans-serif;
-  }
-  
-  .cyber-input .MuiOutlinedInput-notchedOutline {
-    border-color: #00f3ff !important;
-    border-width: 2px;
-  }
-  
-  .cyber-input:hover .MuiOutlinedInput-notchedOutline {
-    border-color: #00f3ff !important;
-    box-shadow: 0 0 10px #00f3ff;
-  }
-  
-  .cyber-input .MuiInputLabel-root {
-    color: #00f3ff !important;
-  }
-  
-  .cyber-input.skill-level {
-    min-width: 80px;
-    margin-top: 26px;
-  }
-  
-  /* Fix for skill category select */
-  .cyber-select {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .cyber-select .MuiInputLabel-root {
-    color: #00f3ff !important;
-    position: static;
-    transform: none;
-    margin-bottom: 8px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.75rem;
-  }
-  
-  .cyber-select .MuiInputBase-root {
-    color: #00f3ff;
-    border: 2px solid #00f3ff;
-    margin-top: 0;
-    font-family: 'Orbitron', sans-serif;
-  }
-  
-  .cyber-select .MuiOutlinedInput-notchedOutline {
-    border-color: transparent !important; /* We're using our own border */
-  }
-  
-  .cyber-select .MuiSvgIcon-root {
-    color: #00f3ff;
-  }
-  
-  .cyber-checkboxes .MuiFormControlLabel-label {
-    font-family: 'Orbitron', sans-serif;
-    color: #00f3ff;
-  }
+    align-items: flex-start;
+}
+.cyber-input.skill-level {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem; /* Align with skill select */
+  min-width: 100px; /* Minimum width for the input */
+  justify-self: stretch; /* Fill available space in grid */
+}
 
-  .cyber-button-group {
+
+/* Checkboxes */
+.cyber-checkboxes .MuiCheckbox-root {
+    color: #00F3FF !important; /* Box color */
+}
+
+.cyber-checkboxes .MuiCheckbox-root.Mui-checked {
+    color: #00F3FF !important; /* Checkmark and box when checked */
+}
+
+.cyber-checkboxes .MuiCheckbox-root.Mui-disabled {
+    color: rgba(0, 243, 255, 0.5) !important;
+}
+.cyber-checkboxes .MuiCheckbox-root.Mui-disabled.Mui-checked {
+    color: rgba(0, 243, 255, 0.7) !important; /* Keep checked color distinct for disabled */
+}
+
+
+.cyber-checkboxes .MuiFormControlLabel-label {
+    font-family: 'Inter', sans-serif !important; /* Label font */
+    color: #00F3FF !important;
+    font-size: 0.9rem;
+}
+.cyber-checkboxes .MuiFormControlLabel-label.Mui-disabled {
+    color: rgba(0, 243, 255, 0.7) !important;
+}
+
+
+/* Buttons */
+.cyber-button-group {
     display: flex;
     gap: 1rem;
-  }
-  
-  .cyber-button {
-    flex: 1;
-    background: linear-gradient(45deg, #0011ff, #000b8f) !important;
-    color: #00f3ff !important;
-    border: 2px solid #00f3ff !important;
-    font-family: 'Orbitron', sans-serif !important;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-  }
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+    margin-top: 1rem;
+}
 
-  .reject {
-    flex: 1;
-    background: linear-gradient(45deg, #ff1900, #8f0000) !important;
-    color: #00f3ff !important;
-    border: 2px solid #00f3ff !important;
+.cyber-button {
+    flex-grow: 1; /* Allow buttons to share space */
     font-family: 'Orbitron', sans-serif !important;
+    background-color: transparent !important;
+    padding: 8px 15px !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease-in-out !important;
+    text-transform: uppercase !important;
+    min-width: 150px; /* Minimum width for buttons */
+}
+
+.cyber-button:hover {
+    transform: translateY(-1px);
+}
+
+/* Primary Action Button (e.g., SAVE, ACCEPT, SUBMIT, APPROVE) - Cyan */
+.cyber-button.primary, 
+.cyber-button.approve,
+.cyber-button.accept-task,
+.cyber-button.submit-task {
+    color: #00F3FF !important;
+    border: 1px solid #00F3FF !important;
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.7) !important;
+}
+
+.cyber-button.primary:hover,
+.cyber-button.approve:hover,
+.cyber-button.accept-task:hover,
+.cyber-button.submit-task:hover {
+    background-color: rgba(0, 243, 255, 0.2) !important;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 1) !important;
+}
+
+/* Destructive/Cancel Action Button (e.g., TERMINATE, DROP, REJECT) - Pink/Magenta */
+.cyber-button.cancel,
+.cyber-button.reject,
+.cyber-button.drop-task {
+    color: #FF5CA2 !important;
+    border: 1px solid #FF5CA2 !important;
+    box-shadow: 0 0 8px rgba(255, 92, 162, 0.7) !important;
+}
+
+.cyber-button.cancel:hover,
+.cyber-button.reject:hover,
+.cyber-button.drop-task:hover {
+    background-color: rgba(255, 92, 162, 0.2) !important;
+    box-shadow: 0 0 12px rgba(255, 92, 162, 1) !important;
+}
+
+/* Neutral Action Button (e.g., CLOSE) - Dimmer Cyan or Grey */
+.cyber-button.neutral {
+    color: #8cb0d4 !important; /* A dimmer blue/cyan */
+    border: 1px solid #8cb0d4 !important;
+    box-shadow: 0 0 6px rgba(140, 176, 212, 0.6) !important;
+}
+
+.cyber-button.neutral:hover {
+    background-color: rgba(140, 176, 212, 0.15) !important;
+    box-shadow: 0 0 10px rgba(140, 176, 212, 0.9) !important;
+}
+
+
+/* Section Styling (Dependencies, Assigned Users) */
+.cyber-section-container { /* New generic class for these sections */
+    margin: 1.5rem 0;
+    padding: 1rem;
+    border: 1px solid #00F3FF;
+    border-radius: 4px;
+    background-color: rgba(0, 10, 20, 0.7); /* HUD panel like background */
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+}
+
+.cyber-section-label { /* New generic class for labels of these sections */
+    font-family: 'Orbitron', sans-serif;
+    color: #00F3FF;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    margin-bottom: 1rem; /* Increased margin for better separation */
+    display: block;
     letter-spacing: 1px;
+}
+
+/* Chips Styling (Dependencies, Assigned Users) */
+.cyber-chip { /* New generic class for chips */
+    background-color: rgba(0, 50, 100, 0.7) !important;
+    border: 1px solid #00F3FF !important;
+    color: #00F3FF !important;
+    font-family: 'Inter', sans-serif !important;
+    margin: 0.25rem !important;
     transition: all 0.3s ease;
-  }
-  
-  .cyber-button:hover {
-    box-shadow: 0 0 15px #0011ff;
-    transform: translateY(-2px);
-  }
-  
-  .cyber-button.cancel {
-    background: linear-gradient(45deg, #ff003c, #8f0000) !important;
-  }
-  
-  .cyber-button.neutral {
-    background: linear-gradient(45deg, #494949, #232323) !important;
-  }
-  
-  /* Disabled input styling */
-  .cyber-input .Mui-disabled {
+    font-size: 0.85rem !important;
+}
+
+.cyber-chip:hover {
+    background-color: rgba(0, 70, 130, 0.8) !important;
+    box-shadow: 0 0 6px #00F3FF !important;
+}
+
+.cyber-chip .MuiChip-deleteIcon {
+    color: #FF5CA2 !important;
+    transition: color 0.2s ease;
+}
+
+.cyber-chip .MuiChip-deleteIcon:hover {
+    color: #ff003c !important;
+    transform: scale(1.1);
+}
+
+
+/* Remove default styling from old classes if they are no longer needed or conflict */
+.cyber-dependencies, .cyber-assigned-users {
+    /* These specific classes might not be needed if using .cyber-section-container */
+    /* Resetting some properties if they were too specific */
+    margin: 0;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    box-shadow: none;
+}
+.cyber-dependencies .MuiInputLabel-root,
+.cyber-assigned-users .MuiInputLabel-root {
+    /* Use .cyber-section-label instead */
+    margin-bottom: 0; 
+}
+.cyber-dependencies .MuiButton-root {
+  /* Style using general .cyber-button classes */
+  font-family: 'Orbitron', sans-serif !important;
+  color: #00F3FF !important;
+  border: 1px solid #00F3FF !important;
+  background-color: transparent !important;
+  padding: 8px 15px !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease-in-out !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.7) !important;
+}
+
+.cyber-dependencies .MuiChip-root,
+.cyber-assigned-users .MuiChip-root {
+  background-color: rgba(0, 50, 100, 0.7) !important;
+  border: 1px solid #00F3FF !important;
+  color: #00F3FF !important;
+  font-family: 'Inter', sans-serif !important;
+  margin: 0.25rem !important;
+  transition: all 0.3s ease;
+  font-size: 0.85rem !important;
+  box-shadow: 0 0 6px rgba(0, 243, 255, 0.3);
+}
+
+/* Specific overrides for proof of work link buttons if needed */
+.proof-link-button {
+    font-family: 'Orbitron', sans-serif !important;
+    color: #00F3FF !important;
+    border: 1px solid #00F3FF !important;
+    padding: 4px 8px !important;
+    margin-left: 8px !important;
+    text-transform: uppercase;
+}
+.proof-link-button:hover {
+    background-color: rgba(0, 243, 255, 0.1) !important;
+    box-shadow: 0 0 5px #00F3FF;
+}
+
+/* Add button for dependencies (if not covered by general button styling) */
+.add-dependency-button {
+    /* Similar to primary cyber-button if needed */
+    color: #00F3FF !important;
+    border: 1px solid #00F3FF !important;
+    font-family: 'Orbitron', sans-serif !important;
+}
+.add-dependency-button:hover {
+    background-color: rgba(0, 243, 255, 0.1) !important;
+}
+
+
+/* Ensure disabled states are clear */
+.Mui-disabled {
+    opacity: 0.6;
+    /* Pointer events should be default (none for disabled buttons) */
+}
+
+.cyber-input .Mui-disabled .MuiOutlinedInput-notchedOutline,
+.cyber-select .Mui-disabled .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(0, 243, 255, 0.5) !important;
+    box-shadow: none !important;
+}
+
+.cyber-input .MuiInputLabel-root.Mui-disabled,
+.cyber-select .MuiInputLabel-root.Mui-disabled {
     color: rgba(0, 243, 255, 0.5) !important;
-    -webkit-text-fill-color: rgba(0, 243, 255, 0.5) !important;
-  }
-  
-  .cyber-select .Mui-disabled {
-    color: rgba(0, 243, 255, 0.5) !important;
-    -webkit-text-fill-color: rgba(0, 243, 255, 0.5) !important;
-  }
-  
-  @keyframes scanline {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
-  }
-  
-  .cyber-border::after {
+}
+
+.cyber-button.Mui-disabled {
+    color: rgba(140, 176, 212, 0.5) !important;
+    border-color: rgba(140, 176, 212, 0.5) !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+}
+
+/* Scanline effect from original (optional, can be kept if desired) */
+.cyber-border::after {
     content: '';
     position: absolute;
     top: 0;
@@ -193,265 +386,45 @@
     bottom: 0;
     background: linear-gradient(0deg, 
       transparent 0%,
-      rgba(0, 243, 255, 0.1) 50%,
+      rgba(0, 243, 255, 0.05) 50%, /* Reduced intensity */
       transparent 100%);
-    height: 100%; /* Ensures it stays within the border */
-    animation: scanline 4s linear infinite;
+    animation: scanline 6s linear infinite; /* Slower animation */
     pointer-events: none;
-    z-index: 1;
-  }
-
-  /* Dependencies section container */
-.cyber-dependencies {
-    margin: 1.5rem 0;
-    padding: 1rem;
-    border: 1px solid #00f3ff;
-    border-radius: 4px;
-    background-color: rgba(0, 10, 20, 0.7);
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
-  }
-  
-  /* Dependencies label */
-  .cyber-dependencies .MuiInputLabel-root {
-    color: #00f3ff !important;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0.5rem;
-    display: block;
-  }
-  
-  /* Dependencies select dropdown */
-  .cyber-dependencies .MuiSelect-select {
-    color: #00f3ff;
-    font-family: 'Orbitron', sans-serif;
-    background-color: rgba(0, 20, 40, 0.8);
-    border: 1px solid #00f3ff;
-  }
-  
-  .cyber-dependencies .MuiSelect-icon {
-    color: #00f3ff;
-  }
-  
-  .cyber-dependencies .MuiOutlinedInput-notchedOutline {
-    border-color: #00f3ff !important;
-  }
-  
-  /* Add dependency button */
-  .cyber-dependencies .MuiButton-root {
-    color: #00f3ff;
-    border-color: #00f3ff;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 8px 16px;
-    transition: all 0.3s ease;
-  }
-  
-  .cyber-dependencies .MuiButton-root:hover {
-    background-color: rgba(0, 243, 255, 0.1);
-    box-shadow: 0 0 10px #00f3ff;
-    transform: translateY(-1px);
-  }
-  
-  /* Dependency chips */
-  .cyber-dependencies .MuiChip-root {
-    background-color: rgba(0, 50, 100, 0.5);
-    border: 1px solid #00f3ff;
-    color: #00f3ff;
-    font-family: 'Orbitron', sans-serif;
-    margin: 0.25rem;
-    transition: all 0.3s ease;
-  }
-  
-  .cyber-dependencies .MuiChip-root:hover {
-    background-color: rgba(0, 100, 200, 0.5);
-    box-shadow: 0 0 8px #00f3ff;
-  }
-  
-  .cyber-dependencies .MuiChip-deleteIcon {
-    color: #ff003c;
-  }
-  
-  .cyber-dependencies .MuiChip-deleteIcon:hover {
-    color: #ff003c;
-    transform: scale(1.1);
-  }
-  
-  /* Loading state */
-  .cyber-dependencies .loading-chip {
-    animation: pulse 2s infinite;
-  }
-  
-  @keyframes pulse {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
-  }
-  
-  /* Menu items in dropdown */
-  .cyber-dependencies .MuiMenu-paper {
-    background-color: #0a0a2e !important;
-    border: 1px solid #00f3ff;
-  }
-  
-  .cyber-dependencies .MuiMenuItem-root {
-    color: #00f3ff;
-    font-family: 'Orbitron', sans-serif;
-  }
-  
-  .cyber-dependencies .MuiMenuItem-root:hover {
-    background-color: rgba(0, 243, 255, 0.1) !important;
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .cyber-dependencies {
-      padding: 0.5rem;
-    }
-    
-    .cyber-dependencies .MuiButton-root {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-    }
-  }
-
-
-
-
-  /* Dependencies section container */
-.cyber-assigned-users {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  border: 1px solid #00f3ff;
-  border-radius: 4px;
-  background-color: rgba(0, 10, 20, 0.7);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    z-index: -1; /* Ensure it's behind content */
 }
 
-/* Dependencies label */
-.cyber-assigned-users .MuiInputLabel-root {
-  color: #00f3ff !important;
-  font-family: 'Orbitron', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-/* Dependencies select dropdown */
-.cyber-assigned-users .MuiSelect-select {
-  color: #00f3ff;
-  font-family: 'Orbitron', sans-serif;
-  background-color: rgba(0, 20, 40, 0.8);
-  border: 1px solid #00f3ff;
-}
-
-.cyber-assigned-users .MuiSelect-icon {
-  color: #00f3ff;
-}
-
-.cyber-assigned-users .MuiOutlinedInput-notchedOutline {
-  border-color: #00f3ff !important;
-}
-
-/* Add dependency button */
-.cyber-assigned-users .MuiButton-root {
-  color: #00f3ff;
-  border-color: #00f3ff;
-  font-family: 'Orbitron', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 8px 16px;
-  transition: all 0.3s ease;
-}
-
-.cyber-assigned-users .MuiButton-root:hover {
-  background-color: rgba(0, 243, 255, 0.1);
-  box-shadow: 0 0 10px #00f3ff;
-  transform: translateY(-1px);
-}
-
-/* Dependency chips */
-.cyber-assigned-users .MuiChip-root {
-  background-color: rgba(0, 50, 100, 0.5);
-  border: 1px solid #00f3ff;
-  color: #00f3ff;
-  font-family: 'Orbitron', sans-serif;
-  margin: 0.25rem;
-  transition: all 0.3s ease;
-}
-
-.cyber-assigned-users .MuiChip-root:hover {
-  background-color: rgba(0, 100, 200, 0.5);
-  box-shadow: 0 0 8px #00f3ff;
-}
-
-.cyber-assigned-users .MuiChip-deleteIcon {
-  color: #ff003c;
-}
-
-.cyber-assigned-users .MuiChip-deleteIcon:hover {
-  color: #ff003c;
-  transform: scale(1.1);
-}
-
-/* Loading state */
-.cyber-assigned-users .loading-chip {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
-}
-
-/* Menu items in dropdown */
-.cyber-assigned-users .MuiMenu-paper {
-  background-color: #0a0a2e !important;
-  border: 1px solid #00f3ff;
-}
-
-.cyber-assigned-users .MuiMenuItem-root {
-  color: #00f3ff;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.cyber-assigned-users .MuiMenuItem-root:hover {
-  background-color: rgba(0, 243, 255, 0.1) !important;
+@keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .cyber-assigned-users {
-    padding: 0.5rem;
-  }
-  
-  .cyber-assigned-users .MuiButton-root {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-}
-
-  /* Add to TaskEditor.css */
-/* Disabled checkbox styling */
-.Mui-checkbox.disabled .MuiSvgIcon-root {
-  color: rgba(0, 243, 255, 0.5) !important;
-}
-
-.Mui-disabled .MuiFormControlLabel-label {
-  color: rgba(0, 243, 255, 0.7) !important;
-}
-
-/* Active status checkbox when not editable */
-.cyber-checkboxes .Mui-disabled .MuiSvgIcon-root {
-  color: #00f3ff !important;
-  opacity: 0.7;
-}
-
-/* Emergency protocol checkbox when not editable */
-.cyber-checkboxes .Mui-disabled .Mui-checked .MuiSvgIcon-root {
-  color: #ff003c !important;
-  opacity: 0.7;
+@media (max-width: 600px) {
+    .cyber-modal {
+        padding: 0.2rem;
+    }
+    .cyber-border {
+        padding: 1rem;
+    }
+    .cyber-content {
+        max-height: calc(90vh - 2rem - 30px);
+        padding-right: 5px;
+    }
+    .cyber-title {
+        font-size: 1.3rem;
+        padding-bottom: 8px;
+        margin-bottom: 1rem;
+    }
+    .cyber-form {
+        gap: 1rem;
+    }
+    .cyber-skill-section {
+        grid-template-columns: 1fr; /* Stack on small screens */
+    }
+    .cyber-button-group {
+        flex-direction: column; /* Stack buttons on very small screens */
+    }
+    .cyber-button {
+        width: 100%; /* Full width for stacked buttons */
+    }
 }

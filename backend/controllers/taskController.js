@@ -340,6 +340,13 @@ const updateTask = async (
       reserved_tokens = 0,
     } = dataResult.rows[0];
 
+    // Check if the task is already completed
+    if (task_status === "completed") {
+      await client.query("ROLLBACK");
+      // client.release() will be called in the finally block
+      return { error: "Completed tasks cannot be modified.", status: 403 };
+    }
+
     console.log("Current values:", {
       task_reward,
       task_status,
