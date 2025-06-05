@@ -209,7 +209,7 @@ const ProjectPages = () => {
             <Button
               variant="contained"
               size="small"
-              sx={{ backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
+              sx={{ marginBottom: '5px', backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
               onClick={() => {
                 setSelectedProject(project);
                 fetchTasks(project.id);

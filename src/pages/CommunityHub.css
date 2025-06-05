@@ -27,6 +27,7 @@
     background-color: var(--hud-bg-color);
     color: var(--hud-text-color);
     overflow-y: auto;
+    overflow-x: hidden;
     margin-top: 60px;
     font-family: var(--hud-font-family);
 }
