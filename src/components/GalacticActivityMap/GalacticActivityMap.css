@@ -150,5 +150,5 @@ body {
 }
 
 .star-is-twinkling {
-  animation: starFadeTwinkle 0.8s ease-in-out;
+  animation: starFadeTwinkle 1.8s ease-in-out;
 }

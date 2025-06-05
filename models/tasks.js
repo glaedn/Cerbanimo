@@ -16,6 +16,7 @@ const createTaskTable = async () => {
       dependencies INTEGER[] DEFAULT '{}', -- Stores IDs of tasks that must be completed before this one
       submitted BOOLEAN DEFAULT FALSE,
       submitted_at TIMESTAMP WITH TIME ZONE,
+      submitted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       proof_of_work_links TEXT[] DEFAULT '{}',
       reflection TEXT, -- User's reflection upon completing the task
       reviewer_ids INTEGER[] DEFAULT '{}', -- IDs of users assigned to review the task
