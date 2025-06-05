@@ -1,10 +1,10 @@
 /* Profile Page - Space Game Theme */
 .profile-container {
     padding: 20px;
-    color: #FFFFFF;
+    color: #FFFFFF; /* theme.colors.textPrimary */
     font-family: 'Orbitron', sans-serif; /* Sci-Fi Font */
     text-align: center;
-    background: radial-gradient(circle, #0A0A2E, #000000);
+    background: #0A0A2E; /* theme.colors.backgroundDefault */
     height: calc(100% - 60px);
     display: flex;
     flex-direction: column;
@@ -20,47 +20,46 @@
 }
 
 .profile-container::-webkit-scrollbar-track {
-    background: rgba(0, 243, 255, 0.2);
+    background: rgba(10, 10, 46, 0.7); /* Darker, theme.colors.backgroundDefault with alpha */
     border-radius: 5px;
 }
 
 .profile-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00F3FF, #4DABF7);
+    background: linear-gradient(180deg, #00F3FF, #4DABF7); /* theme.colors.primary to a lighter shade */
     border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* theme.colors.primary with alpha */
 }
 
 .profile-container::-webkit-scrollbar-thumb:hover {
-    background: #FF5CA2; /* Magenta on hover */
-    box-shadow: 0 0 5px #FF5CA2;
+    background: #FF5CA2; /* theme.colors.accentMagenta */
+    box-shadow: 0 0 5px #FF5CA2; /* theme.colors.accentMagenta */
 }
 
 /* Profile Title */
 .profile-title {
     font-size: 2rem;
     font-weight: bold;
-    color: #00F3FF;
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
-    margin-bottom: 20px;
+    color: #00F3FF; /* theme.colors.primary */
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); /* theme.colors.primary with alpha */
+    margin-bottom: 20px; /* This is fine, sx on component will override if needed */
 }
 
-/* Profile Fields */
-/* Retaining .profile-field for general layout like max-width, margin, but removing border */
+/* Profile Fields - Likely redundant due to panel structure and sx styling */
+/*
 .profile-field {
     max-width: 1200px;
     margin: 10px 0;
-    /* border: 1px solid #6dd5ed; */ /* Removed border */
     justify-content: center;
 }
 
-/* Retaining .profile-textfield for general layout like max-width, min-width, margin-left */
 .profile-textfield {
     max-width: 500px;
     min-width: 200px;
     margin-left: 10px;
 }
+*/
 
-/* Direct MUI component styling for TextFields and Autocomplete removed below */
+/* Direct MUI component styling for TextFields and Autocomplete removed below - These were already commented */
 /* .profile-textfield .MuiOutlinedInput-root ... */
 /* .profile-textfield label ... */
 /* .profile-autocomplete .MuiInputBase-root ... */
@@ -68,39 +67,38 @@
 /* .profile-autocomplete .MuiOutlinedInput-notchedOutline ... */
 /* .profile-autocomplete .MuiAutocomplete-tag ... */
 
-/* Buttons removed as they will be styled using MUI props in JSX */
+/* Buttons removed as they will be styled using MUI props in JSX - These were already commented */
 /* .profile-footer ... */
 /* .profile-buttons ... */
 /* .profile-button ... */
 
-/* Experience Section */
+/* Experience Section - Styling now primarily handled by `panelStyle` in sx prop */
 .profile-experience-container {
-    /* background: rgba(26, 9, 57, 0.9); */ /* Old background */
-    background-color: #1C1C1E; /* New background */
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 20px;
-    margin-left: 20px;
-    margin-right: 20px;
-    margin-bottom: 60px;
-    width: 95%;
-    max-width: 600px;
-    min-height: 300px;
-    max-height: 500px;
-    overflow-y: auto;
-    text-align: center;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+    /* background-color: #1C1C1E; */ /* Handled by sx */
+    /* border-radius: 10px; */ /* Handled by sx */
+    /* padding: 15px; */ /* Handled by sx */
+    /* margin-top: 20px; */ /* Handled by sx (panelStyle.marginBottom) */
+    /* margin-left: 20px; */ /* Handled by sx (panel alignment) */
+    /* margin-right: 20px; */ /* Handled by sx (panel alignment) */
+    /* margin-bottom: 60px; */ /* Handled by sx (panelStyle.marginBottom) */
+    /* width: 95%; */ /* Handled by sx (panelStyle.width & maxWidth) */
+    /* max-width: 600px; */ /* Handled by sx (panelStyle.maxWidth) */
+    min-height: 300px; /* Retain if specific scrolling height is needed */
+    max-height: 500px; /* Retain if specific scrolling height is needed */
+    overflow-y: auto;   /* Retain if specific scrolling behavior is needed */
+    text-align: center; /* Panel content alignment is center via sx, this is fine */
+    /* box-shadow: 0 0 15px rgba(0, 243, 255, 0.6); */ /* Handled by sx */
 }
 
-.profile-experience-title { /* This rule might be duplicated or conflict, ensuring it's updated */
-    font-size: 1.5rem;
+.profile-experience-title { /* This rule might be duplicated or conflict if UserPortfolio also has titles */
+    font-size: 1.5rem; /* Panel titles are h6, this might be for content inside UserPortfolio */
     font-weight: bold;
-    color: #00F3FF;
-    /* text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; */ /* Shadow can be removed or updated if needed */
+    color: #00F3FF; /* theme.colors.primary */
+    /* text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; */ 
     margin-bottom: 10px;
 }
 
-/* Experience List */
+/* Experience List - These styles would apply if UserPortfolio uses these class names internally */
 .profile-experience-list {
     list-style: none;
     padding: 0;
@@ -110,28 +108,27 @@
     margin: 10px 0;
 }
 
-/* Experience Links */
+/* Experience Links - These styles would apply if UserPortfolio uses these class names internally */
 .profile-experience-link {
     font-size: 1rem;
     font-weight: bold;
-    color: #6dd5ed;
+    color: #00F3FF; /* theme.colors.primary */
     text-decoration: none;
     padding: 10px 15px;
-    background: rgba(109, 213, 237, 0.2);
+    background: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
     border-radius: 8px;
     transition: 0.3s ease-in-out;
-    box-shadow: 0 0 10px rgba(109, 213, 237, 0.5);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5); /* theme.colors.primary with alpha */
     display: inline-block;
 }
 
 .profile-experience-link:hover {
-    color: #29b6f6;
-    background: rgba(109, 213, 237, 0.4);
-    box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* Updated shadow color */
+    color: #50FFFF; /* Lighter shade of theme.colors.primary */
+    background: rgba(0, 243, 255, 0.4); /* theme.colors.primary with higher alpha */
+    box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* theme.colors.primary */
 }
 
-
-  /* Task Browser Wrapper */
+/* Task Browser Wrapper - This seems specific to a TaskBrowser component, not directly ProfilePage panels */
   .task-browser-wrapper {
     flex-grow: 1;
     width: 100%;
@@ -144,7 +141,7 @@
   
   /* This second .profile-experience-title rule is more specific or later in cascade. Update it too. */
   .profile-experience-title { 
-    color: #00F3FF;
+    color: #00F3FF; /* theme.colors.primary */
     font-size: 1.5rem;
     margin-bottom: 15px;
     text-transform: uppercase;
@@ -157,7 +154,7 @@
   }
   
   .experience-item {
-    background-color: #16213e;
+    background-color: rgba(10, 10, 46, 0.8); /* Slightly lighter, translucent version of backgroundDefault */
     border-radius: 8px;
     padding: 15px;
     display: flex;
@@ -166,18 +163,18 @@
   }
   
   .task-name {
-    color: #00F3FF;
+    color: #00F3FF; /* theme.colors.primary */
     font-weight: bold;
   }
   
   .task-description {
-    color: #CCCCCC; /* Removed !important */
+    color: #E0E0E0; /* Lighter gray, close to textPrimary but distinct */
   }
   
   .view-project-link {
     align-self: flex-start;
-    background-color: rgba(0, 243, 255, 0.1);
-    color: #00F3FF;
+    background-color: rgba(0, 243, 255, 0.1); /* theme.colors.primary with alpha */
+    color: #00F3FF; /* theme.colors.primary */
     padding: 8px 15px;
     border-radius: 5px;
     text-decoration: none;
@@ -186,5 +183,5 @@
   }
   
   .view-project-link:hover {
-    background-color: rgba(0, 243, 255, 0.2);
+    background-color: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
   }

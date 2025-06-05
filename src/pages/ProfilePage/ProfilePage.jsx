@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
+import theme from '../../styles/theme'; // Import the theme
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
@@ -19,6 +20,23 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
+
+  // Base style for panels
+  const panelStyle = {
+    backgroundColor: 'rgba(28, 28, 30, 0.85)', // theme.colors.backgroundPaper with transparency
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.borders.borderRadiusLg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+    width: '100%', 
+    maxWidth: '800px', 
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center', 
+    gap: theme.spacing.md, 
+  };
+
   const [profileData, setProfileData] = useState({
     username: '',
     skills: [],
@@ -93,10 +111,10 @@ const ProfilePage = () => {
               if (typeof interest === 'string') {
                 try {
                   const parsed = JSON.parse(interest);
-                  console.log('Parsed interest:', parsed); // Debugging
+                  // console.log('Parsed interest:', parsed); // Debugging
                   return { name: parsed.name || parsed };
                 } catch (e) {
-                  console.log('Error parsing interest:', e);
+                  // console.log('Error parsing interest:', e);
                   return { name: interest };
                 }
               }
@@ -118,7 +136,7 @@ const ProfilePage = () => {
           setInterestsPool(optionsResponse.data.interestsPool.map(interest => 
             typeof interest === 'object' ? interest : { name: interest }
           ));
-          console.log("API Response:", optionsResponse.data); // Debugging
+          // console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);
           if (err.response && err.response.status === 401) {
@@ -235,7 +253,7 @@ const ProfilePage = () => {
 
   const handleResourceSubmit = async (resourceData) => {
     try {
-      console.log('Submitting resource:', resourceData);
+      // console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
         audience: 'http://localhost:4000/',
         // Ensure appropriate scope for writing resources
@@ -255,7 +273,7 @@ const ProfilePage = () => {
       } else {
         // Create new resource
         payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
-        console.log('Creating new resource with payload:', payload);
+        // console.log('Creating new resource with payload:', payload);
         response = await axios.post('http://localhost:4000/resources', payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -314,7 +332,7 @@ const ProfilePage = () => {
         audience: import.meta.env.REACT_APP_AUTH0_AUDIENCE,
         scope: 'openid profile email read:profile write:profile',
       });
-      console.log('JWT Token:', token);
+      // console.log('JWT Token:', token);
       if (!token) {
         throw new Error('Access token not available');
       }
@@ -338,44 +356,210 @@ const ProfilePage = () => {
   }
   return (
     <Box className="profile-container">
-      <Typography className="profile-title" variant="h4" gutterBottom>
+      <Typography 
+        className="profile-title" 
+        variant="h4" 
+        gutterBottom
+        sx={{
+          color: theme.colors.primary,
+          fontFamily: theme.typography.fontFamilyAccent,
+          textShadow: `0 0 8px ${theme.colors.primary}7A`,
+        }}
+      >
         Edit Your Profile
       </Typography>
-      {error && <Typography color="error">{error}</Typography>}
+      {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
       
-      {/* Display profile picture or preview new one */}
-      <Box className="profile-card">
-        <Avatar
-          alt="Profile Picture"
-          src={newProfilePicture || (profileData.profile_picture ? `http://localhost:4000${profileData.profile_picture}` : '/default-avatar.png')} // Default avatar if no picture
-          sx={{ width: 100, height: 100, marginBottom: 2 }}
-        />
-      </Box>
-      
-      {/* File input to change the profile picture */}
-      <Button variant="contained" component="label" color="primary" sx={{ marginTop: 1, marginBottom: 2 }}>
-        Edit
-        <input type="file" hidden onChange={handleProfilePictureChange} />
-      </Button>
-      
-      <TextField
-        label="Username"
-        value={profileData.username || ''}
-        onChange={(e) => handleInputChange('username', e.target.value)}
-        margin="normal"
+      {/* User Identification Panel */}
+      <Box sx={{ ...panelStyle, borderColor: theme.colors.primary, boxShadow: theme.effects.glowStrong(theme.colors.primary) }}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
+          User Identification
+        </Typography>
+        <Box 
+          className="profile-card" 
+          sx={{
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            padding: theme.spacing.md, 
+            backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
+            borderRadius: theme.borders.borderRadiusMd,
+            boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`, // Inner shadow
+            mb: 1, // Margin bottom before username field
+          }}
+        >
+          <Avatar
+            alt="Profile Picture"
+            src={newProfilePicture || (profileData.profile_picture ? `http://localhost:4000${profileData.profile_picture}` : '/default-avatar.png')}
+            sx={{ 
+              width: 120, 
+              height: 120, 
+              border: `3px solid ${theme.colors.primary}`,
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+              // Attempting hexagonal clip-path. Revert if problematic.
+              // clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', 
+            }}
+          />
+          <Button 
+            variant="contained" 
+            component="label" 
+            size="small"
+            sx={{ 
+              mt: 1, // Adjusted margin for internal spacing
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.backgroundDefault,
+              fontFamily: theme.typography.fontFamilyAccent,
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+              '&:hover': {
+                backgroundColor: theme.colors.accentBlue,
+                boxShadow: theme.effects.glowStrong(theme.colors.primary),
+              }
+            }}
+          >
+            Edit Picture
+            <input type="file" hidden onChange={handleProfilePictureChange} />
+          </Button>
+        </Box>
+        <TextField
+          label="Username"
+          value={profileData.username || ''}
+          onChange={(e) => handleInputChange('username', e.target.value)}
+          margin="none" // Margin is handled by panel's gap or specific sx here
+          fullWidth // Take full width of the panel's constraint
+        sx={{
+          // width: '100%', // Already fullWidth
+          maxWidth: '400px', // Specific max width for username field
+          '& .MuiInputLabel-root': { 
+            color: theme.colors.textSecondary,
+            fontFamily: theme.typography.fontFamilyAccent,
+          },
+          '& .MuiInputLabel-root.Mui-focused': {
+            color: theme.colors.primary, // Label color when focused
+          },
+          '& .MuiOutlinedInput-root': {
+            fontFamily: theme.typography.fontFamilyAccent,
+            color: theme.colors.textPrimary,
+            backgroundColor: 'rgba(10, 10, 46, 0.6)', // theme.colors.backgroundDefault with transparency
+            '& fieldset': {
+              borderColor: theme.colors.border,
+              borderRadius: theme.borders.borderRadiusMd,
+            },
+            '&:hover fieldset': {
+              borderColor: theme.colors.primary,
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: theme.colors.primary,
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            },
+          },
+          '& .MuiInputBase-input': {
+            color: theme.colors.textPrimary,
+            fontFamily: theme.typography.fontFamilyAccent,
+          },
+        }}
       />
-      <Box mb={2} >
-      
-      <Autocomplete
-        multiple
-        options={skillsPool}
-        getOptionLabel={(option) => option.name || ''} // Ensure it returns a string
-        value={profileData.skills || []}
-        onChange={(event, newValue) => handleInputChange('skills', newValue)}
-        freeSolo
-        renderInput={(params) => (
-          <TextField {...params} variant="outlined" label="Skills" placeholder="Add skills" />
-        )}
+      </Box> 
+
+      {/* Skillset Analysis Panel */}
+      <Box sx={panelStyle}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Skillset Analysis
+        </Typography>
+        <Autocomplete
+          multiple
+          fullWidth // Takes width of panel constraint
+          options={skillsPool}
+          getOptionLabel={(option) => option.name || ''} 
+          value={profileData.skills || []}
+          onChange={(event, newValue) => handleInputChange('skills', newValue)}
+          freeSolo
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              label="Skills" 
+              placeholder="Add skills"
+              sx={{
+                // Styles for TextField wrapper of Autocomplete are mostly from panelStyle or default
+                '& .MuiInputLabel-root': { 
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiOutlinedInput-root': {
+                  fontFamily: theme.typography.fontFamilyAccent,
+                  color: theme.colors.textPrimary,
+                  backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                  '& fieldset': {
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borders.borderRadiusMd,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.colors.primary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.colors.primary,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.colors.textPrimary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiAutocomplete-popupIndicator': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiAutocomplete-clearIndicator': {
+                  color: theme.colors.primary,
+                },
+              }}
+            />
+          )}
+          ChipProps={{
+            sx: {
+              backgroundColor: 'rgba(0, 243, 255, 0.15)', // Slightly more opaque primary color
+              color: theme.colors.primary,
+              fontFamily: theme.typography.fontFamilyAccent,
+              borderColor: theme.colors.primary,
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              margin: '3px', // Increased margin slightly
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary), // Add subtle glow to chips
+              '& .MuiChip-deleteIcon': {
+                color: theme.colors.secondary, // Changed to secondary for better contrast/theme alignment
+                '&:hover': {
+                  color: theme.colors.error, // Keep error color on hover for delete
+                }
+              },
+            }
+          }}
+        slots={{
+          popper: (props) => (
+            <Paper 
+              {...props} 
+              sx={{
+                backgroundColor: theme.colors.backgroundPaper,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.borders.borderRadiusMd,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                '& .MuiAutocomplete-listbox': {
+                  '& .MuiAutocomplete-option': {
+                    color: theme.colors.textPrimary,
+                    fontFamily: theme.typography.fontFamilyAccent,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 243, 255, 0.1)', 
+                    },
+                    '&[aria-selected="true"]': {
+                      backgroundColor: 'rgba(0, 243, 255, 0.2)', 
+                    },
+                  },
+                },
+              }}
+            />
+          )
+        }}
         renderTags={(value, getTagProps) =>
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
@@ -383,13 +567,13 @@ const ProfilePage = () => {
             // Ensure we have a full skill object
             let fullSkill = skillsPool.find(skill => skill.name === option.name) || option;
         
-            console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
+            // console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
         
             let label = fullSkill.name || '';
             let skillLevel = 0;
         
             if (Array.isArray(fullSkill.unlocked_users)) {
-              console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
+              // console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
         
               const userEntry = fullSkill.unlocked_users.find(u => u.user_id == profileData.id);
         
@@ -398,12 +582,13 @@ const ProfilePage = () => {
               }
             }
         
+            // ChipProps above handles the primary styling
             return (
               <Chip
                 key={key}
                 label={`${label} (Lvl ${skillLevel})`}
                 {...otherProps}
-                sx={{ margin: '2px' }}
+                // sx prop here would override ChipProps if needed for specific tags
               />
             );
           })
@@ -416,97 +601,261 @@ const ProfilePage = () => {
         
         
       />
+        <Button 
+          variant="outlined" 
+          onClick={goToSkillTree}
+          sx={{ 
+            borderColor: theme.colors.accentGreen,
+            color: theme.colors.accentGreen,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.accentGreen),
+            '&:hover': {
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              backgroundColor: 'rgba(0, 215, 135, 0.1)', 
+              boxShadow: theme.effects.glowStrong(theme.colors.accentGreen),
+            }
+          }}
+        >
+          Skill Tree
+        </Button>
+        <Autocomplete
+          multiple
+          fullWidth
+          options={interestsPool}
+          getOptionLabel={(option) => option.name || ''} 
+          value={profileData.interests || []}
+          onChange={(event, newValue) => handleInputChange('interests', newValue)}
+          freeSolo
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              label="Interests" 
+              placeholder="Add interests"
+              sx={{
+                '& .MuiInputLabel-root': { 
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiOutlinedInput-root': {
+                  fontFamily: theme.typography.fontFamilyAccent,
+                  color: theme.colors.textPrimary,
+                  backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                  '& fieldset': {
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borders.borderRadiusMd,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.colors.primary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.colors.primary,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.colors.textPrimary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiAutocomplete-popupIndicator': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiAutocomplete-clearIndicator': {
+                  color: theme.colors.primary,
+                },
+              }}
+            />
+          )}
+          ChipProps={{
+            sx: {
+              backgroundColor: 'rgba(255, 92, 162, 0.15)', // Slightly more opaque secondary color
+              color: theme.colors.secondary,
+              fontFamily: theme.typography.fontFamilyAccent,
+              borderColor: theme.colors.secondary,
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              margin: '3px', // Increased margin slightly
+              borderRadius: theme.borders.borderRadiusSm, 
+              boxShadow: theme.effects.glowSubtle(theme.colors.secondary), // Add subtle glow to chips
+              '& .MuiChip-deleteIcon': {
+                color: theme.colors.primary, 
+                '&:hover': {
+                  color: theme.colors.error, // Keep error color for delete hover
+                }
+              },
+            }
+          }}
+          PopperComponent={(props) => (
+            <Paper 
+              {...props} 
+              sx={{
+                backgroundColor: theme.colors.backgroundPaper,
+                border: `1px solid ${theme.colors.secondary}`, 
+                borderRadius: theme.borders.borderRadiusMd,
+                boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+                '& .MuiAutocomplete-listbox': {
+                  '& .MuiAutocomplete-option': {
+                    color: theme.colors.textPrimary,
+                    fontFamily: theme.typography.fontFamilyAccent,
+                    borderRadius: theme.borders.borderRadiusSm,
+                    margin: '2px', 
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 92, 162, 0.1)', 
+                      boxShadow: `0 0 5px ${theme.colors.secondary}7A`,
+                    },
+                    '&[aria-selected="true"]': {
+                      backgroundColor: 'rgba(255, 92, 162, 0.2)', 
+                      '&:hover': {
+                         backgroundColor: 'rgba(255, 92, 162, 0.25)',
+                      }
+                    },
+                  },
+                },
+              }} 
+            />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...otherProps } = getTagProps({ index });
+              return (
+                <Chip key={key} label={option.name} {...otherProps} />
+              );
+            })
+          }
+        />
       </Box>
-      <Button variant="contained" color="secondary" sx={{ marginTop: 1, marginBottom: 2 }} onClick={goToSkillTree}>
-        Skill Tree
-      </Button>
-      <Box mb={2}>
-      <Autocomplete
-        multiple
-        options={interestsPool}
-        getOptionLabel={(option) => option.name || ''} // Ensure string return
-        value={profileData.interests || []}
-        onChange={(event, newValue) => handleInputChange('interests', newValue)}
-        freeSolo
-        renderInput={(params) => (
-          <TextField {...params} variant="outlined" label="Interests" placeholder="Add interests" />
-        )}
-        
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
-            const { key, ...otherProps } = getTagProps({ index });
-            return (
-              <Chip
-                key={key}
-                label={option.name} // Ensure label is a string
-                {...otherProps}
-                sx={{ margin: '2px' }}
-              />
-            );
-          })
-        }
-      />
 
-      </Box>
-      <Box className="profile-experience-container">
+      {/* Experience Panel */}
+      <Box 
+        className="profile-experience-container" 
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.primary, 
+          // boxShadow is from panelStyle, padding from panelStyle
+          // backgroundColor is from panelStyle
+          // borderRadius is from panelStyle
+        }}
+      >
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Mission Log
+        </Typography>
         <UserPortfolio userId={profileData.id}/>
       </Box>
       
-      <Box className="profile-footer">
-      <Button variant="contained" color="primary" onClick={handleSaveProfile}>
-        Save Profile
-      </Button>
-      <Button variant="contained" color="secondary" onClick={goToDashboard}>
-        Dashboard
-      </Button>
-      <Button variant="contained" sx={{ backgroundColor: 'error.main', '&:hover': { backgroundColor: 'error.dark' } }} onClick={() => logout({ returnTo: window.location.origin })}>
-        Logout
-      </Button>
-      </Box>
-
-      {/* My Resources Section */}
-      <Box className="profile-resources-container" sx={{ mt: 4, p: 2, border: '1px solid #ddd', borderRadius: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          My Resources
+      {/* Resources Panel */}
+      <Box 
+        className="profile-resources-container" 
+        sx={{ 
+          ...panelStyle,
+          borderColor: theme.colors.secondary, // Example: make this panel use secondary color for border/glow
+          boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+        }}
+      >
+        <Typography 
+          variant="h6" // Changed to h6 for consistency
+          gutterBottom 
+          sx={{
+            color: theme.colors.primary, 
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%', 
+            textAlign: 'center',
+            // mb: 2, // Handled by panel gap or specific title margin
+          }}
+        >
+          Resource Inventory
         </Typography>
-        <Button variant="contained" color="primary" onClick={() => handleOpenResourceModal()} sx={{ mb: 2 }}>
+        <Button 
+          variant="contained" 
+          onClick={() => handleOpenResourceModal()} 
+          sx={{ 
+            backgroundColor: theme.colors.accentGreen,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.accentGreen),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              backgroundColor: '#00b870', 
+              boxShadow: theme.effects.glowStrong(theme.colors.accentGreen),
+            }
+          }}
+        >
           List New Resource
         </Button>
-        {resourcesLoading && <CircularProgress />}
-        {resourceError && <Typography color="error">{resourceError}</Typography>}
+        {resourcesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {resourceError && <Typography color="error" sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error}}>{resourceError}</Typography>}
         {!resourcesLoading && !resourceError && userResources.length === 0 && (
-          <Typography>You haven't listed any resources yet.</Typography>
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>You haven't listed any resources yet.</Typography>
         )}
         {!resourcesLoading && !resourceError && userResources.length > 0 && (
-          <List>
+          <List sx={{width: '100%'}}>
             {userResources.map((resource) => (
               <ListItem 
                 key={resource.id}
                 secondaryAction={
                   <>
-                    <IconButton edge="end" aria-label="edit" onClick={() => handleOpenResourceModal(resource)} sx={{mr: 1}}>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="edit" 
+                      onClick={() => handleOpenResourceModal(resource)} 
+                      sx={{
+                        mr: 1, 
+                        color: theme.colors.accentBlue,
+                        '&:hover': { color: theme.colors.primary }
+                      }}
+                    >
                       <EditIcon />
                     </IconButton>
-                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteResource(resource.id)}>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="delete" 
+                      onClick={() => handleDeleteResource(resource.id)}
+                      sx={{
+                        color: theme.colors.accentOrange,
+                        '&:hover': { color: theme.colors.error }
+                      }}
+                    >
                       <DeleteIcon />
                     </IconButton>
                   </>
                 }
-                sx={{ borderBottom: '1px solid #eee' }}
+                sx={{ 
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  mb: 1,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)', 
+                  borderRadius: theme.borders.borderRadiusSm,
+                  '&:hover': {
+                    backgroundColor: 'rgba(28, 28, 30, 0.8)',
+                    boxShadow: `0 0 5px ${theme.colors.secondary}`,
+                  }
+                }}
               >
                 <ListItemText 
                   primary={resource.name} 
                   secondary={
                     <>
-                      <Typography component="span" variant="body2" color="text.primary">
+                      <Typography component="span" variant="body2" sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyBase }}>
                         Category: {resource.category || 'N/A'}
                       </Typography>
                       <br />
-                      <Typography component="span" variant="body2" color="text.secondary">
+                      <Typography component="span" variant="body2" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
                         Quantity: {resource.quantity || 'N/A'} - Status: {resource.status || 'N/A'}
                       </Typography>
                     </>
                   } 
+                  primaryTypographyProps={{
+                    sx: {
+                      color: theme.colors.primary,
+                      fontFamily: theme.typography.fontFamilyAccent,
+                      fontSize: theme.typography.fontSizeLg, 
+                    }
+                  }}
+                  secondaryTypographyProps={{ 
+                     sx: { fontFamily: theme.typography.fontFamilyBase }
+                  }}
                 />
               </ListItem>
             ))}
@@ -514,7 +863,67 @@ const ProfilePage = () => {
         )}
       </Box>
 
-      {/* Resource Form Modal */}
+      {/* Command Module Panel */}
+      <Box sx={{ ...panelStyle, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Command Module
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={handleSaveProfile}
+          sx={{
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              backgroundColor: theme.colors.accentBlue,
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+            }
+          }}
+        >
+          Save Profile
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={goToDashboard}
+          sx={{
+            borderColor: theme.colors.secondary,
+            color: theme.colors.secondary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              borderColor: theme.colors.accentPink, 
+              color: theme.colors.accentPink,
+              backgroundColor: 'rgba(255, 92, 162, 0.1)',
+              boxShadow: theme.effects.glowStrong(theme.colors.secondary),
+            }
+          }}
+        >
+          Dashboard
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={() => logout({ returnTo: window.location.origin })}
+          sx={{ 
+            backgroundColor: theme.colors.error, 
+            color: theme.colors.textPrimary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.error),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': { 
+              backgroundColor: theme.colors.accentOrange, 
+              boxShadow: theme.effects.glowStrong(theme.colors.error),
+            } 
+          }}
+        >
+          Logout
+        </Button>
+      </Box>
+
+      {/* Resource Form Modal (remains outside the panel structure) */}
       <Modal
         open={isResourceModalOpen}
         onClose={handleCloseResourceModal}
@@ -529,15 +938,31 @@ const ProfilePage = () => {
           width: { xs: '90%', sm: '75%', md: '600px' },
           maxHeight: '90vh',
           overflowY: 'auto',
-          bgcolor: 'background.paper',
-          boxShadow: 24,
+          bgcolor: theme.colors.backgroundPaper, // Theme background for modal
+          boxShadow: theme.effects.glowStrong(theme.colors.primary),
           p: { xs: 2, sm: 3, md: 4 },
-          borderRadius: 2,
+          borderRadius: theme.borders.borderRadiusLg,
+          border: `1px solid ${theme.colors.primary}`,
+          color: theme.colors.textPrimary, // Default text color for modal content
         }}>
-          <ResourceListingForm
+          <Typography 
+            variant="h6" 
+            component="h2" // Modal title SEO tag
+            sx={{ 
+              color: theme.colors.primary, 
+              fontFamily: theme.typography.fontFamilyAccent,
+              textAlign: 'center',
+              mb: theme.spacing.md, // Margin bottom for title
+              textShadow: `0 0 5px ${theme.colors.primary}7A`,
+            }}
+          >
+            {editingResource ? 'Update Resource Details' : 'List New Resource'}
+          </Typography>
+          <ResourceListingForm 
             initialResourceData={editingResource}
             onSubmit={handleResourceSubmit}
             onCancel={handleCloseResourceModal}
+            theme={theme} // Pass theme to ResourceListingForm
           />
         </Paper>
       </Modal>
