@@ -1,14 +1,15 @@
 .skill-galaxy-panel {
   /* max-width: 300px; */ /* REMOVED */
-  height: 98%;
+  /* height: 98%; Removed to allow parent to control height */
   overflow: hidden;
   color: var(--theme-colors-textPrimary, #FFFFFF);
 } 
-.skill-galaxy-panel.minimized {
-  max-height: 40px; /* Height of just the header */
-  position: absolute;
-  bottom: 0; /* Position at bottom */
-  left: 0;
+
+.hud-panel.minimized .skill-galaxy-panel {
+  height: auto !important; /* Ensure minimized state can shrink */
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 !important;
 }
 
 .skill-galaxy-panel-loading,
