@@ -357,40 +357,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         allStarD3Elements.push(starElement); 
       });
 
-      // Clear previous interval and timeouts for general star shine
-      if (window.starTwinkleIntervalId) {
-        clearInterval(window.starTwinkleIntervalId);
-      }
-      window.twinkleTimeoutIds.forEach(clearTimeout); // Clear all stored timeouts
-      window.twinkleTimeoutIds = []; // Reset the array
 
-      if (allStarD3Elements.length > 0) {
-        window.starTwinkleIntervalId = setInterval(() => {
-          const validStars = allStarD3Elements.filter(el => el.node() && el.node().parentNode);
-          const shuffledStars = [...validStars].sort(() => 0.5 - Math.random());
-          const count = Math.max(1, Math.floor(validStars.length * 0.20));
-          const candidateStars = shuffledStars.slice(0, count);
-
-          candidateStars.forEach(starEl => {
-            const randomIndividualDelay =  Math.random() * 20000; // Between 5s and 34.5s
-            const outerTimeoutId = setTimeout(() => {
-              if (starEl.node() && starEl.node().parentNode && !starEl.classed('star-is-twinkling')) {
-                starEl.classed('star-is-twinkling', true);
-                const innerTimeoutId = setTimeout(() => {
-                  starEl.classed('star-is-twinkling', false);
-                  window.twinkleTimeoutIds = window.twinkleTimeoutIds.filter(id => id !== innerTimeoutId);
-                }, 800); // Animation duration (0.8s)
-                window.twinkleTimeoutIds.push(innerTimeoutId);
-              }
-              window.twinkleTimeoutIds = window.twinkleTimeoutIds.filter(id => id !== outerTimeoutId);
-            }, randomIndividualDelay);
-            window.twinkleTimeoutIds.push(outerTimeoutId);
-          });
-        }, 20000); // Interval for initiating twinkles (e.g., every 15 seconds)
-      }
-
-    /* PULSE FUNCTION ENTIRELY REMOVED 
-    */
     } else if (d3Container.current && (isLoading || error)) {
       let svg = d3.select(d3Container.current).select("svg");
       if (!svg.empty()) {
