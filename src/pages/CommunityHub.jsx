@@ -150,7 +150,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     // Fetch member scores
     if (communityResponse.data.members && communityResponse.data.members.length > 0) {
         try {
-            const scoresResponse = await axios.get(`http://localhost:4000/api/communities/${communityId}/scores`, {
+            const scoresResponse = await axios.get(`http://localhost:4000/communities/${communityId}/scores`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             console.log('Fetched member scores:', scoresResponse.data);
