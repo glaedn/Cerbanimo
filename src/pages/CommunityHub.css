@@ -1,39 +1,63 @@
 /* CommunityHub Styling */
+:root {
+    --hud-bg-color: #0A0A2E;
+    --hud-panel-bg-color: rgba(10, 10, 30, 0.75); /* Darker, more blueish translucent */
+    --hud-panel-bg-opaque: #10102F; /* Darker, more blueish opaque */
+    --hud-primary-color: #00F3FF; /* Cyan */
+    --hud-primary-color-rgb: 0, 243, 255; /* Cyan RGB for rgba() */
+    --hud-secondary-color: #FF00FF; /* Magenta */
+    --hud-secondary-color-rgb: 255, 0, 255; /* Magenta RGB for rgba() */
+    --hud-text-color: #E0E0E0; /* Light grey/white for general text */
+    --hud-text-primary: #00F3FF; /* Cyan text */
+    --hud-text-secondary: #B0C4DE; /* Lighter blue-grey text for secondary info */
+    --hud-border-color: #00F3FF;
+    --hud-glow-color: #00F3FF;
+    --hud-glow-secondary-color: #FF00FF;
+    --hud-font-family: 'Roboto', 'Open Sans', 'Lato', sans-serif;
+    --hud-error-color: #FF4136;
+    --hud-success-color: #2ECC40; 
+}
+
 .community-hub {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 60px);
+    min-height: calc(100vh - 60px); /* Use min-height to ensure it fills screen */
     align-items: center;
     padding: 20px;
-    background-color: #0A0A2E;
-    color: #FFFFFF;
+    background-color: var(--hud-bg-color);
+    color: var(--hud-text-color);
     overflow-y: auto;
     margin-top: 60px;
+    font-family: var(--hud-font-family);
 }
 
 .hub-title {
-    color: #00F3FF;
+    color: var(--hud-primary-color);
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 20px; /* Increased margin */
     padding: 0 20px 20px 20px;
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    text-shadow: 0 0 8px var(--hud-glow-color), 0 0 12px var(--hud-glow-color);
+    font-size: 2.5rem; /* Larger title */
 }
 
 .community-info {
     max-width: 900px;
     text-align: center;
     margin-bottom: 30px;
-    background: rgba(28, 28, 30, 0.7);
-    padding: 10px;
+    background: var(--hud-panel-bg-color);
+    padding: 20px; /* Increased padding */
     border-radius: 10px;
-    box-shadow: 0px 0px 15px rgba(0, 243, 255, 0.3);
+    border: 1px solid var(--hud-border-color);
+    box-shadow: 0 0 10px var(--hud-glow-color), inset 0 0 5px rgba(var(--hud-primary-color-rgb), 0.3);
+    color: var(--hud-text-secondary);
 }
 
 .community-description {
     margin-bottom: 15px;
-    color: #CCCCCC;
+    color: var(--hud-text-secondary);
     line-height: 1.6;
     min-width: 200px;
+    font-size: 1rem;
 }
 
 .tag-container {
@@ -45,10 +69,17 @@
     margin-bottom: 10px;
 }
 
-/*.interest-tag {
-    /* background and color removed */
-    /* Keep other styles if needed, or remove rule if fully handled by MUI sx */
-/*}*/
+/* Chips should use theme colors */
+.tag-container .MuiChip-root {
+    background-color: rgba(var(--hud-primary-color-rgb), 0.15);
+    color: var(--hud-text-primary);
+    border: 1px solid rgba(var(--hud-primary-color-rgb), 0.5);
+    font-family: var(--hud-font-family);
+}
+
+.tag-container .MuiChip-root:hover {
+    background-color: rgba(var(--hud-primary-color-rgb), 0.3);
+}
 
 .small-tags .MuiChip-root {
     height: 24px;
@@ -60,103 +91,138 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
+    gap: 25px; /* Increased gap */
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px; /* Increased max-width */
 }
 
 .hub-grid-item {
     flex: 1;
-    min-width: 300px;
+    min-width: 320px; /* Slightly larger min-width */
     display: flex;
-    justify-content: center;
+    flex-direction: column; /* Ensure cards fill height if item is flex */
 }
 
 .wide-item {
     flex-basis: 100%;
-    max-width: 900px;
+    max-width: 1200px; /* Adjusted to new max-width */
 }
 
 /* Card Styling */
 .hub-card {
-    background: linear-gradient(145deg, #282728, #4c4350);
-    border-radius: 12px;
-    padding: 5px;
+    background: var(--hud-panel-bg-opaque);
+    border: 1px solid var(--hud-border-color);
+    box-shadow: 0 0 8px rgba(var(--hud-primary-color-rgb), 0.4), 
+                0 0 12px rgba(var(--hud-primary-color-rgb), 0.3),
+                inset 0 0 5px rgba(var(--hud-primary-color-rgb), 0.2);
+    border-radius: 10px;
+    padding: 15px; /* Standardized padding */
     width: 100%;
-    box-shadow: 0px 0px 15px rgba(0, 243, 255, 0.3);
     text-align: center;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    color: #CCCCCC;
-    max-height: 600px;
-    overflow-y: auto!important; /* Keeping !important if it's overriding something critical */
-    border-radius: 10px;
-    background: linear-gradient(145deg, #1C1C1E, #0A0A2E);
+    color: var(--hud-text-color);
+    max-height: 600px; /* Keep max height for scroll */
+    overflow-y: auto !important; /* Keep important if needed */
+    display: flex; /* For flex column layout */
+    flex-direction: column; /* For flex column layout */
 }
 
 .hub-card:hover {
-    transform: scale(1.02);
-    box-shadow: 0px 0px 25px rgba(0, 243, 255, 0.6);
+    transform: translateY(-5px) scale(1.01); /* Adjusted hover effect */
+    box-shadow: 0 0 12px var(--hud-glow-color), 
+                0 0 20px var(--hud-glow-color),
+                inset 0 0 8px rgba(var(--hud-primary-color-rgb), 0.3);
+}
+
+.hub-card .MuiCardContent-root { /* Ensure card content uses full height */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 /* Icons */
 .hub-icon {
-    font-size: 40px;
-    color: #00F3FF;
-    margin-bottom: 10px;
+    font-size: 3rem; /* Larger icons */
+    color: var(--hud-primary-color);
+    margin-bottom: 15px;
+    text-shadow: 0 0 5px var(--hud-glow-color);
 }
 
-/* Members Card */
+/* Members Card Specifics */
 .members-card .member-list {
-    max-height: 300px;
+    max-height: 350px; /* Slightly more space */
     overflow-y: auto;
+    padding-right: 5px; /* Space for scrollbar */
 }
 
 .member-entry {
-    background: rgba(255, 255, 255, 0.05);
-    margin-bottom: 8px;
+    background: rgba(var(--hud-primary-color-rgb), 0.07);
+    margin-bottom: 10px; /* Increased spacing */
     border-radius: 6px;
-    transition: background 0.3s ease;
-    color: white;
+    border: 1px solid rgba(var(--hud-primary-color-rgb), 0.2);
+    transition: background 0.3s ease, border-color 0.3s ease;
+    color: var(--hud-text-color);
     padding: 12px;
     display: flex;
     align-items: center;
 }
 
-.member-entry .MuiListItemText-secondary {
-    color: rgba(204, 204, 204, 0.7);
+.member-entry:hover {
+    background: rgba(var(--hud-primary-color-rgb), 0.15);
+    border-color: rgba(var(--hud-primary-color-rgb), 0.4);
 }
 
-.member-entry:hover {
-    background: rgba(0, 243, 255, 0.1);
+.member-entry .MuiListItemText-primary {
+    color: var(--hud-text-color);
+    font-weight: 500;
+}
+.member-entry .MuiListItemText-secondary {
+    color: var(--hud-text-secondary);
+    font-size: 0.8rem;
 }
 
 .delegation-info {
-    background: rgba(0, 215, 135, 0.1);
-    padding: 10px;
+    background: rgba(var(--hud-secondary-color-rgb), 0.1); /* Magenta accent for delegation */
+    padding: 12px;
     border-radius: 6px;
-    margin: 10px 0;
-    border: 1px solid rgba(0, 215, 135, 0.3);
+    margin: 15px 0;
+    border: 1px solid rgba(var(--hud-secondary-color-rgb), 0.3);
+    color: var(--hud-text-color);
+}
+
+.delegation-info strong {
+    color: var(--hud-secondary-color);
 }
 
 .revoke-button {
-    margin-top: 8px !important;
+    margin-top: 10px !important;
+    /* Button styling will be handled by .MuiButton overrides or sx prop */
 }
 
-/* Voting Cards */
+/* Voting Cards (Proposals & Membership) */
 .voting-card .proposal-list,
 .membership-card .request-list {
-    max-height: 300px;
+    max-height: 350px; /* Slightly more space */
     overflow-y: auto;
+    padding-right: 5px; /* Space for scrollbar */
 }
 
 .proposal-entry,
 .request-entry {
-    background: rgba(255, 255, 255, 0.05);
-    margin-bottom: 8px;
+    background: rgba(var(--hud-primary-color-rgb), 0.07);
+    margin-bottom: 10px; /* Increased spacing */
     border-radius: 6px;
-    padding: 12px !important;
+    border: 1px solid rgba(var(--hud-primary-color-rgb), 0.2);
+    padding: 15px !important; /* Increased padding */
     display: flex;
     flex-direction: column;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.proposal-entry:hover,
+.request-entry:hover {
+    background: rgba(var(--hud-primary-color-rgb), 0.15);
+    border-color: rgba(var(--hud-primary-color-rgb), 0.4);
 }
 
 .proposal-content {
@@ -166,151 +232,184 @@
 .vote-actions {
     display: flex;
     justify-content: center;
-    margin-top: 8px;
-    gap: 10px;
+    margin-top: 12px; /* Increased spacing */
+    gap: 15px; /* Increased gap */
 }
 
 .vote-info {
-    margin: 8px 0;
+    margin: 10px 0;
     font-style: italic;
-    color: #b0b0b0;
+    color: var(--hud-text-secondary);
+    font-size: 0.85rem;
 }
 
 .clickable-title {
     cursor: pointer;
-    color: #4DABF7;
-    transition: color 0.3s ease;
+    color: var(--hud-text-primary);
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+    font-weight: bold;
 }
 
 .clickable-title:hover {
-    color: #00F3FF;
-    text-decoration: underline;
+    color: var(--hud-text-color);
+    text-shadow: 0 0 5px var(--hud-glow-color);
+    text-decoration: none; /* Prefer glow over underline */
 }
 
 .clickable-name {
     cursor: pointer;
-    color: #E0E0E0;
-}
-
-.MuiListItemText-secondary {
-    color: rgba(204, 204, 204, 0.7);
+    color: var(--hud-text-color); /* Default name color */
+    font-weight: 500;
 }
 
 .clickable-name:hover {
-    text-decoration: underline;
-    color: #4DABF7;
+    text-decoration: none; /* Prefer no underline */
+    color: var(--hud-text-primary);
+}
+
+.MuiListItemText-secondary { /* General secondary text in lists */
+    color: var(--hud-text-secondary);
 }
 
 .clickable-avatar {
     cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
+}
+.clickable-avatar:hover {
+    border-color: var(--hud-primary-color);
 }
 
 .proposal-description,
-.project-description { /* Assuming this is the one for hub cards */
-    color: #B0B0B0;
-    margin: 6px 0;
+.project-description {
+    color: var(--hud-text-secondary);
+    margin: 8px 0;
     font-size: 0.9rem;
     text-align: left;
+    line-height: 1.5;
 }
 
 /* Projects Grid */
 .projects-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Larger cards */
+    gap: 20px; /* Increased gap */
     margin-top: 15px;
 }
 
-.projects-grid .project-card { /* Made selector more specific */
-    background: rgba(28, 28, 30, 0.8);
-    transition: transform 0.3s ease;
-    height: 100%;
+.projects-grid .project-card {
+    background: var(--hud-panel-bg-color);
+    border: 1px solid var(--hud-border-color);
+    box-shadow: 0 0 5px rgba(var(--hud-primary-color-rgb),0.2);
+    transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    height: 100%; /* Ensure cards in grid take full height */
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
 }
 
-.projects-grid .project-card:hover { /* Made selector more specific */
+.projects-grid .project-card:hover {
     transform: translateY(-5px);
-    background: rgba(28, 28, 30, 1);
+    background: var(--hud-panel-bg-opaque); /* Darken on hover */
+    box-shadow: 0 0 10px var(--hud-glow-color);
 }
 
-/*
-.project-tag {
-    /* background and color removed */
-/*}*/
-
-.view-project-btn {
-    margin-top: 12px !important; /* Kept !important if necessary for override */
+.projects-grid .project-card .MuiCardContent-root {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Content fills card */
 }
+
+.projects-grid .project-card .view-project-btn { /* Target button inside project card */
+    margin-top: auto; /* Push button to bottom */
+    align-self: center; /* Center button */
+}
+
 
 .no-items {
-    padding: 20px;
+    padding: 25px; /* Increased padding */
     font-style: italic;
-    color: #CCCCCC;
+    color: var(--hud-text-secondary);
+    font-size: 1rem;
 }
 
-/* Custom scrollbars for all containers */
+/* Custom scrollbars */
 .hub-card::-webkit-scrollbar,
 .member-list::-webkit-scrollbar,
 .proposal-list::-webkit-scrollbar,
 .request-list::-webkit-scrollbar {
-    width: 6px;
+    width: 8px; /* Slightly wider scrollbar */
 }
 
 .hub-card::-webkit-scrollbar-thumb,
 .member-list::-webkit-scrollbar-thumb,
 .proposal-list::-webkit-scrollbar-thumb,
 .request-list::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 243, 255, 0.4);
-    border-radius: 3px;
+    background-color: rgba(var(--hud-primary-color-rgb), 0.5); /* More visible thumb */
+    border-radius: 4px;
+    border: 1px solid rgba(var(--hud-primary-color-rgb), 0.7);
 }
 
 .hub-card::-webkit-scrollbar-track,
 .member-list::-webkit-scrollbar-track,
 .proposal-list::-webkit-scrollbar-track,
 .request-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(var(--hud-bg-color-rgb, 0,0,0), 0.1); /* Use bg color with alpha or a dark track */
 }
 
 /* Loading and Error States */
-.loading-container { /* Error container styled separately */
+.loading-container {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 50vh;
     width: 100%;
-    color: #CCCCCC;
+    color: var(--hud-text-secondary);
     font-size: 1.2rem;
+    text-transform: uppercase;
 }
 
 .error-container {
-    display: flex; /* Added for consistency if missing */
-    justify-content: center; /* Added for consistency if missing */
-    align-items: center; /* Added for consistency if missing */
-    height: 50vh; /* Added for consistency if missing */
-    width: 100%; /* Added for consistency if missing */
-    color: #FF4136;
-    font-size: 1.2rem; /* Added for consistency if missing */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+    width: 100%;
+    color: var(--hud-error-color);
+    font-size: 1.2rem;
+    text-shadow: 0 0 5px var(--hud-error-color);
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    .hub-grid-item {
-        min-width: 100%;
+    .hub-title {
+        font-size: 2rem; /* Adjust title for smaller screens */
     }
-    
+    .hub-grid-item {
+        min-width: calc(100% - 20px); /* Full width minus some margin */
+        margin-left: 10px;
+        margin-right: 10px;
+    }
     .projects-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Single column for projects */
+    }
+    .hub-card {
+        padding: 10px; /* Reduce padding on smaller cards */
     }
 }
 
 .join-request-container {
-    background-color: #1C1C1E;
+    background-color: var(--hud-panel-bg-opaque);
+    border: 1px solid var(--hud-secondary-color); /* Magenta accent border */
+    box-shadow: 0 0 10px var(--hud-glow-secondary-color), inset 0 0 5px rgba(var(--hud-secondary-color-rgb), 0.3);
     border-radius: 8px;
     margin-bottom: 24px;
     text-align: center;
-    color: white!important; /* Kept !important if it's a critical override */
+    color: var(--hud-text-color) !important; /* Keep important if necessary */
+    padding: 20px; /* Added padding */
   }
   
-  .full-width-item {
-    grid-column: 1 / -1;
+  .full-width-item { /* Ensure this takes full width in the grid */
+    flex-basis: 100% !important; 
+    grid-column: 1 / -1 !important;
   }

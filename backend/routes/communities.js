@@ -138,6 +138,59 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Get community scores for all users
+router.get("/:communityId/scores", async (req, res) => {
+  const { communityId } = req.params;
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(
+      "SELECT id, username, profile_picture, token_ledger FROM users"
+    );
+    const users = result.rows;
+    const communityIdInt = parseInt(communityId, 10);
+
+    if (isNaN(communityIdInt)) {
+      return res.status(400).json({ error: "Invalid community ID format" });
+    }
+
+    const userScores = users.map((user) => {
+      let communityScore = 0;
+      if (user.token_ledger && Array.isArray(user.token_ledger)) {
+        user.token_ledger.forEach((entry) => {
+          try {
+            const record = typeof entry === 'string' ? JSON.parse(entry) : entry;
+            if (
+              record &&
+              record.type === "community" &&
+              record.id === communityIdInt
+            ) {
+              communityScore += record.tokens || 0;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse token_ledger entry:", entry, parseError);
+            // Optionally, decide if this error should affect the response
+            // For now, we'll just log it and continue, effectively skipping malformed entries
+          }
+        });
+      }
+      return {
+        id: user.id,
+        username: user.username,
+        profile_picture: user.profile_picture,
+        communityScore,
+      };
+    });
+
+    res.status(200).json(userScores);
+  } catch (err) {
+    console.error("Error fetching user scores for community:", err);
+    res.status(500).json({ error: "Failed to fetch user scores" });
+  } finally {
+    client.release();
+  }
+});
+
 // Get all communities a user is a member of
 // (userId is passed in the request body)
 router.get("/user/:userId", async (req, res) => {

@@ -14,7 +14,8 @@ import {
   IconButton,
   Tooltip,
   Box,
-  Paper
+  Paper,
+  Link
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -52,6 +53,7 @@ const CommunityHub = () => {
     const [hasRequestedJoin, setHasRequestedJoin] = useState(false);
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
+    const [memberScores, setMemberScores] = useState([]);
 
     const showNotification = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -144,9 +146,28 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
     console.log('Fetched members:', validMembers);
     setMembers(validMembers);
+
+    // Fetch member scores
+    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
+        try {
+            const scoresResponse = await axios.get(`http://localhost:4000/api/communities/${communityId}/scores`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            console.log('Fetched member scores:', scoresResponse.data);
+            setMemberScores(scoresResponse.data);
+        } catch (scoresError) {
+            console.error('Failed to fetch member scores:', scoresError);
+            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
+            setMemberScores([]); 
+        }
+    } else {
+        setMemberScores([]); // No members, so no scores
+    }
+
 } else {
     console.log('No members in this community');
     setMembers([]);
+    setMemberScores([]); // No members, so no scores
 }
                 
                 // Fetch membership requests
@@ -528,19 +549,27 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     <Card className="hub-card members-card">
                         <CardContent>
                             <GroupIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'primary.main' }}>Members</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Members</Typography>
                             
                             {isMember && isDelegating && (
                                 <div className="delegation-info">
-                                    <Typography variant="body2">
-                                        You've delegated your vote to: <strong>{delegatedTo?.username || "Unknown member"}</strong>
+                                    <Typography variant="body2" sx={{color: 'var(--hud-text-color)'}}>
+                                        You've delegated your vote to: <strong style={{color: 'var(--hud-secondary-color)'}}>{delegatedTo?.username || "Unknown member"}</strong>
                                     </Typography>
                                     <Button 
                                         variant="outlined" 
-                                        color="secondary" 
                                         size="small" 
                                         onClick={handleRevokeVote}
-                                        className="revoke-button"
+                                        className="revoke-button" // CSS class for specific margin if needed
+                                        sx={{ 
+                                            color: 'var(--hud-secondary-color)', 
+                                            borderColor: 'var(--hud-secondary-color)',
+                                            '&:hover': { 
+                                                borderColor: 'var(--hud-glow-secondary-color)', 
+                                                backgroundColor: 'rgba(var(--hud-secondary-color-rgb), 0.1)',
+                                                boxShadow: '0 0 8px var(--hud-glow-secondary-color)',
+                                            }
+                                        }}
                                     >
                                         Revoke Delegation
                                     </Button>
@@ -551,25 +580,55 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                 {members.map((member) => (
                                     <ListItem 
                                         key={member.id} 
-                                        className="member-entry"
-                                        sx={{ cursor: 'pointer' }}
+                                        className="member-entry" // CSS handles base style
+                                        sx={{ 
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                borderColor: 'var(--hud-primary-color)', // From CSS: rgba(var(--hud-primary-color-rgb), 0.4)
+                                            }
+                                        }}
                                         onClick={() => navigate(`/profile/public/${member.id}`)}
                                     >
                                         <ListItemAvatar>
-                                            <Avatar src={`http://localhost:4000${member.profile_picture}`} alt={member.name} />
+                                            <Avatar 
+                                                src={`http://localhost:4000${member.profile_picture}`} 
+                                                alt={member.name} 
+                                                sx={{ 
+                                                    borderColor: 'var(--hud-border-color)', 
+                                                    borderWidth: '1px', 
+                                                    borderStyle: 'solid',
+                                                    boxShadow: '0 0 3px var(--hud-glow-color)',
+                                                    '&:hover': {
+                                                        boxShadow: '0 0 8px var(--hud-glow-color)',
+                                                    }
+                                                }}
+                                            />
                                         </ListItemAvatar>
                                         <ListItemText 
+                                            primaryTypographyProps={{ sx: { color: 'var(--hud-text-color)', fontWeight: '500' } }}
+                                            secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
                                             primary={member.username} 
-                                            secondary={`ID: ${member.id}`} 
+                                            secondary={`ID: ${member.id} - Score: ${
+                                                memberScores.find(scoreEntry => scoreEntry.id === member.id)?.communityScore || 0
+                                            }`} 
                                         />
                                         {isMember && !isDelegating && userId !== member.id && (
                                             <Button 
-                                                variant="contained" 
-                                                color="primary" 
+                                                variant="outlined" 
                                                 size="small"
                                                 onClick={(e) => {
-                                                    e.stopPropagation();
+                                                    e.stopPropagation(); // Prevent ListItem click
                                                     handleDelegateVote(member.id);
+                                                }}
+                                                sx={{
+                                                    color: 'var(--hud-primary-color)',
+                                                    borderColor: 'var(--hud-primary-color)',
+                                                    marginLeft: 'auto', // Push to the right
+                                                    '&:hover': {
+                                                        backgroundColor: 'rgba(var(--hud-primary-color-rgb), 0.1)',
+                                                        borderColor: 'var(--hud-glow-color)',
+                                                        boxShadow: '0 0 5px var(--hud-glow-color)',
+                                                    }
                                                 }}
                                             >
                                                 Delegate
@@ -588,32 +647,44 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         <Card className="hub-card voting-card">
                             <CardContent>
                                 <HowToVoteIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'primary.main' }}>Project Proposals</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Project Proposals</Typography>
                                 {proposals.length === 0 ? (
-                                    <Typography variant="body2" className="no-items">No active proposals</Typography>
+                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active proposals</Typography>
                                 ) : (
                                     <List className="proposal-list">
                                         {proposals.map((proposal) => (
                                             <ListItem key={proposal.id} className="proposal-entry">
                                                 <div className="proposal-content">
-                                                    <Typography 
-                                                        variant="h6" 
-                                                        className="clickable-title" // Retaining for clickability and CSS color
+                                                    <Link
+                                                        component="button"
+                                                        variant="h6"
                                                         onClick={() => navigate(`/visualizer/${proposal.id}`)}
+                                                        className="clickable-title" // CSS handles base style
+                                                        sx={{ 
+                                                            textAlign: 'center', 
+                                                            display: 'block', // Ensure it takes full width for centering
+                                                            marginBottom: '8px',
+                                                            // sx for Link component might need different approach for color if not inheriting
+                                                        }}
                                                     >
                                                         {proposal.name}
-                                                    </Typography>
-                                                    <Typography variant="body2" className="proposal-description">
+                                                    </Link>
+                                                    <Typography variant="body2" className="proposal-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                         {proposal.description}
                                                     </Typography>
-                                                    <div className="tag-container small-tags">
+                                                    <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
                                                         {proposal.tags && proposal.tags.map((tag, idx) => (
-                                                            <Chip key={idx} label={tag} size="small" sx={{ /* className='project-tag' removed, use sx if direct styling needed */ }} />
+                                                            <Chip 
+                                                                key={idx} 
+                                                                label={tag} 
+                                                                size="small" 
+                                                                // sx from CSS: .tag-container .MuiChip-root
+                                                            />
                                                         ))}
                                                     </div>
                                                     
                                                     <div className="vote-info">
-                                                        <Typography variant="body2">
+                                                        <Typography variant="body2" sx={{color: 'var(--hud-text-secondary)'}}>
                                                             Current Votes: {
                                                                 proposal.community_votes ? 
                                                                 Object.values(proposal.community_votes).filter(v => v === true).length : 0
@@ -627,16 +698,28 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     <div className="vote-actions">
                                                         <Tooltip title="Approve">
                                                             <IconButton 
-                                                                color="success" 
                                                                 onClick={() => handleVoteProject(proposal.id, true)}
+                                                                sx={{ 
+                                                                    color: 'var(--hud-success-color)', 
+                                                                    '&:hover': { 
+                                                                        backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)', // Define --hud-success-color-rgb or use static
+                                                                        boxShadow: '0 0 8px var(--hud-success-color)',
+                                                                    }
+                                                                }}
                                                             >
                                                                 <CheckCircleIcon />
                                                             </IconButton>
                                                         </Tooltip>
                                                         <Tooltip title="Reject">
                                                             <IconButton 
-                                                                color="error" 
                                                                 onClick={() => handleVoteProject(proposal.id, false)}
+                                                                sx={{ 
+                                                                    color: 'var(--hud-error-color)', 
+                                                                    '&:hover': { 
+                                                                        backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)', // Define --hud-error-color-rgb or use static
+                                                                        boxShadow: '0 0 8px var(--hud-error-color)',
+                                                                    }
+                                                                }}
                                                             >
                                                                 <CancelIcon />
                                                             </IconButton>
@@ -658,9 +741,9 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         <Card className="hub-card membership-card">
                             <CardContent>
                                 <PersonAddIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'primary.main' }}>Membership Requests</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Membership Requests</Typography>
                                 {membershipRequests.length === 0 ? (
-                                    <Typography variant="body2" className="no-items">No pending requests</Typography>
+                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No pending requests</Typography>
                                 ) : (
                                     <List className="request-list">
                                         {membershipRequests.map((request) => (
@@ -670,33 +753,57 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         src={`http://localhost:4000${request.userData.profile_picture}`} 
                                                         alt={request.userData.name} 
                                                         onClick={() => navigate(`/profile/public/${request.user_id}`)}
-                                                        className="clickable-avatar"
+                                                        className="clickable-avatar" // CSS handles hover border
+                                                        sx={{ 
+                                                            borderColor: 'var(--hud-border-color)', 
+                                                            borderWidth: '1px', 
+                                                            borderStyle: 'solid',
+                                                            boxShadow: '0 0 3px var(--hud-glow-color)',
+                                                        }}
                                                     />
                                                 </ListItemAvatar>
                                                 <ListItemText 
                                                     primary={
-                                                        <span 
-                                                            className="clickable-name"
+                                                        <Link 
+                                                            component="button" // Make it behave like a button for onClick
                                                             onClick={() => navigate(`/profile/public/${request.user_id}`)}
+                                                            className="clickable-name" // CSS handles base style
+                                                            sx={{
+                                                                color: 'var(--hud-text-color)', // Ensure correct color
+                                                                '&:hover': { color: 'var(--hud-text-primary)'} // Ensure correct hover color
+                                                            }}
                                                         >
                                                             {request.userData.username}
-                                                        </span>
+                                                        </Link>
                                                     } 
                                                     secondary={`ID: ${request.user_id}`} 
+                                                    secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
                                                 />
                                                 <div className="vote-actions">
                                                     <Tooltip title="Approve">
                                                         <IconButton 
-                                                            color="success" 
                                                             onClick={() => handleVoteMember(request.user_id, true)}
+                                                            sx={{ 
+                                                                color: 'var(--hud-success-color)', 
+                                                                '&:hover': { 
+                                                                    backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)',
+                                                                    boxShadow: '0 0 8px var(--hud-success-color)',
+                                                                }
+                                                            }}
                                                         >
                                                             <CheckCircleIcon />
                                                         </IconButton>
                                                     </Tooltip>
                                                     <Tooltip title="Reject">
                                                         <IconButton 
-                                                            color="error" 
                                                             onClick={() => handleVoteMember(request.user_id, false)}
+                                                            sx={{ 
+                                                                color: 'var(--hud-error-color)', 
+                                                                '&:hover': { 
+                                                                    backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)',
+                                                                    boxShadow: '0 0 8px var(--hud-error-color)',
+                                                                }
+                                                            }}
                                                         >
                                                             <CancelIcon />
                                                         </IconButton>
@@ -715,34 +822,44 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     <Card className="hub-card projects-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'primary.main' }}>Active Projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Projects</Typography>
                             {approvedProjects.length === 0 ? (
-                                <Typography variant="body2" className="no-items">No active projects</Typography>
+                                <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active projects</Typography>
                             ) : (
                                 <div className="projects-grid">
                                     {approvedProjects.map((project) => (
-                                        <Card key={project.id} className="project-card">
+                                        <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
-                                                <Typography 
-                                                    variant="h6" 
-                                                    className="clickable-title" // Retaining for clickability and CSS color
+                                                <Link
+                                                    component="button"
+                                                    variant="h6"
                                                     onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                    className="clickable-title" // CSS handles base style
+                                                    sx={{ textAlign: 'center', display: 'block', marginBottom: '8px' }}
                                                 >
                                                     {project.name}
-                                                </Typography>
-                                                <Typography variant="body2" className="project-description">
+                                                </Link>
+                                                <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                     {project.description}
                                                 </Typography>
-                                                <div className="tag-container small-tags">
+                                                <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
                                                     {project.tags && project.tags.map((tag, idx) => (
-                                                        <Chip key={idx} label={tag} size="small" sx={{ /* className='project-tag' removed, use sx if direct styling needed */ }} />
+                                                        <Chip key={idx} label={tag} size="small" /* sx from CSS */ />
                                                     ))}
                                                 </div>
                                                 <Button 
                                                     variant="outlined" 
-                                                    color="primary"
-                                                    // className="view-project-btn" // Removed, assuming sx or direct MUI Button props will style
                                                     onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                    className="view-project-btn" // CSS handles margin-top: auto
+                                                    sx={{
+                                                        color: 'var(--hud-primary-color)',
+                                                        borderColor: 'var(--hud-primary-color)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(var(--hud-primary-color-rgb), 0.1)',
+                                                            borderColor: 'var(--hud-glow-color)',
+                                                            boxShadow: '0 0 8px var(--hud-glow-color)',
+                                                        }
+                                                    }}
                                                 >
                                                     View Project
                                                 </Button>
@@ -763,15 +880,19 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
   onClose={handleCloseSnackbar}
   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
 >
-
-  <MuiAlert 
-    elevation={6} 
-    variant="filled" 
-    onClose={handleCloseSnackbar} 
-    severity={snackbarSeverity}
-  >
-    {snackbarMessage}
-  </MuiAlert>
+                <MuiAlert 
+                    elevation={6} 
+                    variant="filled" 
+                    onClose={handleCloseSnackbar} 
+                    severity={snackbarSeverity}
+                    sx={{
+                        backgroundColor: snackbarSeverity === 'success' ? 'var(--hud-success-color)' : 'var(--hud-error-color)',
+                        color: '#fff', // Ensuring text is white on colored background
+                        '.MuiAlert-icon': { color: '#fff' } // Ensuring icon is white
+                    }}
+                >
+                    {snackbarMessage}
+                </MuiAlert>
 </Snackbar>
         </div>
     );
