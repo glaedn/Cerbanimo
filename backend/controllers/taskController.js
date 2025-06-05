@@ -545,7 +545,7 @@ const approveTask = async (taskId, io, client) => {
     // Fetch task details first (remove FOR UPDATE to avoid deadlock)
     const initialTaskDetails = await localClient.query(
       `
-      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens
+      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens, submitted_by
       FROM tasks WHERE id = $1
     `,
       [taskId]
@@ -569,14 +569,9 @@ const approveTask = async (taskId, io, client) => {
     );
     const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
 
-    // Store story node data for later use (after transaction)
-    const storyNodeData = {
-      task_id: initialTask.id,
-      user_id: initialTask.assigned_user_ids[0],
-      reflection: initialTask.reflection || "",
-      media_urls: initialTask.proof_of_work_links,
-      tags,
-    };
+    // Story node data will be prepared and used conditionally later, after COMMIT.
+    // We need 'tags' and 'initialTask' (which includes submitted_by, reflection, proof_of_work_links)
+    // 'tags' is already fetched from initialTask.skill_id.
 
     console.log("task ID:", taskId);
     // No need to rollback and begin a new transaction here; just continue in the same transaction
@@ -628,6 +623,7 @@ const approveTask = async (taskId, io, client) => {
     const taskQuery = `
       SELECT t.reward_tokens, 
              t.assigned_user_ids,
+             t.submitted_by,
              t.skill_id, 
              t.status,
              t.project_id,
@@ -647,6 +643,7 @@ const approveTask = async (taskId, io, client) => {
     const {
       reward_tokens,
       assigned_user_ids,
+      submitted_by,
       skill_id,
       status,
       project_id,
@@ -789,48 +786,58 @@ const approveTask = async (taskId, io, client) => {
       [finalUpdatedSkillEntries, skill_id]
     );
 
-    // Step 5: Update users with tokens and experience logs
-    await localClient.query(
-      `
-      UPDATE users SET cotokens = cotokens + $1, experience = array_append(experience, $2)
-      WHERE id = ANY($3)
-    `,
-      [rewardPerUser, taskId.toString(), assigned_user_ids]
-    );
+    // Step 5: Update user experience
+    if (assigned_user_ids && assigned_user_ids.length > 0) {
+      await localClient.query(
+        `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
+         WHERE id = ANY($2)`,
+        [taskId.toString(), assigned_user_ids]
+      );
+    }
 
-    // Step 6a: Update token ledgers for assigned users
-    const ledgerUpdates = community_id
-      ? [
-          {
-            type: "community",
-            id: community_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
-          {
-            type: "project",
-            id: project_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
-        ]
-      : [
-          {
-            type: "project",
-            id: project_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
+    // Step 6: Differential cotoken and token_ledger updates
+    const main_reward = reward_tokens;
+    const bonus_reward = Math.ceil(reward_tokens / 10);
+
+    // Update cotokens and token_ledger for submitted_by user
+    if (submitted_by) {
+      await localClient.query(
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+        [main_reward, submitted_by]
+      );
+      const submitterLedgerEntries = [
+        { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+      ];
+      if (community_id) {
+        submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+      }
+      await localClient.query(
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        [submitterLedgerEntries.map(JSON.stringify), submitted_by]
+      );
+    }
+
+    // Update cotokens and token_ledger for other assigned users
+    if (assigned_user_ids && assigned_user_ids.length > 0) {
+      for (const userId of assigned_user_ids) {
+        if (userId === submitted_by) continue; // Skip the main submitter, already handled
+
+        await localClient.query(
+          `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+          [bonus_reward, userId]
+        );
+        const bonusLedgerEntries = [
+          { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
         ];
-
-    await localClient.query(
-      `
-UPDATE users 
-SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) 
-WHERE id = ANY($2)
-`,
-      [ledgerUpdates.map(JSON.stringify), assigned_user_ids]
-    );
+        if (community_id) {
+          bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+        }
+        await localClient.query(
+          `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+          [bonusLedgerEntries.map(JSON.stringify), userId]
+        );
+      }
+    }
 
     // Step 6b: Reward project creator
     console.log("creator_id:", creator_id ? creator_id : "No creator_id found");
@@ -893,23 +900,36 @@ WHERE id = ANY($2)
     // COMMIT the transaction before making external calls
     await localClient.query("COMMIT");
 
-    // After transaction is committed, we can make external HTTP calls
-    try {
-      console.log("posting story node with tags:", storyNodeData.tags);
-      const response = await fetch(
-        `http://localhost:4000/storyChronicles/story-node`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(storyNodeData),
+    // After transaction is committed, conditionally create story node
+    if (initialTask && initialTask.submitted_by) {
+      const storyNodeData = {
+        task_id: initialTask.id,
+        user_id: initialTask.submitted_by, // Strictly use submitted_by
+        reflection: initialTask.reflection || "",
+        media_urls: initialTask.proof_of_work_links || [],
+        tags: tags, // 'tags' was fetched earlier based on initialTask.skill_id
+      };
+      try {
+        console.log("Posting story node for submitted_by user:", initialTask.submitted_by, "with data:", storyNodeData);
+        const response = await fetch(
+          `http://localhost:4000/storyChronicles/story-node`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(storyNodeData),
+          }
+        );
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
+        } else {
+            console.log("Story node creation request successful for user:", initialTask.submitted_by, "status:", response.status);
         }
-      );
-      console.log("response.status:", response.status);
-      console.log("response text:", await response.text());
-    } catch (fetchError) {
-      // Log error but don't fail the whole operation
-      console.error("Error creating story node:", fetchError);
-      // We don't rollback here because the DB transaction is already committed
+      } catch (fetchError) {
+        console.error("Fetch error creating story node:", fetchError);
+      }
+    } else {
+      console.warn(`Skipping story node creation for task ${taskId} as submitted_by user is not defined or initialTask is missing.`);
     }
 
     // Send socket notifications after transaction is complete
@@ -972,13 +992,23 @@ const submitTask = async (req, res, io) => {
   const proofOfWorkLinks =
     req.body.proofOfWorkLinks || req.body.proof_of_work_links;
   const reflection = req.body.reflection;
+  const platformUserId = req.body.platformUserId;
+
+  if (!platformUserId) {
+    // This function is called by a route handler, so it should return an error object.
+    // The route handler will then send the actual HTTP response.
+    // Note: The original code was calling res.status().json() directly.
+    // This is a change in pattern to allow the route handler to manage the response.
+    return { error: "Platform User ID is required for submission.", status: 400 };
+  }
 
   if (
     !proofOfWorkLinks ||
     !Array.isArray(proofOfWorkLinks) ||
     proofOfWorkLinks.length === 0
   ) {
-    return res.status(400).json({ error: "Proof of work links are required." });
+    // Similarly, return an error object for the route handler.
+    return { error: "Proof of work links are required.", status: 400 };
   }
 
   const client = await pool.connect();
@@ -1015,17 +1045,19 @@ const submitTask = async (req, res, io) => {
        submitted_at = NOW(), 
        status = 'submitted',
        proof_of_work_links = $2,
-       reflection = $3
+       reflection = $3,
+       submitted_by = $4
        FROM projects p
        WHERE t.id = $1 AND p.id = t.project_id
        RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id, 
-                 p.community_id, t.assigned_user_ids, t.skill_id`,
-      [taskId, proofOfWorkLinks || [], reflection || null]
+                 p.community_id, t.assigned_user_ids, t.skill_id, t.submitted_by`,
+      [taskId, proofOfWorkLinks || [], reflection || null, platformUserId]
     );
 
     if (result.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Task not found" });
+      // Return error object for the route handler
+      return { error: "Task not found or project mismatch.", status: 404 };
     }
 
     const task = result.rows[0];
@@ -1167,7 +1199,8 @@ const submitTask = async (req, res, io) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error submitting task:", error);
-    return res.status(500).json({ error: "Failed to submit task" });
+    // Return error object for the route handler
+    return { error: "Failed to submit task: " + error.message, status: 500 };
   } finally {
     client.release();
   }
@@ -1572,6 +1605,26 @@ const processReview = async (taskId, userId, action, io) => {
     const newRejections = updateResult.rows[0].rejections;
     console.log("New approvals:", newApprovals);
     console.log("New rejections:", newRejections);
+
+    // Award reviewer 10 cotokens
+    const reviewerReward = 10;
+    await client.query(
+      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+      [reviewerReward, userId] // userId is the reviewer's ID passed to processReview
+    );
+
+    // Add to reviewer's token ledger
+    const reviewLedgerUpdate = { 
+      type: "task_review_reward", 
+      taskId: taskId, 
+      tokens: reviewerReward, 
+      creationDate: new Date(),
+      projectId: project_id // project_id is available from taskResult
+    };
+    await client.query(
+      `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2`,
+      [JSON.stringify(reviewLedgerUpdate), userId]
+    );
 
     // Check if we've reached consensus (2 or more approvals/rejections)
     if (newApprovals?.length >= 2 || newRejections?.length >= 2) {

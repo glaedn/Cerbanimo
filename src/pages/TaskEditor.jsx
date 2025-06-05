@@ -322,13 +322,18 @@ const TaskEditor = ({
   };
 
   const handleTaskSubmission = async () => {
+    if (!platformUserId) {
+      alert("User ID not found. Cannot submit task. Please ensure your profile is loaded correctly.");
+      return;
+    }
     try {
       const token = await getAccessTokenSilently();
       await axios.post(
         `http://localhost:4000/tasks/${taskForm.id}/submit`,
         {
-          proof_of_work_links: proofLinks.filter(link => link.trim() !== ""), // Add this line
+          proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
           reflection: taskForm.reflection,
+          platformUserId: platformUserId 
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -338,6 +343,7 @@ const TaskEditor = ({
       onClose();
     } catch (error) {
       console.error("Submission failed:", error);
+      alert("Submission failed: " + (error.response?.data?.error || error.message));
     }
   };
   
