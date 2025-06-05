@@ -53,70 +53,78 @@ const TargetingScanner = () => {
                   className={`task-item ${isUrgent ? 'urgent-task' : ''}`}
                   >
                   <div className="task-info">
-                  <span className="task-name">{task.name}</span> - Status: {task.status}
-                  <br />
-                  Skill: {task.skill_name ? `${task.skill_name}, Lvl ${task.requiredSkillLevel}` : `ID ${task.requiredSkillId}, Lvl ${task.requiredSkillLevel}`}
-                  <br />
-                  Match: {task.skillMatchPercent}% | Sensitivity: {task.timeSensitivity}
+                    <span
+                    className="task-name"
+                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={() => window.open(`http://localhost:3000/visualizer/${task.project_id}/${task.id}`, '_blank')}
+                    title="View task in visualizer"
+                    >
+                    {task.name}
+                    </span>
+                    <br/> Status: {task.status}
+                    <br />
+                    Skill: {task.skill_name ? `${task.skill_name}, Lvl ${task.requiredSkillLevel}` : `ID ${task.requiredSkillId}, Lvl ${task.requiredSkillLevel}`}
+                    <br />
+                    Sensitivity: {task.timeSensitivity}
                   </div>
                   <div className="task-actions">
-                  {task.assigned_user_ids?.includes(Number(profile.id)) ? (
-                  <button 
-                  style={{ backgroundColor: '#ff4444', borderColor: '#ff4444', color: '#0A0A2E' }}
-                  onClick={async () => {
-                  try {
-                    const token = await getAccessTokenSilently();
-                    await axios.put(
-                    `http://localhost:4000/tasks/${task.id}/drop`,
-                    { userId: profile.id },
-                    {
-                    headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                    }
-                    }
-                    );
-                    alert(`Task "${task.name}" dropped successfully!`);
-                    refetchTasks(); // Refetch tasks after dropping
-                  } catch (error) {
-                    console.error('Error dropping task:', error);
-                    // Handle error appropriately
-                  }
-                  }}
-                  >
-                  Drop
-                  </button>
-                  ) : (
-                  <button 
-                  style={{ backgroundColor: accentGreen, borderColor: accentGreen, color: '#0A0A2E' }}
-                  onClick={async () => {
-                  try {
-                    const token = await getAccessTokenSilently();
-                    console.log('Accepting task:', task);
-                    console.log('User profile ID:', profile.id);
-                    const response = await axios.put(
-                    `http://localhost:4000/tasks/${task.id}/accept`,
-                    { userId: profile.id },
-                    {
-                    headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                    }
-                    }
-                    );
-                    if (response.status === 200) {
-                      alert(`Task "${task.name}" accepted successfully!`);
-                      refetchTasks(); // Refetch tasks after accepting
-                    }
-                  } catch (error) {
-                    console.error('Error accepting task:', error);
-                    // Handle error appropriately
-                  }
-                  }}
-                  >
-                  Accept
-                  </button>
-                  )}
+                    {task.assigned_user_ids?.includes(Number(profile.id)) ? (
+                    <button 
+                      style={{ backgroundColor: '#ff4444', borderColor: '#ff4444', color: '#0A0A2E' }}
+                      onClick={async () => {
+                      try {
+                        const token = await getAccessTokenSilently();
+                        await axios.put(
+                        `http://localhost:4000/tasks/${task.id}/drop`,
+                        { userId: profile.id },
+                        {
+                          headers: {
+                          Authorization: `Bearer ${token}`,
+                          'Content-Type': 'application/json'
+                          }
+                        }
+                        );
+                        alert(`Task "${task.name}" dropped successfully!`);
+                        refetchTasks(); // Refetch tasks after dropping
+                      } catch (error) {
+                        console.error('Error dropping task:', error);
+                        // Handle error appropriately
+                      }
+                      }}
+                    >
+                      Drop
+                    </button>
+                    ) : (
+                    <button 
+                      style={{ backgroundColor: accentGreen, borderColor: accentGreen, color: '#0A0A2E' }}
+                      onClick={async () => {
+                      try {
+                        const token = await getAccessTokenSilently();
+                        console.log('Accepting task:', task);
+                        console.log('User profile ID:', profile.id);
+                        const response = await axios.put(
+                        `http://localhost:4000/tasks/${task.id}/accept`,
+                        { userId: profile.id },
+                        {
+                          headers: {
+                          Authorization: `Bearer ${token}`,
+                          'Content-Type': 'application/json'
+                          }
+                        }
+                        );
+                        if (response.status === 200) {
+                        alert(`Task "${task.name}" accepted successfully!`);
+                        refetchTasks(); // Refetch tasks after accepting
+                        }
+                      } catch (error) {
+                        console.error('Error accepting task:', error);
+                        // Handle error appropriately
+                      }
+                      }}
+                    >
+                      Accept
+                    </button>
+                    )}
                   </div>
                   </li>
                 );

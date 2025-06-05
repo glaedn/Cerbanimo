@@ -69,7 +69,7 @@ const CommsLog = () => {
                     {notification.projectId && notification.taskId ? (
                       <Link 
                         to={`/visualizer/${notification.projectId}/${notification.taskId}`} 
-                        style={{ textDecoration: 'underline', color: '#8db8ff' }} // Styling for clickable link
+                        style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
                       >
                         {notification.messageText}
                       </Link>
