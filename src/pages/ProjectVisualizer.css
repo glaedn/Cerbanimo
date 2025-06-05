@@ -345,8 +345,6 @@
 
 .cyber-button {
   flex: 1;
-  background: linear-gradient(45deg, #0011ff, #000b8f) !important;
-  color: #00f3ff !important;
   border: 2px solid #00f3ff !important;
   font-family: 'Orbitron', sans-serif !important;
   letter-spacing: 1px;
