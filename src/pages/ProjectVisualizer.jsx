@@ -1048,9 +1048,6 @@ links.forEach(link => {
 
   // Add these debug logs right before the TaskEditor component in the return statement
 
-// Show the comparison that's happening
-const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
-const numericUserId = Number(userId);
   return (
     <div
       className="skill-hierarchy-container"
