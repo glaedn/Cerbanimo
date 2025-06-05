@@ -136,7 +136,7 @@ const CommunityResourceManagement = ({ communityId }) => {
   };
 
   return (
-    <Paper classname="resource-modal-paper" elevation={2} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+    <Paper className="resource-modal-paper" elevation={2} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
       <Typography variant="h6" gutterBottom component="div">
         Community Resources
       </Typography>

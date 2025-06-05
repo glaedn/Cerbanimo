@@ -387,14 +387,14 @@
     }
     .hub-grid-item {
         min-width: calc(100% - 20px); /* Full width minus some margin */
-        margin-left: 10px;
-        margin-right: 10px;
+        margin-left: 0px;
+        margin-right: 0px;
     }
     .projects-grid {
         grid-template-columns: 1fr; /* Single column for projects */
     }
     .hub-card {
-        padding: 10px; /* Reduce padding on smaller cards */
+        padding: 0px; /* Reduce padding on smaller cards */
     }
 }
 
