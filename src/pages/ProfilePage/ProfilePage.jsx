@@ -26,7 +26,7 @@ const ProfilePage = () => {
     backgroundColor: 'rgba(28, 28, 30, 0.85)', // theme.colors.backgroundPaper with transparency
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borders.borderRadiusLg,
-    padding: theme.spacing.lg,
+    padding: '5px',
     marginBottom: theme.spacing.lg,
     boxShadow: theme.effects.glowSubtle(theme.colors.primary),
     width: '100%', 

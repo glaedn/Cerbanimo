@@ -130,16 +130,14 @@
     position: relative; /* No longer absolute to allow stacking */
     width: calc(100% - 20px); /* Full width with margin */
     height: 400px; /* Or a fixed height, e.g., 300px */
-    margin: 10px;
+    margin: 120px 10px 10px 10px; /* Increased bottom margin to prevent overlap (adjust as needed) */
     top: auto;
     left: auto;
     right: auto;
     transform: none; /* Reset transform */
-    /* order: -1; /* Optionally move map to top in flex context if HUD container was flex */
     box-sizing: border-box; /* Ensure padding/border don't expand viewport size */
     overflow: hidden; /* Prevent content from spilling out */
   }
-  
   /* Adjust StatusBar for mobile if needed, might be fine if panels stack above it */
   .hud-container > .status-bar {
     position: fixed;

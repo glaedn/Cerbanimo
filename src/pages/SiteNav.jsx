@@ -231,22 +231,35 @@ const SiteNav = () => {
               recentNotifications.map((notif, index) => {
                 const icon = getSiteNavNotificationIcon(notif.type);
                 return (
-                  <MenuItem key={index} className="notification-menu">
-                    {icon}
-                    {notif.projectId && notif.taskId ? (
-                      <Link
-                        to={`/visualizer/${notif.projectId}/${notif.taskId}`}
+                    <MenuItem
+                        key={index}
+                        className="notification-menu"
                         style={{
-                          textDecoration: "underline",
-                          color: "#8db8ff",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                            maxWidth: 320,
+                            lineHeight: 1.4,
                         }}
-                      >
-                        {notif.messageText}
-                      </Link>
-                    ) : (
-                      notif.messageText
-                    )}
-                  </MenuItem>
+                    >
+                        {icon}
+                        <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
+                            {notif.projectId && notif.taskId ? (
+                                <Link
+                                    to={`/visualizer/${notif.projectId}/${notif.taskId}`}
+                                    style={{
+                                        textDecoration: "underline",
+                                        color: "#8db8ff",
+                                        wordBreak: "break-word",
+                                        whiteSpace: "normal",
+                                    }}
+                                >
+                                    {notif.messageText}
+                                </Link>
+                            ) : (
+                                notif.messageText
+                            )}
+                        </span>
+                    </MenuItem>
                 );
               })
             )}
