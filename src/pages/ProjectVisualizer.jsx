@@ -20,7 +20,6 @@ const ProjectVisualizer = () => {
     useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeNode, setActiveNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({
@@ -639,19 +638,6 @@ useEffect(() => {
       }
     })
     .map((node) => node.id);
-
-    const handleNodeClick = (event, d) => {
-      event.stopPropagation(); // Prevent click bubbling
-
-      // Get node position relative to the SVG container
-      const [x, y] = d3.pointer(event, containerRef.current);
-
-      setActiveNode({
-        ...d,
-        x,
-        y,
-      });
-    };
 
     // Perform topological sorting to assign levels
     const assignLevels = () => {
