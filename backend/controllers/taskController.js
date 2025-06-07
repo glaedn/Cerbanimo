@@ -912,7 +912,7 @@ const approveTask = async (taskId, io, client) => {
       try {
         console.log("Posting story node for submitted_by user:", initialTask.submitted_by, "with data:", storyNodeData);
         const response = await fetch(
-          `http://localhost:4000/storyChronicles/story-node`,
+          `${process.env.BACKEND_URL}/storyChronicles/story-node`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
