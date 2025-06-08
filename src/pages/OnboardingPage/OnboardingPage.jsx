@@ -266,9 +266,10 @@ const OnboardingPage = () => {
           }}
           getOptionLabel={(option) => option.name || option}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip label={option.name || option} {...getTagProps({ index })} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>
-            ))
+            value.map((option, index) => {
+              const { key, ...otherTagProps } = getTagProps({ index });
+              return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
+            })
           }
           renderInput={(params) => (
             <TextField
@@ -294,9 +295,10 @@ const OnboardingPage = () => {
           }}
           getOptionLabel={(option) => option.name || option}
           renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip label={option.name || option} {...getTagProps({ index })} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>
-            ))
+            value.map((option, index) => {
+              const { key, ...otherTagProps } = getTagProps({ index });
+              return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
+            })
           }
           renderInput={(params) => (
             <TextField
