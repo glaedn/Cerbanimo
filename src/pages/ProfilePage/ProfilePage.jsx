@@ -538,9 +538,9 @@ const ProfilePage = () => {
             }
           }}
         slots={{
-          popper: (props) => (
+          popper: ({ disablePortal, anchorEl, ...otherPopperProps }) => (
             <Paper 
-              {...props} 
+              {...otherPopperProps}
               sx={{
                 backgroundColor: theme.colors.backgroundPaper,
                 border: `1px solid ${theme.colors.primary}`,
@@ -691,9 +691,9 @@ const ProfilePage = () => {
               },
             }
           }}
-          PopperComponent={(props) => (
+          PopperComponent={({ disablePortal, anchorEl, ...otherPopperProps }) => (
             <Paper 
-              {...props} 
+              {...otherPopperProps}
               sx={{
                 backgroundColor: theme.colors.backgroundPaper,
                 border: `1px solid ${theme.colors.secondary}`, 
