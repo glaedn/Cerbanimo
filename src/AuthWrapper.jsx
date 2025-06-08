@@ -18,6 +18,14 @@ const AuthWrapper = ({ children }) => {
   const [initialSaveDone, setInitialSaveDone] = useState(false);
 
   useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    if (!backendUrl || backendUrl === 'undefined') {
+      console.error('CRITICAL ERROR: VITE_BACKEND_URL is not defined or is invalid. API calls will fail. Current value:', backendUrl);
+      setProfileLoading(false); // Stop loading indicators
+      // Optionally, you could set an error state to display a message to the user.
+      return; // Prevent further execution
+    }
+
     const saveUserAndFetchProfile = async () => {
       if (auth0Loading) return; // Wait for Auth0 to finish loading
 
