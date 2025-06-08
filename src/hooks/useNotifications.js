@@ -36,7 +36,7 @@ const useNotifications = (userId) => {
       try {
         const token = await getToken();
         // Ensure the endpoint matches the backend; using /notifications/user/:userId as a common pattern
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/user/${userId}`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/notifications/user/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
