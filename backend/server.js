@@ -113,7 +113,7 @@ export const sendNotification = async (userId, notification) => {
 
 // JWT middleware for secured routes
 const jwtCheck = auth({
-  audience: `${import.meta.env.VITE_BACKEND_URL}`,
+  audience: process.env.BACKEND_URL,
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
   tokenSigningAlg: 'RS256',
 });
