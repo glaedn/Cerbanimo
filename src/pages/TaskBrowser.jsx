@@ -18,7 +18,7 @@ const TaskBrowser = () => {
       const fetchProfileAndTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'import.meta.env.VITE_BACKEND_URL',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
       
@@ -111,7 +111,7 @@ const TaskBrowser = () => {
       const fetchAcceptedTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'import.meta.env.VITE_BACKEND_URL',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
 
@@ -140,7 +140,7 @@ const TaskBrowser = () => {
       const fetchApprovalTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'import.meta.env.VITE_BACKEND_URL',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
 

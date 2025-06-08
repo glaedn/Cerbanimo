@@ -17,7 +17,7 @@ const useUserProfile = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL', // Make sure this matches your Auth0 API audience
+        audience: import.meta.env.VITE_BACKEND_URL, // Make sure this matches your Auth0 API audience
         scope: 'openid profile email',
       });
     } catch (e) {

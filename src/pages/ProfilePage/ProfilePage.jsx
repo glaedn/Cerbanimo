@@ -329,7 +329,7 @@ const ProfilePage = () => {
       }
 
       const token = user?.idToken || await getAccessTokenSilently({
-        audience: import.meta.env.REACT_APP_AUTH0_AUDIENCE,
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:profile write:profile',
       });
       // console.log('JWT Token:', token);

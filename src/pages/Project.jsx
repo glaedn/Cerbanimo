@@ -80,7 +80,7 @@ const Project = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL',
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:write:profile'
       });
     } catch (error) {
