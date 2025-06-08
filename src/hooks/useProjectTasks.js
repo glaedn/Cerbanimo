@@ -29,7 +29,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         })
       ]);
       
-      setSkills(options.data.skillsPool || []);
+      setSkills(Array.isArray(options.data?.skillsPool) ? options.data.skillsPool : []);
       setProfileData({
         id: profile.data.id,
         username: profile.data.username,
@@ -48,11 +48,8 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const updated = res.data.map(task => ({
-        ...task,
-        skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
-      }));
-      
+      const tasksData = res.data;
+      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
       setTasks(updated);
       console.log('Tasks data:', updated);
       return updated; // Return the tasks for chaining
@@ -70,7 +67,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProject(res.data);
+      setProject(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
       console.log('Project data:', res.data);
       return res.data; // Return project data for chaining
     } catch (error) {

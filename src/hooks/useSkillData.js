@@ -39,7 +39,7 @@ const useSkillData = () => {
         
         // Assuming response.data is the array of all skill objects
         // Each skill object might look like: { id, name, category, parent_skill_id, description, ... }
-        setAllSkills(response.data || []);
+        setAllSkills(Array.isArray(response.data) ? response.data : []);
         
       } catch (err) {
         console.error('Error fetching all skills:', err.response?.data || err.message);
