@@ -90,7 +90,7 @@ html, body {
     font-size: 3.5rem;
     margin-bottom: 1.5rem;
     color: #FFFFFF; /* theme.colors.textPrimary */
-    text-shadow: 0 0 15px #FF5CA2; /* theme.effects.glowStrong(theme.colors.secondary) */
+    text-shadow: 0 0 10px #00F3FF, 0 0 20px #00F3FF, 0 0 30px #FF5CA2A0; /* Layered cyan and subtle magenta shadow */
     position: relative; /* Ensures it's above the map */
     z-index: 1; /* Ensures it's above the map */
   }
@@ -99,10 +99,11 @@ html, body {
     font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
     font-size: 1.4rem;
     max-width: 700px;
-    color: #CCCCCC; /* theme.colors.textSecondary */
+    color: #FFFFFF; /* theme.colors.textPrimary */
     margin-bottom: 2rem;
     position: relative; /* Ensures it's above the map */
     z-index: 1; /* Ensures it's above the map */
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.7); /* Subtle cyan shadow for readability */
     line-height: 1.5;
   }
   
@@ -112,7 +113,7 @@ html, body {
     font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
     font-size: 1.1rem;
     font-weight: 600;
-    background: linear-gradient(135deg, #9C27B0, #FF5CA2); /* theme.colors.accentPurple, theme.colors.secondary */
+    background: linear-gradient(135deg, #00F3FF, #FF5CA2); /* Cyan to Magenta gradient */
     border: none;
     border-radius: 8px; /* theme.borders.borderRadiusMd */
     color: #FFFFFF; /* theme.colors.textPrimary */
@@ -120,13 +121,13 @@ html, body {
     transition: all 0.3s ease; /* theme.transitions.medium */
     position: relative; /* Ensures it's above the map */
     z-index: 1; /* Ensures it's above the map */
-    box-shadow: 0 4px 20px #9C27B066; /* theme.colors.accentPurple with opacity */
+    box-shadow: 0 4px 20px rgba(0, 243, 255, 0.4); /* Cyan shadow */
   }
   
   .hero > .cta-button:hover {
-    background: linear-gradient(135deg, #B048C8, #FF79B8); /* Darker shades for hover */
+    background: linear-gradient(135deg, #00D0E0, #E64892); /* Slightly darker Cyan to Magenta gradient */
     transform: translateY(-2px);
-    box-shadow: 0 6px 25px #9C27B099; /* theme.colors.accentPurple with more opacity */
+    box-shadow: 0 6px 25px rgba(0, 243, 255, 0.6); /* More intense cyan shadow */
   }
   
   .features {
@@ -143,6 +144,9 @@ html, body {
     border-radius: 12px; /* theme.borders.borderRadiusLg */
     box-shadow: 0 8px 30px rgba(0,0,0,0.3); /* Softer shadow with theme consideration */
     transition: transform 0.3s ease, box-shadow 0.3s ease; /* theme.transitions.medium */
+    border: 1px solid transparent;
+    border-image: linear-gradient(145deg, #00F3FF, #FF5CA2) 1;
+    border-image-slice: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -157,19 +161,19 @@ html, body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 4px;
+    height: 5px; /* Increased height */
     background: linear-gradient(90deg, #00F3FF, #FF5CA2); /* theme.colors.primary, theme.colors.secondary */
     opacity: 0.8;
   }
   
   .feature-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.4); /* Slightly more pronounced shadow */
+    box-shadow: 0 12px 40px rgba(0, 243, 255, 0.3); /* Cyan glow shadow */
   }
   
   .feature-card h3 { /* Assuming h2 from JSX is styled as h3 here */
     font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
-    color: #FFFFFF; /* theme.colors.textPrimary */
+    color: #00F3FF; /* theme.colors.primary (cyan) */
     margin-bottom: 16px; /* theme.spacing.lg */
     font-size: 1.5rem;
     width: 100%;
@@ -192,10 +196,10 @@ html, body {
   }
 
   .vision { /* Styles for the .vision section */
-    background: #1C1C1E; /* theme.colors.backgroundPaper */
+    background: linear-gradient(to bottom right, rgba(0, 243, 255, 0.05), #1C1C1E, rgba(255, 92, 162, 0.05));
     border-radius: 12px; /* theme.borders.borderRadiusLg */
     padding: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), 0 0 25px rgba(255, 92, 162, 0.1);
     margin: 40px auto;
     position: relative;
     overflow: hidden;
@@ -203,7 +207,8 @@ html, body {
   
   .vision h2 {
     font-family: 'Orbitron', sans-serif; /* theme.typography.fontFamilyAccent */
-    color: #FFFFFF; /* theme.colors.textPrimary */
+    color: #FF5CA2; /* theme.colors.secondary (magenta) */
+    text-shadow: 0 0 8px #FF5CA2, 0 0 5px rgba(0, 243, 255, 0.7); /* Magenta glow with subtle cyan halo */
   }
 
   .vision p {
@@ -245,12 +250,12 @@ html, body {
     padding: 0px 20px 10px 0px;
     text-align: center;
     font-size: 0.95rem; /* theme.typography.fontSizeSm */
-    color: #CCCCCC; /* theme.colors.textSecondary */
+    color: rgba(0, 243, 255, 0.8); /* Light cyan */
     background-color: #000000; /* theme.colors.backgroundBlack */
     position: relative;
     margin-top: auto;
     width: 100%;
-    border-top: 1px solid #444444; /* theme.colors.border */
+    border-top: 1px solid #00F3FF; /* theme.colors.primary (cyan) */
   }
 
 /* Styles for GalacticActivityMap positioning */
