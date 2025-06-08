@@ -33,7 +33,7 @@ const useSkillData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/skills/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         

@@ -71,7 +71,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
   
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +106,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${projectId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +156,7 @@ const ProjectVisualizer = () => {
       });
   
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/communities/${selectedCommunity.id}/submit/${projectId}`,
         {
           method: 'POST',
           headers: {
@@ -187,7 +187,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });// Use the token for authorized request
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -218,20 +218,24 @@ const ProjectVisualizer = () => {
           scope: "openid profile email",
         });
 
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch interests');
+          const errorText = await response.text(); // Get text if not ok
+          console.error('Failed to fetch interests. Status:', response.status, 'Response:', errorText);
+          throw new Error(`Failed to fetch interests: ${response.status}`);
         }
 
         const data = await response.json();
         setInterests(data.interestsPool || []);
       } catch (error) {
-        console.error('Error fetching interests:', error);
+        console.error('Error fetching interests:', error.message);
+        // If the error object was augmented with responseText, it could be logged here too.
+        // For this change, the primary log is before throwing.
       }
     };
 
@@ -262,7 +266,7 @@ useEffect(() => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/profile/userId`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -270,14 +274,17 @@ useEffect(() => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        const errorText = await response.text(); // Get text if not ok
+        console.error('Failed to fetch profile. Status:', response.status, 'Response:', errorText);
+        throw new Error(`Failed to fetch profile: ${response.status}`);
       }
 
       const data = await response.json();
       setUserId(data.id);
       
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching profile:', error.message);
+      // If the error object was augmented with responseText, it could be logged here too.
     }
   };
 

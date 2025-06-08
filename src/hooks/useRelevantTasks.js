@@ -39,13 +39,13 @@ const useRelevantTasks = (userId) => {
 
       // Fetch all tasks and user's skills (from profile/options)
       const [tasksResponse, optionsResponse, profileResponse] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks`, { // Fetches all tasks
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`, { // Fetches all tasks
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, { // For skills pool
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, { // For skills pool
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, { // To get the user's actual profile ID for skill matching
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile`, { // To get the user's actual profile ID for skill matching
            headers: { Authorization: `Bearer ${token}` },
         }),
       ]);

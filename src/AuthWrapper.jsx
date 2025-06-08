@@ -36,7 +36,7 @@ const AuthWrapper = ({ children }) => {
           try {
             console.log("Attempting to save user to database:", user.sub);
             await axios.post(
-              `http://localhost:4000/auth/save-user`,
+              `${import.meta.env.VITE_BACKEND_URL}/api/auth/save-user`,
               {
                 sub: user.sub,
                 email: user.email,
@@ -57,7 +57,7 @@ const AuthWrapper = ({ children }) => {
         try {
           console.log("Fetching profile for onboarding check:", user.sub);
           const profileResponse = await axios.get(
-            `http://localhost:4000/profile`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/profile`,
             {
               params: {
                 sub: user.sub,
