@@ -58,16 +58,16 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       try {
         const token = await getAccessTokenSilently({
           authorizationParams: {
-            audience: "http://localhost:4000",
+            audience: `${import.meta.env.VITE_BACKEND_URL}`,
             scope: "openid profile email",
           },
           cacheMode: "off",
         });
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const [tasksRes, projectsRes, communitiesRes] = await Promise.all([
-          axios.get("http://localhost:4000/tasks", config),
-          axios.get("http://localhost:4000/projects", config),
-          axios.get("http://localhost:4000/communities", config),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks`, config),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects`, config),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, config),
         ]);
         const processedData = [];
         console.log("Tasks:", tasksRes.data);

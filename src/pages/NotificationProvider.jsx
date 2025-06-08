@@ -82,7 +82,7 @@ useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const profileResponse = await axios.get('http://localhost:4000/profile', {
+        const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           params: {
             sub: user.sub,
             email: user.email,
@@ -116,7 +116,7 @@ useEffect(() => {
         const token = await getAccessTokenSilently();
         console.log(`Fetching notifications for user ID: ${userId}`);
         
-        const res = await axios.get(`http://localhost:4000/notifications/${userId}`, {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/notifications/${userId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -172,7 +172,7 @@ useEffect(() => {
         const token = await getAccessTokenSilently();
         
         // Connect to socket with query params
-        const newSocket = io("http://localhost:4000", {
+        const newSocket = io(`${import.meta.env.VITE_BACKEND_URL}`, {
           transports: ["websocket"],
           query: { userId }
         });
@@ -205,7 +205,7 @@ useEffect(() => {
     try {
         const token = await getAccessTokenSilently();
         await axios.post(
-            'http://localhost:4000/notifications/read',
+            `${import.meta.env.VITE_BACKEND_URL}/notifications/read`,
             { notificationIds: notificationIdsAsStrings },
             {
                 headers: {

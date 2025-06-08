@@ -4,7 +4,7 @@ import jwksClient from 'jwks-rsa';
 // Auth0 configuration
 const authConfig = {
   domain: 'dev-i5331ndl5kxve1hd.us.auth0.com',
-  audience: 'http://localhost:4000',
+  audience: `${import.meta.env.VITE_BACKEND_URL}`,
   jwksUri: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/.well-known/jwks.json'
 };
 // Set up JWKS client for token verification

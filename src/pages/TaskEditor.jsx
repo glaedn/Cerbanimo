@@ -59,10 +59,10 @@ const TaskEditor = ({
       if (currentUser?.sub) {
         try {
           const token = await getAccessTokenSilently({
-            audience: "http://localhost:4000",
+            audience: `${import.meta.env.VITE_BACKEND_URL}`,
             scope: "openid profile email",
           });
-          const response = await axios.get("http://localhost:4000/profile", {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setPlatformUserId(response.data.id);
@@ -84,11 +84,11 @@ const TaskEditor = ({
     const fetchProjectTasks = async () => {
       try {
         const token = await getAccessTokenSilently({
-          audience: "http://localhost:4000",
+          audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: "openid profile email",
         });
         const response = await axios.get(
-          `http://localhost:4000/tasks/p/${projectId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/tasks/p/${projectId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -121,11 +121,11 @@ const TaskEditor = ({
             taskForm.dependencies.map(async (depId) => {
               try {
                 const token = await getAccessTokenSilently({
-                  audience: "http://localhost:4000",
+                  audience: `${import.meta.env.VITE_BACKEND_URL}`,
                   scope: "openid profile email",
                 });
                 const response = await axios.get(
-                  `http://localhost:4000/tasks/${depId}`,
+                  `${import.meta.env.VITE_BACKEND_URL}/tasks/${depId}`,
                   {
                     headers: { Authorization: `Bearer ${token}` },
                   }
@@ -299,7 +299,7 @@ const TaskEditor = ({
       const action = userIsAssigned ? "drop" : "accept";
       const token = await getAccessTokenSilently();
       const response = await axios.put(
-        `http://localhost:4000/tasks/${taskForm.id}/${action}`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/${action}`,
         { userId: platformUserId },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -329,7 +329,7 @@ const TaskEditor = ({
     try {
       const token = await getAccessTokenSilently();
       await axios.post(
-        `http://localhost:4000/tasks/${taskForm.id}/submit`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/submit`,
         {
           proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
           reflection: taskForm.reflection,
@@ -353,7 +353,7 @@ const TaskEditor = ({
       const token = await getAccessTokenSilently();
       console.log("platformUserId:", platformUserId);
       await axios.put(
-        `http://localhost:4000/tasks/${taskForm.id}/review`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/review`,
         { action: approved ? "approve" : "reject", userId: Number(platformUserId) },
         {
           headers: { Authorization: `Bearer ${token}` },

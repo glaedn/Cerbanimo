@@ -19,7 +19,7 @@ const UserPortfolio = ({ userId: propUserId }) => {
 
     const fetchData = async () => {
       try {
-        const chronicleRes = await fetch(`http://localhost:4000/storyChronicles/user/${userId}/chronicle`);
+        const chronicleRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`);
         const chronicleData = await chronicleRes.json();
 
         if (!Array.isArray(chronicleData)) {
@@ -37,7 +37,7 @@ const UserPortfolio = ({ userId: propUserId }) => {
           });
         }
 
-        const summaryRes = await fetch(`http://localhost:4000/storyChronicles/user/${userId}/summary`);
+        const summaryRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/summary`);
         const summaryRaw = await summaryRes.json();
         const summaryData = {
           total_tokens: parseInt(summaryRaw.total_tokens, 10) || 0,

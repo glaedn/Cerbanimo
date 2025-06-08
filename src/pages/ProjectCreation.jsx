@@ -61,7 +61,7 @@ const ProjectCreation = () => {
       try {
         const token = await getAccessTokenSilently();
         const response = await axios.get(
-          "http://localhost:4000/profile/options",
+          `${import.meta.env.VITE_BACKEND_URL}/profile/options`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -81,7 +81,7 @@ const ProjectCreation = () => {
       // Step 1: Create the project
 
       const response = await axios.post(
-        "http://localhost:4000/projects/create",
+        `${import.meta.env.VITE_BACKEND_URL}/projects/create`,
         {
           name: name,
           description: description,
@@ -101,7 +101,7 @@ const ProjectCreation = () => {
 
         if (autoGenerateTasks) {
           // Step 2: Auto-generate tasks using LLM
-          const generateResponse = await fetch("http://localhost:4000/projects/auto-generate", {
+          const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/auto-generate`, {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",

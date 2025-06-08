@@ -55,7 +55,7 @@ const MissionConsole = () => {
     try {
       const token = await getAccessTokenSilently();
       await axios.put(
-        `http://localhost:4000/tasks/${taskId}/drop`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`,
         { userId: profile.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );

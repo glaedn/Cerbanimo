@@ -56,7 +56,7 @@ const TargetingScanner = () => {
                     <span
                     className="task-name"
                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => window.open(`http://localhost:3000/visualizer/${task.project_id}/${task.id}`, '_blank')}
+                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.project_id}/${task.id}`, '_blank')}
                     title="View task in visualizer"
                     >
                     {task.name}
@@ -75,7 +75,7 @@ const TargetingScanner = () => {
                       try {
                         const token = await getAccessTokenSilently();
                         await axios.put(
-                        `http://localhost:4000/tasks/${task.id}/drop`,
+                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/drop`,
                         { userId: profile.id },
                         {
                           headers: {
@@ -100,10 +100,8 @@ const TargetingScanner = () => {
                       onClick={async () => {
                       try {
                         const token = await getAccessTokenSilently();
-                        console.log('Accepting task:', task);
-                        console.log('User profile ID:', profile.id);
                         const response = await axios.put(
-                        `http://localhost:4000/tasks/${task.id}/accept`,
+                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/accept`,
                         { userId: profile.id },
                         {
                           headers: {
