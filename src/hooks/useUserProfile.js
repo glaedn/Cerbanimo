@@ -44,12 +44,12 @@ const useUserProfile = () => {
 
         // Fetch profile and skills options concurrently
         const [profileResponse, optionsResponse] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile`, {
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             headers: { Authorization: `Bearer ${token}` },
             // Params might be needed if your backend expects sub/email for initial profile creation/retrieval
             // params: { sub: user.sub, email: user.email, name: user.name } 
           }),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, {
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
             headers: { Authorization: `Bearer ${token}` },
           })
         ]);

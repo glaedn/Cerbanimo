@@ -48,7 +48,7 @@ const OnboardingPage = () => {
     const fetchOptions = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -68,7 +68,7 @@ const OnboardingPage = () => {
     const fetchProfileData = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const { data: profileData } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile`, {
+        const { data: profileData } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -183,7 +183,7 @@ const OnboardingPage = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/initiate`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/onboarding/initiate`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

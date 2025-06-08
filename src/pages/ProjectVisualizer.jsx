@@ -71,7 +71,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
   
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +106,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${projectId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +156,7 @@ const ProjectVisualizer = () => {
       });
   
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/communities/${selectedCommunity.id}/submit/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
         {
           method: 'POST',
           headers: {
@@ -187,7 +187,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });// Use the token for authorized request
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/projects/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ const ProjectVisualizer = () => {
           scope: "openid profile email",
         });
 
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -266,7 +266,7 @@ useEffect(() => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/profile/userId`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
