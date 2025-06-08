@@ -82,7 +82,7 @@ const ProfilePage = () => {
             throw new Error('Access token not available');
           }
 
-          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile`, {
             params: { 
               sub: user.sub,
               email: user.email,
@@ -126,7 +126,7 @@ const ProfilePage = () => {
           setProfileData(fetchedProfileData);
 
 
-          const optionsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
+          const optionsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile/options`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -167,7 +167,7 @@ const ProfilePage = () => {
 
           // Use Promise.all to fetch details for all tasks concurrently
           const taskDetailsPromises = profileData.experience.map(async (taskId) => {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ const ProfilePage = () => {
         audience: 'import.meta.env.VITE_BACKEND_URL/',
         scope: 'openid profile email read:profile', 
       });
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/user/${profileData.id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/resources/user/${profileData.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUserResources(response.data);
@@ -268,7 +268,7 @@ const ProfilePage = () => {
       if (editingResource) {
         // Update existing resource
         payload.user_id = profileData.id; // Ensure user_id is set
-        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/${editingResource.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource updated successfully!');
@@ -276,7 +276,7 @@ const ProfilePage = () => {
         // Create new resource
         payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
         // console.log('Creating new resource with payload:', payload);
-        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/resources`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource created successfully!');
@@ -297,7 +297,7 @@ const ProfilePage = () => {
           audience: 'import.meta.env.VITE_BACKEND_URL',
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
-        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/resources/${resourceId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource deleted successfully!');
@@ -339,7 +339,7 @@ const ProfilePage = () => {
         throw new Error('Access token not available');
       }
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/profile`, formData, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/profile`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
