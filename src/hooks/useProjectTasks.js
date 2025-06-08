@@ -12,7 +12,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   const [loading, setLoading] = useState(false);
 
   const getToken = async () => await getAccessTokenSilently({ 
-    audience: 'import.meta.env.VITE_BACKEND_URL',
+    audience: import.meta.env.VITE_BACKEND_URL,
     scope: 'openid profile email'
   });
 

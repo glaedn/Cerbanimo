@@ -11,7 +11,7 @@ const useSkillData = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL', // Ensure this matches your Auth0 API audience
+        audience: import.meta.env.VITE_BACKEND_URL, // Ensure this matches your Auth0 API audience
         scope: 'openid profile email', // Adjust scopes as needed
       });
     } catch (e) {

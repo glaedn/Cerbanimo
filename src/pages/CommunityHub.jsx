@@ -75,7 +75,7 @@ const CommunityHub = () => {
 
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'import.meta.env.VITE_BACKEND_URL',
+                    audience: import.meta.env.VITE_BACKEND_URL,
                     scope: 'openid profile email',
                 });
 
@@ -114,7 +114,7 @@ const CommunityHub = () => {
             try {
                 setIsLoading(true);
                 const token = await getAccessTokenSilently({
-                    audience: 'import.meta.env.VITE_BACKEND_URL',
+                    audience: import.meta.env.VITE_BACKEND_URL,
                     scope: 'openid profile email',
                 });
 
@@ -272,7 +272,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     const handleRequestJoin = async () => {
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
 

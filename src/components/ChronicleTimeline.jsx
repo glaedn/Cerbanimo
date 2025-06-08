@@ -12,7 +12,7 @@ const ChronicleTimeline = ({ stories }) => {
   
     try {
       const token = await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL', // Match the exact value from Auth0
+        audience: import.meta.env.VITE_BACKEND_URL, // Match the exact value from Auth0
         scope: 'openid profile email read:profile write:profile',
       });
 

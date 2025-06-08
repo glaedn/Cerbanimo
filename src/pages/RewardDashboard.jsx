@@ -24,7 +24,7 @@ const RewardDashboard = () => {
 
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'import.meta.env.VITE_BACKEND_URL',
+                    audience: import.meta.env.VITE_BACKEND_URL,
                     scope: 'openid profile email',
                 });
 
@@ -54,7 +54,7 @@ const RewardDashboard = () => {
         const fetchLeaderboard = async () => {
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'import.meta.env.VITE_BACKEND_URL',
+                    audience: import.meta.env.VITE_BACKEND_URL,
                     scope: 'openid profile email',
                 });
 
