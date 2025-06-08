@@ -22,7 +22,7 @@ root.render(
       clientId="vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"
       authorizationParams={{
         redirect_uri: `${window.location.origin}/dashboard`,
-        audience: "http://localhost:4000",
+        audience: "https://cerbanimo-gtkp.onrender.com",
         scope: "openid profile email read:profile write:profile",
       }}
       onRedirectCallback={onRedirectCallback}
