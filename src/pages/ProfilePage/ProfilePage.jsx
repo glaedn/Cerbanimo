@@ -131,11 +131,13 @@ const ProfilePage = () => {
               Authorization: `Bearer ${token}`,
             },
           });
-          setSkillsPool(optionsResponse.data.skillsPool);
+          const skills = optionsResponse.data?.skillsPool;
+          setSkillsPool(Array.isArray(skills) ? skills : []);
           // Transform interest strings into objects with name property
-          setInterestsPool(optionsResponse.data.interestsPool.map(interest => 
+          const interests = optionsResponse.data?.interestsPool;
+          setInterestsPool(Array.isArray(interests) ? interests.map(interest =>
             typeof interest === 'object' ? interest : { name: interest }
-          ));
+          ) : []);
           // console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);

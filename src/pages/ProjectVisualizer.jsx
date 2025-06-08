@@ -67,11 +67,11 @@ const ProjectVisualizer = () => {
     
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
   
-      const response = await fetch(`http://localhost:4000/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -102,11 +102,11 @@ const ProjectVisualizer = () => {
     setLoading(true);
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
 
-      const response = await fetch(`http://localhost:4000/tasks/${projectId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,12 +151,12 @@ const ProjectVisualizer = () => {
   
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
   
       const response = await fetch(
-        `http://localhost:4000/communities/${selectedCommunity.id}/submit/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
         {
           method: 'POST',
           headers: {
@@ -183,11 +183,11 @@ const ProjectVisualizer = () => {
   const handleUpdateTags = async (newTags) => {
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });// Use the token for authorized request
 
-      const response = await fetch(`http://localhost:4000/projects/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -214,11 +214,11 @@ const ProjectVisualizer = () => {
     const fetchInterests = async () => {
       try {
         const token = await getAccessTokenSilently({
-          audience: "http://localhost:4000",
+          audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: "openid profile email",
         });
 
-        const response = await fetch('http://localhost:4000/profile/options', {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -258,11 +258,11 @@ useEffect(() => {
   const fetchProfile = async () => {
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
 
-      const response = await fetch('http://localhost:4000/profile/userId', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
