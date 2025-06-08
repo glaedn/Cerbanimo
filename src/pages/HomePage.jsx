@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import "./Homepage.css";
+import "./HomePage.css";
 import GalacticActivityMap from "../components/GalacticActivityMap/GalacticActivityMap.jsx";
+//Had to fix home page capitalization to match the file name
 
 export default function Homepage() {
   // Get the navigate function from React Router
