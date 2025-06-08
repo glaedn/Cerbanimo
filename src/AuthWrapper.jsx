@@ -128,6 +128,13 @@ const AuthWrapper = ({ children }) => {
     // 3. Profile data has been fetched (even if it's null, means fetch attempt completed).
     // 4. Current path is not already '/onboarding'.
     if (!auth0Loading && !profileLoading && isAuthenticated) {
+      // Alpha check: If user is not alpha and not already on waiting list, redirect.
+      if (profileData && profileData.alpha === false && location.pathname !== "/waiting-list") {
+        console.log("User is not alpha. Redirecting to /waiting-list. Profile:", profileData);
+        navigate("/waiting-list");
+        return; // Exit early to prevent further checks like onboarding
+      }
+
       if (location.pathname !== "/onboarding") {
         const needsOnboarding =
           !profileData || // Profile doesn't exist or fetch failed

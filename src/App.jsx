@@ -23,6 +23,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import GalacticActivityMap from "./components/GalacticActivityMap/GalacticActivityMap.jsx";
 import OnboardingPage from "./pages/OnboardingPage/OnboardingPage";
+import WaitingListPage from "./pages/WaitingListPage.jsx"; // Added import
 import AuthWrapper from "./AuthWrapper.jsx";
 
 const App = () => {
@@ -31,8 +32,9 @@ const App = () => {
       <SiteNav />
       <AuthWrapper>
         <Routes>
-          {/* Public Route */}
+          {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/waiting-list" element={<WaitingListPage />} /> {/* Added route */}
 
           {/* Private Routes */}
           <Route
