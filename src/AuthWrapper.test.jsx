@@ -22,7 +22,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // Mock environment variable
-const mockApiUrl = 'http://localhost:4000';
+const mockApiUrl = 'import.meta.env.VITE_BACKEND_URL';
 process.env.REACT_APP_API_URL = mockApiUrl;
 
 const TestComponent = () => <div>Test Content</div>;

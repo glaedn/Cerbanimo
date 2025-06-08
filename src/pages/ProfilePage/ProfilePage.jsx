@@ -74,7 +74,7 @@ const ProfilePage = () => {
           }
 
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:write:profile',
           });
           
@@ -82,7 +82,7 @@ const ProfilePage = () => {
             throw new Error('Access token not available');
           }
 
-          const profileResponse = await axios.get('http://localhost:4000/profile', {
+          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             params: { 
               sub: user.sub,
               email: user.email,
@@ -126,7 +126,7 @@ const ProfilePage = () => {
           setProfileData(fetchedProfileData);
 
 
-          const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
+          const optionsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -159,13 +159,13 @@ const ProfilePage = () => {
       try {
         if (profileData.experience && profileData.experience.length > 0) {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:profile',
           });
 
           // Use Promise.all to fetch details for all tasks concurrently
           const taskDetailsPromises = profileData.experience.map(async (taskId) => {
-            const response = await axios.get(`http://localhost:4000/tasks/${taskId}`, {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -219,10 +219,10 @@ const ProfilePage = () => {
     setResourceError(null);
     try {
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000/',
+        audience: 'import.meta.env.VITE_BACKEND_URL/',
         scope: 'openid profile email read:profile', 
       });
-      const response = await axios.get(`http://localhost:4000/resources/user/${profileData.id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/user/${profileData.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUserResources(response.data);
@@ -255,7 +255,7 @@ const ProfilePage = () => {
     try {
       // console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000/',
+        audience: 'import.meta.env.VITE_BACKEND_URL/',
         // Ensure appropriate scope for writing resources
         scope: 'read:write:profile openid profile email read:profile',
         ignoreCache: true
@@ -266,7 +266,7 @@ const ProfilePage = () => {
       if (editingResource) {
         // Update existing resource
         payload.user_id = profileData.id; // Ensure user_id is set
-        response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource updated successfully!');
@@ -274,7 +274,7 @@ const ProfilePage = () => {
         // Create new resource
         payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
         // console.log('Creating new resource with payload:', payload);
-        response = await axios.post('http://localhost:4000/resources', payload, {
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource created successfully!');
@@ -292,10 +292,10 @@ const ProfilePage = () => {
     if (window.confirm('Are you sure you want to delete this resource?')) {
       try {
         const token = await getAccessTokenSilently({
-          audience: 'http://localhost:4000',
+          audience: 'import.meta.env.VITE_BACKEND_URL',
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
-        await axios.delete(`http://localhost:4000/resources/${resourceId}`, {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource deleted successfully!');
@@ -337,7 +337,7 @@ const ProfilePage = () => {
         throw new Error('Access token not available');
       }
 
-      await axios.post('http://localhost:4000/profile', formData, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/profile`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
@@ -390,7 +390,7 @@ const ProfilePage = () => {
         >
           <Avatar
             alt="Profile Picture"
-            src={newProfilePicture || (profileData.profile_picture ? `http://localhost:4000${profileData.profile_picture}` : '/default-avatar.png')}
+            src={newProfilePicture || (profileData.profile_picture ? `${import.meta.env.VITE_BACKEND_URL}${profileData.profile_picture}` : '/default-avatar.png')}
             sx={{ 
               width: 120, 
               height: 120, 

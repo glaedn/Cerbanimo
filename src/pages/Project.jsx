@@ -80,7 +80,7 @@ const Project = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: 'import.meta.env.VITE_BACKEND_URL',
         scope: 'openid profile email read:write:profile'
       });
     } catch (error) {
@@ -95,7 +95,7 @@ const Project = () => {
       const token = await getToken();
   
       // Fetch profile
-      const profileResponse = await axios.get('http://localhost:4000/profile', {
+      const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
         params: { sub: user.sub, email: user.email, name: user.name },
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -117,7 +117,7 @@ const Project = () => {
   const saveProject = async () => {
     try {
       const token = await getToken();
-      await axios.put(`http://localhost:4000/projects/${projectId}`, project, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, project, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'

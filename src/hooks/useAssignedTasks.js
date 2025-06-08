@@ -20,10 +20,10 @@ const useAssignedTasks = (userId) => {
 
     try {
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: 'import.meta.env.VITE_BACKEND_URL',
         scope: 'openid profile email',
       });
-      const response = await axios.get(`http://localhost:4000/tasks/accepted?userId=${userId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted?userId=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -11,7 +11,7 @@ const useSkillData = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000', // Ensure this matches your Auth0 API audience
+        audience: 'import.meta.env.VITE_BACKEND_URL', // Ensure this matches your Auth0 API audience
         scope: 'openid profile email', // Adjust scopes as needed
       });
     } catch (e) {
@@ -33,7 +33,7 @@ const useSkillData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get('http://localhost:4000/skills/all', {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
