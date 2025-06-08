@@ -26,11 +26,11 @@ const SkillTree = () => {
 
       try {
         const token = await getAccessTokenSilently({
-          audience: 'http://localhost:4000',
+          audience: 'import.meta.env.VITE_BACKEND_URL',
           scope: 'openid profile email read:profile',
         });
 
-        const profileResponse = await axios.get('http://localhost:4000/profile', {
+        const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           params: { 
             sub: user.sub, 
             email: user.email, 
@@ -44,7 +44,7 @@ const SkillTree = () => {
 
         userIdRef.current = profileResponse.data.id;
 
-        const skillsResponse = await axios.get('http://localhost:4000/skills/all', {
+        const skillsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 

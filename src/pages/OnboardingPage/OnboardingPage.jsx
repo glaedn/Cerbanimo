@@ -48,7 +48,7 @@ const OnboardingPage = () => {
     const fetchOptions = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const response = await axios.get(`http://localhost:4000/profile/options`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -68,7 +68,7 @@ const OnboardingPage = () => {
     const fetchProfileData = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const { data: profileData } = await axios.get(`http://localhost:4000/profile`, {
+        const { data: profileData } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -82,7 +82,7 @@ const OnboardingPage = () => {
             imagePath = imagePath.replace(/\\/g, '/');
             // Construct the full URL
             // Ensure no double slashes if profileData.profile_picture might already start with a slash
-            const baseUrl = 'http://localhost:4000';
+            const baseUrl = import.meta.env.VITE_BACKEND_URL;
             if (imagePath.startsWith('/')) {
                 setProfilePicturePreview(`${baseUrl}${imagePath}`);
             } else {
@@ -183,7 +183,7 @@ const OnboardingPage = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`http://localhost:4000/onboarding/initiate`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/onboarding/initiate`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

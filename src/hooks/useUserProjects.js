@@ -11,7 +11,7 @@ const useUserProjects = (userId) => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: 'import.meta.env.VITE_BACKEND_URL',
         scope: 'openid profile email',
       });
     } catch (e) {
@@ -37,7 +37,7 @@ const useUserProjects = (userId) => {
         
         // Fetch user's projects
         // Assuming the endpoint returns projects where user is creator_id or explicitly managed
-        const projectResponse = await axios.get(`http://localhost:4000/projects/userprojects?userId=${userId}`, {
+        const projectResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects?userId=${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
@@ -56,7 +56,7 @@ const useUserProjects = (userId) => {
         const projectsWithTaskData = await Promise.all(
           fetchedProjects.map(async (proj) => {
             try {
-              const tasksResponse = await axios.get(`http://localhost:4000/tasks/p/${proj.id}`, {
+              const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${proj.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               const tasks = tasksResponse.data;

@@ -75,11 +75,11 @@ const CommunityHub = () => {
 
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'http://localhost:4000',
+                    audience: 'import.meta.env.VITE_BACKEND_URL',
                     scope: 'openid profile email',
                 });
 
-                const profileResponse = await axios.get('http://localhost:4000/profile', {
+                const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
                     params: { 
                         sub: user.sub, 
                         email: user.email, 
@@ -114,13 +114,13 @@ const CommunityHub = () => {
             try {
                 setIsLoading(true);
                 const token = await getAccessTokenSilently({
-                    audience: 'http://localhost:4000',
+                    audience: 'import.meta.env.VITE_BACKEND_URL',
                     scope: 'openid profile email',
                 });
 
                 // Fetch community details
                 console.log('Fetching community data for ID:', communityId);
-const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
     headers: { Authorization: `Bearer ${token}` },
 });
 console.log('Community Data:', communityResponse.data);
@@ -134,7 +134,7 @@ console.log('Members array type:', typeof communityResponse.data.members);
 if (communityResponse.data.members && communityResponse.data.members.length > 0) {
     const memberPromises = communityResponse.data.members.map(memberId => {
         console.log('Fetching member:', memberId);
-        return axios.get(`http://localhost:4000/profile/public/${memberId}`, {
+        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
             headers: { Authorization: `Bearer ${token}` },
         }).catch(error => {
             console.error(`Failed to fetch member ${memberId}:`, error);
@@ -150,7 +150,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     // Fetch member scores
     if (communityResponse.data.members && communityResponse.data.members.length > 0) {
         try {
-            const scoresResponse = await axios.get(`http://localhost:4000/communities/${communityId}/scores`, {
+            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             console.log('Fetched member scores:', scoresResponse.data);
@@ -171,7 +171,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
 }
                 
                 // Fetch membership requests
-                const requestsResponse = await axios.get(`http://localhost:4000/communities/${communityId}/membership-requests`, {
+                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 console.log('Membership Requests:', requestsResponse.data);
@@ -185,7 +185,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 
                 // Fetch user data for each request
                 const requestUserPromises = requestsResponse.data.map(request => 
-                    axios.get(`http://localhost:4000/profile/public/${request.user_id}`, {
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     }).then(userResponse => ({
                         ...request,
@@ -199,7 +199,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 // Fetch proposal details
                 if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
                     const proposalPromises = communityResponse.data.proposals.map(projectId => 
-                        axios.get(`http://localhost:4000/projects/${projectId}`, {
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
@@ -211,7 +211,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 // Fetch approved projects
                 if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
                     const projectPromises = communityResponse.data.approved_projects.map(projectId => 
-                        axios.get(`http://localhost:4000/projects/${projectId}`, {
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
@@ -272,11 +272,11 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     const handleRequestJoin = async () => {
         try {
             const token = await getAccessTokenSilently({
-                audience: 'http://localhost:4000',
+                audience: 'import.meta.env.VITE_BACKEND_URL',
                 scope: 'openid profile email',
             });
 
-            await axios.post(`http://localhost:4000/communities/${communityId}/request`, 
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/request`,
                 { userId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -295,7 +295,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'http://localhost:4000',
+                audience: 'import.meta.env.VITE_BACKEND_URL',
                 scope: 'openid profile email',
             });
     
@@ -304,7 +304,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             const projectName = projectBeforeVote?.name || "Project";
     
             // Send vote to server
-            const voteResponse = await axios.post(`http://localhost:4000/communities/${communityId}/vote/${projectId}`, 
+            const voteResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/${projectId}`,
                 { userId, vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -323,7 +323,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
     
             // Refresh the entire community data after voting
-            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -333,7 +333,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             // First, get all current proposals from the API
             if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
                 const proposalPromises = communityResponse.data.proposals.map(propId => 
-                    axios.get(`http://localhost:4000/projects/${propId}`, {
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${propId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
@@ -348,7 +348,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             // Then get all approved projects from the API
             if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
                 const projectPromises = communityResponse.data.approved_projects.map(projId => 
-                    axios.get(`http://localhost:4000/projects/${projId}`, {
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
@@ -371,24 +371,24 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'http://localhost:4000',
+                audience: 'import.meta.env.VITE_BACKEND_URL',
                 scope: 'openid profile email',
             });
 
-            await axios.post(`http://localhost:4000/communities/${communityId}/vote/member/${requestUserId}`, 
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/member/${requestUserId}`,
                 { userId,                  
                  vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Refresh membership requests after voting
-            const requestsResponse = await axios.get(`http://localhost:4000/communities/${communityId}/membership-requests`, {
+            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
             // Fetch user data for each request
             const requestUserPromises = requestsResponse.data.map(request => 
-                axios.get(`http://localhost:4000/profile/public/${request.user_id}`, {
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 }).then(userResponse => ({
                     ...request,
@@ -400,7 +400,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             setMembershipRequests(requestUsers);
             
             // Refresh community to get updated member list
-            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -417,11 +417,11 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'http://localhost:4000',
+                audience: 'import.meta.env.VITE_BACKEND_URL',
                 scope: 'openid profile email',
             });
 
-            await axios.post(`http://localhost:4000/communities/${communityId}/delegate/${userId}`, 
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/delegate/${userId}`,
                 { delegateTo: delegateToUserId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -433,7 +433,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             });
             
             // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -452,11 +452,11 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'http://localhost:4000',
+                audience: 'import.meta.env.VITE_BACKEND_URL',
                 scope: 'openid profile email',
             });
 
-            await axios.post(`http://localhost:4000/communities/${communityId}/revoke/${userId}`, 
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/revoke/${userId}`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -467,7 +467,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             setVoteDelegations(newDelegations);
             
             // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`http://localhost:4000/communities/${communityId}`, {
+            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -591,7 +591,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                     >
                                         <ListItemAvatar>
                                             <Avatar 
-                                                src={`http://localhost:4000${member.profile_picture}`} 
+                                                src={`${import.meta.env.VITE_BACKEND_URL}${member.profile_picture}`}
                                                 alt={member.name} 
                                                 sx={{ 
                                                     borderColor: 'var(--hud-border-color)', 
@@ -750,7 +750,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                             <ListItem key={request.user_id} className="request-entry">
                                                 <ListItemAvatar>
                                                     <Avatar 
-                                                        src={`http://localhost:4000${request.userData.profile_picture}`} 
+                                                        src={`${import.meta.env.VITE_BACKEND_URL}${request.userData.profile_picture}`}
                                                         alt={request.userData.name} 
                                                         onClick={() => navigate(`/profile/public/${request.user_id}`)}
                                                         className="clickable-avatar" // CSS handles hover border

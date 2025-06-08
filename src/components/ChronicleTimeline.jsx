@@ -12,12 +12,12 @@ const ChronicleTimeline = ({ stories }) => {
   
     try {
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000', // Match the exact value from Auth0
+        audience: 'import.meta.env.VITE_BACKEND_URL', // Match the exact value from Auth0
         scope: 'openid profile email read:profile write:profile',
       });
 
       // Use the token for authorized requests
-      const profileResponse = await axios.get('http://localhost:4000/profile', {
+      const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
         params: { 
           sub: user.sub,
           email: user.email,
@@ -30,7 +30,7 @@ const ChronicleTimeline = ({ stories }) => {
       });
 
       const res = await axios.post(
-        'http://localhost:4000/endorsements/',
+        `${import.meta.env.VITE_BACKEND_URL}/endorsements/`,
         {
           story_node_id,
           user_id: profileResponse.data.id, // Pass the Auth0 user id

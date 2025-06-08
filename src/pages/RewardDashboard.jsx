@@ -24,11 +24,11 @@ const RewardDashboard = () => {
 
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'http://localhost:4000',
+                    audience: 'import.meta.env.VITE_BACKEND_URL',
                     scope: 'openid profile email',
                 });
 
-                const profileResponse = await axios.get('http://localhost:4000/profile', {
+                const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
                     params: { 
                         sub: user.sub, 
                         email: user.email, 
@@ -40,7 +40,7 @@ const RewardDashboard = () => {
                     },
                 });
 
-                const response = await axios.get(`http://localhost:4000/rewards/user/${profileResponse.data.id}`, {
+                const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${profileResponse.data.id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
@@ -54,11 +54,11 @@ const RewardDashboard = () => {
         const fetchLeaderboard = async () => {
             try {
                 const token = await getAccessTokenSilently({
-                    audience: 'http://localhost:4000',
+                    audience: 'import.meta.env.VITE_BACKEND_URL',
                     scope: 'openid profile email',
                 });
 
-                const response = await axios.get('http://localhost:4000/rewards/leaderboard', {
+                const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/leaderboard`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
@@ -96,7 +96,7 @@ const RewardDashboard = () => {
                                 {badges.map((badge, index) => (
                                     <div key={index} className="badge-item">
                                         <Avatar 
-                                            src={`http://localhost:4000${badge.icon}`} 
+                                            src={`${import.meta.env.VITE_BACKEND_URL}${badge.icon}`}
                                             alt={badge.name} 
                                             className="badge-avatar"
                                         />
@@ -130,7 +130,7 @@ const RewardDashboard = () => {
                                             {index + 1}.
                                         </Typography>
                                         <ListItemAvatar>
-                                            <Avatar src={`http://localhost:4000${user.avatar}`} alt={user.username} />
+                                            <Avatar src={`${import.meta.env.VITE_BACKEND_URL}${user.avatar}`} alt={user.username} />
                                         </ListItemAvatar>
                                         <ListItemText primary={user.username} secondary={`Score: ${user.cotokens}`} />
                                     </ListItem>

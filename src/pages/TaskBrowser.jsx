@@ -18,12 +18,12 @@ const TaskBrowser = () => {
       const fetchProfileAndTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:profile',
           });
       
           // Fetch user profile
-          const profileResponse = await axios.get('http://localhost:4000/profile', {
+          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             params: { sub: user.sub, email: user.email, name: user.name },
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -69,7 +69,7 @@ const TaskBrowser = () => {
           }
       
           // Fetch all relevant tasks based on user skills
-          const tasksResponse = await axios.get('http://localhost:4000/tasks/relevant', {
+          const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
             params: { skills: userSkills },
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -111,7 +111,7 @@ const TaskBrowser = () => {
       const fetchAcceptedTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:profile',
           });
 
@@ -120,7 +120,7 @@ const TaskBrowser = () => {
 
           // Only fetch accepted tasks if we have a user ID
           if (userIdString) {
-            const acceptedResponse = await axios.get('http://localhost:4000/tasks/accepted', {
+            const acceptedResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted`, {
               params: { userId: userIdString },
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -140,7 +140,7 @@ const TaskBrowser = () => {
       const fetchApprovalTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:profile',
           });
 
@@ -148,7 +148,7 @@ const TaskBrowser = () => {
           console.log("Fetching review tasks for userId:", userIdString);
 
           if (userIdString) {
-            const approvalResponse = await axios.get(`http://localhost:4000/tasks/reviewer/${userIdString}`, {
+            const approvalResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/reviewer/${userIdString}`, {
               params: { userId: userIdString },
               headers: { Authorization: `Bearer ${token}` },
             });

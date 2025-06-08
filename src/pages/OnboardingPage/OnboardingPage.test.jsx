@@ -22,7 +22,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // Mock environment variable
-const mockApiUrl = 'http://localhost:4000';
+const mockApiUrl = 'import.meta.env.VITE_BACKEND_URL';
 process.env.REACT_APP_API_URL = mockApiUrl;
 
 
@@ -68,7 +68,7 @@ describe('OnboardingPage', () => {
     renderWithTheme(<OnboardingPage />);
     // Wait for options to be fetched and set
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith(`${mockApiUrl}/profile/options`, expect.any(Object));
+      expect(axios.get).toHaveBeenCalledWith(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, expect.any(Object));
     });
     // MUI Autocomplete doesn't easily expose options directly in the DOM for querying.
     // We can infer by trying to open and find items, but it's complex.
@@ -202,7 +202,7 @@ describe('OnboardingPage', () => {
 
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
-        `${mockApiUrl}/api/onboarding/initiate`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/initiate`,
         expect.any(FormData), // Check that it's FormData
         expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } })
       );
