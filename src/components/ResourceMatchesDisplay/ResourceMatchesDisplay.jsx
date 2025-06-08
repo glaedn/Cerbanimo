@@ -31,7 +31,7 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
     setError(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`http://localhost:4000/matching/resource/${resourceId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/matching/resource/${resourceId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMatchedNeeds(response.data);
@@ -68,7 +68,7 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`http://localhost:4000/exchange/initiate`, payload, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/exchange/initiate`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

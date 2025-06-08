@@ -26,7 +26,7 @@ const ProjectPages = () => {
   const fetchUserProfile = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get('http://localhost:4000/profile', {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
         params: { sub: user.sub },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -43,7 +43,7 @@ const ProjectPages = () => {
     try {
       const token = await getAccessTokenSilently();
 
-      const response = await axios.get('http://localhost:4000/projects/personal', {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/personal`, {
         params: { 
           search: search.trim(),
           page: page,
@@ -85,7 +85,7 @@ const ProjectPages = () => {
         typeof skill === 'object' ? skill.name : skill
       );
   
-      const response = await axios.get('http://localhost:4000/tasks/prelevant', {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/prelevant`, {
         params: { 
           skills: skillNames,
           projectId: projectId,
@@ -118,8 +118,8 @@ const ProjectPages = () => {
       const token = await getAccessTokenSilently();
       
       const endpoint = action === 'accept' 
-        ? `http://localhost:4000/tasks/${taskId}/accept`
-        : `http://localhost:4000/tasks/${taskId}/drop`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`
+        : `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`;
 
       const response = await axios.put(endpoint, 
         { userId: userProfile.id }, 

@@ -35,7 +35,7 @@ const CommunityResourceManagement = ({ communityId }) => {
     setError(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`http://localhost:4000/resources/community/${communityId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/community/${communityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCommunityResources(response.data);
@@ -88,7 +88,7 @@ const CommunityResourceManagement = ({ communityId }) => {
         // If it should be explicitly nulled for community resources, do: payload.owner_user_id = null;
         // For now, we assume the backend handles logic if both owner_user_id and owner_community_id are present,
         // or that `ResourceListingForm` doesn't set `owner_user_id` when used in this context.
-        response = await axios.post('http://localhost:4000/resources', payload, {
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Resource created successfully!', 'success');
@@ -120,7 +120,7 @@ const CommunityResourceManagement = ({ communityId }) => {
       setLoading(true);
       try {
         const token = await getAccessTokenSilently();
-        await axios.delete(`http://localhost:4000/resources/${resourceId}`, {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Resource deleted successfully!', 'success');

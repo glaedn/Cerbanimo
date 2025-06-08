@@ -24,7 +24,7 @@ const Communities = () => {
     try {
       const token = await getAccessTokenSilently();
   
-      const response = await axios.get('http://localhost:4000/communities', {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
         params: { search, page },
         headers: {
           Authorization: `Bearer ${token}`
@@ -64,7 +64,7 @@ const Communities = () => {
     try {
       const token = await getAccessTokenSilently();
       
-      const response = await axios.get(`http://localhost:4000/communities/${communityId}/projects`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/projects`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -85,7 +85,7 @@ const Communities = () => {
     try {
       const token = await getAccessTokenSilently();
       
-      await axios.post(`http://localhost:4000/communities/${communityId}/join`, 
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/join`, 
         { userId: user.sub }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );

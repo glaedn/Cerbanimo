@@ -126,7 +126,7 @@ const SiteNav = () => {
     if (isAuthenticated && user?.sub && !userProfileId) {
       try {
         const token = await getAccessTokenSilently();
-        const response = await axios.get("http://localhost:4000/profile", {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           params: { sub: user.sub, email: user.email },
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -174,7 +174,7 @@ const SiteNav = () => {
     try {
       const token = await getAccessTokenSilently();
       // The NeedDeclarationForm already sets requestor_user_id to loggedInUserId (which is userProfileId here)
-      await axios.post("http://localhost:4000/needs", needData, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, needData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotificationState({
