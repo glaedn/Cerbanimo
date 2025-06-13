@@ -22,7 +22,7 @@ const CommandDeck = () => {
   };
 
   if (profileLoading || projectsLoading) {
-    return <div className="hud-panel command-deck">Loading Galactic Treasury...</div>;
+    return <div className="hud-panel command-deck">Loading Commmand Deck...</div>;
   }
   
   // Simplified error display
