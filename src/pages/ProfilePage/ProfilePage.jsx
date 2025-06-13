@@ -257,7 +257,7 @@ const ProfilePage = () => {
     try {
       // console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL/',
+        audience: `${import.meta.env.VITE_BACKEND_URL}/`,
         // Ensure appropriate scope for writing resources
         scope: 'read:write:profile openid profile email read:profile',
         ignoreCache: true
