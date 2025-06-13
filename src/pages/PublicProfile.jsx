@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -60,6 +60,9 @@ const PublicProfile = () => {
                 }
                 return interest;
               })
+            : [],
+          contact_links: Array.isArray(profileResponse.data.contact_links)
+            ? profileResponse.data.contact_links
             : []
         };
         
@@ -150,6 +153,26 @@ const PublicProfile = () => {
       <Typography variant="h4" gutterBottom>
         {profile.username}
       </Typography>
+
+      {/* Contact Links Section */}
+      {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (
+        <Box sx={{ my: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Contact:
+          </Typography>
+          {profile.contact_links.filter(link => link && link.trim() !== '').map((link, index) => {
+            const href = (link.startsWith('http://') || link.startsWith('https://')) ? link : `http://${link}`;
+            return (
+              <Typography key={index} sx={{ mb: 0.5 }}>
+                <MuiLink href={href} target="_blank" rel="noopener noreferrer" sx={{ wordBreak: 'break-all' }}>
+                  {link}
+                </MuiLink>
+              </Typography>
+            );
+          })}
+        </Box>
+      )}
+
       <UserPortfolio userId={userId} />
       <Typography variant="h6" gutterBottom>
         Skills:

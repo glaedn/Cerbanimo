@@ -43,6 +43,7 @@ const ProfilePage = () => {
     interests: [],
     experience: [],
     profile_picture: '', // This will hold the file path or URL of the profile picture
+    contact_links: ['', '', ''], // Initialize with 3 empty strings
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -122,6 +123,9 @@ const ProfilePage = () => {
             }),
             experience: profileResponse.data.experience || [],
             profile_picture: profileResponse.data.profile_picture || '',
+            contact_links: Array.isArray(profileResponse.data.contact_links)
+              ? [...profileResponse.data.contact_links.slice(0, 3), '', '', ''].slice(0, 3)
+              : ['', '', ''],
             };
           setProfileData(fetchedProfileData);
 
@@ -194,6 +198,17 @@ const ProfilePage = () => {
       ...prevData,
       [field]: value,
     }));
+  };
+
+  const handleContactLinkChange = (index, value) => {
+    setProfileData((prevData) => {
+      const newContactLinks = [...prevData.contact_links];
+      newContactLinks[index] = value;
+      return {
+        ...prevData,
+        contact_links: newContactLinks,
+      };
+    });
   };
 
   const handleProfilePictureChange = (event) => {
@@ -294,7 +309,7 @@ const ProfilePage = () => {
     if (window.confirm('Are you sure you want to delete this resource?')) {
       try {
         const token = await getAccessTokenSilently({
-          audience: 'import.meta.env.VITE_BACKEND_URL',
+          audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
         await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
@@ -322,13 +337,21 @@ const ProfilePage = () => {
       formData.append('skills', JSON.stringify(profileData.skills));
       formData.append('interests', JSON.stringify(profileData.interests));
 
+      // Handle contact_links
+      const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
+      formData.append('contact_links', JSON.stringify(cleanedContactLinks));
+
       if (profileData.id) {
         formData.append('user_id', profileData.id);
       }
 
-      if (profileData.profile_picture) {
-        formData.append('profilePicture', profileData.profile_picture); // Use the file selected for the profile picture
+      if (profileData.profile_picture && profileData.profile_picture instanceof File) {
+        formData.append('profilePicture', profileData.profile_picture);
+      } else if (profileData.profile_picture === null || profileData.profile_picture === '') {
+        // Optionally, send a signal to backend to clear the picture if needed
+        // formData.append('clearProfilePicture', 'true'); 
       }
+      // If profileData.profile_picture is a URL string, do nothing, backend won't update it unless new file is sent
 
       const token = user?.idToken || await getAccessTokenSilently({
         audience: import.meta.env.VITE_BACKEND_URL,
@@ -368,23 +391,21 @@ const ProfilePage = () => {
           textShadow: `0 0 8px ${theme.colors.primary}7A`,
         }}
       >
-        Edit Your Profile
+        Your Profile
       </Typography>
       {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
-      
-      {/* User Identification Panel */}
-      <Box sx={{ ...panelStyle, borderColor: theme.colors.primary, boxShadow: theme.effects.glowStrong(theme.colors.primary) }}>
-        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
-          User Identification
-        </Typography>
-        <Box 
-          className="profile-card" 
-          sx={{
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            padding: theme.spacing.md, 
-            backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
+        <Box sx={{ ...panelStyle, borderColor: theme.colors.primary, boxShadow: theme.effects.glowStrong(theme.colors.primary), paddingBottom: '20px' }}>
+          <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
+            User Identification
+          </Typography>
+          <Box 
+            className="profile-card" 
+            sx={{
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          padding: theme.spacing.md, 
+          backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
             borderRadius: theme.borders.borderRadiusMd,
             boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`, // Inner shadow
             mb: 1, // Margin bottom before username field
@@ -460,6 +481,47 @@ const ProfilePage = () => {
           },
         }}
       />
+      {[0, 1, 2].map((index) => (
+        <TextField
+          key={index}
+          label={`Contact Link ${index + 1}`}
+          value={profileData.contact_links[index] || ''}
+          onChange={(e) => handleContactLinkChange(index, e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            maxWidth: '400px',
+            mt: index === 0 ? 1 : 1, // Add margin top for spacing between fields
+            '& .MuiInputLabel-root': { 
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: theme.colors.primary,
+            },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': {
+                borderColor: theme.colors.border,
+                borderRadius: theme.borders.borderRadiusMd,
+              },
+              '&:hover fieldset': {
+                borderColor: theme.colors.primary,
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: theme.colors.primary,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+              },
+            },
+            '& .MuiInputBase-input': {
+              color: theme.colors.textPrimary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+          }}
+        />
+      ))}
       </Box> 
 
       {/* Skillset Analysis Panel */}

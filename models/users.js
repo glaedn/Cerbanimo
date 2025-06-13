@@ -17,6 +17,7 @@ const createUserTable = async () => {
       experience JSONB DEFAULT '[]'::jsonb,
       token_ledger JSONB DEFAULT '[]'::jsonb,
       roles TEXT[] DEFAULT '{"user"}'::text[],
+      contact_links TEXT[] DEFAULT '{}'::TEXT[],
       alpha BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
