@@ -29,15 +29,16 @@ router.get("/public/:userId",
 
       // Ensure the query fetches only public data
       const result = await pool.query(
-        `SELECT id, username, profile_picture, skills, interests, badges FROM users WHERE id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges, contact_links FROM users WHERE id = $1`,
         [userId]
       );
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      res.json(result.rows[0]); // Send public profile data
+      const profile = result.rows[0];
+      profile.contact_links = profile.contact_links || [];
+      res.json(profile); // Send public profile data
     } catch (error) {
       console.error("Error fetching public profile:", error);
       res.status(500).json({ error: "Failed to fetch public profile" });
@@ -105,7 +106,7 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, alpha
+      SELECT id, username, skills, interests, profile_picture, cotokens, alpha, contact_links
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -123,6 +124,7 @@ router.get('/', async (req, res) => {
     profile.interests = typeof profile.interests === 'string' && profile.interests.trim() !== '' 
       ? JSON.parse(profile.interests) 
       : profile.interests || [];
+    profile.contact_links = profile.contact_links || [];
 
     const skillsResult = await pool.query('SELECT name FROM skills');
     const interestsResult = await pool.query('SELECT name FROM interests');
@@ -139,7 +141,7 @@ router.get('/', async (req, res) => {
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
-  const { username, skills, interests, user_id } = req.body;
+  let { username, skills, interests, user_id, contact_links } = req.body;
   const auth0Id = req.auth.payload.sub;
   const profilePicture = req.file ? `/uploads/${req.file.filename}` : null;
 
@@ -164,15 +166,37 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
         username = $1,
         skills = $2,
         interests = $3,
-        profile_picture = COALESCE($4, profile_picture)
-      WHERE id = $5
-      RETURNING id, username, skills, interests, profile_picture, experience;
+        profile_picture = COALESCE($4, profile_picture),
+        contact_links = $5
+      WHERE id = $6
+      RETURNING id, username, skills, interests, profile_picture, experience, contact_links;
     `;
+
+    // Validate and truncate contact_links
+    if (contact_links) {
+      if (typeof contact_links === 'string') {
+        try {
+          contact_links = JSON.parse(contact_links);
+        } catch (parseError) {
+          return res.status(400).json({ message: 'Invalid contact_links format. Expected an array.' });
+        }
+      }
+      if (!Array.isArray(contact_links)) {
+        return res.status(400).json({ message: 'contact_links must be an array.' });
+      }
+      if (contact_links.length > 3) {
+        contact_links = contact_links.slice(0, 3);
+      }
+    } else {
+      contact_links = []; // Default to empty array if not provided
+    }
+
     const values = [
       username,
       JSON.parse(skills),
       JSON.parse(interests),
       profilePicture,
+      contact_links, // Already an array or parsed/defaulted to one
       userId,
     ];
     const result = await pool.query(query, values);
