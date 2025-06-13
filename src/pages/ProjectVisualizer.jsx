@@ -21,6 +21,7 @@ const ProjectVisualizer = () => {
   const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({
     width: 800,
@@ -356,8 +357,8 @@ useEffect(() => {
     if (hoveredNode?.id === d.id) return;
     setHoveredNode({
       ...d,
-      x: event.clientX + 20, // Viewport-relative X
-      y: event.clientY + 20, // Viewport-relative Y
+      rawX: event.clientX,
+      rawY: event.clientY,
       element: event.currentTarget,
     });
   };
@@ -492,6 +493,59 @@ useEffect(() => {
   }
 }, [skills, tasks]); // Dependencies remain the same
 
+useEffect(() => {
+  if (hoveredNode && tooltipRef.current) {
+    const { width: tooltipWidth, height: tooltipHeight } = tooltipRef.current.getBoundingClientRect();
+    const screenWidth = window.innerWidth; // Renamed for clarity from prompt
+    const screenHeight = window.innerHeight; // Renamed for clarity from prompt
+    const offset = 20;
+
+    let finalX = hoveredNode.rawX - tooltipWidth / 2; // Default: bottom-center X
+    let finalY = hoveredNode.rawY + offset;          // Default: bottom-center Y
+
+    const nearTop = hoveredNode.rawY < tooltipHeight + offset * 1.5; 
+    const nearBottom = hoveredNode.rawY + tooltipHeight + offset * 1.5 > screenHeight;
+    const nearLeft = hoveredNode.rawX < tooltipWidth / 2 + offset; 
+    const nearRight = hoveredNode.rawX + tooltipWidth / 2 + offset > screenWidth;
+
+    // Corner conditions first
+    if (nearTop && nearLeft) { // Top-left corner => position bottom-right of cursor
+      finalX = hoveredNode.rawX + offset;
+      finalY = hoveredNode.rawY + offset;
+    } else if (nearTop && nearRight) { // Top-right corner => position bottom-left of cursor
+      finalX = hoveredNode.rawX - tooltipWidth - offset;
+      finalY = hoveredNode.rawY + offset;
+    } else if (nearBottom && nearLeft) { // Bottom-left corner => position top-right of cursor
+      finalX = hoveredNode.rawX + offset;
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+    } else if (nearBottom && nearRight) { // Bottom-right corner => position top-left of cursor
+      finalX = hoveredNode.rawX - tooltipWidth - offset;
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+    }
+    // Edge conditions (if not a corner)
+    else if (nearTop) { // Near top edge => position top-centered (which means tooltip bottom is above cursor)
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+      // X is already default (centered relative to cursor)
+    } else if (nearBottom) { // Near bottom edge => position top-centered
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+      // X is already default (centered relative to cursor)
+    } else if (nearLeft) { // Near left edge => position right-centered from cursor
+        finalX = hoveredNode.rawX + offset;
+        // Y is already default (bottom of cursor)
+    } else if (nearRight) { // Near right edge => position left-centered from cursor
+        finalX = hoveredNode.rawX - tooltipWidth - offset;
+        // Y is already default (bottom of cursor)
+    }
+
+    // Boundary checks
+    if (finalX < 0) finalX = 0;
+    if (finalX + tooltipWidth > screenWidth) finalX = screenWidth - tooltipWidth;
+    if (finalY < 0) finalY = 0;
+    if (finalY + tooltipHeight > screenHeight) finalY = screenHeight - tooltipHeight;
+
+    setTooltipPosition({ x: finalX, y: finalY });
+  }
+}, [hoveredNode]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -859,13 +913,14 @@ links.forEach(link => {
                   status: dep.taskInfo.status,
                   category: dep.taskInfo.category,
                   type: dep.type,
-                  x: event.pageX,
-                  y: event.pageY,
+                  rawX: event.clientX,
+                  rawY: event.clientY,
+                  element: event.currentTarget,
                 });
               }
             })
-            .on("mouseout", () => setHoveredNode(null))
-            .on("mouseleave", () => setHoveredNode(null)) // Additional check to ensure tooltip disappears
+            .on("mouseout", handleMouseOut)
+            .on("mouseleave", handleMouseOut) 
             .on("click", () => handleEditTask(dep.taskInfo.id));
 
           externalNodeGroup
@@ -917,13 +972,14 @@ links.forEach(link => {
                   status: dep.taskInfo.status,
                   category: dep.taskInfo.category,
                   type: dep.type,
-                  x: event.pageX,
-                  y: event.pageY,
+                  rawX: event.clientX,
+                  rawY: event.clientY,
+                  element: event.currentTarget,
                 });
               }
             })
-            .on("mouseout", () => setHoveredNode(null))
-            .on("mouseleave", () => setHoveredNode(null)); // Additional check
+            .on("mouseout", handleMouseOut)
+            .on("mouseleave", handleMouseOut);
 
           externalNodeGroup
             .append("circle")
@@ -1190,13 +1246,16 @@ links.forEach(link => {
           ref={tooltipRef}
           className="tooltip-container"
           style={{
-            left: hoveredNode.x,
-            top: hoveredNode.y,
+            position: 'fixed',
+            left: tooltipPosition.x,
+            top: tooltipPosition.y,
             opacity: hoveredNode ? 1 : 0,
-            transform: `translate(20px, 20px)`,
           }}
           onMouseEnter={() => clearTimeout(hoverIntentRef.current)}
-          onMouseLeave={() => setHoveredNode(null)}
+          onMouseLeave={() => {
+            clearTimeout(hoverIntentRef.current); // Clear any pending show
+            setHoveredNode(null); // Hide tooltip
+          }}
         >
           <div className="node-tooltip">
             <h4>{hoveredNode.name}</h4>
