@@ -9,6 +9,7 @@
     padding: 5px;
     box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden;
     margin-top: 60px;
     background: transparent;
     color: #FFFFFF;

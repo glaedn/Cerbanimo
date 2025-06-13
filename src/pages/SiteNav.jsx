@@ -366,7 +366,7 @@ const SiteNav = () => {
         {isAuthenticated ? (
           <button
             className="nav-button logout-button"
-            onClick={() => logout({ returnTo: window.location.origin })}
+            onClick={() => logout({ returnTo: import.meta.env.VITE_FRONTEND_URL })}
           >
             Logout
           </button>

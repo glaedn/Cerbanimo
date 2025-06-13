@@ -23,6 +23,7 @@ import {
   indigo,
 } from "@mui/material/colors";
 import "./ProjectCreation.css";
+import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
 
 const ProjectCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -32,6 +33,8 @@ const ProjectCreation = () => {
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
+  const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
+  const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
 
   const colorPalette = [
     blue[100],
@@ -75,6 +78,8 @@ const ProjectCreation = () => {
   }, [getAccessTokenSilently]);
 
   const handleCreateProject = async () => {
+    setLoadingPopupMessages(["Creating your project..."]);
+    setLoadingPopupOpen(true);
     try {
       const token = await getAccessTokenSilently();
 
@@ -97,13 +102,14 @@ const ProjectCreation = () => {
 
       if (response.status === 201) {
         const projectId = response.data.id;
-        alert("Project created successfully!");
+        setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
 
         if (autoGenerateTasks) {
+          setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
           // Step 2: Auto-generate tasks using LLM
           const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/auto-generate`, {
             method: "POST",
-            headers: { 
+            headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
@@ -113,9 +119,9 @@ const ProjectCreation = () => {
           const result = await generateResponse.json();
 
           if (result.success) {
-            alert("Tasks generated successfully!");
+            setLoadingPopupMessages(prevMessages => [...prevMessages, "Tasks generated successfully!"]);
           } else {
-            alert("Task generation failed: " + result.error);
+            setLoadingPopupMessages(prevMessages => [...prevMessages, "Task generation failed: " + result.error]);
           }
         }
 
@@ -124,12 +130,14 @@ const ProjectCreation = () => {
       }
     } catch (error) {
       console.error("Failed to create project:", error);
-      alert("Error creating project. Please try again.");
+      setLoadingPopupMessages(["Error creating project. Please try again."]);
+      setLoadingPopupOpen(true); // Ensure it's open if it wasn't already
     }
   };
 
   return (
     <div className="project-creation-background">
+    <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
     <Box className="project-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
       <Typography variant="h4" className="form-title">
         Create a New Project

@@ -1,0 +1,115 @@
+/* src/components/LoadingPopup/LoadingPopup.css */
+.loading-popup-cyber-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 450px; /* Adjusted width */
+  background-color: #0a0f1e; /* Dark background similar to TaskEditor's rgba(10, 10, 46, 0.9) */
+  border: 2px solid #00f3ff; /* Primary cyan border */
+  box-shadow: 0 0 20px #00f3ff, 0 0 30px #00f3ff inset; /* Cyan glow, outer and inner */
+  padding: 0; 
+  outline: none;
+  color: #e0e0e0; /* General text color, can be overridden by specific elements */
+  font-family: 'Orbitron', sans-serif; /* Sci-fi font */
+  border-radius: 8px; /* From TaskEditor.css .cyber-modal */
+}
+
+.loading-popup-cyber-border {
+  padding: 20px 30px; /* Inner padding */
+  border: 1px dashed #ff00ff; /* Magenta inner border - dashed for effect */
+  box-shadow: inset 0 0 15px #ff00ff, inset 0 0 5px #ff00ff; /* Magenta inner glow */
+  background: rgba(10, 15, 30, 0.75); /* Slightly transparent inner background, similar to TaskEditor */
+  border-radius: 6px; /* Slightly smaller radius for inner element */
+  /* Consider adding scanline effect if desired, adapted from TaskEditor.css */
+}
+
+.loading-popup-cyber-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers children horizontally */
+  text-align: center;
+  padding-bottom: 20px; 
+}
+
+.cyber-loader {
+  border: 4px solid rgba(0, 243, 255, 0.25); /* Lighter cyan for the track */
+  border-left-color: #00F3FF; /* Solid cyan for the spinning part */
+  border-radius: 50%;
+  width: 40px;  /* Desired size */
+  height: 40px; /* Desired size */
+  animation: cyber-spin 1s linear infinite;
+  margin-top: 20px; /* Space between title and loader */
+  /* Ensure it's not affected by other global div styles if any */
+  box-sizing: border-box; /* Important for border and padding calculations */
+}
+
+@keyframes cyber-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-popup-title { /* This class is on the Typography component in LoadingPopup.jsx */
+  color: #00f3ff; /* Cyan title text, from TaskEditor.css .cyber-title */
+  text-transform: uppercase;
+  margin-bottom: 20px; /* Space before spinner */
+  font-size: 1.3rem; /* Adjusted font size */
+  font-weight: bold;
+  letter-spacing: 1px; /* From TaskEditor.css .cyber-title */
+  text-shadow: 0 0 5px #00f3ff, 0 0 10px #00f3ff; /* Enhanced cyan text glow, from TaskEditor.css .cyber-title */
+  /* Consider border-bottom like .cyber-title if it fits the design */
+  /* border-bottom: 1px solid #FF5CA2; */
+  /* padding-bottom: 10px; */
+}
+
+/* Ensure spinner color is also cyan - already handled in JSX via sx prop */
+/* .MuiCircularProgress-root { color: #00f3ff; } */
+
+/* Additional styles for text if needed */
+.loading-popup-cyber-content p { /* If we add more text elements */
+  color: #c0c0c0; /* Slightly dimmer text for sub-messages if any */
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif; /* Consistent with TaskEditor's content font */
+}
+
+/* Optional: Scanline effect adapted from TaskEditor.css */
+.loading-popup-cyber-border::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(0deg, 
+      transparent 0%,
+      rgba(0, 243, 255, 0.05) 50%, /* Reduced intensity */
+      transparent 100%);
+    animation: loading-popup-scanline 6s linear infinite; /* Slower animation */
+    pointer-events: none;
+    z-index: -1; /* Ensure it's behind content */
+    border-radius: 6px; /* Match border's radius */
+}
+
+@keyframes loading-popup-scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+/* Responsive adjustments if needed, similar to TaskEditor.css */
+@media (max-width: 600px) {
+    .loading-popup-cyber-modal {
+        width: 90%;
+        padding: 0.1rem; /* Adjust if padding is 0 on modal */
+    }
+    .loading-popup-cyber-border {
+        padding: 15px 20px;
+    }
+    .loading-popup-title {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+}
