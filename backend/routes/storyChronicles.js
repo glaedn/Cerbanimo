@@ -64,24 +64,42 @@ router.get('/community/:id/chronicle-feed', async (req, res) => {
     }
   });
   
-  // GET /user/:id/summary
+// GET /user/:id/summary
 router.get('/user/:id/summary', async (req, res) => {
-    const { id } = req.params;
-    console.log('Fetching summary for user ID:', id);
-    try {
-      const result = await db.query(`
-        SELECT 
-          COALESCE(SUM(reward_tokens), 0) AS total_tokens,
-          ARRAY_AGG(DISTINCT skill_name) AS skills
-        FROM user_chronicles
-        WHERE user_id = $1
-      `, [id]);
-      console.log('User summary:', result.rows[0]);
-      res.status(200).json(result.rows[0]);
-    } catch (err) {
-      console.error('Error fetching user summary:', err);
-      res.status(500).json({ error: 'Failed to fetch user summary' });
-    }
-  });
+  const { id } = req.params;
+  console.log('Fetching summary for user ID:', id);
+
+  try {
+    const summaryResult = await db.query(`
+      SELECT 
+        COALESCE(SUM(reward_tokens), 0) AS total_tokens,
+        ARRAY_AGG(DISTINCT skill_name) AS skills
+      FROM user_chronicles
+      WHERE user_id = $1
+    `, [id]);
+
+    const perSkillResult = await db.query(`
+      SELECT 
+        skill_name,
+        SUM(reward_tokens) AS tokens
+      FROM user_chronicles
+      WHERE user_id = $1
+      GROUP BY skill_name
+    `, [id]);
+
+    const tokens_per_skill = perSkillResult.rows;
+
+    const result = {
+      ...summaryResult.rows[0],
+      tokens_per_skill,
+    };
+
+    console.log('User summary:', result);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Error fetching user summary:', err);
+    res.status(500).json({ error: 'Failed to fetch user summary' });
+  }
+});
 
 export default router;
