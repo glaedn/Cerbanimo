@@ -197,7 +197,7 @@ router.put('/:resourceId', authenticate, async (req, res) => {
 // DELETE /resources/:resourceId - Delete a resource
 router.delete('/:resourceId', authenticate, async (req, res) => {
   const { resourceId } = req.params;
-  const currentUserId = req.user.id;
+  const currentUserId = parseInt(req.headers['x-user-id']);
 
   try {
     // First, fetch the resource to check ownership
