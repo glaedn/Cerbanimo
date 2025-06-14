@@ -313,7 +313,9 @@ const ProfilePage = () => {
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
         await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}`, 
+          'X-User-Id': profileData.id, // Ensure user_id is sent for authorization // 
+          },
         });
         alert('Resource deleted successfully!');
         fetchUserResources(); // Refresh list
