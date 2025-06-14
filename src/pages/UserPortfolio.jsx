@@ -39,11 +39,50 @@ const UserPortfolio = ({ userId: propUserId }) => {
 
         const summaryRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/summary`);
         const summaryRaw = await summaryRes.json();
-        const summaryData = {
+
+        // --- Start of transformation logic ---
+        let processedSkills = [];
+        const rawSkillsArray = Array.isArray(summaryRaw.skills) ? summaryRaw.skills : [];
+        const tokensPerSkillArray = Array.isArray(summaryRaw.tokens_per_skill) ? summaryRaw.tokens_per_skill : [];
+
+        if (rawSkillsArray.length > 0) {
+          const tokensMap = new Map();
+          tokensPerSkillArray.forEach(item => {
+            if (item && typeof item.skill_name === 'string' && item.tokens !== undefined) {
+              const tokenValue = parseInt(item.tokens, 10);
+              if (!isNaN(tokenValue)) { // Ensure parsing was successful
+                tokensMap.set(item.skill_name, tokenValue);
+              } else {
+                // Optional: handle or log cases where parsing fails, or set a default like 0
+                tokensMap.set(item.skill_name, 0); // Default to 0 if parsing fails
+              }
+            }
+          });
+
+          processedSkills = rawSkillsArray.map(skillName => {
+            // Ensure skillName is a string, though it should be based on typical API responses
+            const currentSkillName = typeof skillName === 'string' ? skillName : String(skillName);
+            return {
+              id: currentSkillName, // Using skillName as ID, ensure it's unique or suitable for a key
+              name: currentSkillName, // This will be used by TokenAndSkillSummary if skill_name is not present
+              skill_name: currentSkillName, // Explicitly providing skill_name
+              tokens: tokensMap.get(currentSkillName) || 0, // Default to 0 if not found
+              // Add level and exp with defaults if TokenAndSkillSummary expects them,
+              // otherwise, TokenAndSkillSummary needs to handle their absence.
+              // For this task, only name and tokens are specified from this transformation.
+              // TokenAndSkillSummary expects skill_level and skill_exp. Let's add defaults.
+              skill_level: 0, // Default level
+              skill_exp: 'N/A' // Default experience
+            };
+          });
+        }
+        // --- End of transformation logic ---
+
+        const newSummaryData = {
           total_tokens: parseInt(summaryRaw.total_tokens, 10) || 0,
-          skills: summaryRaw.skills || []
+          skills: processedSkills // Use the transformed array here
         };
-        setSummaryData(summaryData);
+        setSummaryData(newSummaryData);
       } catch (err) {
         console.error("Error fetching chronicle or summary data:", err);
       }
@@ -62,10 +101,12 @@ const UserPortfolio = ({ userId: propUserId }) => {
         <Typography variant="h4" color="primary">User Portfolio</Typography>
       </div>
 
-      <TokenAndSkillSummary
-        tokens={summaryData.total_tokens}
-        skills={summaryData.skills}
-      />
+      <div className="portfolio-section-summary">
+        <TokenAndSkillSummary
+          tokens={summaryData.total_tokens}
+          skills={summaryData.skills}
+        />
+      </div>
 
       <div className="portfolio-filters">
         {/* <FilterPanel filters={filters} setFilters={setFilters} /> */}
@@ -79,7 +120,9 @@ const UserPortfolio = ({ userId: propUserId }) => {
         </div>
       </div>
 
-      <ChronicleTimeline stories={chronicleData} />
+      <div className="portfolio-section-timeline">
+        <ChronicleTimeline stories={chronicleData} />
+      </div>
     </div>
   );
 };

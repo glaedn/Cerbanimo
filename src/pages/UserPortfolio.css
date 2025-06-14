@@ -26,19 +26,19 @@
   }
   
   /* Timeline section */
-  .timeline-container {
+  /* .timeline-container {
     margin-top: 2rem;
-    border-left: 3px solid #8338ec;
-    padding-left: 1rem;
-  }
+    border-left: 3px solid #8338ec; /* May conflict or be redundant with panel border */
+    /* padding-left: 1rem;
+  } */
   
   .timeline-entry {
     margin-bottom: 2rem;
     padding: 1rem;
-    border: 1px solid #3a3a70;
+    border: 1px solid #3a3a70; /* This is for individual entries, might be fine */
     border-radius: 12px;
-    background-color: #14162b;
-    box-shadow: 0 0 8px rgba(131, 56, 236, 0.6);
+    background-color: #14162b; /* This is for individual entries, might be fine */
+    box-shadow: 0 0 8px rgba(131, 56, 236, 0.6); /* This is for individual entries, might be fine */
     transition: transform 0.2s ease;
   }
   
@@ -47,7 +47,7 @@
     box-shadow: 0 0 12px rgba(255, 0, 255, 0.7);
   }
   
-  /* Filter module */
+  /* Filter module - This module is not targeted for HUD styling in this task */
   .filters-container {
     display: flex;
     flex-wrap: wrap;
@@ -64,19 +64,47 @@
   }
   
   /* Token and skill summary */
-  .summary-module {
+  /* .summary-module {
     background-color: #14162b;
     border: 1px solid #2c2c5d;
     padding: 1rem;
     margin-bottom: 2rem;
     border-radius: 10px;
     box-shadow: 0 0 8px rgba(0, 255, 163, 0.4);
-  }
+  } */
   
-  .summary-module h3 {
+  /* .summary-module h3 {
     color: #00ff9f;
     margin-bottom: 1rem;
-  }
+  } */
+
+/* NEW HUD Panel Styles for Portfolio Sections */
+.portfolio-section-summary,
+.story-stats,
+.portfolio-section-timeline {
+  background-color: #1C1C1E; /* theme.colors.backgroundPaper */
+  border: 1px solid #00F3FF; /* theme.colors.primary */
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.47); /* theme.colors.primary with ~0.5 alpha */
+  border-radius: 8px; /* theme.borders.borderRadiusMd */
+  padding: 1.5rem; /* theme.spacing.md */
+  margin-bottom: 1.5rem; /* theme.spacing.md */
+}
+
+/* Specific adjustment for summary if its Paper component's padding is preferred */
+/* For now, the above rule applies. If TokenAndSkillSummary's internal padding (1rem)
+   is sufficient and the additional 1.5rem from portfolio-section-summary is too much,
+   we might reduce padding for .portfolio-section-summary or set it to 0
+   if the border and shadow are the only goals.
+   Example:
+   .portfolio-section-summary { padding: 0; }
+   However, the TokenAndSkillSummary's Paper component already has a background color.
+   The new background #1C1C1E on .portfolio-section-summary will contain the Paper component.
+   This is generally fine. The padding of 1.5rem will be outside the TokenAndSkillSummary's Paper.
+*/
+
+/* .story-stats is part of portfolio-filters, so it will get the HUD panel style.
+   The .portfolio-filters div itself is not styled as a HUD panel in this iteration.
+*/
   
   /* Mentor badge and stats */
   .mentor-overlay {
