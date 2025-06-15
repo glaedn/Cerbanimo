@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import pg from 'pg';
-import { uploadFile, generatePrivateDownloadUrl } from '../../src/utils/b2.js';
+import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 
 const { Pool } = pg;
