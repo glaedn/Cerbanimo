@@ -21,7 +21,7 @@ const BadgeCreation = () => {
       const fetchUserProfile = async () => {
         try {
           const token = await getAccessTokenSilently();
-          const response = await axios.get("http://localhost:4000/profile/", {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -61,7 +61,7 @@ const BadgeCreation = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      await axios.post("http://localhost:4000/rewards/badges/create", formData, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/rewards/badges/create`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

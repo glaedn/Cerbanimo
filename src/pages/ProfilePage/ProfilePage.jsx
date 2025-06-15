@@ -57,6 +57,11 @@ const ProfilePage = () => {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceError, setResourceError] = useState(null);
 
+  // State for Badges
+  const [userBadges, setUserBadges] = useState([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
+  const [badgesError, setBadgesError] = useState(null);
+
   const colorPalette = [
       blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
       blue[400], red[400], green[400], orange[400], purple[400], teal[400], pink[400], indigo[400],
@@ -257,6 +262,35 @@ const ProfilePage = () => {
       fetchUserResources();
     }
   }, [profileData.id, fetchUserResources]);
+
+  // --- Badge Management Functions ---
+  const fetchUserBadges = useCallback(async () => {
+    if (!profileData.id) return;
+    setBadgesLoading(true);
+    setBadgesError(null);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: `${import.meta.env.VITE_BACKEND_URL}/`, // Make sure audience is just the backend URL
+        scope: 'openid profile email read:profile', // Adjust scope as needed for badges
+      });
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserBadges(response.data.badges || []);
+    } catch (err) {
+      console.error('Error fetching user badges:', err);
+      setBadgesError('Failed to fetch badges.');
+    } finally {
+      setBadgesLoading(false);
+    }
+  }, [profileData.id, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (profileData.id) {
+      fetchUserBadges();
+    }
+  }, [profileData.id, fetchUserBadges]);
+  // --- End Badge Management Functions ---
 
   const handleOpenResourceModal = (resource = null) => {
     setEditingResource(resource);
@@ -926,6 +960,77 @@ const ProfilePage = () => {
               </ListItem>
             ))}
           </List>
+        )}
+      </Box>
+
+      {/* Badges Panel */}
+      <Box 
+        className="profile-badges-container" 
+        sx={{ 
+          ...panelStyle,
+          borderColor: theme.colors.accentPurple, // Example: use a different color for this panel
+          boxShadow: theme.effects.glowSubtle(theme.colors.accentPurple),
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          gutterBottom 
+          sx={{
+            color: theme.colors.primary, 
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%', 
+            textAlign: 'center',
+          }}
+        >
+          My Badges
+        </Typography>
+        {badgesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {badgesError && <Typography color="error" sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error}}>{badgesError}</Typography>}
+        {!badgesLoading && !badgesError && userBadges.length === 0 && (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
+            No badges earned yet. Keep engaging and completing tasks to earn them!
+          </Typography>
+        )}
+        {!badgesLoading && !badgesError && userBadges.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.md, width: '100%' }}>
+            {userBadges.map((badge) => (
+              <Box 
+                key={badge.id || badge.name} // Use badge.id if available, otherwise badge.name
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  textAlign: 'center',
+                  padding: theme.spacing.sm,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)', 
+                  borderRadius: theme.borders.borderRadiusMd,
+                  border: `1px solid ${theme.colors.accentPurple}`,
+                  minWidth: '100px', // Ensure items have a minimum width
+                }}
+              >
+                <Avatar
+                  src={badge.icon || '/default-badge.png'}
+                  alt={badge.name}
+                  sx={{ 
+                    width: 60, 
+                    height: 60, 
+                    mb: 1, 
+                    border: `2px solid ${theme.colors.accentPurple}`,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.accentPurple),
+                  }}
+                  imgProps={{
+                    onError: (e) => {
+                      e.target.onerror = null; 
+                      e.target.src = '/default-badge.png';
+                    }
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyBase }}>
+                  {badge.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         )}
       </Box>
 
