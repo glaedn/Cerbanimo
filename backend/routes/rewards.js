@@ -2,7 +2,7 @@ import express from 'express';
 import pg from 'pg';
 import multer from 'multer';
 import { checkAndAwardBadges } from '../services/badgeService.js';
-import { uploadFile, generatePrivateDownloadUrl } from '../../src/utils/b2.js';
+import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 
 const { Pool } = pg;
