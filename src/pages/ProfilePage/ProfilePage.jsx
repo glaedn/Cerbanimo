@@ -415,7 +415,7 @@ const ProfilePage = () => {
         >
           <Avatar
             alt="Profile Picture"
-            src={newProfilePicture || (profileData.profile_picture ? `${import.meta.env.VITE_BACKEND_URL}${profileData.profile_picture}` : '/default-avatar.png')}
+            src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
             sx={{ 
               width: 120, 
               height: 120, 

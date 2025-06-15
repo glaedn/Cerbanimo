@@ -47,7 +47,7 @@ export async function generatePrivateDownloadUrl(fileName, validDurationSeconds 
     validDurationInSeconds: validDurationSeconds,
   });
 
-  const baseUrl = `https://f004.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
+  const baseUrl = `${b2.downloadUrl}/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
   const signedUrl = `${baseUrl}?Authorization=${encodeURIComponent(data.authorizationToken)}`;
 
   return signedUrl;
