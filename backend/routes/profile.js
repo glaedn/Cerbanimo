@@ -1,6 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import pg from 'pg';
+import { uploadFile, generatePrivateDownloadUrl } from '../../src/utils/b2.js';
+import fs from 'fs';
 
 const { Pool } = pg;
 
@@ -38,6 +40,15 @@ router.get("/public/:userId",
       }
       const profile = result.rows[0];
       profile.contact_links = profile.contact_links || [];
+      if (profile.profile_picture) {
+        try {
+          const signedUrl = await generatePrivateDownloadUrl(profile.profile_picture);
+          profile.profile_picture = signedUrl;
+        } catch (err) {
+          console.error('Error generating signed URL for public profile picture:', err);
+          profile.profile_picture = null; // Fallback
+        }
+      }
       res.json(profile); // Send public profile data
     } catch (error) {
       console.error("Error fetching public profile:", error);
@@ -132,6 +143,17 @@ router.get('/', async (req, res) => {
     const skillsPool = skillsResult.rows.map((row) => row.name);
     const interestsPool = interestsResult.rows.map((row) => row.name);
 
+    if (profile.profile_picture) {
+      try {
+        const signedUrl = await generatePrivateDownloadUrl(profile.profile_picture);
+        profile.profile_picture = signedUrl;
+      } catch (err) {
+        console.error('Error generating signed URL for profile picture:', err);
+        // Decide how to handle: send profile with null/original filename, or error out?
+        // For now, let's send null to prevent broken image links if URL generation fails.
+        profile.profile_picture = null; 
+      }
+    }
     res.status(200).json(profile);
   } catch (err) {
     console.error('Error fetching profile:', err);
@@ -143,7 +165,20 @@ router.get('/', async (req, res) => {
 router.post('/', upload.single('profilePicture'), async (req, res) => {
   let { username, skills, interests, user_id, contact_links } = req.body;
   const auth0Id = req.auth.payload.sub;
-  const profilePicture = req.file ? `/uploads/${req.file.filename}` : null;
+  // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
+  let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
+  if (req.file) {
+    try {
+      await uploadFile(req.file.path, req.file.filename, req.file.mimetype); // Ensure B2 upload is successful
+      valueForProfilePictureColumn = req.file.filename; // Store only the filename
+      fs.unlinkSync(req.file.path); // Delete local temp file
+    } catch (b2UploadError) {
+      console.error('B2 Upload Error during profile update:', b2UploadError);
+      // Decide error handling: either throw or make valueForProfilePictureColumn null
+      // For now, let error propagate to be caught by main try-catch, which means profile isn't updated with new pic name
+      throw b2UploadError;
+    }
+  }
 
   try {
     // Get user ID if not provided in request
@@ -195,7 +230,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       username,
       JSON.parse(skills),
       JSON.parse(interests),
-      profilePicture,
+      valueForProfilePictureColumn, // This is the key change
       contact_links, // Already an array or parsed/defaulted to one
       userId,
     ];

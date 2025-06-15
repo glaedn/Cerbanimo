@@ -29,6 +29,7 @@
     "@mui/x-date-pickers": "^8.3.1",
     "@reduxjs/toolkit": "^2.5.0",
     "axios": "^1.7.9",
+    "backblaze-b2": "^1.7.1",
     "cra-template": "1.2.0",
     "d3": "^7.9.0",
     "dayjs": "^1.11.13",
