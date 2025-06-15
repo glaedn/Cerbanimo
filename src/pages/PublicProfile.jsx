@@ -145,7 +145,7 @@ const PublicProfile = () => {
   return (
     <div className="public-profile-container">
       <Avatar 
-        src={profile.profile_picture ? `${import.meta.env.VITE_BACKEND_URL}${profile.profile_picture}` : "/default-avatar.png"}
+        src={profile.profile_picture ? profile.profile_picture : "/default-avatar.png"}
         className="public-profile-avatar"
         sx={{ width: 100, height: 100, marginBottom: 2 }}
       />
@@ -196,7 +196,7 @@ const PublicProfile = () => {
           badges.map((badge, index) => (
             <div key={`badge-${badge.id || index}`} className="badge-item">
               <Avatar 
-                src={badge.icon ? `${import.meta.env.VITE_BACKEND_URL}${badge.icon}` : "/default-badge.png"}
+                src={badge.icon ? badge.icon : "/default-badge.png"}
                 alt={badge.name}
                 className="badge-avatar"
                 sx={{ width: 50, height: 50 }}
