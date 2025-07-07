@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import useSkillData from '../../../hooks/useSkillData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
@@ -46,13 +46,67 @@ const SkillGalaxyPanel = () => {
   const [forceDataUpdate, setForceDataUpdate] = useState(false); // To trigger data reprocessing
   const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [originalPanelStyle, setOriginalPanelStyle] = useState(null);
   const panelRef = useRef(null);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
-      e.stopPropagation();
+      e.stopPropagation(); // Prevent header click when button is clicked
     }
-    setIsMinimized(!isMinimized);
+    setIsMinimized(prevMinimized => {
+      const newMinimized = !prevMinimized;
+      if (newMinimized && isMaximized) {
+        // If maximizing and then minimizing, just minimize within the maximized view
+        // The panel will be a small bar at the top of the screen.
+        // No need to change isMaximized state here.
+      } else if (!newMinimized && isMaximized) {
+        // If un-minimizing while it was maximized, stay maximized.
+      }
+      return newMinimized;
+    });
+  };
+
+  const toggleMaximize = (e) => {
+    if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
+      e.stopPropagation(); // Prevent header click when button is clicked
+    }
+    setIsMaximized(prevMaximized => {
+      const newMaximized = !prevMaximized;
+      if (newMaximized) {
+        // Only capture/update originalPanelStyle if the panel is not currently minimized.
+        // This ensures that if we maximize from a minimized state, we don't store the minimized dimensions as "original".
+        // If originalPanelStyle is already set from a previous "normal" state maximization, we keep it.
+        if (!isMinimized) {
+          if (panelRef.current) {
+            const rect = panelRef.current.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(panelRef.current);
+            setOriginalPanelStyle({
+              width: panelRef.current.style.width || computedStyle.width,
+              height: panelRef.current.style.height || computedStyle.height,
+              top: panelRef.current.style.top || rect.top + 'px',
+              left: panelRef.current.style.left || rect.left + 'px',
+              position: panelRef.current.style.position || computedStyle.position,
+              transform: panelRef.current.style.transform || computedStyle.transform,
+              maxWidth: panelRef.current.style.maxWidth || computedStyle.maxWidth,
+              maxHeight: panelRef.current.style.maxHeight || computedStyle.maxHeight,
+              zIndex: panelRef.current.style.zIndex || computedStyle.zIndex,
+            });
+          }
+        }
+        // Always ensure panel is not minimized when maximizing
+        setIsMinimized(false);
+      } else {
+        // When restoring from maximized state.
+        // The originalPanelStyle (if set) will be applied via the style prop on the main div.
+        // We don't necessarily need to clear originalPanelStyle here,
+        // as it might be useful if the user maximizes again without the panel moving.
+        // However, if the panel *could* be moved by the user in its normal state,
+        // then originalPanelStyle should be cleared upon restoration to ensure fresh capture.
+        // For now, let's assume it's not user-movable in normal state.
+      }
+      return newMaximized;
+    });
   };
 
   const getStarColor = React.useCallback((level) => {
@@ -599,7 +653,7 @@ const SkillGalaxyPanel = () => {
     };
     // Removed setD3Nodes from deps. Added fixedStarPositionsRef (though as a ref, it doesn't trigger updates itself).
     // Key dependencies are d3Nodes, d3Links, and simulation. activeStar removed.
-  }, [d3Nodes, d3Links, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor, fixedStarPositionsRef, setForceDataUpdate]);
+  }, [d3Nodes, d3Links, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor, fixedStarPositionsRef, setForceDataUpdate, isMaximized]); // Added isMaximized
 
   if (skillsLoading) {
     return (
@@ -630,21 +684,54 @@ const SkillGalaxyPanel = () => {
   }
 
   return (
-    <div 
-    ref={panelRef}
-    className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+    <div
+      ref={panelRef}
+      className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''} ${isMaximized ? 'maximized' : ''}`}
+      style={isMaximized ? {} : (originalPanelStyle && !isMaximized ? originalPanelStyle : {})} // Apply original styles when restored
+    >
+      <div
+        className="hud-panel-header"
+        onClick={(e) => {
+          // Allow header click to toggle minimize only if not clicking on buttons
+          if (e.target === e.currentTarget) {
+            toggleMinimize(e);
+          }
+        }}
+        title={isMinimized ? "Expand Panel" : "Minimize Panel"}
+      >
         <h4>Skill Constellations</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}>
-          {isMinimized ? '+' : '-'}
-        </button>
+        <div className="panel-controls">
+          <button
+            onClick={toggleMinimize}
+            className="minimize-btn"
+            aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}
+            title={isMinimized ? "Expand" : "Minimize"}
+          >
+            {isMinimized ? '+' : '-'}
+          </button>
+          <button
+            onClick={toggleMaximize}
+            className="maximize-btn" // Will add styles for this
+            aria-label={isMaximized ? "Restore Skill Constellations" : "Maximize Skill Constellations"}
+            title={isMaximized ? "Restore" : "Maximize"}
+          >
+            {isMaximized ? '\u2922' : '\u26F6'} {/* Unicode for restore down and maximize */}
+          </button>
+        </div>
       </div>
-      <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
-        <svg 
-          ref={svgRef} 
-          className="skill-galaxy-svg" 
-          style={{ 
-            width: '100%', 
+      <div
+        className="skill-galaxy-content" // Added a wrapper for content
+        style={{
+          width: '100%',
+          height: isMaximized ? 'calc(100% - 48px)' : '500px', // Adjust height when maximized (header height ~48px)
+          minHeight: isMinimized ? '0' : (isMaximized ? 'calc(100% - 48px)' : '400px')
+        }}
+      >
+        <svg
+          ref={svgRef}
+          className="skill-galaxy-svg"
+          style={{
+            width: '100%',
             height: '100%',
             backgroundColor: theme.colors.background || 'transparent',
             border: '1px solid ' + (theme.colors.border || '#666')
@@ -654,10 +741,10 @@ const SkillGalaxyPanel = () => {
         </svg>
       </div>
       {selectedSkillForPopup && (
-        <SkillDetailPopup 
-          skillData={selectedSkillForPopup} 
+        <SkillDetailPopup
+          skillData={selectedSkillForPopup}
           onClose={() => setSelectedSkillForPopup(null)}
-          parentRef ={panelRef} 
+          parentRef={panelRef} // This might need adjustment if the panel is fixed position
         />
       )}
     </div>

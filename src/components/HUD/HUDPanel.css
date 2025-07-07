@@ -154,13 +154,20 @@
   font-size: 1.1em;
   text-shadow: 0 0 3px #00F3FF;
   flex-grow: 1; /* Added */
+  text-align: left; /* Ensure title stays left */
+}
+
+.hud-panel-header .panel-controls {
+  display: flex;
+  align-items: center;
 }
 
 .targeting-scanner {
   max-width: 300px;
 }
 
-.hud-panel-header .minimize-btn {
+.hud-panel-header .minimize-btn,
+.hud-panel-header .maximize-btn {
   background: none;
   border: 1px solid transparent; /* Default transparent border */
   color: #00F3FF; /* theme.colors.primary */
@@ -168,15 +175,17 @@
   font-weight: bold;
   cursor: pointer;
   padding: 0px 5px; /* Minimal padding around +/- icon */
-  margin-left: 10px;
-  line-height: 1; /* Ensure '+' and '-' align well */
+  margin-left: 8px; /* Spacing between buttons */
+  line-height: 1; /* Ensure icons align well */
   box-shadow: none; /* Override general button shadow */
   border-radius: 4px; /* theme.borders.borderRadiusSm */
   /* Transitions are inherited from .hud-panel button */
 }
 
 .hud-panel-header .minimize-btn:hover,
-.hud-panel-header .minimize-btn:focus {
+.hud-panel-header .minimize-btn:focus,
+.hud-panel-header .maximize-btn:hover,
+.hud-panel-header .maximize-btn:focus {
   color: #FF5CA2; /* theme.colors.secondary */
   background-color: rgba(0, 243, 255, 0.1); /* Faint primary glow */
   border-color: #FF5CA2; /* Show border on hover/focus */
