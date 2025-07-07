@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom'; // Import ReactDOM for createPortal
 import { useAuth0 } from '@auth0/auth0-react';
 import useSkillData from '../../../hooks/useSkillData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
@@ -48,7 +49,21 @@ const SkillGalaxyPanel = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [originalPanelStyle, setOriginalPanelStyle] = useState(null);
-  const panelRef = useRef(null);
+  // const [calculatedMaximizedStyle, setCalculatedMaximizedStyle] = useState({}); // No longer needed
+  const panelRef = useRef(null); // This ref will apply to the div whether in portal or not
+
+  // useEffect for calculatedMaximizedStyle is no longer needed.
+  // useEffect(() => {
+  //   if (isMaximized && panelRef.current && panelRef.current.parentElement) {
+  //     const parentRect = panelRef.current.parentElement.getBoundingClientRect();
+  //     setCalculatedMaximizedStyle({
+  //       top: `${-parentRect.top}px`,
+  //       left: `${-parentRect.left}px`,
+  //     });
+  //   } else {
+  //     setCalculatedMaximizedStyle({});
+  //   }
+  // }, [isMaximized]);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -683,16 +698,19 @@ const SkillGalaxyPanel = () => {
     );
   }
 
-  return (
+  const panelJsx = (
     <div
-      ref={panelRef}
+      ref={panelRef} // The ref is attached here. When portaled, it refers to the element in the portal.
       className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''} ${isMaximized ? 'maximized' : ''}`}
-      style={isMaximized ? {} : (originalPanelStyle && !isMaximized ? originalPanelStyle : {})} // Apply original styles when restored
+      style={
+        isMaximized
+          ? {} // When maximized via portal, specific top/left are not needed here; CSS handles it.
+          : (originalPanelStyle && !isMaximized ? originalPanelStyle : {})
+      }
     >
       <div
         className="hud-panel-header"
         onClick={(e) => {
-          // Allow header click to toggle minimize only if not clicking on buttons
           if (e.target === e.currentTarget) {
             toggleMinimize(e);
           }
@@ -711,19 +729,19 @@ const SkillGalaxyPanel = () => {
           </button>
           <button
             onClick={toggleMaximize}
-            className="maximize-btn" // Will add styles for this
+            className="maximize-btn"
             aria-label={isMaximized ? "Restore Skill Constellations" : "Maximize Skill Constellations"}
             title={isMaximized ? "Restore" : "Maximize"}
           >
-            {isMaximized ? '\u2922' : '\u26F6'} {/* Unicode for restore down and maximize */}
+            {isMaximized ? '\u2922' : '\u26F6'}
           </button>
         </div>
       </div>
       <div
-        className="skill-galaxy-content" // Added a wrapper for content
+        className="skill-galaxy-content"
         style={{
           width: '100%',
-          height: isMaximized ? 'calc(100% - 48px)' : '500px', // Adjust height when maximized (header height ~48px)
+          height: isMaximized ? 'calc(100% - 48px)' : '500px',
           minHeight: isMinimized ? '0' : (isMaximized ? 'calc(100% - 48px)' : '400px')
         }}
       >
@@ -744,11 +762,20 @@ const SkillGalaxyPanel = () => {
         <SkillDetailPopup
           skillData={selectedSkillForPopup}
           onClose={() => setSelectedSkillForPopup(null)}
-          parentRef={panelRef} // This might need adjustment if the panel is fixed position
+          parentRef={panelRef}
         />
       )}
     </div>
   );
+
+  if (isMaximized) {
+    return ReactDOM.createPortal(
+      panelJsx,
+      document.body // Render directly into body, or a dedicated portal root
+    );
+  }
+
+  return panelJsx; // Render normally if not maximized
 };
 
 export default SkillGalaxyPanel;
