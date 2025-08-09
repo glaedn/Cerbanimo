@@ -2015,7 +2015,7 @@ const approveByPM = async (req, res, io) => {
       return res.status(404).json({ error: 'Task not found' });
     }
     const task = taskResult.rows[0];
-    if (task.status !== 'submitted' || task.approvals?.length < 2) {
+    if (task.status !== 'submitted') {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
     }
