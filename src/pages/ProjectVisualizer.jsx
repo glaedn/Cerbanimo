@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
+import axios from "axios";
 import TaskEditor from "./TaskEditor";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import "./ProjectVisualizer.css";
@@ -247,10 +248,12 @@ const ProjectVisualizer = () => {
   
   // Modify your fetchTasks call to preserve the category
 const refreshTasks = async () => {
+  console.log("Refreshing tasks...");
   const currentCategory = activeCategory; // Save before refresh
   const currentSkillId = activeSkillId;
   
-  await fetchTasks();
+  const updatedTasks = await fetchTasks();
+  console.log("Refreshed tasks data:", updatedTasks);
   
   // Restore the active category after refresh
   if (currentCategory) {
@@ -384,9 +387,20 @@ useEffect(() => {
     setShowTaskPopup(true); // Show the TaskEditor modal
   };
 
-  const handleViewTask = (task) => {
-    setTaskForm(task); // Fill in form with task values
-    setShowTaskPopup(true); // Show the TaskEditor modal
+  const handleViewTask = async (task) => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTaskForm(response.data);
+      setShowTaskPopup(true);
+    } catch (error) {
+      console.error("Error fetching full task details:", error);
+      setTaskForm(task);
+      setShowTaskPopup(true);
+    }
   };
 
   const handleAddTask = (dependencyId = null) => {
@@ -1091,23 +1105,44 @@ links.forEach(link => {
 
 
     useEffect(() => {
-    if (taskId && !popupLaunched) {
-      // Find the task in the tasks array
-      const task = tasks.find(t => t.id === parseInt(taskId, 10));
-      if (task) {
-        // Set the current task and skill
-        setTaskForm(task);
-        setPopupLaunched(true);
-        setActiveSkillId(task.skill_id);
-        setShowTaskPopup(true);
-        // Find and set the active category (skill name)
-        const skill = skills.find(s => s.id === task.skill_id);
-        if (skill) {
-          setActiveCategory(skill.name);
+    const fetchFullTask = async () => {
+      if (taskId && !popupLaunched) {
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const task = response.data;
+          if (task) {
+            setTaskForm(task);
+            setPopupLaunched(true);
+            setActiveSkillId(task.skill_id);
+            setShowTaskPopup(true);
+            const skill = skills.find(s => s.id === task.skill_id);
+            if (skill) {
+              setActiveCategory(skill.name);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching full task details for deep link:", error);
+          // Fallback to tasks array
+          const task = tasks.find(t => t.id === parseInt(taskId, 10));
+          if (task) {
+            setTaskForm(task);
+            setPopupLaunched(true);
+            setActiveSkillId(task.skill_id);
+            setShowTaskPopup(true);
+            const skill = skills.find(s => s.id === task.skill_id);
+            if (skill) {
+              setActiveCategory(skill.name);
+            }
+          }
         }
       }
-    }
-  }, [taskId, tasks, skills]);
+    };
+    fetchFullTask();
+  }, [taskId, tasks, skills, popupLaunched, getAccessTokenSilently]);
 
   // Add these debug logs right before the TaskEditor component in the return statement
 

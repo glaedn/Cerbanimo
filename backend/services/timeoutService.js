@@ -8,7 +8,7 @@ const checkTimeouts = async (io) => {
         // Handle peer review timeouts
         const peerReviewTimeoutQuery = `
             SELECT id, project_id FROM tasks
-            WHERE status = 'submitted' AND peer_review_deadline < NOW()
+            WHERE status = 'submitted' AND array_length(approvals, 1) IS NULL AND peer_review_deadline < NOW()
         `;
         const peerReviewTimedOutTasksResult = await client.query(peerReviewTimeoutQuery);
         const peerReviewTimedOutTasks = peerReviewTimedOutTasksResult.rows;
@@ -19,8 +19,7 @@ const checkTimeouts = async (io) => {
                 console.log(`Peer review for task ${task.id} has timed out. Moving to PM approval.`);
                 await client.query(
                     `UPDATE tasks
-                     SET status = 'awaiting_pm_approval',
-                         pm_approval_deadline = NOW() + INTERVAL '18 hours'
+                     SET pm_approval_deadline = NOW() + INTERVAL '18 hours'
                      WHERE id = $1`,
                     [task.id]
                 );
@@ -59,7 +58,7 @@ const checkTimeouts = async (io) => {
         // Handle PM approval timeouts
         const pmApprovalTimeoutQuery = `
             SELECT id FROM tasks
-            WHERE status = 'awaiting_pm_approval' AND pm_approval_deadline < NOW()
+            WHERE status = 'submitted' AND array_length(approvals, 1) >= 2 AND pm_approval_deadline < NOW()
         `;
         const pmApprovalTimedOutTasksResult = await client.query(pmApprovalTimeoutQuery);
         const pmApprovalTimedOutTasks = pmApprovalTimedOutTasksResult.rows;

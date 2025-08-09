@@ -1807,11 +1807,10 @@ const processReview = async (taskId, userId, action, io) => {
           return payoutResult;
         }
 
-        // Update task status and set PM approval deadline
+        // Set PM approval deadline
         await client.query(
           `UPDATE tasks
-           SET status = 'awaiting_pm_approval',
-               pm_approval_deadline = NOW() + INTERVAL '18 hours'
+           SET pm_approval_deadline = NOW() + INTERVAL '18 hours'
            WHERE id = $1`,
           [taskId]
         );
@@ -2010,13 +2009,13 @@ const approveByPM = async (req, res, io) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const taskResult = await client.query(`SELECT status, project_id FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
+    const taskResult = await client.query(`SELECT status, project_id, approvals FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
     if (taskResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Task not found' });
     }
     const task = taskResult.rows[0];
-    if (task.status !== 'awaiting_pm_approval') {
+    if (task.status !== 'submitted' || task.approvals?.length < 2) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
     }
@@ -2063,13 +2062,13 @@ const rejectByPM = async (req, res, io) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const taskResult = await client.query(`SELECT status, project_id, assigned_user_ids FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
+        const taskResult = await client.query(`SELECT status, project_id, assigned_user_ids, approvals FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
         if (taskResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Task not found' });
         }
         const task = taskResult.rows[0];
-        if (task.status !== 'awaiting_pm_approval') {
+        if (task.status !== 'submitted' || task.approvals?.length < 2) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
         }
@@ -2134,7 +2133,7 @@ const getPmApprovalTasks = async (userId) => {
             SELECT t.*, p.name as project_name
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
-            WHERE p.creator_id = $1 AND t.status = 'awaiting_pm_approval'
+            WHERE p.creator_id = $1 AND t.status = 'submitted' AND array_length(t.approvals, 1) >= 2
         `;
         const result = await client.query(query, [userId]);
         return result.rows;

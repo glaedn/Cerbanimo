@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, List, ListItem, ListItemText, Link, Paper, Button } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, Link, Paper } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 import './TaskBrowser.css';
 
@@ -10,37 +10,8 @@ const TaskBrowser = () => {
   const [tasks, setTasks] = useState([]);
   const [acceptedTasks, setAcceptedTasks] = useState([]);
   const [approvalTasks, setApprovalTasks] = useState([]);
-  const [pmApprovalTasks, setPmApprovalTasks] = useState([]);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
-
-  const handlePmApprove = async (taskId) => {
-    try {
-      const token = await getAccessTokenSilently({
-        audience: import.meta.env.VITE_BACKEND_URL,
-      });
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/pm-approve`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPmApprovalTasks(pmApprovalTasks.filter(task => task.id !== taskId));
-    } catch (err) {
-      console.error('Error approving task:', err);
-    }
-  };
-
-  const handlePmReject = async (taskId) => {
-    try {
-      const token = await getAccessTokenSilently({
-        audience: import.meta.env.VITE_BACKEND_URL,
-      });
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/pm-reject`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPmApprovalTasks(pmApprovalTasks.filter(task => task.id !== taskId));
-    } catch (err) {
-      console.error('Error rejecting task:', err);
-    }
-  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -139,23 +110,9 @@ const TaskBrowser = () => {
         }
       };
 
-      const fetchPmApprovalTasks = async () => {
-        if (!userId) return;
-        try {
-          const token = await getAccessTokenSilently();
-          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/pm-approval/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setPmApprovalTasks(response.data);
-        } catch (err) {
-          setError(`Failed to fetch PM approval tasks: ${err.response?.data?.message || err.message}`);
-        }
-      };
-
       fetchProfileAndTasks();
       fetchAcceptedTasks();
       fetchApprovalTasks();
-      fetchPmApprovalTasks();
     }
   }, [isAuthenticated, getAccessTokenSilently, user, userId]);
 
@@ -204,8 +161,8 @@ const TaskBrowser = () => {
                         <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
                         <br />
                         <Typography component="span" variant="body2" className="task-status">
-                          {task.status === 'submitted' ? `✅ Submitted for Peer Review` :
-                           task.status === 'awaiting_pm_approval' ? `⏳ Awaiting PM Approval` :
+                          {task.status === 'submitted' && task.approvals?.length >= 2 ? `⏳ Awaiting PM Approval` :
+                           task.status === 'submitted' ? `✅ Submitted for Peer Review` :
                            `⌛ In Progress`}
                         </Typography>
                         <br />
@@ -244,33 +201,6 @@ const TaskBrowser = () => {
                 </ListItem>
               ))
             ) : <Typography className="no-tasks">No tasks to review.</Typography>}
-          </List>
-        </Paper>
-      </Box>
-
-      <Box flex={1} className="task-browser-container">
-        <Typography variant="h4" gutterBottom className="task-title">PM Approval Tasks</Typography>
-        <Paper elevation={5} className="task-list">
-          <List>
-            {pmApprovalTasks.length > 0 ? (
-              pmApprovalTasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
-                  <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
-                        <br />
-                        <Typography component="span" variant="body2" className="task-status">⏳ Awaiting your approval</Typography>
-                        <br />
-                        <Button variant="contained" color="primary" size="small" onClick={() => handlePmApprove(task.id)}>Approve</Button>
-                        <Button variant="contained" color="secondary" size="small" onClick={() => handlePmReject(task.id)} style={{ marginLeft: '10px' }}>Reject</Button>
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
-            ) : <Typography className="no-tasks">No tasks awaiting your approval.</Typography>}
           </List>
         </Paper>
       </Box>
