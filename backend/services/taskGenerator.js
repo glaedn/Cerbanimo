@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Shared JSON parsing helper
-const parseLLMJsonResponse = (text) => {
+export const parseLLMJsonResponse = (text) => {
   // Look for the start of the JSON object or array
   let jsonStart = text.indexOf('{');
   const arrayStart = text.indexOf('[');

@@ -22,6 +22,8 @@ const createTaskTable = async () => {
       reviewer_ids INTEGER[] DEFAULT '{}', -- IDs of users assigned to review the task
       approvals INTEGER[] DEFAULT '{}', -- IDs of users who approved the task completion
       rejections INTEGER[] DEFAULT '{}', -- IDs of users who rejected the task completion
+      peer_review_deadline TIMESTAMP WITH TIME ZONE,
+      pm_approval_deadline TIMESTAMP WITH TIME ZONE,
       task_type VARCHAR(50) DEFAULT 'project_task', -- e.g., project_task, resource_management, community_engagement
       related_resource_id INTEGER REFERENCES resources(id) ON DELETE SET NULL, -- Link to a specific resource if task is resource-related
       related_need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL, -- Link to a specific need if task is need-related

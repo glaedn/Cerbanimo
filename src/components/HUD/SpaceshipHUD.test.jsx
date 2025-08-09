@@ -7,7 +7,7 @@ jest.mock('./panels/CommandDeck', () => () => <div data-testid="command-deck-pan
 jest.mock('./panels/MissionConsole', () => () => <div data-testid="mission-console-panel">MissionConsole</div>);
 jest.mock('./panels/TargetingScanner', () => () => <div data-testid="targeting-scanner-panel">TargetingScanner</div>);
 jest.mock('./panels/CommsLog', () => () => <div data-testid="comms-log-panel">CommsLog</div>);
-jest.mock('./panels/SkillGalaxy', () => () => <div data-testid="skill-galaxy-panel">SkillGalaxy</div>);
+jest.mock('./panels/SkillGalaxyPanel', () => () => <div data-testid="skill-galaxy-panel">SkillGalaxy</div>);
 jest.mock('./panels/StatusBar', () => () => <div data-testid="status-bar">StatusBar</div>);
 
 // Mock HUDSettingsPanel (to ensure it's not rendered)
@@ -139,8 +139,3 @@ describe('SpaceshipHUD', () => {
 // The existing "renders all five primary panels" test effectively confirms the HUD container is rendering its contents.
 // If a specific test for the container div itself is needed, a test-id is the best way.
 // I will write it assuming no test-id on the root for now.
-// The class check on panel wrappers is a good structural test.Okay, I will proceed with creating the test files as outlined.
-
-First, I will provide the content for `SpaceshipHUD.test.jsx`. I'll make a slight adjustment to the first test to be more robust without requiring a `data-testid` on the root element of `SpaceshipHUD.jsx`, by checking for the presence of the map viewport which is a key structural element.
-
-**1. `SpaceshipHUD.test.jsx`**

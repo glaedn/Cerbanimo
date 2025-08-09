@@ -1041,15 +1041,16 @@ const submitTask = async (req, res, io) => {
     // Step 1: Update the task and get project/community info in a single query
     const result = await client.query(
       `UPDATE tasks t
-       SET submitted = TRUE, 
-       submitted_at = NOW(), 
+       SET submitted = TRUE,
+       submitted_at = NOW(),
        status = 'submitted',
+       peer_review_deadline = NOW() + INTERVAL '6 hours',
        proof_of_work_links = $2,
        reflection = $3,
        submitted_by = $4
        FROM projects p
        WHERE t.id = $1 AND p.id = t.project_id
-       RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id, 
+       RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id,
                  p.community_id, t.assigned_user_ids, t.skill_id, t.submitted_by`,
       [taskId, proofOfWorkLinks || [], reflection || null, platformUserId]
     );
@@ -1129,8 +1130,8 @@ const submitTask = async (req, res, io) => {
     ]);
 
     // Step 2: Notify the project creator if we have an owner
-    if (task.project_owner_id && reviewerIds.length === 0) {
-      const notificationMessage = `A task was submitted for approval in your project "${
+    if (task.project_owner_id) {
+      const notificationMessage = `A task has been submitted for peer review in your project "${
         task.project_name || "Untitled"
       }".`;
       const notificationDetails = JSON.stringify({
@@ -1547,6 +1548,174 @@ const granularizeTasks = async (req, res) => {
   }
 };
 
+const payoutPeerReviewRewards = async (taskId, client, io) => {
+  // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
+  const taskQuery = `
+    SELECT t.reward_tokens,
+           t.assigned_user_ids,
+           t.submitted_by,
+           t.skill_id,
+           t.status,
+           t.project_id,
+           p.community_id
+    FROM tasks t
+    JOIN projects p ON t.project_id = p.id
+    WHERE t.id = $1;
+  `;
+  const taskResult = await client.query(taskQuery, [taskId]);
+
+  if (taskResult.rows.length === 0) {
+    return { error: "Task not found", status: 404 };
+  }
+
+  const {
+    reward_tokens,
+    assigned_user_ids,
+    submitted_by,
+    skill_id,
+    project_id,
+    community_id,
+  } = taskResult.rows[0];
+
+  // Fetch skill name
+  const skillNameQuery = await client.query(
+    `SELECT name FROM skills WHERE id = $1`,
+    [skill_id]
+  );
+  const skillName = skillNameQuery.rows[0]?.name || "Unknown Skill";
+
+  // 🎓 Calculate rewardPerUser — currently not divided
+  const rewardPerUser = reward_tokens;
+
+  // 🎯 XP system and level calculations
+  const skillsQuery = `
+    SELECT unlocked_users
+    FROM skills
+    WHERE id = $1 FOR UPDATE;
+  `;
+  const skillsResult = await client.query(skillsQuery, [skill_id]);
+  if (skillsResult.rows.length === 0) {
+    return { error: "Skill not found for this task", status: 404 };
+  }
+
+  let rawUnlockedUsers = skillsResult.rows[0].unlocked_users || [];
+
+  const calculateLevel = (exp) => {
+    return Math.floor(Math.sqrt(exp / 40)) + 1;
+  };
+
+  let parsedSkillEntries = [];
+  if (Array.isArray(rawUnlockedUsers)) {
+      for (const entry of rawUnlockedUsers) {
+          if (entry === null && rawUnlockedUsers.length === 1) continue;
+          let parsedEntry;
+          try {
+              if (typeof entry === 'string') {
+                  try {
+                      parsedEntry = JSON.parse(entry);
+                  } catch (e1) {
+                      parsedEntry = JSON.parse(entry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, ""));
+                  }
+              } else {
+                  parsedEntry = entry;
+              }
+              if (parsedEntry && typeof parsedEntry.user_id !== 'undefined') {
+                  parsedSkillEntries.push(parsedEntry);
+              }
+          } catch (err) {
+              console.error("Error parsing entry for DB:", entry, "Error:", err.message);
+          }
+      }
+  }
+
+  const skillEntryMap = new Map(parsedSkillEntries.map(entry => [entry.user_id, entry]));
+
+  for (const userId of assigned_user_ids) {
+    let previousXP = 0, previousLevel = 1, newXP = 0, newLevel = 1;
+
+    const existingEntry = skillEntryMap.get(userId);
+
+    if (existingEntry) {
+      previousXP = existingEntry.exp;
+      previousLevel = existingEntry.level;
+      existingEntry.exp += rewardPerUser;
+      existingEntry.level = calculateLevel(existingEntry.exp);
+      newXP = existingEntry.exp;
+      newLevel = existingEntry.level;
+      skillEntryMap.set(userId, existingEntry);
+    } else {
+      newXP = rewardPerUser;
+      newLevel = calculateLevel(rewardPerUser);
+      const newSkillEntry = { user_id: userId, exp: newXP, level: newLevel };
+      skillEntryMap.set(userId, newSkillEntry);
+    }
+
+    const room = `user_${userId}`;
+    io.to(room).emit("levelUpdate", { previousXP, newXP, previousLevel, newLevel, skillName });
+  }
+
+  const finalUpdatedSkillEntries = Array.from(skillEntryMap.values());
+
+  await client.query(
+    `UPDATE skills SET unlocked_users = $1 WHERE id = $2`,
+    [finalUpdatedSkillEntries, skill_id]
+  );
+
+  // Step 5: Update user experience
+  if (assigned_user_ids && assigned_user_ids.length > 0) {
+    await client.query(
+      `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
+       WHERE id = ANY($2)`,
+      [taskId.toString(), assigned_user_ids]
+    );
+  }
+
+  // Step 6: Differential cotoken and token_ledger updates
+  const main_reward = reward_tokens;
+  const bonus_reward = Math.ceil(reward_tokens / 10);
+
+  // Update cotokens and token_ledger for submitted_by user
+  if (submitted_by) {
+    await client.query(
+      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+      [main_reward, submitted_by]
+    );
+    const submitterLedgerEntries = [
+      { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+    ];
+    if (community_id) {
+      submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+    }
+    await client.query(
+      `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+      [submitterLedgerEntries.map(JSON.stringify), submitted_by]
+    );
+  }
+
+  // Update cotokens and token_ledger for other assigned users
+  if (assigned_user_ids && assigned_user_ids.length > 0) {
+    for (const userId of assigned_user_ids) {
+      if (userId === submitted_by) continue;
+
+      await client.query(
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+        [bonus_reward, userId]
+      );
+      const bonusLedgerEntries = [
+        { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
+      ];
+      if (community_id) {
+        bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+      }
+      await client.query(
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        [bonusLedgerEntries.map(JSON.stringify), userId]
+      );
+    }
+  }
+  return { success: true };
+}
+
 // Process review function
 const processReview = async (taskId, userId, action, io) => {
   const client = await pool.connect();
@@ -1614,10 +1783,10 @@ const processReview = async (taskId, userId, action, io) => {
     );
 
     // Add to reviewer's token ledger
-    const reviewLedgerUpdate = { 
-      type: "task_review_reward", 
-      taskId: taskId, 
-      tokens: reviewerReward, 
+    const reviewLedgerUpdate = {
+      type: "task_review_reward",
+      taskId: taskId,
+      tokens: reviewerReward,
       creationDate: new Date(),
       projectId: project_id // project_id is available from taskResult
     };
@@ -1631,19 +1800,49 @@ const processReview = async (taskId, userId, action, io) => {
       const finalAction = newApprovals?.length >= 2 ? "approve" : "reject";
 
       if (finalAction === "approve") {
-        // Approve the task
-        const currentStatusResult = await client.query(
-          `SELECT status FROM tasks WHERE id = $1`,
-          [taskId]
-        );
-        if (currentStatusResult.rows[0].status !== "submitted") {
-          return { success: true, message: "Task already processed" };
+        // Payout peer review rewards
+        const payoutResult = await payoutPeerReviewRewards(taskId, client, io);
+        if (payoutResult.error) {
+          await client.query("ROLLBACK");
+          return payoutResult;
         }
 
-        const approveResult = await approveTask(taskId, io, client);
-        if (approveResult.error) {
-          await client.query("ROLLBACK");
-          return approveResult;
+        // Update task status and set PM approval deadline
+        await client.query(
+          `UPDATE tasks
+           SET status = 'awaiting_pm_approval',
+               pm_approval_deadline = NOW() + INTERVAL '18 hours'
+           WHERE id = $1`,
+          [taskId]
+        );
+
+        // Notify project manager
+        const projectOwnerQuery = await client.query(
+          `SELECT creator_id FROM projects WHERE id = $1`,
+          [project_id]
+        );
+        const projectOwnerId = projectOwnerQuery.rows[0].creator_id;
+
+        if (projectOwnerId) {
+            const notificationMessage = `A task in your project has passed peer review and is awaiting your approval.`;
+            const notificationDetails = JSON.stringify({
+                text: notificationMessage,
+                projectId: project_id,
+                taskId: taskId,
+            });
+            await client.query(
+                `INSERT INTO notifications (user_id, message, type, created_at, read)
+                 VALUES ($1, $2, $3, NOW(), false)`,
+                [projectOwnerId, notificationDetails, "task"]
+            );
+            if (io) {
+                io.to(`user_${projectOwnerId}`).emit("notification", {
+                    message: notificationMessage,
+                    type: "task",
+                    projectId: project_id,
+                    taskId: taskId,
+                });
+            }
         }
       } else {
         // Reject the task - return to assigned users
@@ -1663,16 +1862,14 @@ const processReview = async (taskId, userId, action, io) => {
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
           const notificationMessage = `Your submitted task was rejected and needs revisions.`;
-          // project_id is available from the taskResult destructuring earlier in processReview
-          // taskId is a parameter of processReview
           const notificationDetails = JSON.stringify({
             text: notificationMessage,
-            projectId: project_id, // This was destructured from taskResult.rows[0]
-            taskId: taskId,       // This is the function parameter
+            projectId: project_id,
+            taskId: taskId,
           });
           await client.query(
             `
-            INSERT INTO notifications (user_id, message, type, created_at, read) 
+            INSERT INTO notifications (user_id, message, type, created_at, read)
             SELECT unnest($1::int[]), $2, $3, NOW(), false
           `,
             [assignedUserIds, notificationDetails, "task"]
@@ -1680,13 +1877,13 @@ const processReview = async (taskId, userId, action, io) => {
 
           // Socket notifications
           if (io) {
-            assignedUserIds.forEach((uId) => { // Renamed userId to uId to avoid conflict with outer scope userId
+            assignedUserIds.forEach((uId) => {
               io.to(`user_${uId}`).emit("notification", {
                 id: Date.now(),
                 type: "task",
                 message: "Your task was rejected and needs revisions",
-                projectId: project_id, // This was destructured from taskResult.rows[0]
-                taskId: taskId,       // This is the function parameter
+                projectId: project_id,
+                taskId: taskId,
                 read: false,
                 timestamp: new Date().toISOString(),
               });
@@ -1710,6 +1907,243 @@ const processReview = async (taskId, userId, action, io) => {
   } finally {
     client.release();
   }
+};
+
+const finalizeTask = async (taskId, client, io) => {
+    // This function will handle the final steps after PM approval.
+    // It's a subset of the original approveTask logic.
+
+    const taskQuery = `
+      SELECT t.reward_tokens,
+             t.assigned_user_ids,
+             t.project_id,
+             p.community_id,
+             p.creator_id,
+             t.reflection,
+             t.proof_of_work_links,
+             t.skill_id,
+             t.submitted_by
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      WHERE t.id = $1;
+    `;
+    const taskResult = await client.query(taskQuery, [taskId]);
+    if (taskResult.rows.length === 0) {
+        return { error: "Task not found for finalization", status: 404 };
+    }
+    const task = taskResult.rows[0];
+
+    // Step 1: Reward project creator
+    if (task.creator_id) {
+      await client.query(
+        `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
+        [task.creator_id]
+      );
+      const creatorLedgerUpdates = [
+        { type: "project", id: task.project_id, tokens: 10, creationDate: new Date() },
+      ];
+      if (task.community_id) {
+        creatorLedgerUpdates.push({ type: "community", id: task.community_id, tokens: 10, creationDate: new Date() });
+      }
+      await client.query(
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        [creatorLedgerUpdates.map(JSON.stringify), task.creator_id]
+      );
+    }
+
+    // Step 2: Update project token stats
+    await client.query(
+      `
+      UPDATE projects SET used_tokens = used_tokens + $1,
+        reserved_tokens = GREATEST(0, reserved_tokens - $1)
+      WHERE id = $2
+    `,
+      [task.reward_tokens, task.project_id]
+    );
+
+    // Step 3: Notify users
+    const notificationMessage = `Your submitted task was approved by the project manager!`;
+    if (task.assigned_user_ids && task.assigned_user_ids.length > 0) {
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: task.project_id,
+        taskId: taskId,
+      });
+      await client.query(
+          `INSERT INTO notifications (user_id, message, type, created_at, read)
+          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
+          [task.assigned_user_ids, notificationDetails, "task"]
+      );
+      if (io) {
+        for (const userId of task.assigned_user_ids) {
+            io.to(`user_${userId}`).emit("notification", {
+                id: Date.now(),
+                type: 'task-approved',
+                message: notificationMessage,
+                projectId: task.project_id,
+                taskId: taskId,
+                read: false,
+                timestamp: new Date().toISOString(),
+            });
+        }
+      }
+    }
+
+    // Step 4: Create story node (this should happen outside the transaction)
+    // We'll return the necessary data for the caller to handle it.
+    const tagsQuery = await client.query(`SELECT name FROM skills WHERE id = $1`, [task.skill_id]);
+    const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
+
+    const storyNodeData = {
+        task_id: taskId,
+        user_id: task.submitted_by,
+        reflection: task.reflection || "",
+        media_urls: task.proof_of_work_links || [],
+        tags: tags,
+    };
+
+    return { success: true, task, storyNodeData };
+}
+
+const approveByPM = async (req, res, io) => {
+  const { taskId } = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const taskResult = await client.query(`SELECT status, project_id FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
+    if (taskResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    const task = taskResult.rows[0];
+    if (task.status !== 'awaiting_pm_approval') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
+    }
+
+    await client.query(`UPDATE tasks SET status = 'completed' WHERE id = $1`, [taskId]);
+
+    const finalizeResult = await finalizeTask(taskId, client, io);
+    if (finalizeResult.error) {
+        await client.query('ROLLBACK');
+        return res.status(finalizeResult.status || 500).json({ error: finalizeResult.error });
+    }
+
+    await client.query('COMMIT');
+
+    // Create story node after transaction commits
+    if (finalizeResult.storyNodeData && finalizeResult.storyNodeData.user_id) {
+        try {
+            const response = await fetch(`${process.env.BACKEND_URL}/storyChronicles/story-node`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(finalizeResult.storyNodeData),
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
+            }
+        } catch (fetchError) {
+            console.error("Fetch error creating story node:", fetchError);
+        }
+    }
+
+    res.json({ message: 'Task approved by Project Manager and completed.', task: finalizeResult.task });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error in approveByPM:', error);
+    res.status(500).json({ error: 'Server error during PM approval' });
+  } finally {
+    client.release();
+  }
+};
+
+const rejectByPM = async (req, res, io) => {
+    const { taskId } = req.params;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const taskResult = await client.query(`SELECT status, project_id, assigned_user_ids FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
+        if (taskResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        const task = taskResult.rows[0];
+        if (task.status !== 'awaiting_pm_approval') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
+        }
+
+        const rejectQuery = `
+          UPDATE tasks
+          SET status = 'active-assigned',
+              submitted = false,
+              reviewer_ids = ARRAY[]::integer[],
+              approvals = ARRAY[]::integer[],
+              rejections = ARRAY[]::integer[]
+          WHERE id = $1
+          RETURNING assigned_user_ids;
+        `;
+        const rejectResult = await client.query(rejectQuery, [taskId]);
+        const assignedUserIds = rejectResult.rows[0].assigned_user_ids;
+
+        // Notify assigned users
+        if (assignedUserIds && assignedUserIds.length > 0) {
+          const notificationMessage = `Your submitted task was rejected by the Project Manager and needs revisions.`;
+          const notificationDetails = JSON.stringify({
+            text: notificationMessage,
+            projectId: task.project_id,
+            taskId: taskId,
+          });
+          await client.query(
+            `
+            INSERT INTO notifications (user_id, message, type, created_at, read)
+            SELECT unnest($1::int[]), $2, $3, NOW(), false
+          `,
+            [assignedUserIds, notificationDetails, "task"]
+          );
+          if (io) {
+            assignedUserIds.forEach((userId) => {
+              io.to(`user_${userId}`).emit("notification", {
+                id: Date.now(),
+                type: "task",
+                message: notificationMessage,
+                projectId: task.project_id,
+                taskId: taskId,
+                read: false,
+                timestamp: new Date().toISOString(),
+              });
+            });
+          }
+        }
+        await client.query('COMMIT');
+        res.json({ message: 'Task rejected by Project Manager.' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in rejectByPM:', error);
+        res.status(500).json({ error: 'Server error during PM rejection' });
+    } finally {
+        client.release();
+    }
+};
+
+const getPmApprovalTasks = async (userId) => {
+    const client = await pool.connect();
+    try {
+        const query = `
+            SELECT t.*, p.name as project_name
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            WHERE p.creator_id = $1 AND t.status = 'awaiting_pm_approval'
+        `;
+        const result = await client.query(query, [userId]);
+        return result.rows;
+    } catch (error) {
+        console.error('Error fetching PM approval tasks:', error);
+        throw new Error('Failed to fetch PM approval tasks');
+    } finally {
+        client.release();
+    }
 };
 
 // Function to get tasks the user is a reviewer for
@@ -1762,4 +2196,9 @@ export default {
   createTaskRoute,
   resetAllSpentPoints,
   findById,
+  payoutPeerReviewRewards,
+  approveByPM,
+  rejectByPM,
+  finalizeTask,
+  getPmApprovalTasks,
 };

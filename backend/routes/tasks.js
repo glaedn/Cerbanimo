@@ -384,6 +384,16 @@ router.put('/:taskId/review', async (req, res) => {
   }
 });
 
+router.put('/:taskId/pm-approve', async (req, res) => {
+    const io = req.app.get('io');
+    await taskController.approveByPM(req, res, io);
+});
+
+router.put('/:taskId/pm-reject', async (req, res) => {
+    const io = req.app.get('io');
+    await taskController.rejectByPM(req, res, io);
+});
+
 // Route to get tasks the user is a reviewer for
 router.get('/reviewer/:userId', async (req, res) => {
   const { userId } = req.params;
@@ -395,6 +405,18 @@ router.get('/reviewer/:userId', async (req, res) => {
     console.error('Error fetching reviewer tasks:', error);
     res.status(500).json({ error: 'Failed to fetch reviewer tasks' });
   }
+});
+
+// Route to get tasks for a project manager to approve
+router.get('/pm-approval/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const tasks = await taskController.getPmApprovalTasks(userId);
+        res.status(200).json(tasks);
+    } catch (error) {
+        console.error('Error fetching PM approval tasks:', error);
+        res.status(500).json({ error: 'Failed to fetch PM approval tasks' });
+    }
 });
 
 export default router;

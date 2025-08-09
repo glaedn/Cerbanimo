@@ -6,13 +6,11 @@ import CommandDeck from './CommandDeck'; // Adjust path as necessary
 jest.mock('../../../hooks/useUserProfile', () => ({
   useUserProfile: jest.fn(),
 }));
-jest.mock('../../../hooks/useUserProjects', () => ({
-  useUserProjects: jest.fn(),
-}));
+jest.mock('../../../hooks/useUserProjects', () => jest.fn());
 
 // Import hooks to change their mock implementation
 import { useUserProfile } from '../../../hooks/useUserProfile';
-import { useUserProjects } from '../../../hooks/useUserProjects';
+import useUserProjects from '../../../hooks/useUserProjects';
 
 // Mock constants from CommandDeck if they affect tests and are not easily controlled otherwise
 // For MOCKED_TOKEN_POOL and MOCK_PROJECT_TOKENS, the component's internal values will be used.
