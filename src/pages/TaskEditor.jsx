@@ -368,7 +368,36 @@ const TaskEditor = ({
       console.error(`${approved ? "Approval" : "Rejection"} failed:`, error);
     }
   };
-  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted);
+
+  const handlePmApprove = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/pm-approve`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert('Task approved successfully');
+      onClose();
+    } catch (error) {
+      console.error('Error approving task:', error);
+      alert('Failed to approve task');
+    }
+  };
+
+  const handlePmReject = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/pm-reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert('Task rejected successfully');
+      onClose();
+    } catch (error) {
+      console.error('Error rejecting task:', error);
+      alert('Failed to reject task');
+    }
+  };
+  const isProjectManager = Number(platformUserId) === Number(projectCreatorId);
+  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager);
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
@@ -759,6 +788,23 @@ const TaskEditor = ({
                           </Button>
                         </>
                       )}
+
+                    { isProjectManager && taskForm.status === 'awaiting_pm_approval' && (
+                        <>
+                          <Button
+                            className="cyber-button approve"
+                            onClick={handlePmApprove}
+                          >
+                            PM APPROVE
+                          </Button>
+                          <Button
+                            className="cyber-button reject"
+                            onClick={handlePmReject}
+                          >
+                            PM REJECT
+                          </Button>
+                        </>
+                    )}
 
                     <Button className="cyber-button neutral" onClick={onClose}> {/* Updated class */}
                       CLOSE
