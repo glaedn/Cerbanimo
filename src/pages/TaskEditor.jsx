@@ -789,7 +789,7 @@ const TaskEditor = ({
                         </>
                       )}
 
-                    { isProjectManager && taskForm.status === 'submitted' && taskForm.approvals?.length >= 2 && (
+                    { isProjectManager && taskForm.status === 'submitted' && (
                         <>
                           <Button
                             className="cyber-button approve"
