@@ -397,7 +397,7 @@ const TaskEditor = ({
     }
   };
   const isProjectManager = Number(platformUserId) === Number(projectCreatorId);
-  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager);
+  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager, 'taskForm.status:', taskForm.status);
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
@@ -789,7 +789,7 @@ const TaskEditor = ({
                         </>
                       )}
 
-                    { isProjectManager && taskForm.status === 'awaiting_pm_approval' && (
+                    { isProjectManager && taskForm.status === 'submitted' && taskForm.approvals?.length >= 2 && (
                         <>
                           <Button
                             className="cyber-button approve"
