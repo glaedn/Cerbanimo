@@ -25,6 +25,7 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
+import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
 //import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
@@ -175,6 +176,17 @@ cron.schedule('0 0 * * *', async () => {
   } catch (error) {
     console.error('Failed to reset spent points:', error);
   }
+});
+
+// Task timeout checker
+cron.schedule('*/5 * * * *', async () => {
+    console.log('Running task timeout check');
+    try {
+        await timeoutService.checkTimeouts(io);
+        console.log('Timeout check completed successfully');
+    } catch (error) {
+        console.error('Failed to run timeout check:', error);
+    }
 });
 
 // Start server
