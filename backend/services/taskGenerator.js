@@ -67,7 +67,7 @@ Instructions for AI Generation:
       model: "gemini-2.5-flash",
       contents: prompt,
     });
-    const responseText = result.response.text();
+    const responseText = result.text;
     console.log("LLM response for project idea:", responseText);
 
     // Parse the JSON response
@@ -607,7 +607,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
     model: "gemini-2.5-flash",
     contents: prompt,
   });
-  const text = result.response.text();
+  const text = result.text;
   console.log('LLM response:', text);
   // Attempt to safely parse JSON from LLM output
   try {
@@ -1121,7 +1121,7 @@ const result = await genAI.models.generateContent({
     model: "gemini-2.5-flash",
     contents: prompt,
 });
-const text = result.response.text();
+const text = result.text;
 console.log('LLM response (generateSubtasks):', text);
 
 try {
