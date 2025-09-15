@@ -65,7 +65,7 @@ Format your response as JSON with keys Name and Description.
     console.log("Generating project idea with prompt:", prompt);
 
     const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json" },
     });
@@ -603,7 +603,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
 
   const result = await genAI.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -1122,7 +1122,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
 
 const result = await genAI.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: "application/json" },
 });
