@@ -1,8 +1,7 @@
 // services/taskGenerator.js
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const genAI = new GoogleGenAI({apiKey: process.env.GOOGLE_GENAI_API_KEY});
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -64,7 +63,10 @@ Instructions for AI Generation:
 
   try {
     console.log("Generating project idea with prompt:", prompt);
-    const result = await model.generateContent(prompt);
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
     const responseText = result.response.text();
     console.log("LLM response for project idea:", responseText);
 
@@ -601,7 +603,10 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
 
-  const result = await model.generateContent(prompt);
+  const result = await genAI.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
   const text = result.response.text();
   console.log('LLM response:', text);
   // Attempt to safely parse JSON from LLM output
@@ -1112,7 +1117,10 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
 
-const result = await model.generateContent(prompt);
+const result = await genAI.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+});
 const text = result.response.text();
 console.log('LLM response (generateSubtasks):', text);
 

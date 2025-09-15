@@ -1,18 +1,17 @@
 import { generateProjectIdea, parseLLMJsonResponse } from './taskGenerator'; // Assuming parseLLMJsonResponse is exported for direct testing
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
-// Mock the GoogleGenerativeAI library
-jest.mock('@google/generative-ai', () => {
+// Mock the GoogleGenAI library
+jest.mock('@google/genai', () => {
   const mockGenerateContent = jest.fn();
-  const mockGetGenerativeModel = jest.fn(() => ({
-    generateContent: mockGenerateContent,
-  }));
-  const mockGoogleGenerativeAI = jest.fn(() => ({
-    getGenerativeModel: mockGetGenerativeModel,
+  const mockGoogleGenAI = jest.fn(() => ({
+    models: {
+      generateContent: mockGenerateContent,
+    },
   }));
   return {
-    GoogleGenerativeAI: mockGoogleGenerativeAI,
-    mockGenerateContent, // Export mockGenerateContent for easy access in tests
+    GoogleGenAI: mockGoogleGenAI,
+    mockGenerateContent,
   };
 });
 
@@ -69,7 +68,7 @@ describe('taskGenerator.js', () => {
 
   describe('generateProjectIdea', () => {
     // Access the mockGenerateContent from the mocked module
-    const { mockGenerateContent } = require('@google/generative-ai');
+    const { mockGenerateContent } = require('@google/genai');
 
     const skills = ['React', 'Node.js'];
     const interests = ['AI', 'Sustainability'];
@@ -79,10 +78,11 @@ describe('taskGenerator.js', () => {
       await generateProjectIdea(skills, interests);
       
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-      const prompt = mockGenerateContent.mock.calls[0][0];
-      expect(prompt).toContain(JSON.stringify(skills));
-      expect(prompt).toContain(JSON.stringify(interests));
-      expect(prompt).toContain('Format your response as JSON with keys Name and Description.');
+      const { model, contents } = mockGenerateContent.mock.calls[0][0];
+      expect(model).toBe('gemini-2.5-flash');
+      expect(contents).toContain(JSON.stringify(skills));
+      expect(contents).toContain(JSON.stringify(interests));
+      expect(contents).toContain('Format your response as JSON with keys Name and Description.');
     });
 
     it('should correctly parse the LLM response when valid JSON is returned', async () => {
