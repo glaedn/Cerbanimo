@@ -1,7 +1,10 @@
 // services/taskGenerator.js
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 
-const genAI = new GoogleGenAI({apiKey: process.env.GOOGLE_GENAI_API_KEY});
+const openai = new OpenAI({
+  apiKey: process.env.AIMLAPI_KEY,
+  baseURL: process.env.AIMLAPI_BASE_URL,
+});
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -64,13 +67,16 @@ Format your response as JSON with keys Name and Description.
   try {
     console.log("Generating project idea with prompt:", prompt);
 
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json" },
+    const completion = await openai.chat.completions.create({
+      model: "mistralai/Mistral-7B-Instruct-v0.2",
+      messages: [
+        { role: "system", content: "You are a helpful assistant that generates project ideas." },
+        { role: "user", content: prompt },
+      ],
     });
 
-    const projectIdea = JSON.parse(result.response.text());
+    const responseText = completion.choices[0].message.content;
+    const projectIdea = parseLLMJsonResponse(responseText);
 
     if (!projectIdea.Name || !projectIdea.Description) {
       throw new Error("LLM response missing Name or Description for project idea.");
@@ -602,16 +608,18 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
 
-  const result = await genAI.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: "application/json" },
+  const completion = await openai.chat.completions.create({
+    model: "mistralai/Mistral-7B-Instruct-v0.2",
+    messages: [
+      { role: "system", content: "You are an expert project manager and task engineer." },
+      { role: "user", content: prompt },
+    ],
   });
-  const text = result.response.text();
+  const text = completion.choices[0].message.content;
   console.log('LLM response:', text);
   // Attempt to safely parse JSON from LLM output
   try {
-    const tasks = JSON.parse(text);
+    const tasks = parseLLMJsonResponse(text);
     if (!Array.isArray(tasks)) {
       throw new Error('LLM response is not a JSON array.');
     }
@@ -1121,16 +1129,18 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
 
-const result = await genAI.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: "application/json" },
+const completion = await openai.chat.completions.create({
+    model: "mistralai/Mistral-7B-Instruct-v0.2",
+    messages: [
+        { role: "system", content: "You are an expert Project Manager AI." },
+        { role: "user", content: prompt },
+    ],
 });
-const text = result.response.text();
+const text = completion.choices[0].message.content;
 console.log('LLM response (generateSubtasks):', text);
 
 try {
-  const parsedData = JSON.parse(text);
+  const parsedData = parseLLMJsonResponse(text);
   if (!parsedData.projects || !parsedData.tasks || !Array.isArray(parsedData.projects) || !Array.isArray(parsedData.tasks)) {
     throw new Error('LLM response is not in the expected format.');
   }
