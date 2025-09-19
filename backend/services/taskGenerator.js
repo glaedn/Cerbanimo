@@ -68,7 +68,7 @@ Format your response as JSON with keys Name and Description.
     console.log("Generating project idea with prompt:", prompt);
 
     const completion = await openai.chat.completions.create({
-      model: "mistralai/Mistral-7B-Instruct-v0.2",
+      model: "gemma-3-12b",
       messages: [
         { role: "system", content: "You are a helpful assistant that generates project ideas." },
         { role: "user", content: prompt },
@@ -609,7 +609,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
 
   const completion = await openai.chat.completions.create({
-    model: "mistralai/Mistral-7B-Instruct-v0.2",
+    model: "gemma-3-12b",
     messages: [
       { role: "system", content: "You are an expert project manager and task engineer." },
       { role: "user", content: prompt },
@@ -1130,7 +1130,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
 
 const completion = await openai.chat.completions.create({
-    model: "mistralai/Mistral-7B-Instruct-v0.2",
+    model: "gemma-3-12b",
     messages: [
         { role: "system", content: "You are an expert Project Manager AI." },
         { role: "user", content: prompt },
