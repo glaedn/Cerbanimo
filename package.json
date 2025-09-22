@@ -10,18 +10,6 @@
     "preview": "vite preview",
     "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
   },
-  "jest": {
-    "transform": {
-      "^.+\\.(js|jsx)$": "babel-jest"
-    },
-    "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": [
-      "./jest.setup.js"
-    ],
-    "moduleNameMapper": {
-      "\\.(css|less)$": "<rootDir>/__mocks__/styleMock.js"
-    }
-  },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
     "@babel/plugin-proposal-optional-chaining": "^7.21.0",

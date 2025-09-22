@@ -21,9 +21,6 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// Mock environment variable
-const mockApiUrl = 'import.meta.env.VITE_BACKEND_URL';
-process.env.REACT_APP_API_URL = mockApiUrl;
 
 
 // Helper function to render with ThemeProvider

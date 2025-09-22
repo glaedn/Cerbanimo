@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
-import './SpaceshipHUD.css';
+import React from 'react';
+import {
+  HUDContainer,
+  CommandDeckPanel,
+  TargetingScannerPanel,
+  MissionConsolePanel,
+  CommsLogPanel,
+  AffinityGalaxyPanelWrapper,
+  HUDMapViewort,
+  StatusBarWrapper,
+} from './SpaceshipHUD.styles';
 import CommandDeck from './panels/CommandDeck';
 import MissionConsole from './panels/MissionConsole';
 import TargetingScanner from './panels/TargetingScanner';
@@ -10,67 +19,36 @@ import AffinityGalaxyPanel from './panels/AffinityGalaxyPanel'; // Renamed impor
 import { useWindowSize } from '../../hooks/useWindowSize.js'; // Adjust path
 
 const SpaceshipHUD = ({ children }) => {
-  const { width } = useWindowSize();
-  const isMobile = width <= 768;
-
-  // const [panelVisibility, setPanelVisibility] = useState({ // Removed
-  //   commandDeck: true,
-  //   missionConsole: true,
-  //   targetingScanner: true,
-  //   commsLog: true,
-  //   skillGalaxy: true,
-  // });
-
-  // const togglePanel = (panelName) => { // Removed
-  //   setPanelVisibility(prev => ({ ...prev, [panelName]: !prev[panelName] }));
-  // };
-
-  // Default positions for panels - adjust as needed for initial layout
-  const settingsPanelStyle = {
-    position: 'fixed',
-    top: isMobile ? '10px' : '60px', // Higher on mobile if map is at top
-    right: '10px',
-    zIndex: 105, // Ensure settings panel is above map tooltips (which are z-index 100)
-    width: isMobile ? 'calc(100% - 20px)' : 'auto', // Full width on mobile, auto on desktop
-    maxWidth: isMobile ? '300px' : 'none', // Max width on mobile
-  };
-  
   return (
-    <div className={`hud-container ${isMobile ? 'mobile-hud' : ''}`}>
-      {/* Settings Panel - Removed */}
-      {/* <div style={settingsPanelStyle} className="hud-settings-panel-wrapper">
-        <HUDSettingsPanel panelVisibility={panelVisibility} togglePanel={togglePanel} />
-      </div> */}
-
-      {/* Panels - Always rendered, internal state will control minimization */}
-      <div className={`panel-wrapper command-deck-panel`}>
+    <HUDContainer>
+      <CommandDeckPanel>
         <CommandDeck />
-      </div>
+      </CommandDeckPanel>
       
-      <div className={`panel-wrapper targeting-scanner-panel`}>
+      <TargetingScannerPanel>
         <TargetingScanner />
-      </div>
+      </TargetingScannerPanel>
 
-      <div className={`panel-wrapper mission-console-panel`}>
+      <MissionConsolePanel>
         <MissionConsole />
-      </div>
+      </MissionConsolePanel>
 
-      <div className={`panel-wrapper comms-log-panel`}>
+      <CommsLogPanel>
         <CommsLog />
-      </div>
+      </CommsLogPanel>
 
-      <div className={`panel-wrapper affinity-galaxy-panel`}>
+      <AffinityGalaxyPanelWrapper>
         <AffinityGalaxyPanel />
-      </div>
+      </AffinityGalaxyPanelWrapper>
       
-      {/* Central Map Viewport */}
-      <div className="hud-map-viewport">
+      <HUDMapViewort>
         {children}
-      </div>
+      </HUDMapViewort>
       
-      {/* Static Status Bar - Not Draggable */}
-      <StatusBar />
-    </div>
+      <StatusBarWrapper>
+        <StatusBar />
+      </StatusBarWrapper>
+    </HUDContainer>
   );
 };
 export default SpaceshipHUD;

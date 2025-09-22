@@ -21,9 +21,6 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
-  background-color: #0A0A2E; /* theme.colors.backgroundDefault */
-  color: #FFFFFF; /* theme.colors.textPrimary */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -31,33 +28,4 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
-}
-
-/* Global Scrollbar Styles */
-:root {
-  --color-background-paper-rgb: 28, 28, 30; /* #1C1C1E */
-  --color-primary: #00F3FF;
-  --color-secondary: #FF5CA2;
-}
-
-/* Applying to body or a general scrollable container if needed */
-body::-webkit-scrollbar {
-  width: 8px;
-}
-body::-webkit-scrollbar-track {
-  background: rgba(var(--color-background-paper-rgb), 0.5);
-}
-body::-webkit-scrollbar-thumb {
-  background-color: var(--color-primary);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-body::-webkit-scrollbar-thumb:hover {
-    background: #FF5CA2; /* Magenta on hover */
-    box-shadow: 0 0 5px #FF5CA2;
-}
-body {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-primary) rgba(var(--color-background-paper-rgb), 0.5);
 }

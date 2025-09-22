@@ -3,9 +3,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 import useAffinityData from '../../../hooks/useAffinityData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import * as d3 from 'd3';
-import './AffinityGalaxyPanel.css';
-import '../HUDPanel.css';
-import theme from '../../../styles/theme';
+import { useTheme } from '@mui/material/styles';
+import {
+  AffinityGalaxyPanelContainer,
+} from './AffinityGalaxyPanel.styles';
+import { HUDPanelHeader, HUDPanelTitle } from '../HUDPanel.styles';
 import { processAffinityDataForGalaxy } from '../../../utils/affinityUtils';
 import AffinityDetailPopup from './AffinityDetailPopup';
 
@@ -41,12 +43,13 @@ const AffinityGalaxyPanel = () => {
   const [d3Links, setD3Links] = useState([]);
   const svgRef = useRef(null);
   const [simulation, setSimulation] = useState(null);
-  const fixedStarPositionsRef = useRef(new Map()); // For persisting star fx/fy values
-  const initialZoomAppliedRef = useRef(false); // To track if initial overview zoom is applied
-  const [forceDataUpdate, setForceDataUpdate] = useState(false); // To trigger data reprocessing
+  const fixedStarPositionsRef = useRef(new Map());
+  const initialZoomAppliedRef = useRef(false);
+  const [forceDataUpdate, setForceDataUpdate] = useState(false);
   const [selectedAffinityForPopup, setSelectedAffinityForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const panelRef = useRef(null);
+  const theme = useTheme();
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -56,23 +59,20 @@ const AffinityGalaxyPanel = () => {
   };
 
   const getStarColor = React.useCallback((level) => {
-    if (level >= 20) return theme.colors.accentPurple || '#800080'; // Purple for 20+
-    if (level >= 10) return theme.colors.secondary; // Pink for 10-19 (assuming secondary is pink)
-    if (level >= 5) return theme.colors.accentGreen; // Green for 5-9
-    // For levels 1-4, use primary. If level 0 should have a different default, adjust.
-    // Assuming level 0 means "not achieved enough for distinct color" or "base color".
-    // If skills only show color from level 1:
-    if (level >= 1) return theme.colors.primary; // Blue for 1-4
-    return theme.colors.primary; // Default for level 0 or uncolored
-  }, [theme.colors]);
+    if (level >= 20) return theme.palette.secondary.main;
+    if (level >= 10) return theme.palette.secondary.main;
+    if (level >= 5) return theme.palette.success.main;
+    if (level >= 1) return theme.palette.primary.main;
+    return theme.palette.primary.main;
+  }, [theme]);
 
   const getStarGradientUrl = React.useCallback((level) => {
-    if (level >= 20) return 'url(#star-gradient-3)'; // Corresponds to accentPurple
-    if (level >= 10) return 'url(#star-gradient-2)'; // Corresponds to secondary (pink)
-    if (level >= 5) return 'url(#star-gradient-1)';  // Corresponds to accentGreen
-    if (level >= 1) return 'url(#star-gradient-0)';  // Corresponds to primary (blue)
-    return 'url(#star-gradient-0)'; // Default for level 0 or uncolored
-  }, []); // No theme dependencies needed here as it maps to fixed IDs
+    if (level >= 20) return 'url(#star-gradient-3)';
+    if (level >= 10) return 'url(#star-gradient-2)';
+    if (level >= 5) return 'url(#star-gradient-1)';
+    if (level >= 1) return 'url(#star-gradient-0)';
+    return 'url(#star-gradient-0)';
+  }, []);
 
   const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
 
@@ -603,64 +603,64 @@ const AffinityGalaxyPanel = () => {
 
   if (affinitiesLoading) {
     return (
-      <div className="affinity-galaxy-panel-loading" style={{color: theme.colors.textSecondary}}>
-        {`Loading ${theme.terminology.skill} Data...`}
-      </div>
+      <AffinityGalaxyPanelContainer style={{ color: theme.palette.text.secondary }}>
+        Loading Skill Data...
+      </AffinityGalaxyPanelContainer>
     );
   }
   
   if (affinitiesError) {
     return (
-      <div className="affinity-galaxy-panel-error" style={{color: theme.colors.error}}>
-        {`Error loading ${theme.terminology.skill_plural}: ${affinitiesError.message || affinitiesError.toString()}`}
-      </div>
+      <AffinityGalaxyPanelContainer style={{ color: theme.palette.error.main }}>
+        Error loading skills: {affinitiesError.message || affinitiesError.toString()}
+      </AffinityGalaxyPanelContainer>
     );
   }
 
   if (processedAffinities.length === 0 && d3Nodes.length === 0 && !affinitiesLoading && !affinitiesError) {
     return (
-      <div className={`hud-panel affinity-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-        <h2 style={{ color: theme.colors.textPrimary }}>{`${theme.terminology.skill} Constellations`}</h2>
-        <div className="affinity-galaxy-empty" style={{color: theme.colors.textSecondary, textAlign: 'center', marginTop: '50px'}}>
-          <p>{`Your ${theme.terminology.skill} Constellation is forming.`}</p>
-          <p>{`Unlock ${theme.terminology.skill_plural} by completing ${theme.terminology.task_plural} or training!`}</p>
+      <AffinityGalaxyPanelContainer>
+        <HUDPanelTitle>Skill Constellations</HUDPanelTitle>
+        <div style={{ color: theme.palette.text.secondary, textAlign: 'center', marginTop: '50px' }}>
+          <p>Your Skill Constellation is forming.</p>
+          <p>Unlock skills by completing quests or training!</p>
         </div>
-      </div>
+      </AffinityGalaxyPanelContainer>
     );
   }
 
   return (
-    <div 
-    ref={panelRef}
-    className={`hud-panel affinity-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>{`${theme.terminology.skill} Constellations`}</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? `Expand ${theme.terminology.skill} Constellations` : `Minimize ${theme.terminology.skill} Constellations`}>
+    <AffinityGalaxyPanelContainer ref={panelRef}>
+      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+        <HUDPanelTitle>Skill Constellations</HUDPanelTitle>
+        <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Skill Constellations` : `Minimize Skill Constellations`}>
           {isMinimized ? '+' : '-'}
         </button>
-      </div>
-      <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
-        <svg 
-          ref={svgRef} 
-          className="affinity-galaxy-svg"
-          style={{ 
-            width: '100%', 
-            height: '100%',
-            backgroundColor: theme.colors.background || 'transparent',
-            border: '1px solid ' + (theme.colors.border || '#666')
-          }}
-        >
-          {/* Defs will be appended here by D3 */}
-        </svg>
-      </div>
-      {selectedAffinityForPopup && (
-        <AffinityDetailPopup
-          affinityData={selectedAffinityForPopup}
-          onClose={() => setSelectedAffinityForPopup(null)}
-          parentRef ={panelRef} 
-        />
+      </HUDPanelHeader>
+      {!isMinimized && (
+        <>
+          <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
+            <svg
+              ref={svgRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: theme.palette.background.default,
+                border: `1px solid ${theme.palette.divider}`
+              }}
+            >
+            </svg>
+          </div>
+          {selectedAffinityForPopup && (
+            <AffinityDetailPopup
+              affinityData={selectedAffinityForPopup}
+              onClose={() => setSelectedAffinityForPopup(null)}
+              parentRef={panelRef}
+            />
+          )}
+        </>
       )}
-    </div>
+    </AffinityGalaxyPanelContainer>
   );
 };
 

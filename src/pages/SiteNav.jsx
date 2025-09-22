@@ -15,7 +15,11 @@ import {
   Snackbar,
   Alert,
   Typography,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleTheme } from "../store/themeSlice";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import ExploreIcon from "@mui/icons-material/Explore";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
@@ -44,6 +48,12 @@ const SiteNav = () => {
     setIsGameOpen((prev) => !prev);
   };
   const { notifications, unreadCount, markAsRead } = useNotifications();
+  const dispatch = useDispatch();
+  const themeMode = useSelector((state) => state.theme.mode);
+
+  const handleThemeChange = () => {
+    dispatch(toggleTheme());
+  };
 
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -308,6 +318,18 @@ const SiteNav = () => {
               </Button>
             </>
           )}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={themeMode === 'magicalGirl'}
+                onChange={handleThemeChange}
+                name="theme-switch"
+                color="primary"
+              />
+            }
+            label="Magical Girl Mode"
+            sx={{ ml: 1, color: 'white' }}
+          />
         </div>
 
         {isAuthenticated ? (

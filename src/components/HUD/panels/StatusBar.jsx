@@ -1,44 +1,37 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-// Removed useNotifications hook
 import useAffinityData from '../../../hooks/useAffinityData';
 import { useAuth0 } from '@auth0/auth0-react';
-import '../HUDPanel.css'; // Shared panel styles
-import './StatusBar.css'; // Specific styles for StatusBar
-import theme from '../../../styles/theme.js';
+import { useTheme } from '@mui/material/styles';
+import {
+  StatusBarContainer,
+  StatusItem,
+  Username,
+  Level,
+  TokensInfo,
+} from './StatusBar.styles';
 
 
 const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { allAffinities, loading: affinitiesLoading, error: affinitiesError } = useAffinityData();
   const { user, isAuthenticated } = useAuth0();
+  const theme = useTheme();
 
-  const primaryColor = '#00F3FF'; // theme.colors.primary
-  const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
-
-  if (profileLoading || affinitiesLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
-  if (profileError || affinitiesError) return <div className="hud-panel status-bar">Error: {profileError?.message || affinitiesError?.message}</div>;
-  if (!profile || !allAffinities || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, affinities, or authentication unavailable.</div>;
+  if (profileLoading || affinitiesLoading) return <StatusBarContainer>Loading Status...</StatusBarContainer>;
+  if (profileError || affinitiesError) return <StatusBarContainer>Error: {profileError?.message || affinitiesError?.message}</StatusBarContainer>;
+  if (!profile || !allAffinities || !isAuthenticated || !user) return <StatusBarContainer>User data, affinities, or authentication unavailable.</StatusBarContainer>;
   
-  console.log('[StatusBar Debug] allAffinities:', allAffinities);
-  console.log('[StatusBar Debug] profile.id:', profile ? profile.id : 'Profile or profile.id not available');
-  // Calculate Total Global Experience from allAffinities
   let totalGlobalExp = 0;
-  if (allAffinities && profile && profile.id) { // Ensure data is available
+  if (allAffinities && profile && profile.id) {
     allAffinities.forEach(affinity => {
-      console.log('[StatusBar Debug] Processing affinity:', affinity.name, affinity.unlocked_users);
       if (affinity.unlocked_users && Array.isArray(affinity.unlocked_users)) {
-        affinity.unlocked_users.forEach(userEntry => { // userEntry is now an object
-          console.log('[StatusBar Debug] Checking userEntry:', userEntry);
-          if (userEntry && typeof profile.id !== 'undefined') { // Ensure profile.id is available
+        affinity.unlocked_users.forEach(userEntry => {
+          if (userEntry && typeof profile.id !== 'undefined') {
             const entryUserId = parseInt(userEntry.user_id, 10);
             const currentProfileId = parseInt(profile.id, 10);
-
-            console.log(`[StatusBar Debug] Comparing IDs: entryUserId=${entryUserId} (type: ${typeof entryUserId}), currentProfileId=${currentProfileId} (type: ${typeof currentProfileId})`);
-
             if (entryUserId === currentProfileId) {
               const experienceValue = userEntry.experience !== undefined ? userEntry.experience : userEntry.exp;
-              console.log('[StatusBar Debug] Matched user.id:', currentProfileId, 'Found experienceValue:', experienceValue, 'from userEntry:', userEntry);
               if (typeof experienceValue === 'number') {
                 totalGlobalExp += experienceValue;
               }
@@ -49,58 +42,50 @@ const StatusBar = () => {
     });
   }
 
-  console.log('[StatusBar Debug] Final totalGlobalExp:', totalGlobalExp);
   const currentLevel = Math.floor(Math.sqrt(totalGlobalExp / 40)) + 1;
-
   const expForCurrentLevel = 40 * Math.pow(currentLevel - 1, 2);
   const expForNextLevel = 40 * Math.pow(currentLevel, 2);
-
   const currentLevelExpProgress = totalGlobalExp - expForCurrentLevel;
   const totalExpNeededForNextLevelSpan = expForNextLevel - expForCurrentLevel;
-
   let xpPercentage = 0;
   if (totalExpNeededForNextLevelSpan > 0) {
       xpPercentage = (currentLevelExpProgress / totalExpNeededForNextLevelSpan) * 100;
   } else if (currentLevelExpProgress >= 0) { 
-      // Handles cases where user might be at max level or exactly at a level threshold
-      // or if totalExpNeededForNextLevelSpan is somehow zero (e.g. currentLevel = 0 from bad data)
       xpPercentage = currentLevel === 1 && totalGlobalExp === 0 ? 0 : 100;
   }
-  xpPercentage = Math.min(Math.max(xpPercentage, 0), 100); // Cap between 0-100
+  xpPercentage = Math.min(Math.max(xpPercentage, 0), 100);
 
   return (
-    <div className="hud-panel status-bar">
-      <div className="status-item user-info">
-        <span className="username" style={{ fontFamily: accentFont }}>{profile.username}</span>
-        <span className="level">Lvl: {currentLevel}</span>
-      </div>
+    <StatusBarContainer>
+      <StatusItem>
+        <Username>{profile.username}</Username>
+        <Level>Lvl: {currentLevel}</Level>
+      </StatusItem>
 
-      <div className="status-item xp-bar-container">
-        <div className="progress-bar-container" style={{ height: '12px', width: '200px', backgroundColor: 'rgba(0,0,0,0.5)' }}> {/* Increased width for more text */}
+      <StatusItem>
+        <div style={{ height: '12px', width: '200px', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div 
-            className="progress-bar shimmer"
             style={{ 
               width: `${xpPercentage}%`, 
-              backgroundColor: primaryColor, 
+              backgroundColor: theme.palette.primary.main,
               height: '12px',
               lineHeight: '12px',
               fontSize: '9px',
-              overflow: 'hidden' // Ensure text doesn't overflow the bar itself
+              overflow: 'hidden',
+              textAlign: 'center',
+              color: theme.palette.getContrastText(theme.palette.primary.main)
             }}
             title={`${Math.round(currentLevelExpProgress)} / ${Math.round(totalExpNeededForNextLevelSpan)} XP`}
           >
-            {/* Display XP progress text */}
             {`${Math.round(currentLevelExpProgress)} / ${Math.round(totalExpNeededForNextLevelSpan)} XP`}
           </div>
         </div>
-      </div>
+      </StatusItem>
 
-      <div className="status-item tokens-info">
-        <span style={{ fontFamily: accentFont }}>{theme.terminology.platform_token}:</span> {profile.tokens !== undefined ? profile.tokens : 'N/A'}
-      </div>
-      
-      {/* Notifications section removed */}
-    </div>
+      <TokensInfo>
+        <span style={{ fontFamily: theme.typography.fontFamilyAccent }}>Stardust:</span> {profile.tokens !== undefined ? profile.tokens : 'N/A'}
+      </TokensInfo>
+    </StatusBarContainer>
   );
 };
 export default StatusBar;

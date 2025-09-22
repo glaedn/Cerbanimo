@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
-import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
-import '../HUDPanel.css'; // Shared panel styles
-import theme from '../../../styles/theme.js';
-// import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
+import { Link } from 'react-router-dom';
+import { useNotifications } from '../../../pages/NotificationProvider';
+import {
+  CommsLogContainer,
+  LogItem,
+} from './CommsLog.styles';
+import { HUDPanelHeader, HUDPanelTitle, HUDPanelList } from '../HUDPanel.styles';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import CancelIcon from '@mui/icons-material/Cancel';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
@@ -28,65 +30,55 @@ const getNotificationIcon = (type) => {
 };
 
 const CommsLog = () => {
-  const { notifications } = useNotifications(); // Consuming the context
+  const { notifications } = useNotifications();
   const [isMinimized, setIsMinimized] = useState(false);
 
   const toggleMinimize = (e) => {
-    // Prevent click event from bubbling up if the button itself was clicked
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
       e.stopPropagation();
     }
     setIsMinimized(!isMinimized);
   };
 
-  // Removed the useEffect hook that used sampleActivities and setInterval
-  // Removed activityLog state, will use notifications directly
-
-  // Removed the useEffect hook that used sampleActivities and setInterval
-  // Removed activityLog state, will use notifications directly
-
-  // Display all notifications, no longer slicing for the latest 3
-  // const latestNotifications = notifications ? notifications.slice(0, 3) : [];
-
   return (
-    <div className={`hud-panel comms-log ${isMinimized ? 'minimized' : ''}`}>
-      <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>{`${theme.terminology.notification_source}'s Log`}</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? `Expand ${theme.terminology.notification_source}'s Log` : `Minimize ${theme.terminology.notification_source}'s Log`}>
+    <CommsLogContainer>
+      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+        <HUDPanelTitle>Comms Log</HUDPanelTitle>
+        <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Comms Log` : `Minimize Comms Log`}>
           {isMinimized ? '+' : '-'}
         </button>
-      </div>
+      </HUDPanelHeader>
       {!isMinimized && (
-        <div className="hud-panel-content" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-          {notifications === null || notifications === undefined ? ( // Check if notifications context is not yet available
+        <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+          {notifications === null || notifications === undefined ? (
             <p>Loading transmissions...</p>
-          ) : notifications.length > 0 ? ( // Check full notifications array
-            <ul>
-              {notifications.map((notification) => { // Map over full notifications array
-                const icon = getNotificationIcon(notification.type); // Get the icon
+          ) : notifications.length > 0 ? (
+            <HUDPanelList>
+              {notifications.map((notification) => {
+                const icon = getNotificationIcon(notification.type);
                 return (
-                  <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
-                    {icon} {/* Render the icon */}
+                  <LogItem key={notification.id} style={{ display: 'flex', alignItems: 'center' }}>
+                    {icon}
                     {notification.projectId && notification.taskId ? (
                       <Link 
                         to={`/visualizer/${notification.projectId}/${notification.taskId}`} 
-                        style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
+                        style={{ textDecoration: 'underline', color: 'inherit' }}
                       >
                         {notification.messageText}
                       </Link>
                     ) : (
-                      notification.messageText // Displaying parsed messageText
+                      notification.messageText
                     )}
-                  </li>
+                  </LogItem>
                 );
               })}
-            </ul>
+            </HUDPanelList>
           ) : (
             <p>No new transmissions.</p>
           )}
         </div>
       )}
-    </div>
+    </CommsLogContainer>
   );
 };
 
