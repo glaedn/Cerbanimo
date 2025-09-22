@@ -128,8 +128,8 @@
     box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* theme.colors.primary */
 }
 
-/* Task Browser Wrapper - This seems specific to a TaskBrowser component, not directly ProfilePage panels */
-  .task-browser-wrapper {
+/* Quest Browser Wrapper - This seems specific to a QuestBrowser component, not directly ProfilePage panels */
+  .quest-browser-wrapper {
     flex-grow: 1;
     width: 100%;
     max-width: 1200px;

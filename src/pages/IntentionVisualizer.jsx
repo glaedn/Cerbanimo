@@ -20,7 +20,7 @@ const IntentionVisualizer = () => {
   const [userId, setUserId] = useState(null);
   const { quests, skills, project, handleQuestAction, fetchQuests, updateProject } =
     useIntentionQuests(projectId, user);
-  const [activeCategory, setActiveCategory] = useState(`All ${theme.terminology.task_plural}`); // Default to All Tasks
+  const [activeCategory, setActiveCategory] = useState(`All ${theme.terminology.task_plural}`); // Default to All Quests
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -785,8 +785,8 @@ data.forEach((source) => {
   const sourceNode = graph[source.id];
   if (!sourceNode) return;
 
-  // For All Tasks view, include all dependencies
-  if (activeCategory === "All Tasks") {
+  // For All Quests view, include all dependencies
+  if (activeCategory === `All ${theme.terminology.task_plural}`) {
     source.dependencies.forEach((depId) => {
       const targetNode = graph[depId];
       if (targetNode) {
@@ -1146,10 +1146,10 @@ links.forEach(link => {
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
         >
-          {/* Add the All Tasks tab first */}
+          {/* Add the All Quests tab first */}
           <button
-            key="all-tasks"
-            className={`tab all-tasks ${activeCategory === `All ${theme.terminology.task_plural}` ? "active" : ""}`}
+            key="all-quests"
+            className={`tab all-quests ${activeCategory === `All ${theme.terminology.task_plural}` ? "active" : ""}`}
             onClick={() => {
               setActiveCategory(`All ${theme.terminology.task_plural}`);
               setActiveSkillId(null);
