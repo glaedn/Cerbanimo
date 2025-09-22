@@ -3,19 +3,20 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Box, Typography, List, ListItem, ListItemText, Link, Paper } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
-import './TaskBrowser.css';
+import './QuestBrowser.css';
+import theme from '../styles/theme';
 
-const TaskBrowser = () => {
+const QuestBrowser = () => {
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
-  const [tasks, setTasks] = useState([]);
-  const [acceptedTasks, setAcceptedTasks] = useState([]);
-  const [approvalTasks, setApprovalTasks] = useState([]);
+  const [quests, setQuests] = useState([]);
+  const [acceptedQuests, setAcceptedQuests] = useState([]);
+  const [approvalQuests, setApprovalQuests] = useState([]);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     if (isAuthenticated) {
-      const fetchProfileAndTasks = async () => {
+      const fetchProfileAndQuests = async () => {
         try {
           const token = await getAccessTokenSilently({
             audience: import.meta.env.VITE_BACKEND_URL,
@@ -55,35 +56,35 @@ const TaskBrowser = () => {
             return;
           }
       
-          const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
+          const questsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
             params: { skills: userSkills },
             headers: { Authorization: `Bearer ${token}` },
           });
       
-          const sortedTasks = tasksResponse.data.sort((a, b) => {
+          const sortedQuests = questsResponse.data.sort((a, b) => {
             const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             return sharedB - sharedA;
           });
       
-          const tasksWithSharedTags = sortedTasks.map(task => ({
-            ...task,
-            sharedTags: Array.isArray(task.projectTags)
-              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim()))
+          const questsWithSharedTags = sortedQuests.map(quest => ({
+            ...quest,
+            sharedTags: Array.isArray(quest.projectTags)
+              ? quest.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim()))
               : [],
-            sharedTagsCount: Array.isArray(task.projectTags)
-              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length
+            sharedTagsCount: Array.isArray(quest.projectTags)
+              ? quest.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length
               : 0,
           }));
       
-          setTasks(tasksWithSharedTags);
+          setQuests(questsWithSharedTags);
       
         } catch (err) {
-          setError(`Failed to fetch profile or tasks: ${err.response?.data?.message || err.message}`);
+          setError(`Failed to fetch profile or ${theme.terminology.task_plural}: ${err.response?.data?.message || err.message}`);
         }
       };
 
-      const fetchAcceptedTasks = async () => {
+      const fetchAcceptedQuests = async () => {
         if (!userId) return;
         try {
           const token = await getAccessTokenSilently();
@@ -91,116 +92,116 @@ const TaskBrowser = () => {
             params: { userId: userId.toString() },
             headers: { Authorization: `Bearer ${token}` },
           });
-          setAcceptedTasks(acceptedResponse.data);
+          setAcceptedQuests(acceptedResponse.data);
         } catch (err) {
-          setError(`Failed to fetch accepted tasks: ${err.response?.data?.message || err.message}`);
+          setError(`Failed to fetch accepted ${theme.terminology.task_plural}: ${err.response?.data?.message || err.message}`);
         }
       };
 
-      const fetchApprovalTasks = async () => {
+      const fetchApprovalQuests = async () => {
         if (!userId) return;
         try {
           const token = await getAccessTokenSilently();
           const approvalResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/reviewer/${userId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setApprovalTasks(approvalResponse.data);
+          setApprovalQuests(approvalResponse.data);
         } catch (err) {
-          setError(`Failed to fetch review tasks: ${err.response?.data?.message || err.message}`);
+          setError(`Failed to fetch review ${theme.terminology.task_plural}: ${err.response?.data?.message || err.message}`);
         }
       };
 
-      fetchProfileAndTasks();
-      fetchAcceptedTasks();
-      fetchApprovalTasks();
+      fetchProfileAndQuests();
+      fetchAcceptedQuests();
+      fetchApprovalQuests();
     }
   }, [isAuthenticated, getAccessTokenSilently, user, userId]);
 
   return (
     <Box display="flex" flexDirection="row" className="task-browser">
       <Box className="task-browser-container" flex={1}>
-        <Typography variant="h4" gutterBottom className="task-title">Available Tasks</Typography>
+        <Typography variant="h4" gutterBottom className="task-title">Available {theme.terminology.task_plural}</Typography>
         {error && <Typography color="error">{error}</Typography>}
         <Paper elevation={5} className="task-list">
           <List>
-            {tasks.length > 0 ? (
-              tasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
+            {quests.length > 0 ? (
+              quests.map((quest) => (
+                <ListItem key={quest.id} divider className="task-item">
                   <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
+                    primary={<span className="task-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
+                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
                         <br />
                         <Typography component="span" variant="body2" className="task-tags">
-                          {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
+                          {quest.sharedTagsCount > 0 ? `🔹 Shared Interests: ${quest.sharedTags.join(', ')}` : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        {task.project_id && <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>}
+                        {quest.project_id && <Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link>}
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No matching tasks found.</Typography>}
+            ) : <Typography className="no-tasks">No matching {theme.terminology.task_plural} found.</Typography>}
           </List>
         </Paper>
       </Box>
       
       <Box flex={1} className="task-browser-container">
-        <Typography variant="h4" gutterBottom className="task-title">Accepted Tasks</Typography>
+        <Typography variant="h4" gutterBottom className="task-title">Accepted {theme.terminology.task_plural}</Typography>
         <Paper elevation={5} className="task-list">
           <List>
-            {acceptedTasks.length > 0 ? (
-              acceptedTasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
+            {acceptedQuests.length > 0 ? (
+              acceptedQuests.map((quest) => (
+                <ListItem key={quest.id} divider className="task-item">
                   <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
+                    primary={<span className="task-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
+                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
                         <br />
                         <Typography component="span" variant="body2" className="task-status">
-                          {task.status === 'submitted' && task.approvals?.length >= 2 ? `⏳ Awaiting PM Approval` :
-                           task.status === 'submitted' ? `✅ Submitted for Peer Review` :
+                          {quest.status === 'submitted' && quest.approvals?.length >= 2 ? `⏳ Awaiting ${theme.terminology.project_manager_approval}` :
+                           quest.status === 'submitted' ? `✅ Submitted for ${theme.terminology.peer_review_approval}` :
                            `⌛ In Progress`}
                         </Typography>
                         <br />
-                        <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>
+                        <Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link>
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No accepted tasks yet.</Typography>}
+            ) : <Typography className="no-tasks">No accepted {theme.terminology.task_plural} yet.</Typography>}
           </List>
         </Paper>
       </Box>
       
       <Box flex={1} className="task-browser-container">
-        <Typography variant="h4" gutterBottom className="task-title">Review Tasks</Typography>
+        <Typography variant="h4" gutterBottom className="task-title">Review {theme.terminology.task_plural}</Typography>
         <Paper elevation={5} className="task-list">
           <List>
-            {approvalTasks.length > 0 ? (
-              approvalTasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
+            {approvalQuests.length > 0 ? (
+              approvalQuests.map((quest) => (
+                <ListItem key={quest.id} divider className="task-item">
                   <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
+                    primary={<span className="task-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
+                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
                         <br />
                         <Typography component="span" variant="body2" className="task-status">
-                          {`📝 Needs Review (${task.approvals?.length || 0} approvals, ${task.rejections?.length || 0} rejections)`}
+                          {`📝 Needs Review (${quest.approvals?.length || 0} approvals, ${quest.rejections?.length || 0} rejections)`}
                         </Typography>
-                        {task.project_id && <><br /><Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link></>}
-                        {task.project_id && task.id && <><br /><Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
+                        {quest.project_id && <><br /><Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link></>}
+                        {quest.project_id && quest.id && <><br /><Link href={`/visualizer/${quest.project_id}/${quest.id}`} className="task-link">✏️ Review {theme.terminology.task}</Link></>}
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No tasks to review.</Typography>}
+            ) : <Typography className="no-tasks">No {theme.terminology.task_plural} to review.</Typography>}
           </List>
         </Paper>
       </Box>
@@ -208,4 +209,4 @@ const TaskBrowser = () => {
   );
 };
 
-export default TaskBrowser;
+export default QuestBrowser;

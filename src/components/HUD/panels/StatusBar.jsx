@@ -1,33 +1,34 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 // Removed useNotifications hook
-import useSkillData from '../../../hooks/useSkillData';
+import useAffinityData from '../../../hooks/useAffinityData';
 import { useAuth0 } from '@auth0/auth0-react';
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
+import theme from '../../../../styles/theme';
 
 
 const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
+  const { allAffinities, loading: affinitiesLoading, error: affinitiesError } = useAffinityData();
   const { user, isAuthenticated } = useAuth0();
 
   const primaryColor = '#00F3FF'; // theme.colors.primary
   const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
 
-  if (profileLoading || skillsLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
-  if (profileError || skillsError) return <div className="hud-panel status-bar">Error: {profileError?.message || skillsError?.message}</div>;
-  if (!profile || !allSkills || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, skills, or authentication unavailable.</div>;
+  if (profileLoading || affinitiesLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
+  if (profileError || affinitiesError) return <div className="hud-panel status-bar">Error: {profileError?.message || affinitiesError?.message}</div>;
+  if (!profile || !allAffinities || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, affinities, or authentication unavailable.</div>;
   
-  console.log('[StatusBar Debug] allSkills:', allSkills);
+  console.log('[StatusBar Debug] allAffinities:', allAffinities);
   console.log('[StatusBar Debug] profile.id:', profile ? profile.id : 'Profile or profile.id not available');
-  // Calculate Total Global Experience from allSkills
+  // Calculate Total Global Experience from allAffinities
   let totalGlobalExp = 0;
-  if (allSkills && profile && profile.id) { // Ensure data is available
-    allSkills.forEach(skill => {
-      console.log('[StatusBar Debug] Processing skill:', skill.name, skill.unlocked_users);
-      if (skill.unlocked_users && Array.isArray(skill.unlocked_users)) {
-        skill.unlocked_users.forEach(userEntry => { // userEntry is now an object
+  if (allAffinities && profile && profile.id) { // Ensure data is available
+    allAffinities.forEach(affinity => {
+      console.log('[StatusBar Debug] Processing affinity:', affinity.name, affinity.unlocked_users);
+      if (affinity.unlocked_users && Array.isArray(affinity.unlocked_users)) {
+        affinity.unlocked_users.forEach(userEntry => { // userEntry is now an object
           console.log('[StatusBar Debug] Checking userEntry:', userEntry);
           if (userEntry && typeof profile.id !== 'undefined') { // Ensure profile.id is available
             const entryUserId = parseInt(userEntry.user_id, 10);
@@ -95,7 +96,7 @@ const StatusBar = () => {
       </div>
 
       <div className="status-item tokens-info">
-        <span style={{ fontFamily: accentFont }}>Galactic Credits:</span> {profile.tokens !== undefined ? profile.tokens : 'N/A'}
+        <span style={{ fontFamily: accentFont }}>{theme.terminology.platform_token}:</span> {profile.tokens !== undefined ? profile.tokens : 'N/A'}
       </div>
       
       {/* Notifications section removed */}

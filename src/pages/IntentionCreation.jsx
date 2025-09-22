@@ -22,10 +22,11 @@ import {
   pink,
   indigo,
 } from "@mui/material/colors";
-import "./ProjectCreation.css";
+import "./IntentionCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
+import theme from '../styles/theme';
 
-const ProjectCreation = () => {
+const IntentionCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -77,13 +78,11 @@ const ProjectCreation = () => {
     fetchTags();
   }, [getAccessTokenSilently]);
 
-  const handleCreateProject = async () => {
-    setLoadingPopupMessages(["Creating your project..."]);
+  const handleCreateIntention = async () => {
+    setLoadingPopupMessages([`Creating your ${theme.terminology.project}...`]);
     setLoadingPopupOpen(true);
     try {
       const token = await getAccessTokenSilently();
-
-      // Step 1: Create the project
 
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/projects/create`,
@@ -102,36 +101,34 @@ const ProjectCreation = () => {
 
       if (response.status === 201) {
         const projectId = response.data.id;
-        setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
+        setLoadingPopupMessages(prevMessages => [...prevMessages, `${theme.terminology.project} created successfully!`]);
 
         if (autoGenerateTasks) {
-          setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
-          // Step 2: Auto-generate tasks using LLM
+          setLoadingPopupMessages(prevMessages => [...prevMessages, `Generating ${theme.terminology.task_plural} data...`]);
           const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/auto-generate`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ projectId }), // Send the new project ID
+            body: JSON.stringify({ projectId }),
 
           });
           const result = await generateResponse.json();
 
           if (result.success) {
-            setLoadingPopupMessages(prevMessages => [...prevMessages, "Tasks generated successfully!"]);
+            setLoadingPopupMessages(prevMessages => [...prevMessages, `${theme.terminology.task_plural} generated successfully!`]);
           } else {
-            setLoadingPopupMessages(prevMessages => [...prevMessages, "Task generation failed: " + result.error]);
+            setLoadingPopupMessages(prevMessages => [...prevMessages, `${theme.terminology.task} generation failed: ` + result.error]);
           }
         }
 
-        // Step 3: Navigate to the project visualizer either way
         navigate(`/visualizer/${projectId}`);
       }
     } catch (error) {
-      console.error("Failed to create project:", error);
-      setLoadingPopupMessages(["Error creating project. Please try again."]);
-      setLoadingPopupOpen(true); // Ensure it's open if it wasn't already
+      console.error(`Failed to create ${theme.terminology.project}:`, error);
+      setLoadingPopupMessages([`Error creating ${theme.terminology.project}. Please try again.`]);
+      setLoadingPopupOpen(true);
     }
   };
 
@@ -140,10 +137,10 @@ const ProjectCreation = () => {
     <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
     <Box className="project-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
       <Typography variant="h4" className="form-title">
-        Create a New Project
+        {theme.terminology.create_project}
       </Typography>
       <TextField
-        label="Project Name"
+        label={`${theme.terminology.project} Name`}
         variant="outlined"
         sx={{ width: '100%' }}
         value={name}
@@ -151,7 +148,7 @@ const ProjectCreation = () => {
         margin="normal"
       />
       <TextField
-        label="Project Description"
+        label={`${theme.terminology.project} Description`}
         variant="outlined"
         fullWidth
         multiline
@@ -199,20 +196,20 @@ const ProjectCreation = () => {
             color="primary"
           />
         }
-        label="Auto-generate project tasks using AI"
+        label={`Auto-generate ${theme.terminology.project} ${theme.terminology.task_plural} using AI`}
         sx={{ marginTop: 2, marginBottom: 1 }}
       />
       <Button
         variant="contained"
         color="primary"
-        onClick={handleCreateProject}
+        onClick={handleCreateIntention}
         sx={{ marginTop: 2, paddingY: '10px', paddingX: '20px', fontWeight: 'bold' }}
       >
-        Create Project
+        {theme.terminology.create_project}
       </Button>
     </Box>
     </div>
   );
 };
 
-export default ProjectCreation;
+export default IntentionCreation;

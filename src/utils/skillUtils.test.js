@@ -1,20 +1,20 @@
-// src/utils/skillUtils.test.js
-import { processSkillDataForGalaxy, calculateExperienceNeeded } from './skillUtils';
+// src/utils/affinityUtils.test.js
+import { processAffinityDataForGalaxy, calculateExperienceNeeded } from './affinityUtils';
 
-describe('skillUtils', () => {
-  describe('processSkillDataForGalaxy', () => {
+describe('affinityUtils', () => {
+  describe('processAffinityDataForGalaxy', () => {
     const mockUserId = 'user123';
-    const baseSkills = [
-      { id: 's1', name: 'Star Skill 1', parent_skill_id: null, unlocked_users: `[{"user_id":"${mockUserId}","level":5,"exp":100}]` },
-      { id: 'p1', name: 'Planet Skill 1', parent_skill_id: 's1', unlocked_users: `[{"user_id":"${mockUserId}","level":3,"exp":50}]` },
-      { id: 'm1', name: 'Moon Skill 1', parent_skill_id: 'p1', unlocked_users: `[{"user_id":"${mockUserId}","level":2,"exp":20}]` },
-      { id: 'sat1', name: 'Satellite Skill 1', parent_skill_id: 'm1', unlocked_users: `[{"user_id":"${mockUserId}","level":1,"exp":10}]` },
-      { id: 's2', name: 'Star Skill 2 (Unrelated)', parent_skill_id: null, unlocked_users: `[{"user_id":"anotherUser","level":1,"exp":10}]` },
-      { id: 'p2', name: 'Planet Skill 2 (Child of s1, user no level)', parent_skill_id: 's1', unlocked_users: `[{"user_id":"anotherUser","level":1,"exp":10}]` },
+    const baseAffinities = [
+      { id: 's1', name: 'Star Affinity 1', parent_affinity_id: null, unlocked_users: `[{"user_id":"${mockUserId}","level":5,"exp":100}]` },
+      { id: 'p1', name: 'Planet Affinity 1', parent_affinity_id: 's1', unlocked_users: `[{"user_id":"${mockUserId}","level":3,"exp":50}]` },
+      { id: 'm1', name: 'Moon Affinity 1', parent_affinity_id: 'p1', unlocked_users: `[{"user_id":"${mockUserId}","level":2,"exp":20}]` },
+      { id: 'sat1', name: 'Satellite Affinity 1', parent_affinity_id: 'm1', unlocked_users: `[{"user_id":"${mockUserId}","level":1,"exp":10}]` },
+      { id: 's2', name: 'Star Affinity 2 (Unrelated)', parent_affinity_id: null, unlocked_users: `[{"user_id":"anotherUser","level":1,"exp":10}]` },
+      { id: 'p2', name: 'Planet Affinity 2 (Child of s1, user no level)', parent_affinity_id: 's1', unlocked_users: `[{"user_id":"anotherUser","level":1,"exp":10}]` },
     ];
 
-    it('should correctly categorize skills including satellites', () => {
-      const processed = processSkillDataForGalaxy(baseSkills, mockUserId);
+    it('should correctly categorize affinities including satellites', () => {
+      const processed = processAffinityDataForGalaxy(baseAffinities, mockUserId);
       
       const star1 = processed.find(s => s.id === 's1');
       const planet1 = processed.find(s => s.id === 'p1');
@@ -27,8 +27,8 @@ describe('skillUtils', () => {
       expect(moon1?.category).toBe('moon');
       expect(satellite1?.category).toBe('satellite');
       
-      // p2 is not unlocked by mockUserId and is not a direct parent of an unlocked skill by mockUserId.
-      // Based on current processSkillDataForGalaxy logic, it should not be included.
+      // p2 is not unlocked by mockUserId and is not a direct parent of an unlocked affinity by mockUserId.
+      // Based on current processAffinityDataForGalaxy logic, it should not be included.
       const planet2Processed = processed.find(s => s.id === 'p2');
       expect(planet2Processed).toBeUndefined(); 
       // If planet2 were to be included structurally, the following would be tested:
@@ -38,7 +38,7 @@ describe('skillUtils', () => {
     });
 
     it('should correctly calculate levelForColor for stars and pass userLevel for dependencies', () => {
-      const processed = processSkillDataForGalaxy(baseSkills, mockUserId);
+      const processed = processAffinityDataForGalaxy(baseAffinities, mockUserId);
       const star1 = processed.find(s => s.id === 's1');
       const planet1 = processed.find(s => s.id === 'p1');
       const moon1 = processed.find(s => s.id === 'm1');
@@ -54,12 +54,12 @@ describe('skillUtils', () => {
       expect(satellite1?.levelForColor).toBe(satellite1?.userLevel);
     });
     
-    it('includes structural parent skills not directly unlocked by user', () => {
-      const skillsWithStructuralParent = [
-        { id: 's3', name: 'Star Skill 3 (Not by User)', parent_skill_id: null, unlocked_users: `[{"user_id":"anotherUser","level":5,"exp":100}]` },
-        { id: 'p3', name: 'Planet Skill 3 (Child of S3, by User)', parent_skill_id: 's3', unlocked_users: `[{"user_id":"${mockUserId}","level":3,"exp":50}]` },
+    it('includes structural parent affinities not directly unlocked by user', () => {
+      const affinitiesWithStructuralParent = [
+        { id: 's3', name: 'Star Affinity 3 (Not by User)', parent_affinity_id: null, unlocked_users: `[{"user_id":"anotherUser","level":5,"exp":100}]` },
+        { id: 'p3', name: 'Planet Affinity 3 (Child of S3, by User)', parent_affinity_id: 's3', unlocked_users: `[{"user_id":"${mockUserId}","level":3,"exp":50}]` },
       ];
-      const processed = processSkillDataForGalaxy(skillsWithStructuralParent, mockUserId);
+      const processed = processAffinityDataForGalaxy(affinitiesWithStructuralParent, mockUserId);
 
       const star3 = processed.find(s => s.id === 's3');
       const planet3 = processed.find(s => s.id === 'p3');

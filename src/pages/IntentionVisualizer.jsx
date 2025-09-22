@@ -1,25 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import axios from "axios";
-import TaskEditor from "./TaskEditor";
-import { useProjectTasks } from "../hooks/useProjectTasks";
-import "./ProjectVisualizer.css";
+import QuestEditor from "./QuestEditor";
+import { useIntentionQuests } from "../hooks/useIntentionQuests";
+import "./IntentionVisualizer.css";
 import { useParams } from "react-router-dom";
+import theme from "../styles/theme";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 
-const ProjectVisualizer = () => {
+const IntentionVisualizer = () => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { projectId, taskId } = useParams();
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
-  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
-    useProjectTasks(projectId, user);
-  const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
+  const { quests, skills, project, handleQuestAction, fetchQuests, updateProject } =
+    useIntentionQuests(projectId, user);
+  const [activeCategory, setActiveCategory] = useState(`All ${theme.terminology.task_plural}`); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -43,22 +44,21 @@ const ProjectVisualizer = () => {
   const [popupLaunched, setPopupLaunched] = useState(false);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
-  // Check if any task is active, completed, or urgent
   const [projectIsActive, setProjectIsActive] = useState(false);
 
   useEffect(() => {
     setProjectIsActive(
-      tasks.some(
-        (task) =>
-          task.status === "completed" ||
-          task.status === "active-assigned" ||
-          task.status === "active-unassigned" ||
-          task.status === "urgent-unassigned" ||
-          task.status === "urgent-assigned" ||
-          task.status === "submitted"
+      quests.some(
+        (quest) =>
+          quest.status === "completed" ||
+          quest.status === "active-assigned" ||
+          quest.status === "active-unassigned" ||
+          quest.status === "urgent-unassigned" ||
+          quest.status === "urgent-assigned" ||
+          quest.status === "submitted"
       )
     );
-  }, [tasks]);
+  }, [quests]);
 
 
   const fetchUserCommunities = async () => {
@@ -97,8 +97,8 @@ const ProjectVisualizer = () => {
   };
 
   // Function to handle granularization of tasks
-  const handleGranularizeTasks = async (projectId) => {
-    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the project.');
+  const handleGranularizeQuests = async (projectId) => {
+    const confirm = window.confirm(`Are you sure? This will delete and replace ALL ${theme.terminology.task_plural} in the project.`);
     if (!confirm) return;
 
     setLoading(true);
@@ -125,15 +125,14 @@ const ProjectVisualizer = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Refresh tasks after successful granularization
-        await fetchTasks();
-        alert('Task granularization successful!');
+        await fetchQuests();
+        alert(`${theme.terminology.task} granularization successful!`);
       } else {
-        alert('Task granularization failed: ' + data.error);
+        alert(`${theme.terminology.task} granularization failed: ` + data.error);
       }
     } catch (error) {
-      console.error('Error granularizing task:', error);
-      alert('Error granularizing task: ' + error.message);
+      console.error(`Error granularizing ${theme.terminology.task}:`, error);
+      alert(`Error granularizing ${theme.terminology.task}: ` + error.message);
     } finally {
       setLoading(false);
     }
@@ -247,13 +246,13 @@ const ProjectVisualizer = () => {
 
   
   // Modify your fetchTasks call to preserve the category
-const refreshTasks = async () => {
-  console.log("Refreshing tasks...");
-  const currentCategory = activeCategory; // Save before refresh
+const refreshQuests = async () => {
+  console.log(`Refreshing ${theme.terminology.task_plural}...`);
+  const currentCategory = activeCategory;
   const currentSkillId = activeSkillId;
   
-  const updatedTasks = await fetchTasks();
-  console.log("Refreshed tasks data:", updatedTasks);
+  const updatedQuests = await fetchQuests();
+  console.log(`Refreshed ${theme.terminology.task_plural} data:`, updatedQuests);
   
   // Restore the active category after refresh
   if (currentCategory) {
@@ -308,23 +307,21 @@ useEffect(() => {
     };
   }, []);
 
-  const categorizedTasks = useMemo(() => {
-    // First create the all-tasks entry
-    const taskMap = {
-      "All Tasks": [...tasks] // Include all tasks
+  const categorizedQuests = useMemo(() => {
+    const questMap = {
+      [`All ${theme.terminology.task_plural}`]: [...quests]
     };
   
-    // Then add the skill-specific categories
     const filteredSkills = skills.filter((skill) =>
-      tasks.some((task) => task.skill_id === skill.id)
+      quests.some((quest) => quest.skill_id === skill.id)
     );
   
     filteredSkills.forEach((skill) => {
-      taskMap[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
+      questMap[skill.name] = quests.filter((quest) => quest.skill_id === skill.id);
     });
   
-    return taskMap;
-  }, [tasks, skills]);
+    return questMap;
+  }, [quests, skills]);
 
   const initialForm = {
     id: null,
@@ -338,8 +335,8 @@ useEffect(() => {
   };
 
   // local modal control here
-  const [taskForm, setTaskForm] = useState(initialForm);
-  const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [questForm, setQuestForm] = useState(initialForm);
+  const [showQuestPopup, setShowQuestPopup] = useState(false);
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -382,28 +379,28 @@ useEffect(() => {
     tabsContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  const handleEditTask = (task) => {
-    setTaskForm(task); // Fill in form with task values
-    setShowTaskPopup(true); // Show the TaskEditor modal
+  const handleEditQuest = (quest) => {
+    setQuestForm(quest);
+    setShowQuestPopup(true);
   };
 
-  const handleViewTask = async (task) => {
+  const handleViewQuest = async (quest) => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${quest.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setTaskForm(response.data);
-      setShowTaskPopup(true);
+      setQuestForm(response.data);
+      setShowQuestPopup(true);
     } catch (error) {
-      console.error("Error fetching full task details:", error);
-      setTaskForm(task);
-      setShowTaskPopup(true);
+      console.error(`Error fetching full ${theme.terminology.task} details:`, error);
+      setQuestForm(quest);
+      setShowQuestPopup(true);
     }
   };
 
-  const handleAddTask = (dependencyId = null) => {
+  const handleAddQuest = (dependencyId = null) => {
     const currentSkill = skills.find((s) => s.name === activeCategory);
     const form = {
       ...initialForm,
@@ -414,23 +411,22 @@ useEffect(() => {
     // If dependencyId exists, create both the numeric dependencies array
     // and the named version needed for display
     if (dependencyId) {
-      const depTask = allTasks[dependencyId];
+      const depQuest = allQuests[dependencyId];
       form.dependencies = [parseInt(dependencyId, 10)];
-      form.dependenciesWithNames = depTask ? [
-        { id: parseInt(dependencyId, 10), name: depTask.name }
+      form.dependenciesWithNames = depQuest ? [
+        { id: parseInt(dependencyId, 10), name: depQuest.name }
       ] : [];
     }
     
-    setTaskForm(form);
-    setShowTaskPopup(true);
+    setQuestForm(form);
+    setShowQuestPopup(true);
   };
 
   const FIXED_LEVEL_HEIGHT = 120;
   const MAX_EXTERNAL_DEPS = 3;
 
-  // All tasks across all skills - used to find external dependencies
-  const allTasks = tasks.reduce((acc, task) => {
-    acc[task.id] = task;
+  const allQuests = quests.reduce((acc, quest) => {
+    acc[quest.id] = quest;
     return acc;
   }, {});
 
@@ -500,12 +496,11 @@ useEffect(() => {
 
 // Modify this useEffect to only set initial values when there are no current values
 useEffect(() => {
-  // Only set initial values if both activeCategory and activeSkillId are not set
   if (!activeCategory) {
-    setActiveCategory("All Tasks");
+    setActiveCategory(`All ${theme.terminology.task_plural}`);
     setActiveSkillId(null);
   }
-}, [skills, tasks]); // Dependencies remain the same
+}, [skills, quests]);
 
 useEffect(() => {
   if (hoveredNode && tooltipRef.current) {
@@ -631,8 +626,7 @@ useEffect(() => {
   useEffect(() => {
     if (!svgRef.current) return;
     
-    // Get tasks for the current category
-    const data = categorizedTasks[activeCategory] || [];
+    const data = categorizedQuests[activeCategory] || [];
     
     // Exit early if no data
     if (data.length === 0) return;
@@ -697,17 +691,14 @@ useEffect(() => {
       });
     });
 
-    // Find root nodes - different logic for All Tasks view vs skill-specific views
     const rootNodes = data
     .filter((node) => {
-      if (activeCategory === "All Tasks") {
-        // For All Tasks view, a root node has no dependencies at all
+      if (activeCategory === `All ${theme.terminology.task_plural}`) {
         return node.dependencies.length === 0;
       } else {
-        // For skill-specific views
         const internalDeps = node.dependencies.filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id === activeSkillId;
+          const depQuest = allQuests[depId];
+          return depQuest && depQuest.skill_id === activeSkillId;
         });
         return internalDeps.length === 0;
       }
@@ -850,7 +841,6 @@ const linkElements = linksGroup
     }`;
   });
 
-// 3. Now go through and update the colors for completed tasks directly
 links.forEach(link => {
   if (link.targetStatus === "completed") {
     d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
@@ -858,34 +848,31 @@ links.forEach(link => {
 });
 
 
-    // Only process external dependencies if we're not in All Tasks view
-    if (activeCategory !== "All Tasks") {
+    if (activeCategory !== `All ${theme.terminology.task_plural}`) {
       Object.values(graph).forEach((node) => {
-        // Get external dependencies (things this node depends on)
         const externalDeps = node.dependencies
           .filter((depId) => {
-            const depTask = allTasks[depId];
-            return depTask && depTask.skill_id !== activeSkillId;
+            const depQuest = allQuests[depId];
+            return depQuest && depQuest.skill_id !== activeSkillId;
           })
           .map((depId) => ({
             id: depId,
             sourceNode: node,
             type: "depends-on",
-            taskInfo: allTasks[depId],
+            questInfo: allQuests[depId],
           }));
     
-        // Get external dependents (things that depend on this node)
-        const externalDependents = Object.values(allTasks)
+        const externalDependents = Object.values(allQuests)
           .filter(
-            (task) =>
-              task.skill_id !== activeSkillId &&
-              task.dependencies.includes(node.id)
+            (quest) =>
+              quest.skill_id !== activeSkillId &&
+              quest.dependencies.includes(node.id)
           )
-          .map((task) => ({
-            id: task.id,
+          .map((quest) => ({
+            id: quest.id,
             sourceNode: node,
             type: "depended-by",
-            taskInfo: task,
+            questInfo: quest,
           }));
     
         // Limit to MAX_EXTERNAL_DEPS dependencies of each type
@@ -920,12 +907,12 @@ links.forEach(link => {
             .attr("transform", `translate(${x2}, ${y2})`)
             .style("pointer-events", "visible")
             .on("mouseover", (event) => {
-              if (dep.taskInfo) {
+              if (dep.questInfo) {
                 setHoveredNode({
                   id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
+                  name: dep.questInfo.name,
+                  status: dep.questInfo.status,
+                  category: dep.questInfo.category,
                   type: dep.type,
                   rawX: event.clientX,
                   rawY: event.clientY,
@@ -935,18 +922,18 @@ links.forEach(link => {
             })
             .on("mouseout", handleMouseOut)
             .on("mouseleave", handleMouseOut) 
-            .on("click", () => handleEditTask(dep.taskInfo.id));
+            .on("click", () => handleEditQuest(dep.questInfo.id));
 
           externalNodeGroup
             .append("circle")
             .attr("r", 7)
             .attr(
               "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+              dep.questInfo ? getNodeFill(dep.questInfo.status) : "#CCCCCC"
             )
             .attr(
               "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+              dep.questInfo ? getNodeStroke(dep.questInfo.status) : "#999999"
             )
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
@@ -978,13 +965,13 @@ links.forEach(link => {
             .attr("class", "external-node")
             .attr("transform", `translate(${x2}, ${y2})`)
             .on("mouseover", (event) => {
-              const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
-              if (dep.taskInfo) {
+              const [x, y] = d3.pointer(event);
+              if (dep.questInfo) {
                 setHoveredNode({
                   id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
+                  name: dep.questInfo.name,
+                  status: dep.questInfo.status,
+                  category: dep.questInfo.category,
                   type: dep.type,
                   rawX: event.clientX,
                   rawY: event.clientY,
@@ -1000,11 +987,11 @@ links.forEach(link => {
             .attr("r", 7)
             .attr(
               "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+              dep.questInfo ? getNodeFill(dep.questInfo.status) : "#CCCCCC"
             )
             .attr(
               "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+              dep.questInfo ? getNodeStroke(dep.questInfo.status) : "#999999"
             )
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
@@ -1024,11 +1011,11 @@ links.forEach(link => {
       .on("mouseover", handleMouseOver)
       .on("mouseout", handleMouseOut)
       .on("click", function (event, d) {
-        event.stopPropagation(); // Prevent event bubbling
+        event.stopPropagation();
         if (isEditMode) {
-          handleEditTask(d);
+          handleEditQuest(d);
         } else {
-          handleViewTask(d);
+          handleViewQuest(d);
         }
       });
     nodeGroups
@@ -1068,12 +1055,11 @@ links.forEach(link => {
           .append("g")
           .attr("class", "add-button")
           .attr("transform", `translate(${node.x + 35}, ${node.y})`)
-          .style("pointer-events", "all") // Add this line
+          .style("pointer-events", "all")
           .style("cursor", "pointer")
           .on("click", function (event) {
-            // Move click handler here
             event.stopPropagation();
-            handleAddTask(node.id);
+            handleAddQuest(node.id);
           });
 
         addButtonGroup
@@ -1099,13 +1085,13 @@ links.forEach(link => {
     isEditMode,
     zoomTransform,
     svgDimensions,
-    tasks,
+    quests,
   ]);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
 
     useEffect(() => {
-    const fetchFullTask = async () => {
+    const fetchFullQuest = async () => {
       if (taskId && !popupLaunched) {
         try {
           const token = await getAccessTokenSilently();
@@ -1113,27 +1099,26 @@ links.forEach(link => {
             `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const task = response.data;
-          if (task) {
-            setTaskForm(task);
+          const quest = response.data;
+          if (quest) {
+            setQuestForm(quest);
             setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
+            setActiveSkillId(quest.skill_id);
+            setShowQuestPopup(true);
+            const skill = skills.find(s => s.id === quest.skill_id);
             if (skill) {
               setActiveCategory(skill.name);
             }
           }
         } catch (error) {
-          console.error("Error fetching full task details for deep link:", error);
-          // Fallback to tasks array
-          const task = tasks.find(t => t.id === parseInt(taskId, 10));
-          if (task) {
-            setTaskForm(task);
+          console.error(`Error fetching full ${theme.terminology.task} details for deep link:`, error);
+          const quest = quests.find(t => t.id === parseInt(taskId, 10));
+          if (quest) {
+            setQuestForm(quest);
             setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
+            setActiveSkillId(quest.skill_id);
+            setShowQuestPopup(true);
+            const skill = skills.find(s => s.id === quest.skill_id);
             if (skill) {
               setActiveCategory(skill.name);
             }
@@ -1141,10 +1126,8 @@ links.forEach(link => {
         }
       }
     };
-    fetchFullTask();
-  }, [taskId, tasks, skills, popupLaunched, getAccessTokenSilently]);
-
-  // Add these debug logs right before the TaskEditor component in the return statement
+    fetchFullQuest();
+  }, [taskId, quests, skills, popupLaunched, getAccessTokenSilently]);
 
   return (
     <div
@@ -1166,15 +1149,15 @@ links.forEach(link => {
           {/* Add the All Tasks tab first */}
           <button
             key="all-tasks"
-            className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
+            className={`tab all-tasks ${activeCategory === `All ${theme.terminology.task_plural}` ? "active" : ""}`}
             onClick={() => {
-              setActiveCategory("All Tasks");
-              setActiveSkillId(null); // No specific skill for All Tasks view
+              setActiveCategory(`All ${theme.terminology.task_plural}`);
+              setActiveSkillId(null);
             }}
             style={{ flex: "0 0 auto" }}
           >
-            All Tasks
-            {activeCategory === "All Tasks" && (
+            All {theme.terminology.task_plural}
+            {activeCategory === `All ${theme.terminology.task_plural}` && (
               <span className="active-indicator" />
             )}
           </button>
@@ -1236,21 +1219,21 @@ links.forEach(link => {
               <button
                 className="new-task-button"
                 onClick={() => {
-                  handleAddTask();
+                handleAddQuest();
                 }}
               >
-                + New Task
+              + New {theme.terminology.task}
               </button>
             )}
             {!projectIsActive && (
             <button
               className={`new-task-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
-                handleGranularizeTasks(projectId);
+                handleGranularizeQuests(projectId);
               }}
               disabled={loading}
             >
-              {loading ? 'Granularizing...' : 'Granularize all project tasks'}
+              {loading ? 'Granularizing...' : `Granularize all ${theme.terminology.project} ${theme.terminology.task_plural}`}
             </button>
             )}
             {project?.community_id === null && (
@@ -1296,7 +1279,7 @@ links.forEach(link => {
             <h4>{hoveredNode.name}</h4>
             {hoveredNode.isAddButton ? (
               <p>
-                Creates a new task connected to node{" "}
+                Creates a new {theme.terminology.task} connected to node{" "}
                 {hoveredNode.connectedToNodeId}
               </p>
             ) : (
@@ -1310,8 +1293,8 @@ links.forEach(link => {
                   <p>
                     Relationship:{" "}
                     {hoveredNode.type === "depends-on"
-                      ? "Current task depends on this"
-                      : "This depends on current task"}
+                      ? `Current ${theme.terminology.task} depends on this`
+                      : `This depends on current ${theme.terminology.task}`}
                   </p>
                 )}
                 {hoveredNode.dependencies &&
@@ -1320,12 +1303,12 @@ links.forEach(link => {
                       <p>Depends on:</p>
                       <ul>
                         {hoveredNode.dependencies
-                          .map((depId) => allTasks[depId]) // Resolve ID to task object
-                          .filter(Boolean) // Remove undefined (invalid dependencies)
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
+                          .map((depId) => allQuests[depId])
+                          .filter(Boolean)
+                          .map((quest) => (
+                            <li key={quest.id}>
+                              {quest.name}{" "}
+                              {quest.skill_id !== activeSkillId
                                 ? `(${
                                     skills.find((s) => s.id === task.skill_id)
                                       ?.name || "external"
@@ -1342,14 +1325,14 @@ links.forEach(link => {
                     <div>
                       <p>Required by:</p>
                       <ul>
-                        {Object.values(allTasks)
-                          .filter((task) =>
-                            task.dependencies.includes(hoveredNode.id)
+                        {Object.values(allQuests)
+                          .filter((quest) =>
+                            quest.dependencies.includes(hoveredNode.id)
                           )
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
+                          .map((quest) => (
+                            <li key={quest.id}>
+                              {quest.name}{" "}
+                              {quest.skill_id !== activeSkillId
                                 ? `(${
                                     skills.find((s) => s.id === task.skill_id)
                                       ?.name || "external"
@@ -1361,12 +1344,11 @@ links.forEach(link => {
                     </div>
                   )}
 
-                {/* Reviewer info for this specific task */}
-                {allTasks[hoveredNode.id]?.reviewer_ids && (
+                {allQuests[hoveredNode.id]?.reviewer_ids && (
                   <div>
                     <p>Reviewers:</p>
                     <ul>
-                      {allTasks[hoveredNode.id].reviewer_ids.map((rid, idx) => (
+                      {allQuests[hoveredNode.id].reviewer_ids.map((rid, idx) => (
                         <li key={idx}>{rid}</li>
                       ))}
                     </ul>
@@ -1507,20 +1489,20 @@ links.forEach(link => {
         </div>
       </div>
 
-      <TaskEditor
-        open={showTaskPopup}
+      <QuestEditor
+        open={showQuestPopup}
         onClose={() => {
-          setShowTaskPopup(false);
-          refreshTasks();
+          setShowQuestPopup(false);
+          refreshQuests();
         }}
         projectId={projectId}
-        taskForm={taskForm}
-        setTaskForm={setTaskForm}
+        questForm={questForm}
+        setQuestForm={setQuestForm}
         onSubmit={async (formData) => {
           const action = formData.id ? 'update' : 'create'; 
-          const result = await handleTaskAction(formData, action);
+          const result = await handleQuestAction(formData, action);
           if (!result.error) {
-            await refreshTasks();
+            await refreshQuests();
             updateLinkColors();
           }
           return result;
@@ -1529,13 +1511,12 @@ links.forEach(link => {
         isEdit={isEditMode}
         currentUser={user}
         projectCreatorId={project?.creator_id}
-        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
+        isReviewer={allQuests[questForm?.id]?.reviewer_ids?.includes(Number(userId))}
       />
 
       <div className="legend">
         <div>
-          <span style={{ color: "#FF69B4" }}>● </span>Pink indicates a completed
-          task
+          <span style={{ color: "#FF69B4" }}>● </span>Pink indicates a completed {theme.terminology.task}
         </div>
         <div>
           <span style={{ color: "#FF0000" }}>● </span>Red circle indicates
@@ -1626,4 +1607,4 @@ links.forEach(link => {
   );
 };
 
-export default ProjectVisualizer;
+export default IntentionVisualizer;

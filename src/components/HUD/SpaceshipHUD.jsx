@@ -5,7 +5,7 @@ import MissionConsole from './panels/MissionConsole';
 import TargetingScanner from './panels/TargetingScanner';
 import CommsLog from './panels/CommsLog';
 import StatusBar from './panels/StatusBar';
-import SkillGalaxyPanel from './panels/SkillGalaxyPanel'; // Renamed import
+import AffinityGalaxyPanel from './panels/AffinityGalaxyPanel'; // Renamed import
 // import HUDSettingsPanel from './panels/HUDSettingsPanel'; // Removed
 import { useWindowSize } from '../../hooks/useWindowSize.js'; // Adjust path
 
@@ -59,8 +59,8 @@ const SpaceshipHUD = ({ children }) => {
         <CommsLog />
       </div>
 
-      <div className={`panel-wrapper skill-galaxy-panel`}>
-        <SkillGalaxyPanel />
+      <div className={`panel-wrapper affinity-galaxy-panel`}>
+        <AffinityGalaxyPanel />
       </div>
       
       {/* Central Map Viewport */}

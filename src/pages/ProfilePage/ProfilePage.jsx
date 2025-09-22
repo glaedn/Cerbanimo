@@ -14,7 +14,7 @@ import theme from '../../styles/theme'; // Import the theme
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
-import UserPortfolio from '../UserPortfolio.jsx';
+import UserGrimoire from '../UserGrimoire.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 const ProfilePage = () => {
@@ -843,7 +843,7 @@ const ProfilePage = () => {
         <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
           Mission Log
         </Typography>
-        <UserPortfolio userId={profileData.id}/>
+        <UserGrimoire userId={profileData.id}/>
       </Box>
       
       {/* Resources Panel */}

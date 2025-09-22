@@ -4,14 +4,14 @@ import axios from 'axios';
 import { Box, Typography, TextField, InputAdornment, List, ListItem, ListItemText, Pagination } from '@mui/material';
 import { Search } from 'lucide-react';
 
-const ProjectOverviewPage = () => {
-    const [projects, setProjects] = useState([]);
+const IntentionOverviewPage = () => {
+    const [intentions, setIntentions] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
-        const fetchProjects = async () => {
+        const fetchIntentions = async () => {
             try {
                 const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects`, {
                     params: {
@@ -19,21 +19,21 @@ const ProjectOverviewPage = () => {
                         page: page,
                     }
                 });
-                setProjects(response.data.projects);
+                setIntentions(response.data.projects);
                 setTotalPages(response.data.totalPages);
             } catch (error) {
-                console.error('Failed to fetch projects:', error);
+                console.error('Failed to fetch intentions:', error);
             }
         };
-        fetchProjects();
+        fetchIntentions();
     }, [searchTerm, page]);
 
     return (
-        <Box className="project-overview-container">
-            <Typography variant="h4" className="project-title">Project Overview</Typography>
+        <Box className="intention-overview-container">
+            <Typography variant="h4" className="intention-title">Intention Overview</Typography>
 
             <TextField
-                placeholder="Search Projects"
+                placeholder="Search Intentions"
                 variant="outlined"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -47,10 +47,10 @@ const ProjectOverviewPage = () => {
                 className="search-bar"
             />
 
-            <List className="project-list">
-                {projects.map((project) => (
-                    <ListItem key={project.id} listItemButton component="a" href={`/project/${project.id}`}>
-                        <ListItemText primary={project.name} secondary={project.description} />
+            <List className="intention-list">
+                {intentions.map((intention) => (
+                    <ListItem key={intention.id} listItemButton component="a" href={`/intention/${intention.id}`}>
+                        <ListItemText primary={intention.name} secondary={intention.description} />
                     </ListItem>
                 ))}
             </List>
@@ -65,4 +65,4 @@ const ProjectOverviewPage = () => {
     );
 };
 
-export default ProjectOverviewPage;
+export default IntentionOverviewPage;

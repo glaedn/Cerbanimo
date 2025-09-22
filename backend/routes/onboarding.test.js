@@ -1,3 +1,4 @@
+require('text-encoding').TextEncoder;
 const request = require('supertest');
 const express = require('express');
 const onboardingRoutes = require('./onboarding'); // Adjust path as necessary

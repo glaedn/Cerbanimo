@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const useAssignedTasks = (userId) => {
+const useAssignedQuests = (userId) => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const [assignedTasks, setAssignedTasks] = useState([]);
+  const [assignedQuests, setAssignedQuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAssignedTasks = async () => {
+  const fetchAssignedQuests = async () => {
     if (!userId || !isAuthenticated) {
       setLoading(false);
-      setAssignedTasks([]);
+      setAssignedQuests([]);
       return;
     }
 
@@ -27,30 +27,30 @@ const useAssignedTasks = (userId) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const tasksWithPlaceholders = response.data.map(task => ({
-        id: task.id,
-        name: task.name,
-        status: task.status || 'Unknown',
-        projectName: task.project_name || 'N/A',
-        projectId: task.project_id || null,
+      const questsWithPlaceholders = response.data.map(quest => ({
+        id: quest.id,
+        name: quest.name,
+        status: quest.status || 'Unknown',
+        projectName: quest.project_name || 'N/A',
+        projectId: quest.project_id || null,
         timeRemaining: 'N/A', // Placeholder
       }));
       
-      setAssignedTasks(tasksWithPlaceholders);
+      setAssignedQuests(questsWithPlaceholders);
     } catch (err) {
-      console.error('Error fetching assigned tasks:', err.response?.data || err.message);
-      setError(err.response?.data?.error || err.message || 'Failed to fetch assigned tasks');
-      setAssignedTasks([]);
+      console.error('Error fetching assigned quests:', err.response?.data || err.message);
+      setError(err.response?.data?.error || err.message || 'Failed to fetch assigned quests');
+      setAssignedQuests([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAssignedTasks();
+    fetchAssignedQuests();
   }, [userId, isAuthenticated, getAccessTokenSilently]);
 
-  return { assignedTasks, loading, error, refetchTasks: fetchAssignedTasks };
+  return { assignedQuests, loading, error, refetchQuests: fetchAssignedQuests };
 };
 
-export default useAssignedTasks;
+export default useAssignedQuests;

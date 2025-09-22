@@ -13,13 +13,14 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
-import "./TaskEditor.css";
+import "./QuestEditor.css";
+import theme from "../styles/theme";
 
-const TaskEditor = ({
+const QuestEditor = ({
   open,
   onClose,
-  taskForm,
-  setTaskForm,
+  questForm,
+  setQuestForm,
   onSubmit,
   skills,
   isEdit = true,
@@ -28,31 +29,31 @@ const TaskEditor = ({
   projectCreatorId,
   isReviewer,
 }) => {
-  const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
+  const statusParts = questForm.status?.split("-") || ["inactive", "unassigned"];
   const isUrgent = statusParts[0] === "urgent";
   const isActive =
     statusParts[0] !== "inactive" && statusParts[0] !== "completed";
-  const [availableTasks, setAvailableTasks] = useState([]);
+  const [availableQuests, setAvailableQuests] = useState([]);
   const [dependencyOptions, setDependencyOptions] = useState([]);
   const [selectedDependency, setSelectedDependency] = useState("");
   const [loadingDependencies, setLoadingDependencies] = useState(false);
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [isSubmitted, setIsSubmitted] = useState(
-    (taskForm.status || "").toLowerCase().includes("submitted")
+    (questForm.status || "").toLowerCase().includes("submitted")
   );
 
-  const effectiveIsEdit = taskForm.status === "completed" ? false : isEdit;
+  const effectiveIsEdit = questForm.status === "completed" ? false : isEdit;
  
   const [platformUserId, setPlatformUserId] = useState(null);
-  const isAssigned = taskForm.assigned_user_ids?.length > 0;
-  const userIsAssigned = taskForm.assigned_user_ids?.some(
-    (id) => Number(id) === Number(platformUserId) // Ensure both are numbers
+  const isAssigned = questForm.assigned_user_ids?.length > 0;
+  const userIsAssigned = questForm.assigned_user_ids?.some(
+    (id) => Number(id) === Number(platformUserId)
   );
-  const [proofLinks, setProofLinks] = useState(taskForm.proof_of_work_links || [""]);
+  const [proofLinks, setProofLinks] = useState(questForm.spell_echo_links || [""]);
 
  useEffect(() => {
-    setIsSubmitted((taskForm.status || "").toLowerCase().includes("submitted"));
-  }, [taskForm.status]);
+    setIsSubmitted((questForm.status || "").toLowerCase().includes("submitted"));
+  }, [questForm.status]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -76,12 +77,11 @@ const TaskEditor = ({
   }, [currentUser?.sub, getAccessTokenSilently]);
 
   useEffect(() => {
-    setProofLinks(taskForm.proof_of_work_links || [""]);
-  }, [taskForm.proof_of_work_links]);
+    setProofLinks(questForm.spell_echo_links || [""]);
+  }, [questForm.spell_echo_links]);
 
-  // Fetch all tasks for the project when component mounts or projectId changes
   useEffect(() => {
-    const fetchProjectTasks = async () => {
+    const fetchProjectQuests = async () => {
       try {
         const token = await getAccessTokenSilently({
           audience: `${import.meta.env.VITE_BACKEND_URL}`,
@@ -93,32 +93,30 @@ const TaskEditor = ({
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setAvailableTasks(response.data);
+        setAvailableQuests(response.data);
 
-        // Create options excluding current task (if editing)
         const options = response.data
-          .filter((task) => task.id !== taskForm.id)
-          .map((task) => ({ id: task.id, name: task.name }));
+          .filter((quest) => quest.id !== questForm.id)
+          .map((quest) => ({ id: quest.id, name: quest.name }));
 
         setDependencyOptions(options);
       } catch (error) {
-        console.error("Error fetching project tasks:", error);
+        console.error(`Error fetching project ${theme.terminology.task_plural}:`, error);
       }
     };
 
     if (projectId && open) {
-      fetchProjectTasks();
+      fetchProjectQuests();
     }
-  }, [projectId, open, taskForm.id, getAccessTokenSilently]);
+  }, [projectId, open, questForm.id, getAccessTokenSilently]);
 
-  // Load names for existing dependencies
   useEffect(() => {
     const loadDependencyNames = async () => {
-      if (taskForm.dependencies?.length > 0) {
+      if (questForm.dependencies?.length > 0) {
         setLoadingDependencies(true);
         try {
           const dependenciesWithNames = await Promise.all(
-            taskForm.dependencies.map(async (depId) => {
+            questForm.dependencies.map(async (depId) => {
               try {
                 const token = await getAccessTokenSilently({
                   audience: `${import.meta.env.VITE_BACKEND_URL}`,
@@ -133,15 +131,15 @@ const TaskEditor = ({
 
                 return { id: parseInt(depId, 10), name: response.data.name };
               } catch (error) {
-                console.error(`Error loading task ${depId}:`, error);
+                console.error(`Error loading ${theme.terminology.task} ${depId}:`, error);
                 return {
                   id: parseInt(depId, 10),
-                  name: `Unknown Task (${depId})`,
+                  name: `Unknown ${theme.terminology.task} (${depId})`,
                 };
               }
             })
           );
-          setTaskForm((prev) => ({
+          setQuestForm((prev) => ({
             ...prev,
             dependenciesWithNames: dependenciesWithNames,
           }));
@@ -153,15 +151,15 @@ const TaskEditor = ({
       }
     };
 
-    if (open && taskForm.dependencies && !taskForm.dependenciesWithNames) {
+    if (open && questForm.dependencies && !questForm.dependenciesWithNames) {
       loadDependencyNames();
     }
   }, [
     open,
-    taskForm.dependencies,
-    taskForm.id,
+    questForm.dependencies,
+    questForm.id,
     getAccessTokenSilently,
-    setTaskForm,
+    setQuestForm,
   ]);
 
   const handleProofChange = (index, value) => {
@@ -176,61 +174,57 @@ const TaskEditor = ({
   
   const handleRemoveProofLink = (index) => {
     const updatedLinks = proofLinks.filter((_, i) => i !== index);
-    setProofLinks(updatedLinks.length ? updatedLinks : [""]); // Ensure at least one
+    setProofLinks(updatedLinks.length ? updatedLinks : [""]);
   };
 
   const handleRemoveAssignee = (userId) => {
-    setTaskForm({
-      ...taskForm,
-      assigned_user_ids: taskForm.assigned_user_ids.filter(
+    setQuestForm({
+      ...questForm,
+      assigned_user_ids: questForm.assigned_user_ids.filter(
         (id) => id !== userId
       ),
       status:
-        taskForm.status.includes("assigned") &&
-        taskForm.assigned_user_ids.length <= 1
-          ? taskForm.status.replace("-assigned", "-unassigned")
-          : taskForm.status,
+        questForm.status.includes("assigned") &&
+        questForm.assigned_user_ids.length <= 1
+          ? questForm.status.replace("-assigned", "-unassigned")
+          : questForm.status,
     });
   };
 
   const handleUrgentChange = (e) => {
     const isChecked = e.target.checked;
-    const isAssigned = taskForm.assigned_user_ids?.length > 0;
+    const isAssigned = questForm.assigned_user_ids?.length > 0;
 
     let newStatus;
 
     if (isChecked) {
-      // When making urgent, force it to be active
       newStatus = `urgent-${isAssigned ? "assigned" : "unassigned"}`;
     } else {
-      // When removing urgent, revert to active (not inactive)
       newStatus = `active-${isAssigned ? "assigned" : "unassigned"}`;
     }
 
-    setTaskForm({ ...taskForm, status: newStatus });
+    setQuestForm({ ...questForm, status: newStatus });
   };
 
   const handleAddDependency = () => {
     if (
       selectedDependency &&
-      !taskForm.dependencies?.includes(parseInt(selectedDependency, 10))
+      !questForm.dependencies?.includes(parseInt(selectedDependency, 10))
     ) {
-      // Convert dependency to integer
       const depId = parseInt(selectedDependency, 10);
 
-      const newDependencies = [...(taskForm.dependencies || []), depId];
+      const newDependencies = [...(questForm.dependencies || []), depId];
 
-      // Find the dependency name from options
       const selectedDep = dependencyOptions.find(
         (opt) => opt.id === selectedDependency
       );
       const newDependenciesWithNames = [
-        ...(taskForm.dependenciesWithNames || []),
-        { id: depId, name: selectedDep?.name || `Task ${depId}` },
+        ...(questForm.dependenciesWithNames || []),
+        { id: depId, name: selectedDep?.name || `${theme.terminology.task} ${depId}` },
       ];
 
-      setTaskForm({
-        ...taskForm,
+      setQuestForm({
+        ...questForm,
         dependencies: newDependencies,
         dependenciesWithNames: newDependenciesWithNames,
       });
@@ -240,15 +234,14 @@ const TaskEditor = ({
   };
 
   const handleRemoveDependency = (depId) => {
-    // Ensure depId is an integer for comparison
     const depIdInt = parseInt(depId, 10);
 
-    setTaskForm({
-      ...taskForm,
-      dependencies: (taskForm.dependencies || []).filter(
+    setQuestForm({
+      ...questForm,
+      dependencies: (questForm.dependencies || []).filter(
         (id) => parseInt(id, 10) !== depIdInt
       ),
-      dependenciesWithNames: (taskForm.dependenciesWithNames || []).filter(
+      dependenciesWithNames: (questForm.dependenciesWithNames || []).filter(
         (dep) => parseInt(dep.id, 10) !== depIdInt
       ),
     });
@@ -256,40 +249,36 @@ const TaskEditor = ({
 
   const handleSubmit = async () => {
     try {
-      // Ensure everything is properly formatted
       const formData = {
-        ...taskForm,
+        ...questForm,
         active: statusParts[0] !== "inactive",
-        projectId: taskForm.project_id || projectId,
-        skill_level: parseInt(taskForm.skill_level || 0, 10),
-        reward_tokens: parseInt(taskForm.reward_tokens || 0, 10),
-        dependencies: (taskForm.dependencies || []).map((id) =>
+        projectId: questForm.project_id || projectId,
+        skill_level: parseInt(questForm.skill_level || 0, 10),
+        reward_tokens: parseInt(questForm.reward_tokens || 0, 10),
+        dependencies: (questForm.dependencies || []).map((id) =>
           parseInt(id, 10)
         ),
-        status: taskForm.status || "inactive-unassigned",
-        proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
+        status: questForm.status || "inactive-unassigned",
+        spell_echo_links: proofLinks.filter(link => link.trim() !== ""),
       };
       console.log("Form data before submission:", formData);
 
-      // Clean up before submission
       delete formData.project_id;
       delete formData.dependenciesWithNames;
       if (!formData.id) delete formData.id;
 
       const result = await onSubmit(formData);
-      // Only show success if no error returned
       if (!result.error) {
-        alert(`Task "${taskForm.name}" saved successfully`);
+        alert(`${theme.terminology.task} "${questForm.name}" saved successfully`);
         onClose();
       }
     } catch (error) {
-      alert("Failed to save task. Please try again.");
+      alert(`Failed to save ${theme.terminology.task}. Please try again.`);
       console.error("Save failed:", error);
     }
   };
 
-  // In your TaskEditor component
-  const handleTaskAction = async () => {
+  const handleQuestAction = async () => {
     if (!platformUserId) {
       alert("User ID not found");
       return;
@@ -299,7 +288,7 @@ const TaskEditor = ({
       const action = userIsAssigned ? "drop" : "accept";
       const token = await getAccessTokenSilently();
       const response = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/${action}`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${questForm.id}/${action}`,
         { userId: platformUserId },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -307,32 +296,32 @@ const TaskEditor = ({
       );
 
       if (!response.data.success) {
-        alert(response.data.error || "Failed to update task");
+        alert(response.data.error || `Failed to update ${theme.terminology.task}`);
         return;
       }
 
       alert(
-        `Task ${action === "accept" ? "accepted" : "dropped"} successfully`
+        `${theme.terminology.task} ${action === "accept" ? "accepted" : "dropped"} successfully`
       );
       onClose();
     } catch (error) {
-      console.error("Task action failed:", error);
-      alert(error.message || "Failed to update task");
+      console.error(`${theme.terminology.task} action failed:`, error);
+      alert(error.message || `Failed to update ${theme.terminology.task}`);
     }
   };
 
-  const handleTaskSubmission = async () => {
+  const handleQuestSubmission = async () => {
     if (!platformUserId) {
-      alert("User ID not found. Cannot submit task. Please ensure your profile is loaded correctly.");
+      alert(`User ID not found. Cannot submit ${theme.terminology.task}. Please ensure your profile is loaded correctly.`);
       return;
     }
     try {
       const token = await getAccessTokenSilently();
       await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/submit`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${questForm.id}/submit`,
         {
-          proof_of_work_links: proofLinks.filter(link => link.trim() !== ""),
-          reflection: taskForm.reflection,
+          spell_echo_links: proofLinks.filter(link => link.trim() !== ""),
+          reflection: questForm.reflection,
           platformUserId: platformUserId 
         },
         {
@@ -353,17 +342,16 @@ const TaskEditor = ({
       const token = await getAccessTokenSilently();
       console.log("platformUserId:", platformUserId);
       await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/review`,
+        `${import.meta.env.VITE_BACKEND_URL}/tasks/${questForm.id}/review`,
         { action: approved ? "approve" : "reject", userId: Number(platformUserId) },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       alert(
-        `Task ${approved ? "approved" : "rejected"} successfully`
+        `${theme.terminology.task} ${approved ? "approved" : "rejected"} successfully`
       );
       onClose();
-      // Add notification logic here
     } catch (error) {
       console.error(`${approved ? "Approval" : "Rejection"} failed:`, error);
     }
@@ -372,49 +360,49 @@ const TaskEditor = ({
   const handlePmApprove = async () => {
     try {
       const token = await getAccessTokenSilently();
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/pm-approve`, {}, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${questForm.id}/ritual-seal`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert('Task approved successfully');
+      alert(`${theme.terminology.task} approved successfully`);
       onClose();
     } catch (error) {
-      console.error('Error approving task:', error);
-      alert('Failed to approve task');
+      console.error(`Error approving ${theme.terminology.task}:`, error);
+      alert(`Failed to approve ${theme.terminology.task}`);
     }
   };
 
   const handlePmReject = async () => {
     try {
       const token = await getAccessTokenSilently();
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskForm.id}/pm-reject`, {}, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${questForm.id}/pm-reject`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert('Task rejected successfully');
+      alert(`${theme.terminology.task} rejected successfully`);
       onClose();
     } catch (error) {
-      console.error('Error rejecting task:', error);
-      alert('Failed to reject task');
+      console.error(`Error rejecting ${theme.terminology.task}:`, error);
+      alert(`Failed to reject ${theme.terminology.task}`);
     }
   };
   const isProjectManager = Number(platformUserId) === Number(projectCreatorId);
-  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager, 'taskForm.status:', taskForm.status);
+  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager, 'questForm.status:', questForm.status);
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
         <div className="cyber-border">
           <div className="cyber-content">
             <h3 className="cyber-title">
-              TASK PROTOCOL {isEdit ? "EDITOR" : "VIEWER"}
+              {theme.terminology.task.toUpperCase()} PROTOCOL {isEdit ? "EDITOR" : "VIEWER"}
             </h3>
 
             <div className="cyber-form">
               <TextField
                 className="cyber-input"
-                label="TASK NAME"
-                variant="outlined" // Ensure outlined variant
-                value={taskForm.name}
+                label={`${theme.terminology.task.toUpperCase()} NAME`}
+                variant="outlined"
+                value={questForm.name}
                 onChange={(e) =>
-                  setTaskForm({ ...taskForm, name: e.target.value })
+                  setQuestForm({ ...questForm, name: e.target.value })
                 }
                 disabled={!effectiveIsEdit}
               />
@@ -424,28 +412,28 @@ const TaskEditor = ({
                 label="DESCRIPTION"
                 multiline
                 rows={4}
-                variant="outlined" // Ensure outlined variant
-                value={taskForm.description}
+                variant="outlined"
+                value={questForm.description}
                 onChange={(e) =>
-                  setTaskForm({ ...taskForm, description: e.target.value })
+                  setQuestForm({ ...questForm, description: e.target.value })
                 }
                 disabled={!effectiveIsEdit}
               />
 
               <div className="cyber-skill-section">
-                <div className="cyber-select"> {/* Keep cyber-select for MuiInputLabel-root targeting if still needed, or ensure label is styled by cyber-input's label style */}
-                  <InputLabel>SKILL CATEGORY</InputLabel>
+                <div className="cyber-select">
+                  <InputLabel>{theme.terminology.skill.toUpperCase()} CATEGORY</InputLabel>
                   <Select
-                    value={taskForm.skill_id}
-                    variant="outlined" // Ensure outlined variant
-                    MenuProps={{ className: "cyber-select-menu" }} // For dropdown styling
+                    value={questForm.skill_id}
+                    variant="outlined"
+                    MenuProps={{ className: "cyber-select-menu" }}
                     onChange={(e) =>
-                      setTaskForm({ ...taskForm, skill_id: e.target.value })
+                      setQuestForm({ ...questForm, skill_id: e.target.value })
                     }
                     disabled={!effectiveIsEdit}
                   >
                     <MenuItem value="">
-                      <em>SELECT SKILL MODULE</em>
+                      <em>SELECT {theme.terminology.skill.toUpperCase()} MODULE</em>
                     </MenuItem>
                     {skills.map((skill) => (
                       <MenuItem key={skill.id} value={skill.id}>
@@ -457,13 +445,13 @@ const TaskEditor = ({
 
                 <TextField
                   className="cyber-input skill-level"
-                  label="SKILL LVL"
+                  label={`${theme.terminology.skill.toUpperCase()} LVL`}
                   type="number"
-                  variant="outlined" // Ensure outlined variant
-                  value={taskForm.skill_level || 0}
+                  variant="outlined"
+                  value={questForm.skill_level || 0}
                   onChange={(e) =>
-                    setTaskForm({
-                      ...taskForm,
+                    setQuestForm({
+                      ...questForm,
                       skill_level: parseInt(e.target.value, 10),
                     })
                   }
@@ -472,16 +460,16 @@ const TaskEditor = ({
                 />
               </div>
 
-              <div className="cyber-section-container"> {/* Updated class */}
-                <InputLabel className="cyber-section-label">DEPENDENCIES</InputLabel> {/* Updated class */}
+              <div className="cyber-section-container">
+                <InputLabel className="cyber-section-label">DEPENDENCIES</InputLabel>
                 <Box
                   sx={{ display: "flex", gap: 1, alignItems: "center", mt: 1 }}
                 >
                   <Select
-                    className="cyber-select" // Added for select specific styling if needed
-                    variant="outlined" // Ensure outlined variant
+                    className="cyber-select"
+                    variant="outlined"
                     value={selectedDependency}
-                    MenuProps={{ className: "cyber-select-menu" }} // For dropdown styling
+                    MenuProps={{ className: "cyber-select-menu" }}
                     onChange={(e) => setSelectedDependency(e.target.value)}
                     disabled={!effectiveIsEdit || loadingDependencies}
                     sx={{ flexGrow: 1 }}
@@ -492,19 +480,18 @@ const TaskEditor = ({
                     {dependencyOptions
                       .filter(
                         (opt) =>
-                          !taskForm.dependencies?.includes(parseInt(opt.id, 10))
+                          !questForm.dependencies?.includes(parseInt(opt.id, 10))
                       )
-                      .map((task) => (
-                        <MenuItem key={task.id} value={task.id}>
-                          {task.name}
+                      .map((quest) => (
+                        <MenuItem key={quest.id} value={quest.id}>
+                          {quest.name}
                         </MenuItem>
                       ))}
                   </Select>
                   <Button
-                    className="cyber-button add-dependency-button" // Added specific class for styling if general .cyber-button isn't enough
+                    className="cyber-button add-dependency-button"
                     onClick={handleAddDependency}
                     disabled={!selectedDependency || !effectiveIsEdit}
-                    // variant="outlined" // Variant is less important due to custom styling
                   >
                     ADD
                   </Button>
@@ -512,9 +499,9 @@ const TaskEditor = ({
 
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
                   {loadingDependencies ? (
-                    <Chip label="Loading dependencies..." className="cyber-chip" /> // Updated class
+                    <Chip label="Loading dependencies..." className="cyber-chip" />
                   ) : (
-                    taskForm.dependenciesWithNames?.map((dep) => (
+                    questForm.dependenciesWithNames?.map((dep) => (
                       <Chip
                         key={dep.id}
                         label={dep.name}
@@ -523,45 +510,43 @@ const TaskEditor = ({
                             ? () => handleRemoveDependency(dep.id)
                             : undefined
                         }
-                        className="cyber-chip" // Updated class
-                        // variant="outlined" // Variant is less important
+                        className="cyber-chip"
                       />
                     )) ||
-                    taskForm.dependencies?.map((depId) => (
+                    questForm.dependencies?.map((depId) => (
                       <Chip
                         key={depId}
-                        label={`Task ${depId}`}
+                        label={`${theme.terminology.task} ${depId}`}
                         onDelete={
                           effectiveIsEdit
                             ? () => handleRemoveDependency(depId)
                             : undefined
                         }
-                        className="cyber-chip" // Updated class
-                        // variant="outlined"
+                        className="cyber-chip"
                       />
                     ))
                   )}
                 </Box>
               </div>
-              <div className="cyber-section-container"> {/* Updated class */}
-                <InputLabel className="cyber-section-label">ASSIGNED OPERATORS</InputLabel> {/* Updated class */}
+              <div className="cyber-section-container">
+                <InputLabel className="cyber-section-label">ASSIGNED OPERATORS</InputLabel>
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
-                  {taskForm.assigned_user_ids?.map((userId, index) => (
+                  {questForm.assigned_user_ids?.map((userId, index) => (
                     <Chip
                       key={index}
                       label={`Operator ${userId}`}
-                      className="cyber-chip" // Updated class
+                      className="cyber-chip"
                       onDelete={
                         effectiveIsEdit ? () => handleRemoveAssignee(userId) : undefined
                       }
                     />
                   ))}
-                  {taskForm.assigned_user_ids?.length === 0 && (
-                    <Chip label="No assigned operators" className="cyber-chip" /> // Updated class
+                  {questForm.assigned_user_ids?.length === 0 && (
+                    <Chip label="No assigned operators" className="cyber-chip" />
                   )}
                 </Box>
               </div>
-              <div className="cyber-checkboxes"> {/* This class is used for specific Checkbox child styling */}
+              <div className="cyber-checkboxes">
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -574,22 +559,21 @@ const TaskEditor = ({
                               isAssigned ? "assigned" : "unassigned"
                             }`;
 
-                        // If currently urgent and being deactivated, remove urgent status
                         const finalStatus =
                           isUrgent && !newActiveState
                             ? newStatus.replace("urgent", "inactive")
                             : newStatus;
 
-                        setTaskForm({ ...taskForm, status: finalStatus });
+                        setQuestForm({ ...questForm, status: finalStatus });
                       }}
                       disabled={!effectiveIsEdit || isUrgent}
                       sx={{
-                        color: "#00f3ff", // Color when unchecked
+                        color: "#00f3ff",
                         "&.Mui-checked": {
-                          color: "#00f3ff", // Color when checked
+                          color: "#00f3ff",
                         },
                         "&.Mui-disabled": {
-                          color: "rgba(0, 243, 255, 0.5)", // Color when disabled
+                          color: "rgba(0, 243, 255, 0.5)",
                         },
                       }}
                     />
@@ -617,11 +601,11 @@ const TaskEditor = ({
                 className="cyber-input"
                 label="REWARD TOKENS"
                 type="number"
-                variant="outlined" // Ensure outlined variant
-                value={taskForm.reward_tokens}
+                variant="outlined"
+                value={questForm.reward_tokens}
                 onChange={(e) =>
-                  setTaskForm({
-                    ...taskForm,
+                  setQuestForm({
+                    ...questForm,
                     reward_tokens: parseInt(e.target.value, 10),
                   })
                 }
@@ -633,13 +617,13 @@ const TaskEditor = ({
                 {isEdit ? (
                   <>
                     <Button
-                      className="cyber-button primary" // Updated class
+                      className="cyber-button primary"
                       onClick={handleSubmit}
                       disabled={!effectiveIsEdit}
                     >
                       SAVE TO DATACORE
                     </Button>
-                    <Button className="cyber-button cancel" onClick={onClose}> {/* Updated class */}
+                    <Button className="cyber-button cancel" onClick={onClose}>
                       TERMINATE EDIT
                     </Button>
                   </>
@@ -648,69 +632,68 @@ const TaskEditor = ({
                     {!isEdit && (
                       <>
                         <Button
-                          className={`cyber-button ${ // Base class
-                            userIsAssigned ? "drop-task" : "accept-task" // Specific classes for color
+                          className={`cyber-button ${
+                            userIsAssigned ? "drop-task" : "accept-task"
                           }`}
-                          onClick={handleTaskAction}
+                          onClick={handleQuestAction}
                           disabled={
                             isSubmitted ||
-                            taskForm.status?.includes("completed")
+                            questForm.status?.includes("completed")
                           }
                         >
-                          {userIsAssigned ? "DROP TASK" : "ACCEPT TASK"}
+                          {userIsAssigned ? `DROP ${theme.terminology.task.toUpperCase()}` : `ACCEPT ${theme.terminology.task.toUpperCase()}`}
                         </Button>
                         
-                        {(taskForm.status !== "submitted" && userIsAssigned) && (
+                        {(questForm.status !== "submitted" && userIsAssigned) && (
   <Box mt={2}>
-    {/* These h4 and TextField for reflection/proof might need their own styling if not covered by general modal text/input styles */}
     <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Reflection (Summarize your work)</h4>
     <TextField
-      className="cyber-input" // Use existing input styling
+      className="cyber-input"
       label="Reflection"
       variant="outlined"
       multiline
-      disabled={taskForm.status?.includes("completed")}
+      disabled={questForm.status?.includes("completed")}
       rows={4}
-      value={taskForm.reflection}
+      value={questForm.reflection}
       onChange={(e) =>
-        setTaskForm({ ...taskForm, reflection: e.target.value })
+        setQuestForm({ ...questForm, reflection: e.target.value })
       }
     />
-    <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>Proof of Work</h4>
+    <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>{theme.terminology.proof_of_work}</h4>
     {proofLinks.map((link, index) => (
       <Box key={index} display="flex" alignItems="center" mb={1}>
         <TextField
-          className ="cyber-input" // Use existing input styling
+          className ="cyber-input"
           variant="outlined"
           fullWidth
-          disabled={taskForm.status?.includes("completed")}
+          disabled={questForm.status?.includes("completed")}
           label={`Link ${index + 1}`}
           value={link}
           onChange={(e) => handleProofChange(index, e.target.value)}
         />
         {proofLinks.length > 1 && (
           <Button className="proof-link-button" 
-          disabled={taskForm.status?.includes("completed")}
+          disabled={questForm.status?.includes("completed")}
           onClick={() => handleRemoveProofLink(index)}>Remove</Button>
         )}
       </Box>
     ))}
-    <Button className="cyber-button primary" style={{marginTop: '0.5rem'}} variant="outlined" disabled={taskForm.status?.includes("completed")} onClick={handleAddProofLink}>
-      Add Proof of Work
+    <Button className="cyber-button primary" style={{marginTop: '0.5rem'}} variant="outlined" disabled={questForm.status?.includes("completed")} onClick={handleAddProofLink}>
+      Add {theme.terminology.proof_of_work}
     </Button>
   </Box>
 )}
 
                         {userIsAssigned && !isSubmitted && (
                           <Button
-                            className="cyber-button submit-task" // Updated class
-                            onClick={handleTaskSubmission}
+                            className="cyber-button submit-task"
+                            onClick={handleQuestSubmission}
                             disabled={
                               proofLinks.length === 0 ||
-                              proofLinks.some((link) => link.trim() === "" || taskForm.status?.includes("completed"))
+                              proofLinks.some((link) => link.trim() === "" || questForm.status?.includes("completed"))
                             }
                           >
-                            SUBMIT TASK
+                            SUBMIT {theme.terminology.task.toUpperCase()}
                           </Button>
                         )}
                       </>
@@ -723,37 +706,37 @@ const TaskEditor = ({
                           <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Submitted Reflection</h4>
                           <Box
                             sx={{
-                              background: "rgba(0, 20, 40, 0.7)", // Consistent dark background
+                              background: "rgba(0, 20, 40, 0.7)",
                               color: "#00F3FF",
                               borderRadius: 1,
                               border: "1px solid #00F3FF",
                               p: 2,
                               mb: 2,
-                              fontFamily: "'Inter', sans-serif", // Content font
+                              fontFamily: "'Inter', sans-serif",
                               whiteSpace: "pre-wrap",
                               maxHeight: '150px',
                               overflowY: 'auto',
                             }}
                           >
-                            {taskForm.reflection}
+                            {questForm.reflection}
                           </Box>
-                          <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>Proof of Work links (must review)</h4>
+                          <h4 style={{ fontFamily: 'Orbitron, sans-serif', color: '#00F3FF', textTransform: 'uppercase', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0.5rem' }}>{theme.terminology.proof_of_work} links (must review)</h4>
                           <Box
                             sx={{
-                              background: "rgba(0, 20, 40, 0.7)", // Consistent dark background
+                              background: "rgba(0, 20, 40, 0.7)",
                               color: "#00F3FF",
                               borderRadius: 1,
                               border: "1px solid #00F3FF",
                               p: 2,
                               mb: 2,
-                              fontFamily: "'Inter', sans-serif", // Content font
+                              fontFamily: "'Inter', sans-serif",
                               whiteSpace: "pre-wrap",
                               maxHeight: '150px',
                               overflowY: 'auto',
                             }}
                           >
-                            {Array.isArray(taskForm.proof_of_work_links)
-                              ? taskForm.proof_of_work_links.map((link, idx) =>
+                            {Array.isArray(questForm.spell_echo_links)
+                              ? questForm.spell_echo_links.map((link, idx) =>
                                   link ? (
                                     <div key={idx}>
                                       <a
@@ -761,7 +744,7 @@ const TaskEditor = ({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{
-                                          color: "#FF5CA2", // Accent color for links
+                                          color: "#FF5CA2",
                                           textDecoration: "underline",
                                           wordBreak: "break-all",
                                         }}
@@ -775,13 +758,13 @@ const TaskEditor = ({
                           </Box>
                         </Box>
                           <Button
-                            className="cyber-button approve" // Updated class
+                            className="cyber-button approve"
                             onClick={() => handleApproval(true)}
                           >
                             APPROVE
                           </Button>
                           <Button
-                            className="cyber-button reject" // Updated class
+                            className="cyber-button reject"
                             onClick={() => handleApproval(false)}
                           >
                             REJECT
@@ -789,7 +772,7 @@ const TaskEditor = ({
                         </>
                       )}
 
-                    { isProjectManager && taskForm.status === 'submitted' && (
+                    { isProjectManager && questForm.status === 'submitted' && (
                         <>
                           <Button
                             className="cyber-button approve"
@@ -806,7 +789,7 @@ const TaskEditor = ({
                         </>
                     )}
 
-                    <Button className="cyber-button neutral" onClick={onClose}> {/* Updated class */}
+                    <Button className="cyber-button neutral" onClick={onClose}>
                       CLOSE
                     </Button>
                   </>
@@ -820,4 +803,4 @@ const TaskEditor = ({
   );
 };
 
-export default TaskEditor;
+export default QuestEditor;

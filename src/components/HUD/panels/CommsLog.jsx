@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // Import Link
 import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
 import '../HUDPanel.css'; // Shared panel styles
+import theme from '../../../../styles/theme';
 // import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -13,13 +14,13 @@ const getNotificationIcon = (type) => {
   if (!type) type = 'default'; // Handle undefined type
 
   switch (type.toLowerCase()) { // Use toLowerCase for case-insensitive matching
-    case 'task-approved':
+    case 'quest-approved':
       return <TaskAltIcon style={{ marginRight: '8px' }} />;
-    case 'task-rejected':
+    case 'quest-rejected':
       return <CancelIcon style={{ marginRight: '8px' }} />;
-    case 'task-submitted': // If you anticipate this type
+    case 'quest-submitted': // If you anticipate this type
       return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
-    case 'task': // For generic tasks
+    case 'quest': // For generic quests
       return <ListAltIcon style={{ marginRight: '8px' }} />;
     default:
       return <InfoIcon style={{ marginRight: '8px' }} />;
@@ -50,15 +51,15 @@ const CommsLog = () => {
   return (
     <div className={`hud-panel comms-log ${isMinimized ? 'minimized' : ''}`}>
       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Comms Log</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Comms Log" : "Minimize Comms Log"}>
+        <h4>{`${theme.terminology.notification_source}'s Log`}</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? `Expand ${theme.terminology.notification_source}'s Log` : `Minimize ${theme.terminology.notification_source}'s Log`}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       {!isMinimized && (
         <div className="hud-panel-content" style={{ maxHeight: '150px', overflowY: 'auto' }}>
           {notifications === null || notifications === undefined ? ( // Check if notifications context is not yet available
-            <p>Loading comms...</p>
+            <p>Loading transmissions...</p>
           ) : notifications.length > 0 ? ( // Check full notifications array
             <ul>
               {notifications.map((notification) => { // Map over full notifications array
@@ -81,7 +82,7 @@ const CommsLog = () => {
               })}
             </ul>
           ) : (
-            <p>No new activity.</p> 
+            <p>No new transmissions.</p>
           )}
         </div>
       )}

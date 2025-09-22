@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Box, LinearProgress, Typography, Paper } from '@mui/material';
 import './LevelNotification.css';
+import theme from '../../styles/theme';
 
 const generateProgressText = (progress, totalChars = 10) => {
     if (progress === undefined || progress === null) progress = 0;
@@ -116,7 +117,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillNa
                                 mb: 0.5,
                             }}
                         >
-                            {skillName || 'SKILL'} LEVELED UP!
+                            AFFINITY INCREASED!
                         </Typography>
                         <Typography
                             variant="h4"
@@ -141,7 +142,7 @@ const LevelNotification = ({ previousXP, newXP, previousLevel, newLevel, skillNa
                             fontWeight: '500',
                         }}
                     >
-                        XP GAINED IN {skillName || 'SKILL'}
+                        {`XP GAINED IN ${skillName || theme.terminology.skill.toUpperCase()}`}
                     </Typography>
                 )}
             </Paper>

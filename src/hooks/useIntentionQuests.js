@@ -1,13 +1,13 @@
-// hooks/useProjectTasks.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import theme from '../styles/theme';
 
-export const useProjectTasks = (projectId, user, setUnreadCount) => {
+export const useIntentionQuests = (intentionId, user, setUnreadCount) => {
   const { getAccessTokenSilently } = useAuth0();
   const [skills, setSkills] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [project, setProject] = useState(null);
+  const [quests, setQuests] = useState([]);
+  const [intention, setIntention] = useState(null);
   const [profileData, setProfileData] = useState({ id: '', username: '', skills: [] });
   const [loading, setLoading] = useState(false);
 
@@ -40,57 +40,55 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchQuests = async () => {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${intentionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const tasksData = res.data;
-      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
-      setTasks(updated);
-      console.log('Tasks data:', updated);
-      return updated; // Return the tasks for chaining
+      const questsData = res.data;
+      const updated = Array.isArray(questsData) ? questsData.map(quest => ({...quest, skill_name: skills.find(s => s.id === quest.skill_id)?.name || 'Not specified'})) : [];
+      setQuests(updated);
+      console.log(`${theme.terminology.task_plural} data:`, updated);
+      return updated;
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error(`Error fetching ${theme.terminology.task_plural}:`, error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProject = async () => {
+  const fetchIntention = async () => {
     try {
       const token = await getToken();
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${intentionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProject(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
-      console.log('Project data:', res.data);
-      return res.data; // Return project data for chaining
+      setIntention(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
+      console.log(`${theme.terminology.project} data:`, res.data);
+      return res.data;
     } catch (error) {
-      console.error('Error fetching project:', error);
+      console.error(`Error fetching ${theme.terminology.project}:`, error);
       throw error;
     }
   };
 
-  // New function to update project locally
-  const updateProject = (updates) => {
-    if (project) {
-      setProject(prevProject => ({ ...prevProject, ...updates }));
+  const updateIntention = (updates) => {
+    if (intention) {
+      setIntention(prevIntention => ({ ...prevIntention, ...updates }));
     }
   };
 
-  const handleTaskAction = async (formData, action) => {
+  const handleQuestAction = async (formData, action) => {
     try {
       setLoading(true);
       const token = await getToken();
       
-      // Simplify the payload - only send what's needed
       const payload = {
-        userId: profileData.id, // Only include user ID for accept/drop
+        userId: profileData.id,
         ...(action === 'accept' || action === 'drop' ? {} : formData)
       };
   
@@ -118,18 +116,17 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         headers: { Authorization: `Bearer ${token}` }
       });
   
-      // Only refresh if successful
-      await fetchTasks();
-      await fetchProject();
+      await fetchQuests();
+      await fetchIntention();
       
       return {
         ...response.data,
         success: true
       };
     } catch (error) {
-      console.error('Task action failed:', error.response?.data || error.message);
+      console.error(`${theme.terminology.task} action failed:`, error.response?.data || error.message);
       return {
-        error: error.response?.data?.error || 'Failed to update task',
+        error: error.response?.data?.error || `Failed to update ${theme.terminology.task}`,
         success: false
       };
     } finally {
@@ -143,21 +140,21 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   }, [user]);
 
   useEffect(() => {
-    if (skills.length && projectId) {
-      fetchProject();
-      fetchTasks();
+    if (skills.length && intentionId) {
+      fetchIntention();
+      fetchQuests();
     }
-  }, [skills.length, projectId]);
+  }, [skills.length, intentionId]);
 
   return {
     skills,
-    tasks,
-    project,
+    quests,
+    intention,
     profileData,
     loading,
-    fetchTasks,
-    fetchProject,
-    handleTaskAction,
-    updateProject, // Export the new function
+    fetchQuests,
+    fetchIntention,
+    handleQuestAction,
+    updateIntention,
   };
 };

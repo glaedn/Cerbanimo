@@ -29,31 +29,32 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
-import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
-import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
-import './CommunityHub.css';
+import DreamCircleGrimoire from '../components/CommunityChronicle/index.jsx';
+import DreamCircleResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
+import './DreamCircleHub.css';
+import theme from '../../styles/theme';
 
-const CommunityHub = () => {
+const DreamCircleHub = () => {
     const { communityId } = useParams();
     const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-    const [community, setCommunity] = useState(null);
-    const [members, setMembers] = useState([]);
-    const [membershipRequests, setMembershipRequests] = useState([]);
-    const [proposals, setProposals] = useState([]);
-    const [approvedProjects, setApprovedProjects] = useState([]);
+    const [dreamCircle, setDreamCircle] = useState(null);
+    const [dreamers, setDreamers] = useState([]);
+    const [dreamerRequests, setDreamerRequests] = useState([]);
+    const [intentionProposals, setIntentionProposals] = useState([]);
+    const [approvedIntentions, setApprovedIntentions] = useState([]);
     const [userId, setUserId] = useState(null);
-    const [voteDelegations, setVoteDelegations] = useState({});
+    const [blessingDelegations, setBlessingDelegations] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isMember, setIsMember] = useState(false);
-    const [hasRequestedJoin, setHasRequestedJoin] = useState(false);
+    const [isDreamer, setIsDreamer] = useState(false);
+    const [hasRequestedToJoinDreamCircle, setHasRequestedToJoinDreamCircle] = useState(false);
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
-    const [memberScores, setMemberScores] = useState([]);
+    const [dreamerScores, setDreamerScores] = useState([]);
 
     const showNotification = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -93,9 +94,9 @@ const CommunityHub = () => {
 
                 setUserId(profileResponse.data.id);
                 
-                // Load vote delegations if available
-                if (profileResponse.data.vote_delegations) {
-                    setVoteDelegations(profileResponse.data.vote_delegations);
+                // Load blessing delegations if available
+                if (profileResponse.data.blessing_delegations) {
+                    setBlessingDelegations(profileResponse.data.blessing_delegations);
                 }
                 
             } catch (error) {
@@ -108,7 +109,7 @@ const CommunityHub = () => {
     }, [isAuthenticated, user, getAccessTokenSilently]);
 
     useEffect(() => {
-        const fetchCommunityData = async () => {
+        const fetchDreamCircleData = async () => {
             if (!communityId || !userId) { setIsLoading(false); return; }
             
             try {
@@ -118,67 +119,67 @@ const CommunityHub = () => {
                     scope: 'openid profile email',
                 });
 
-                // Fetch community details
-                console.log('Fetching community data for ID:', communityId);
-const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+                // Fetch dreamCircle details
+                console.log('Fetching dreamCircle data for ID:', communityId);
+const dreamCircleResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
     headers: { Authorization: `Bearer ${token}` },
 });
-console.log('Community Data:', communityResponse.data);
-setCommunity(communityResponse.data);
+console.log('Dream Circle Data:', dreamCircleResponse.data);
+setDreamCircle(dreamCircleResponse.data);
 
-// Debug members array
-console.log('Members array:', communityResponse.data.members);
-console.log('Members array type:', typeof communityResponse.data.members);
+// Debug dreamers array
+console.log('Dreamers array:', dreamCircleResponse.data.dreamers);
+console.log('Dreamers array type:', typeof dreamCircleResponse.data.dreamers);
 
-// Fetch member details
-if (communityResponse.data.members && communityResponse.data.members.length > 0) {
-    const memberPromises = communityResponse.data.members.map(memberId => {
-        console.log('Fetching member:', memberId);
-        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
+// Fetch dreamer details
+if (dreamCircleResponse.data.dreamers && dreamCircleResponse.data.dreamers.length > 0) {
+    const dreamerPromises = dreamCircleResponse.data.dreamers.map(dreamerId => {
+        console.log('Fetching dreamer:', dreamerId);
+        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${dreamerId}`, {
             headers: { Authorization: `Bearer ${token}` },
         }).catch(error => {
-            console.error(`Failed to fetch member ${memberId}:`, error);
+            console.error(`Failed to fetch dreamer ${dreamerId}:`, error);
             return null;
         });
     });
     
-    const memberResults = await Promise.all(memberPromises);
-    const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
-    console.log('Fetched members:', validMembers);
-    setMembers(validMembers);
+    const dreamerResults = await Promise.all(dreamerPromises);
+    const validDreamers = dreamerResults.filter(result => result !== null).map(result => result.data);
+    console.log('Fetched dreamers:', validDreamers);
+    setDreamers(validDreamers);
 
-    // Fetch member scores
-    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
+    // Fetch dreamer scores
+    if (dreamCircleResponse.data.dreamers && dreamCircleResponse.data.dreamers.length > 0) {
         try {
             const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log('Fetched member scores:', scoresResponse.data);
-            setMemberScores(scoresResponse.data);
+            console.log('Fetched dreamer scores:', scoresResponse.data);
+            setDreamerScores(scoresResponse.data);
         } catch (scoresError) {
-            console.error('Failed to fetch member scores:', scoresError);
+            console.error('Failed to fetch dreamer scores:', scoresError);
             // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
-            setMemberScores([]); 
+            setDreamerScores([]);
         }
     } else {
-        setMemberScores([]); // No members, so no scores
+        setDreamerScores([]); // No dreamers, so no scores
     }
 
 } else {
-    console.log('No members in this community');
-    setMembers([]);
-    setMemberScores([]); // No members, so no scores
+    console.log('No dreamers in this dream circle');
+    setDreamers([]);
+    setDreamerScores([]); // No dreamers, so no scores
 }
                 
-                // Fetch membership requests
-                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+                // Fetch dreamer requests
+                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/dreamer-requests`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                console.log('Membership Requests:', requestsResponse.data);
+                console.log('Dreamer Requests:', requestsResponse.data);
                 console.log('User ID:', userId);
                 // Check if current user has already requested to join
                 if (userId) {
-                    setHasRequestedJoin(requestsResponse.data.some(request => 
+                    setHasRequestedToJoinDreamCircle(requestsResponse.data.some(request =>
                         String(request.user_id) === String(userId)
                     ));
                 }
@@ -194,59 +195,59 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 );
                 
                 const requestUsers = await Promise.all(requestUserPromises);
-                setMembershipRequests(requestUsers);
+                setDreamerRequests(requestUsers);
                 
-                // Fetch proposal details
-                if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                    const proposalPromises = communityResponse.data.proposals.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                // Fetch intention proposal details
+                if (dreamCircleResponse.data.intentionProposals && dreamCircleResponse.data.intentionProposals.length > 0) {
+                    const proposalPromises = dreamCircleResponse.data.intentionProposals.map(intentionId =>
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
                     
                     const proposalResults = await Promise.all(proposalPromises);
-                    setProposals(proposalResults.map(result => result.data));
+                    setIntentionProposals(proposalResults.map(result => result.data));
                 }
                 
-                // Fetch approved projects
-                if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                    const projectPromises = communityResponse.data.approved_projects.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                // Fetch approved intentions
+                if (dreamCircleResponse.data.approvedIntentions && dreamCircleResponse.data.approvedIntentions.length > 0) {
+                    const intentionPromises = dreamCircleResponse.data.approvedIntentions.map(intentionId =>
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
                     
-                    const projectResults = await Promise.all(projectPromises);
-                    setApprovedProjects(projectResults.map(result => result.data));
+                    const intentionResults = await Promise.all(intentionPromises);
+                    setApprovedIntentions(intentionResults.map(result => result.data));
                 }
                 
             } catch (error) {
-                console.error('Failed to fetch community data:', error);
-                setError('Failed to load community data. Please try again later.');
+                console.error('Failed to fetch dream circle data:', error);
+                setError('Failed to load Dream Circle data. Please try again later.');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchCommunityData();
+        fetchDreamCircleData();
     }, [communityId, getAccessTokenSilently, userId]);
 
     // This is the updated useEffect for delegation status
     useEffect(() => {
         // Check if we have all the necessary data
-        if (community && userId && members.length > 0) {
-            // Check if community has vote_delegations property and if user has delegated their vote
-            if (community.vote_delegations) {
+        if (dreamCircle && userId && dreamers.length > 0) {
+            // Check if dreamCircle has blessing_delegations property and if user has delegated their blessing
+            if (dreamCircle.blessing_delegations) {
                 const userIdStr = String(userId);
-                const isDelegatingNow = Object.keys(community.vote_delegations).includes(userIdStr);
+                const isDelegatingNow = Object.keys(dreamCircle.blessing_delegations).includes(userIdStr);
                 setIsDelegating(isDelegatingNow);
                 
                 if (isDelegatingNow) {
-                    const delegatedToId = community.vote_delegations[userIdStr];
-                    const delegatedMember = members.find(member => 
-                        String(member.id) === String(delegatedToId)
+                    const delegatedToId = dreamCircle.blessing_delegations[userIdStr];
+                    const delegatedDreamer = dreamers.find(dreamer =>
+                        String(dreamer.id) === String(delegatedToId)
                     );
-                    setDelegatedTo(delegatedMember);
+                    setDelegatedTo(delegatedDreamer);
                 } else {
                     setDelegatedTo(null);
                 }
@@ -256,20 +257,20 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 setDelegatedTo(null);
             }
         }
-    }, [community, userId, members]); // Dependencies ensure it runs when any of these change
+    }, [dreamCircle, userId, dreamers]); // Dependencies ensure it runs when any of these change
 
     useEffect(() => {
-        if (community && userId) {
-            // Check if userId exists in community.members array
+        if (dreamCircle && userId) {
+            // Check if userId exists in dreamCircle.dreamers array
             // Note: We use String() to ensure type consistency in comparison
-            const memberCheck = community.members.some(memberId => 
-                String(memberId) === String(userId)
+            const dreamerCheck = dreamCircle.dreamers.some(dreamerId =>
+                String(dreamerId) === String(userId)
             );
-            setIsMember(memberCheck);
+            setIsDreamer(dreamerCheck);
         }
-    }, [community, userId]);
+    }, [dreamCircle, userId]);
 
-    const handleRequestJoin = async () => {
+    const handleRequestJoinDreamCircle = async () => {
         try {
             const token = await getAccessTokenSilently({
                 audience: import.meta.env.VITE_BACKEND_URL,
@@ -281,17 +282,17 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            setHasRequestedJoin(true);
-            showNotification('Your request to join has been submitted!');
+            setHasRequestedToJoinDreamCircle(true);
+            showNotification(`Your request to join the ${theme.terminology.community} has been submitted!`);
             
         } catch (error) {
             console.error('Failed to submit join request:', error);
-            alert('Failed to submit your join request. Please try again.');
+            showNotification(`Failed to submit your request to join the ${theme.terminology.community}. Please try again.`, 'error');
         }
     };
 
-    const handleVoteProject = async (projectId, vote) => {
-        if (!isMember) return;
+    const handleBlessIntention = async (intentionId, blessing) => {
+        if (!isDreamer) return;
         
         try {
             const token = await getAccessTokenSilently({
@@ -299,75 +300,75 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
     
-            // Get the project name before voting for potential notification
-            const projectBeforeVote = proposals.find(p => p.id === projectId);
-            const projectName = projectBeforeVote?.name || "Project";
+            // Get the intention name before blessing for potential notification
+            const intentionBeforeBlessing = intentionProposals.find(p => p.id === intentionId);
+            const intentionName = intentionBeforeBlessing?.name || "Intention";
     
-            // Send vote to server
-            const voteResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/${projectId}`,
-                { userId, vote },
+            // Send blessing to server
+            const blessingResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/bless/intention/${intentionId}`,
+                { userId, blessing },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
     
-            // Check if the vote led to consensus (server should return this info)
-            const wasRejected = voteResponse.data?.failed;
-            const wasApproved = voteResponse.data?.passed;
+            // Check if the blessing led to consensus (server should return this info)
+            const wasWithheld = blessingResponse.data?.failed;
+            const wasBlessed = blessingResponse.data?.passed;
             
             // Show appropriate message if consensus was reached
             
-            if (wasApproved) {
-                showNotification(`${projectName} has been approved by the community and moved to active projects!`, 'success');
-            } else if (wasRejected) {
-                showNotification(`${projectName} has been rejected by the community.`);
+            if (wasBlessed) {
+                showNotification(`${intentionName} has been blessed by the ${theme.terminology.community} and moved to active intentions!`, 'success');
+            } else if (wasWithheld) {
+                showNotification(`${intentionName} has been withheld by the ${theme.terminology.community}.`);
             }
             
     
-            // Refresh the entire community data after voting
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh the entire dream circle data after blessing
+            const dreamCircleResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setDreamCircle(dreamCircleResponse.data);
     
-            // After voting, we need to fully refresh both proposals and approved projects
-            // First, get all current proposals from the API
-            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                const proposalPromises = communityResponse.data.proposals.map(propId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${propId}`, {
+            // After blessing, we need to fully refresh both intention proposals and approved intentions
+            // First, get all current intention proposals from the API
+            if (dreamCircleResponse.data.intentionProposals && dreamCircleResponse.data.intentionProposals.length > 0) {
+                const proposalPromises = dreamCircleResponse.data.intentionProposals.map(propId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${propId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
                 
                 const proposalResults = await Promise.all(proposalPromises);
-                setProposals(proposalResults.map(result => result.data));
+                setIntentionProposals(proposalResults.map(result => result.data));
             } else {
-                // If no proposals are left, set to empty array
-                setProposals([]);
+                // If no intention proposals are left, set to empty array
+                setIntentionProposals([]);
             }
             
-            // Then get all approved projects from the API
-            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                const projectPromises = communityResponse.data.approved_projects.map(projId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projId}`, {
+            // Then get all approved intentions from the API
+            if (dreamCircleResponse.data.approvedIntentions && dreamCircleResponse.data.approvedIntentions.length > 0) {
+                const intentionPromises = dreamCircleResponse.data.approvedIntentions.map(projId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${projId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
                 
-                const projectResults = await Promise.all(projectPromises);
-                setApprovedProjects(projectResults.map(result => result.data));
+                const intentionResults = await Promise.all(intentionPromises);
+                setApprovedIntentions(intentionResults.map(result => result.data));
             } else {
-                // If no approved projects, set to empty array
-                setApprovedProjects([]);
+                // If no approved intentions, set to empty array
+                setApprovedIntentions([]);
             }
             
         } catch (error) {
-            console.error('Failed to vote on project:', error);
-            alert('Failed to submit your vote. Please try again.');
+            console.error('Failed to bless intention:', error);
+            showNotification('Failed to submit your blessing. Please try again.', 'error');
         }
     };
 
-    const handleVoteMember = async (requestUserId, vote) => {
-        if (!isMember) return;
+    const handleBlessDreamer = async (requestUserId, blessing) => {
+        if (!isDreamer) return;
         
         try {
             const token = await getAccessTokenSilently({
@@ -375,14 +376,14 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/member/${requestUserId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/bless/dreamer/${requestUserId}`,
                 { userId,                  
-                 vote },
+                 blessing },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Refresh membership requests after voting
-            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+            // Refresh dreamer requests after blessing
+            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/dreamer-requests`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -397,23 +398,23 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             );
             
             const requestUsers = await Promise.all(requestUserPromises);
-            setMembershipRequests(requestUsers);
+            setDreamerRequests(requestUsers);
             
-            // Refresh community to get updated member list
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh dream circle to get updated dreamer list
+            const dreamCircleResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setDreamCircle(dreamCircleResponse.data);
             
         } catch (error) {
-            console.error('Failed to vote on membership:', error);
-            alert('Failed to submit your vote. Please try again.');
+            console.error('Failed to bless dreamer:', error);
+            showNotification('Failed to submit your blessing. Please try again.', 'error');
         }
     };
 
-    const handleDelegateVote = async (delegateToUserId) => {
-        if (!isMember) return;
+    const handleDelegateBlessing = async (delegateToUserId) => {
+        if (!isDreamer) return;
         
         try {
             const token = await getAccessTokenSilently({
@@ -421,34 +422,34 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/delegate/${userId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/delegate-blessing/${userId}`,
                 { delegateTo: delegateToUserId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Update local state with delegation
-            setVoteDelegations({
-                ...voteDelegations,
+            setBlessingDelegations({
+                ...blessingDelegations,
                 [communityId]: delegateToUserId
             });
             
-            // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh dream circle data to get updated blessing delegations
+            const dreamCircleResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setDreamCircle(dreamCircleResponse.data);
             
-            showNotification('Vote delegation successful!');
+            showNotification('Blessing delegation successful!');
             
         } catch (error) {
-            console.error('Failed to delegate vote:', error);
-            alert('Failed to delegate your vote. Please try again.');
+            console.error('Failed to delegate blessing:', error);
+            showNotification('Failed to delegate your blessing. Please try again.', 'error');
         }
     };
 
-    const handleRevokeVote = async () => {
-        if (!isMember) return;
+    const handleRevokeBlessing = async () => {
+        if (!isDreamer) return;
         
         try {
             const token = await getAccessTokenSilently({
@@ -456,84 +457,84 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/revoke/${userId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/revoke-blessing/${userId}`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Update local state
-            const newDelegations = { ...voteDelegations };
+            const newDelegations = { ...blessingDelegations };
             delete newDelegations[communityId];
-            setVoteDelegations(newDelegations);
+            setBlessingDelegations(newDelegations);
             
-            // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh dream circle data to get updated blessing delegations
+            const dreamCircleResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setDreamCircle(dreamCircleResponse.data);
             
-            showNotification('Vote delegation revoked!');
+            showNotification('Blessing delegation revoked!');
             
         } catch (error) {
-            console.error('Failed to revoke vote delegation:', error);
-            alert('Failed to revoke your vote delegation. Please try again.');
+            console.error('Failed to revoke blessing delegation:', error);
+            showNotification('Failed to revoke your blessing delegation. Please try again.', 'error');
         }
     };
 
     if (isLoading) {
-        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading community data...</Typography>;
+        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>{`Loading ${theme.terminology.community} data...`}</Typography>;
     }
 
     if (error) {
-        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{error}</Typography>;
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{`Failed to load ${theme.terminology.community} data. Please try again later.`}</Typography>;
     }
 
-    if (!community) {
-        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Community not found</Typography>;
+    if (!dreamCircle) {
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{`${theme.terminology.community} not found`}</Typography>;
     }
 
     return (
-        <div className="community-hub">
-            <Typography variant="h4" className="hub-title">{community.name}</Typography>
+        <div className="dream-circle-hub">
+            <Typography variant="h4" className="hub-title">{dreamCircle.name}</Typography>
             
-            {/* Community Info Section */}
-            <div className="community-info">
-                <Typography variant="body1" className="community-description">{community.description}</Typography>
+            {/* Dream Circle Info Section */}
+            <div className="dream-circle-info">
+                <Typography variant="body1" className="dream-circle-description">{dreamCircle.description}</Typography>
                 <div className="tag-container">
-                    {community.interest_tags && community.interest_tags.map((tag, index) => (
+                    {dreamCircle.interest_tags && dreamCircle.interest_tags.map((tag, index) => (
                         <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
                     ))}
                 </div>
                 
-                {/* Join Request Button for non-members */}
-                {!isMember && (
+                {/* Join Request Button for non-dreamers */}
+                {!isDreamer && (
                     <Box mt={3} display="flex" justifyContent="center">
                         <Paper elevation={3} className="join-request-container" sx={{ padding: 3, maxWidth: 500 }}>
                             <Typography variant="h6" align="center" gutterBottom>
-                                You're not a member of this community yet
+                                {`You're not a ${theme.terminology.dreamer} in this ${theme.terminology.community} yet`}
                             </Typography>
                             <Typography variant="body2" align="center" paragraph>
-                                Join this community to participate in voting, propose projects, and connect with other members.
+                                {`Join this ${theme.terminology.community} to participate in ${theme.terminology.peer_review_approval}s, propose ${theme.terminology.project_plural}, and connect with other ${theme.terminology.dreamer_plural}.`}
                             </Typography>
                             <Box display="flex" justifyContent="center">
-                                {hasRequestedJoin ? (
+                                {hasRequestedToJoinDreamCircle ? (
                                     <Button 
                                         variant="contained" 
                                         color="primary" 
                                         disabled 
                                         startIcon={<PersonAddIcon />}
                                     >
-                                        Join Request Pending
+                                        {`${theme.terminology.community} Request Pending`}
                                     </Button>
                                 ) : (
                                     <Button 
                                         variant="contained" 
                                         color="primary" 
-                                        onClick={handleRequestJoin}
+                                        onClick={handleRequestJoinDreamCircle}
                                         startIcon={<PersonAddIcon />}
                                     >
-                                        Request to Join
+                                        {`Request to Join ${theme.terminology.community}`}
                                     </Button>
                                 )}
                             </Box>
@@ -544,22 +545,22 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             {/* Main Content Grid */}
             <div className="hub-grid">
-                {/* Members Card */}
+                {/* Dreamers Card */}
                 <div className="hub-grid-item">
-                    <Card className="hub-card members-card">
+                    <Card className="hub-card dreamers-card">
                         <CardContent>
                             <GroupIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Members</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>{theme.terminology.dreamer_plural}</Typography>
                             
-                            {isMember && isDelegating && (
+                            {isDreamer && isDelegating && (
                                 <div className="delegation-info">
                                     <Typography variant="body2" sx={{color: 'var(--hud-text-color)'}}>
-                                        You've delegated your vote to: <strong style={{color: 'var(--hud-secondary-color)'}}>{delegatedTo?.username || "Unknown member"}</strong>
+                                        {`You've delegated your ${theme.terminology.peer_review_approval} to:`} <strong style={{color: 'var(--hud-secondary-color)'}}>{delegatedTo?.username || `Unknown ${theme.terminology.dreamer}`}</strong>
                                     </Typography>
                                     <Button 
                                         variant="outlined" 
                                         size="small" 
-                                        onClick={handleRevokeVote}
+                                        onClick={handleRevokeBlessing}
                                         className="revoke-button" // CSS class for specific margin if needed
                                         sx={{ 
                                             color: 'var(--hud-secondary-color)', 
@@ -571,28 +572,28 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                             }
                                         }}
                                     >
-                                        Revoke Delegation
+                                        {`Revoke ${theme.terminology.peer_review_approval}`}
                                     </Button>
                                 </div>
                             )}
                             
-                            <List className="member-list" key={`member-list-${communityId}`}>
-                                {members.map((member) => (
+                            <List className="dreamer-list" key={`dreamer-list-${dreamCircleId}`}>
+                                {dreamers.map((dreamer) => (
                                     <ListItem 
-                                        key={member.id} 
-                                        className="member-entry" // CSS handles base style
+                                        key={dreamer.id}
+                                        className="dreamer-entry" // CSS handles base style
                                         sx={{ 
                                             cursor: 'pointer',
                                             '&:hover': {
                                                 borderColor: 'var(--hud-primary-color)', // From CSS: rgba(var(--hud-primary-color-rgb), 0.4)
                                             }
                                         }}
-                                        onClick={() => navigate(`/profile/public/${member.id}`)}
+                                        onClick={() => navigate(`/profile/public/${dreamer.id}`)}
                                     >
                                         <ListItemAvatar>
                                             <Avatar 
-                                                src={`${import.meta.env.VITE_BACKEND_URL}${member.profile_picture}`}
-                                                alt={member.name} 
+                                                src={`${import.meta.env.VITE_BACKEND_URL}${dreamer.profile_picture}`}
+                                                alt={dreamer.name}
                                                 sx={{ 
                                                     borderColor: 'var(--hud-border-color)', 
                                                     borderWidth: '1px', 
@@ -607,18 +608,18 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                         <ListItemText 
                                             primaryTypographyProps={{ sx: { color: 'var(--hud-text-color)', fontWeight: '500' } }}
                                             secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
-                                            primary={member.username} 
-                                            secondary={`ID: ${member.id} - Score: ${
-                                                memberScores.find(scoreEntry => scoreEntry.id === member.id)?.communityScore || 0
+                                            primary={dreamer.username}
+                                            secondary={`ID: ${dreamer.id} - Score: ${
+                                                dreamerScores.find(scoreEntry => scoreEntry.id === dreamer.id)?.dreamerScore || 0
                                             }`} 
                                         />
-                                        {isMember && !isDelegating && userId !== member.id && (
+                                        {isDreamer && !isDelegating && userId !== dreamer.id && (
                                             <Button 
                                                 variant="outlined" 
                                                 size="small"
                                                 onClick={(e) => {
                                                     e.stopPropagation(); // Prevent ListItem click
-                                                    handleDelegateVote(member.id);
+                                                    handleDelegateBlessing(dreamer.id);
                                                 }}
                                                 sx={{
                                                     color: 'var(--hud-primary-color)',
@@ -631,7 +632,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     }
                                                 }}
                                             >
-                                                Delegate
+                                                {`Delegate ${theme.terminology.peer_review_approval}`}
                                             </Button>
                                         )}
                                     </ListItem>
@@ -641,18 +642,18 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
                 
-                {/* Voting Card - Projects */}
-                {isMember && (
+                {/* Blessing Card - Intentions */}
+                {isDreamer && (
                     <div className="hub-grid-item">
-                        <Card className="hub-card voting-card">
+                        <Card className="hub-card blessing-card">
                             <CardContent>
                                 <HowToVoteIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Project Proposals</Typography>
-                                {proposals.length === 0 ? (
-                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active proposals</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>{`${theme.terminology.project_plural} Proposals`}</Typography>
+                                {intentionProposals.length === 0 ? (
+                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>{`No active ${theme.terminology.project_plural} proposals`}</Typography>
                                 ) : (
                                     <List className="proposal-list">
-                                        {proposals.map((proposal) => (
+                                        {intentionProposals.map((proposal) => (
                                             <ListItem key={proposal.id} className="proposal-entry">
                                                 <div className="proposal-content">
                                                     <Link
@@ -683,22 +684,22 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         ))}
                                                     </div>
                                                     
-                                                    <div className="vote-info">
+                                                    <div className="blessing-info">
                                                         <Typography variant="body2" sx={{color: 'var(--hud-text-secondary)'}}>
-                                                            Current Votes: {
-                                                                proposal.community_votes ? 
-                                                                Object.values(proposal.community_votes).filter(v => v === true).length : 0
-                                                            } Yes / {
-                                                                proposal.community_votes ? 
-                                                                Object.values(proposal.community_votes).filter(v => v === false).length : 0
-                                                            } No
+                                                            {`Current ${theme.terminology.peer_review_approval}s: ${
+                                                                proposal.dream_circle_blessings ?
+                                                                Object.values(proposal.dream_circle_blessings).filter(v => v === true).length : 0
+                                                            } ${theme.terminology.peer_review_approval}s / ${
+                                                                proposal.dream_circle_blessings ?
+                                                                Object.values(proposal.dream_circle_blessings).filter(v => v === false).length : 0
+                                                            } Withholds`}
                                                         </Typography>
                                                     </div>
                                                     
-                                                    <div className="vote-actions">
-                                                        <Tooltip title="Approve">
+                                                    <div className="blessing-actions">
+                                                        <Tooltip title={theme.terminology.peer_review_approval}>
                                                             <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, true)}
+                                                                onClick={() => handleBlessIntention(proposal.id, true)}
                                                                 sx={{ 
                                                                     color: 'var(--hud-success-color)', 
                                                                     '&:hover': { 
@@ -710,9 +711,9 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                                 <CheckCircleIcon />
                                                             </IconButton>
                                                         </Tooltip>
-                                                        <Tooltip title="Reject">
+                                                        <Tooltip title="Withhold">
                                                             <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, false)}
+                                                                onClick={() => handleBlessIntention(proposal.id, false)}
                                                                 sx={{ 
                                                                     color: 'var(--hud-error-color)', 
                                                                     '&:hover': { 
@@ -735,18 +736,18 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </div>
                 )}
                 
-                {/* Membership Requests Card - Only for members */}
-                {isMember && (
+                {/* Dreamer Requests Card - Only for dreamers */}
+                {isDreamer && (
                     <div className="hub-grid-item">
-                        <Card className="hub-card membership-card">
+                        <Card className="hub-card dreamer-requests-card">
                             <CardContent>
                                 <PersonAddIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Membership Requests</Typography>
-                                {membershipRequests.length === 0 ? (
-                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No pending requests</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>{`${theme.terminology.dreamer} Join Requests`}</Typography>
+                                {dreamerRequests.length === 0 ? (
+                                    <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>{`No pending ${theme.terminology.dreamer} join requests`}</Typography>
                                 ) : (
                                     <List className="request-list">
-                                        {membershipRequests.map((request) => (
+                                        {dreamerRequests.map((request) => (
                                             <ListItem key={request.user_id} className="request-entry">
                                                 <ListItemAvatar>
                                                     <Avatar 
@@ -779,10 +780,10 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     secondary={`ID: ${request.user_id}`} 
                                                     secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
                                                 />
-                                                <div className="vote-actions">
-                                                    <Tooltip title="Approve">
+                                                <div className="blessing-actions">
+                                                    <Tooltip title={theme.terminology.peer_review_approval}>
                                                         <IconButton 
-                                                            onClick={() => handleVoteMember(request.user_id, true)}
+                                                            onClick={() => handleBlessDreamer(request.user_id, true)}
                                                             sx={{ 
                                                                 color: 'var(--hud-success-color)', 
                                                                 '&:hover': { 
@@ -794,9 +795,9 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                             <CheckCircleIcon />
                                                         </IconButton>
                                                     </Tooltip>
-                                                    <Tooltip title="Reject">
+                                                    <Tooltip title="Withhold">
                                                         <IconButton 
-                                                            onClick={() => handleVoteMember(request.user_id, false)}
+                                                            onClick={() => handleBlessDreamer(request.user_id, false)}
                                                             sx={{ 
                                                                 color: 'var(--hud-error-color)', 
                                                                 '&:hover': { 
@@ -817,40 +818,40 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         </Card>
                     </div>
                 )}
-                {/* Active Projects Card - Visible to all */}
-                <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
-                    <Card className="hub-card projects-card">
+                {/* Active Intentions Card - Visible to all */}
+                <div className={`hub-grid-item ${isDreamer ? 'wide-item' : 'full-width-item'}`}>
+                    <Card className="hub-card intentions-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Projects</Typography>
-                            {approvedProjects.length === 0 ? (
-                                <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>{`Active ${theme.terminology.project_plural}`}</Typography>
+                            {approvedIntentions.length === 0 ? (
+                                <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>{`No active ${theme.terminology.project_plural}`}</Typography>
                             ) : (
-                                <div className="projects-grid">
-                                    {approvedProjects.map((project) => (
-                                        <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
+                                <div className="intentions-grid">
+                                    {approvedIntentions.map((intention) => (
+                                        <Card key={intention.id} className="intention-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
                                                 <Link
                                                     component="button"
                                                     variant="h6"
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                    onClick={() => navigate(`/visualizer/${intention.id}`)}
                                                     className="clickable-title" // CSS handles base style
                                                     sx={{ textAlign: 'center', display: 'block', marginBottom: '8px' }}
                                                 >
-                                                    {project.name}
+                                                    {intention.name}
                                                 </Link>
-                                                <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
-                                                    {project.description}
+                                                <Typography variant="body2" className="intention-description" sx={{color: 'var(--hud-text-secondary)'}}>
+                                                    {intention.description}
                                                 </Typography>
                                                 <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
-                                                    {project.tags && project.tags.map((tag, idx) => (
+                                                    {intention.tags && intention.tags.map((tag, idx) => (
                                                         <Chip key={idx} label={tag} size="small" /* sx from CSS */ />
                                                     ))}
                                                 </div>
                                                 <Button 
                                                     variant="outlined" 
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
-                                                    className="view-project-btn" // CSS handles margin-top: auto
+                                                    onClick={() => navigate(`/visualizer/${intention.id}`)}
+                                                    className="view-intention-btn" // CSS handles margin-top: auto
                                                     sx={{
                                                         color: 'var(--hud-primary-color)',
                                                         borderColor: 'var(--hud-primary-color)',
@@ -861,7 +862,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         }
                                                     }}
                                                 >
-                                                    View Project
+                                                    {theme.terminology.view_project}
                                                 </Button>
                                             </CardContent>
                                         </Card>
@@ -872,8 +873,8 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
-            <CommunityResourceManagement communityId={communityId} />
-            <CommunityChronicle communityId={communityId} />
+            <DreamCircleResourceManagement dreamCircleId={dreamCircleId} />
+            <DreamCircleGrimoire dreamCircleId={dreamCircleId} />
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 
@@ -898,4 +899,4 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     );
 };
 
-export default CommunityHub;
+export default DreamCircleHub;

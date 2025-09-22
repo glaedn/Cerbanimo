@@ -2,25 +2,25 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-import './Communities.css';
+import './DreamCircles.css';
+import theme from '../styles/theme';
 
-const Communities = () => {
+const DreamCircles = () => {
   const { user, getAccessTokenSilently } = useAuth0();
-  const [communities, setCommunities] = useState([]);
+  const [dreamCircles, setDreamCircles] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedCommunity, setSelectedCommunity] = useState(null);
-  const [communityProjects, setCommunityProjects] = useState([]);
+  const [selectedDreamCircle, setSelectedDreamCircle] = useState(null);
+  const [dreamCircleProjects, setDreamCircleProjects] = useState([]);
   
   const navigate = useNavigate();
   
-  // Comprehensive case-insensitive search function
   const matchesSearch = (text, searchTerm) => {
     if (!searchTerm) return true;
     return text.toLowerCase().includes(searchTerm.toLowerCase());
   };
 
-  const fetchCommunities = async () => {
+  const fetchDreamCircles = async () => {
     try {
       const token = await getAccessTokenSilently();
   
@@ -30,50 +30,45 @@ const Communities = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      console.log('Fetched Communities:', response.data);
+      console.log('Fetched Dream Circles:', response.data);
     
-      // Extract the communities array from the response data
-      const communitiesArray = response.data.communities || [];
+      const dreamCirclesArray = response.data.communities || [];
       
-      if (communitiesArray.length === 0) {
-        console.log('No communities data returned from API');
+      if (dreamCirclesArray.length === 0) {
+        console.log('No dream circle data returned from API');
       }
       
-      // Apply search filter if there's a search term
       const searchTerm = search.trim();
-      const filteredCommunities = searchTerm 
-        ? communitiesArray.filter(community => {
-            // Check if search term matches name or description
-            return matchesSearch(community.name || '', searchTerm) || 
-                   matchesSearch(community.description || '', searchTerm);
+      const filteredDreamCircles = searchTerm
+        ? dreamCirclesArray.filter(dreamCircle => {
+            return matchesSearch(dreamCircle.name || '', searchTerm) ||
+                   matchesSearch(dreamCircle.description || '', searchTerm);
           })
-        : communitiesArray;
+        : dreamCirclesArray;
         
-      console.log('Filtered Communities:', filteredCommunities);
+      console.log('Filtered Dream Circles:', filteredDreamCircles);
       
-      // Set the communities state
-      setCommunities(filteredCommunities);
+      setDreamCircles(filteredDreamCircles);
     } catch (error) {
-      console.error('Failed to fetch communities:', error);
-      // Initialize with empty array on error
-      setCommunities([]);
+      console.error(`Failed to fetch ${theme.terminology.community_plural}:`, error);
+      setDreamCircles([]);
     }
   };
 
-  const fetchCommunityProjects = async (communityId) => {
+  const fetchDreamCircleProjects = async (dreamCircleId) => {
     try {
       const token = await getAccessTokenSilently();
       
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/projects`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${dreamCircleId}/projects`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
     
-      console.log('Fetched Community Projects:', response.data);
-      setCommunityProjects(response.data);
+      console.log(`Fetched ${theme.terminology.community} ${theme.terminology.project_plural}:`, response.data);
+      setDreamCircleProjects(response.data);
     } catch (error) {
-      console.error('Failed to fetch community projects:', error);
+      console.error(`Failed to fetch ${theme.terminology.community} ${theme.terminology.project_plural}:`, error);
       if (error.response) {
         console.error('Server response:', error.response.data);
         console.error('Server status:', error.response.status);
@@ -81,20 +76,19 @@ const Communities = () => {
     }
   };
 
-  const joinCommunity = async (communityId) => {
+  const joinDreamCircle = async (dreamCircleId) => {
     try {
       const token = await getAccessTokenSilently();
       
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/join`, 
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${dreamCircleId}/join`,
         { userId: user.sub }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Refresh communities to update member count
-      fetchCommunities();
+      fetchDreamCircles();
       
     } catch (error) {
-      console.error('Failed to join community:', error);
+      console.error(`Failed to join ${theme.terminology.community}:`, error);
       if (error.response) {
         console.error('Server response:', error.response.data);
       }
@@ -103,44 +97,44 @@ const Communities = () => {
 
   useEffect(() => {
     if (user) {
-      fetchCommunities();
+      fetchDreamCircles();
     }
   }, [user, page, search]);
 
 useEffect(() => {
-    console.log('Current communities state:', communities);
-}, [communities]);
+    console.log('Current dream circles state:', dreamCircles);
+}, [dreamCircles]);
 
 return (
     <div className="communities-container">
-        <h1 className="community-page-title">Discover Communities</h1>
+        <h1 className="community-page-title">Discover {theme.terminology.community_plural}</h1>
 
         <div className="search-bar-container">
             <input
                 className="search-input"
                 type="text"
-                placeholder="Search Communities..."
+                placeholder={`Search ${theme.terminology.community_plural}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
             />
             <button
                 className="add-community-button"
-                onClick={() => window.location.href = '/communitycreation'}
-                title="Create New Community"
+                onClick={() => window.location.href = '/createdreamcircle'}
+                title={`Create New ${theme.terminology.community}`}
             >
                 +
             </button>
         </div>
 
         <div className="community-list-wrapper">
-            {communities.length > 0 ? (
-                communities.map((community) => (
-                    <div key={community.id} className="community-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '15px' }}>
-                        <h2 className="community-title">{community.name}</h2>
-                        <p className="community-description">{community.description}</p>
+            {dreamCircles.length > 0 ? (
+                dreamCircles.map((dreamCircle) => (
+                    <div key={dreamCircle.id} className="community-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '15px' }}>
+                        <h2 className="community-title">{dreamCircle.name}</h2>
+                        <p className="community-description">{dreamCircle.description}</p>
                         <div className="community-tags">
-                            {community.interest_tags && community.interest_tags.length > 0 ? (
-                                community.interest_tags.map((tag, index) => (
+                            {dreamCircle.interest_tags && dreamCircle.interest_tags.length > 0 ? (
+                                dreamCircle.interest_tags.map((tag, index) => (
                                     <span key={index} className="tag-chip">{tag}</span>
                                 ))
                             ) : (
@@ -149,22 +143,22 @@ return (
                         </div>
                         <div className="community-stats">
                             <span className="member-count">
-                                <i className="fas fa-users"></i> {Array.isArray(community.members) ? community.members.length : 0} members
+                                <i className="fas fa-users"></i> {Array.isArray(dreamCircle.members) ? dreamCircle.members.length : 0} dreamers
                             </span>
                         </div>
                         <div className="community-actions">
                                 <button
                                   className="join-button"
-                                  onClick={() => navigate(`/communityhub/${community.id}`)}
+                                  onClick={() => navigate(`/dream-circle/${dreamCircle.id}`)}
                                 >
-                                  View Community
+                                  View {theme.terminology.community}
                                 </button>
                               </div>
                             </div>
                           ))
                         ) : (
                           <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
-                            <p>No communities found. Try adjusting your search or create a new community.</p>
+                            <p>No {theme.terminology.community_plural} found. Try adjusting your search or create a new {theme.terminology.community}.</p>
                           </div>
                         )}
                       </div>
@@ -186,12 +180,12 @@ return (
                         </button>
                       </div>
 
-                      {selectedCommunity && (
+                      {selectedDreamCircle && (
                         <div className="community-popup-overlay">
                           <div className="community-popup">
-                            <h2>Projects in {selectedCommunity.name}</h2>
+                            <h2>{theme.terminology.project_plural} in {selectedDreamCircle.name}</h2>
                             <div className="community-projects-list">
-                              {communityProjects.length > 0 ? communityProjects.map((project) => (
+                              {dreamCircleProjects.length > 0 ? dreamCircleProjects.map((project) => (
                                 <div key={project.id} className="project-card">
                                   <h3>{project.name}</h3>
                                   <p>{project.description}</p>
@@ -201,14 +195,14 @@ return (
                                         navigate(`/visualizer/${project.id}`);
                                     }}
                                 >
-                                    Open Project
+                                    Open {theme.terminology.project}
                                 </button>
                             </div>
-                        )) : <p>No projects in this community yet</p>}
+                        )) : <p>No {theme.terminology.project_plural} in this {theme.terminology.community} yet</p>}
                     </div>
                     <button
                         className="close-popup-button"
-                        onClick={() => setSelectedCommunity(null)}
+                        onClick={() => setSelectedDreamCircle(null)}
                     >
                         Close
                     </button>
@@ -219,4 +213,4 @@ return (
 );
 };
 
-export default Communities;
+export default DreamCircles;

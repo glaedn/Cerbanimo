@@ -53,6 +53,35 @@ const theme = {
     glowSubtle: (color) => `0 0 10px ${color}7A`, // 7A for ~0.5 alpha
     glass: { backdropFilter: 'blur(10px)', backgroundColor: 'rgba(28, 28, 30, 0.75)' }, // Example, may need adjustment
   },
+  terminology: {
+    project: 'Intention',
+    project_plural: 'Intentions',
+    create_project: 'Set an Intention',
+    task: 'Quest',
+    task_plural: 'Quests',
+    complete_task: 'Complete Quest',
+    skill: 'Affinity',
+    skill_plural: 'Affinities',
+    cotokens: 'Stardust',
+    community_tokens: 'Dream Circle Essence',
+    project_tokens: 'Crystallized Intention Shards',
+    portfolio: 'Grimoire',
+    chronicle: 'Grimoire',
+    community: 'Dream Circle',
+    community_plural: 'Dream Circles',
+    peer_review_approval: 'Blessing',
+    project_manager_approval: 'Ritual Seal',
+    proof_of_work: 'Spell Echo',
+    notification: 'Familiar',
+    notifications: 'Familiars',
+    // Actions and Labels
+    submit_task: 'Complete Quest',
+    project_approved: 'Intention Received its Ritual Seal',
+    proof_of_work_required: 'Spell Echo Required',
+    community_dashboard: 'Dream Circle Dashboard',
+    view_project: 'View Intention',
+    add_project: 'Set an Intention',
+  }
 };
 
 export default theme;

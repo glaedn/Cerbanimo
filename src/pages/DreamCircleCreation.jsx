@@ -4,9 +4,10 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
-import './CommunityCreation.css';
+import './DreamCircleCreation.css';
+import theme from '../styles/theme';
 
-const CommunityCreation = () => {
+const DreamCircleCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -14,7 +15,7 @@ const CommunityCreation = () => {
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [userId, setUserId] = useState(null); // State to store user ID
+  const [userId, setUserId] = useState(null);
 
   const colorPalette = [
     blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
@@ -40,7 +41,6 @@ const CommunityCreation = () => {
     fetchTags();
   }, [getAccessTokenSilently]);
 
-  // fetch the user's id from the backend
     useEffect(() => {
         const fetchUserId = async () => {
         try {
@@ -62,9 +62,9 @@ const CommunityCreation = () => {
         fetchUserId();
     }, [getAccessTokenSilently]);
 
-    const handleCreateCommunity = async () => {
+    const handleCreateDreamCircle = async () => {
       if (!name.trim()) {
-        alert('Please enter a community name');
+        alert(`Please enter a ${theme.terminology.community} name`);
         return;
       }
     
@@ -72,14 +72,12 @@ const CommunityCreation = () => {
       try {
         const token = await getAccessTokenSilently();
     
-        // Extract tag IDs - handles both strings and objects
         const tagIds = selectedTags.map(tag => {
           if (typeof tag === 'string') {
-            // Find matching tag object
             const foundTag = availableTags.find(t => t.name === tag);
             return foundTag ? foundTag.id : null;
           }
-          return tag.id; // If it's already an object
+          return tag.id;
         }).filter(id => id !== null);
     
         const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/`, {
@@ -94,12 +92,12 @@ const CommunityCreation = () => {
         });
       
         if (response.status === 201) {
-          alert('Community created successfully!');
-          navigate(`/communityhub/${response.data.communityId}`);
+          alert(`${theme.terminology.community} created successfully!`);
+          navigate(`/dream-circle/${response.data.communityId}`);
         }
       } catch (error) {
-        console.error('Failed to create community:', error);
-        alert('Error creating community. Please try again.');
+        console.error(`Failed to create ${theme.terminology.community}:`, error);
+        alert(`Error creating ${theme.terminology.community}. Please try again.`);
       } finally {
         setIsLoading(false);
       }
@@ -107,11 +105,11 @@ const CommunityCreation = () => {
 
   return (
     <Box className="community-creation-container">
-      <Typography variant="h4" className="form-title">Create a New Community</Typography>
+      <Typography variant="h4" className="form-title">Create a New {theme.terminology.community}</Typography>
       
       <div className="cosmic-field-container">
         <TextField
-          label="Community Name"
+          label={`${theme.terminology.community} Name`}
           variant="outlined"
           fullWidth
           value={name}
@@ -124,7 +122,7 @@ const CommunityCreation = () => {
       
       <div className="cosmic-field-container">
         <TextField
-          label="Community Description"
+          label={`${theme.terminology.community} Description`}
           variant="outlined"
           fullWidth
           multiline
@@ -169,11 +167,11 @@ const CommunityCreation = () => {
       <Button
         variant="contained"
         color="primary"
-        onClick={handleCreateCommunity}
+        onClick={handleCreateDreamCircle}
         disabled={isLoading}
         sx={{ marginTop: 3, paddingY: '12px', paddingX: '24px', fontWeight: 'bold' }}
       >
-        {isLoading ? 'Creating...' : 'Launch Community'}
+        {isLoading ? 'Creating...' : `Launch ${theme.terminology.community}`}
       </Button>
       
       <div className="space-particles">
@@ -185,4 +183,4 @@ const CommunityCreation = () => {
   );
 };
 
-export default CommunityCreation;
+export default DreamCircleCreation;

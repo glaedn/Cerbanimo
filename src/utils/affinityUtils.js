@@ -1,7 +1,7 @@
 /**
  * Calculates the experience needed for the next level.
  * This is a placeholder and can be adjusted based on actual game mechanics.
- * @param {number} currentLevel - The current level of the skill.
+ * @param {number} currentLevel - The current level of the affinity.
  * @returns {number} - Experience needed for the next level.
  */
 export const calculateExperienceNeeded = (currentLevel) => {
@@ -16,7 +16,7 @@ export const calculateExperienceNeeded = (currentLevel) => {
  * Parses the unlocked_users field, which is expected to be a string
  * that might represent an array of JSON strings, or a direct JSON array string.
  * Handles cases where unlocked_users might be null, undefined, or malformed.
- * @param {string | string[] | Object[]} unlockedUsersInput - The raw unlocked_users data from the skill.
+ * @param {string | string[] | Object[]} unlockedUsersInput - The raw unlocked_users data from the affinity.
  * @returns {Array<Object>} - An array of parsed user progress objects, or an empty array if parsing fails or input is empty.
  */
 const parseUnlockedUsers = (unlockedUsersInput) => {
@@ -96,30 +96,30 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
 
 
 /**
- * Processes raw skill data to filter for the current user and categorize skills.
- * @param {Array<Object>} allSkills - Array of all skill objects from the API.
+ * Processes raw affinity data to filter for the current user and categorize affinities.
+ * @param {Array<Object>} allAffinities - Array of all affinity objects from the API.
  * @param {string} currentUserId - The ID of the current user.
- * @returns {Array<Object>} - Processed and categorized skill data for D3.
+ * @returns {Array<Object>} - Processed and categorized affinity data for D3.
  */
-export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
-  if (!allSkills || !currentUserId) {
+export const processAffinityDataForGalaxy = (allAffinities, currentUserId) => {
+  if (!allAffinities || !currentUserId) {
     return [];
   }
 
-  const allSkillsMap = new Map();
-  allSkills.forEach(skill => {
-    allSkillsMap.set(skill.id, { ...skill });
+  const allAffinitiesMap = new Map();
+  allAffinities.forEach(affinity => {
+    allAffinitiesMap.set(affinity.id, { ...affinity });
   });
 
-  const skillsToProcess = new Map();
+  const affinitiesToProcess = new Map();
 
-  // Add all user-unlocked skills
-  allSkills.forEach(skill => {
-    const parsedUsers = parseUnlockedUsers(skill.unlocked_users);
+  // Add all user-unlocked affinities
+  allAffinities.forEach(affinity => {
+    const parsedUsers = parseUnlockedUsers(affinity.unlocked_users);
     const userData = parsedUsers.find(u => u.user_id?.toString() === currentUserId?.toString());
     if (userData) {
-      skillsToProcess.set(skill.id, {
-        ...skill,
+      affinitiesToProcess.set(affinity.id, {
+        ...affinity,
         userLevel: userData.level,
         userExperience: userData.experience,
         experienceNeededForNextLevel: calculateExperienceNeeded(userData.level),
@@ -128,114 +128,114 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  // Add necessary parent skills for hierarchy completion
+  // Add necessary parent affinities for hierarchy completion
   // Iterate over a copy of keys if modifying the map during iteration, or use a temporary array.
-  const skillsToConsiderForParents = Array.from(skillsToProcess.values());
-  skillsToConsiderForParents.forEach(skill => {
-    let current = skill;
-    while (current && current.parent_skill_id) {
-      if (!skillsToProcess.has(current.parent_skill_id)) {
-        const parentSkill = allSkillsMap.get(current.parent_skill_id);
-        if (parentSkill) {
-          skillsToProcess.set(parentSkill.id, {
-            ...parentSkill,
+  const affinitiesToConsiderForParents = Array.from(affinitiesToProcess.values());
+  affinitiesToConsiderForParents.forEach(affinity => {
+    let current = affinity;
+    while (current && current.parent_affinity_id) {
+      if (!affinitiesToProcess.has(current.parent_affinity_id)) {
+        const parentAffinity = allAffinitiesMap.get(current.parent_affinity_id);
+        if (parentAffinity) {
+          affinitiesToProcess.set(parentAffinity.id, {
+            ...parentAffinity,
             userLevel: 0, // Default for structural parents not unlocked by user
             userExperience: 0,
             experienceNeededForNextLevel: calculateExperienceNeeded(0),
             isUnlockedByUser: false,
           });
-          current = parentSkill; // Move up to the next parent
+          current = parentAffinity; // Move up to the next parent
         } else {
-          console.warn(`Parent skill with ID ${current.parent_skill_id} not found in allSkillsMap.`);
+          console.warn(`Parent affinity with ID ${current.parent_affinity_id} not found in allAffinitiesMap.`);
           break; // Parent not found, stop ascending
         }
       } else {
-        // Parent already in skillsToProcess, stop ascending this path
-        current = skillsToProcess.get(current.parent_skill_id); // ensure current is updated from the map for next iteration
+        // Parent already in affinitiesToProcess, stop ascending this path
+        current = affinitiesToProcess.get(current.parent_affinity_id); // ensure current is updated from the map for next iteration
         // break; // This was causing issues if a parent was added by another branch earlier
       }
     }
   });
   
 
-  const processedSkillsArray = Array.from(skillsToProcess.values());
-  const skillHierarchy = new Map(processedSkillsArray.map(s => [s.id, { ...s, children: [], category: 'unknown' }]));
+  const processedAffinitiesArray = Array.from(affinitiesToProcess.values());
+  const affinityHierarchy = new Map(processedAffinitiesArray.map(s => [s.id, { ...s, children: [], category: 'unknown' }]));
 
   // Build children arrays first
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  affinityHierarchy.forEach(affinityNode => {
+    if (affinityNode.parent_affinity_id) {
+      const parentNode = affinityHierarchy.get(affinityNode.parent_affinity_id);
       if (parentNode) {
-        parentNode.children.push(skillNode);
+        parentNode.children.push(affinityNode);
       } else {
-        // This warning is valid if a parent_skill_id points to a skill not included in skillsToProcess
-        console.warn(`Structural issue: Parent node with ID ${skillNode.parent_skill_id} for skill ${skillNode.name} (ID: ${skillNode.id}) not found in skillHierarchy. This skill might be orphaned or data needs checking.`);
+        // This warning is valid if a parent_affinity_id points to a affinity not included in affinitiesToProcess
+        console.warn(`Structural issue: Parent node with ID ${affinityNode.parent_affinity_id} for affinity ${affinityNode.name} (ID: ${affinityNode.id}) not found in affinityHierarchy. This affinity might be orphaned or data needs checking.`);
       }
     }
   });
 
   // Pass 1: Categorize Stars
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id === null || skillNode.parent_skill_id === undefined) {
-      skillNode.category = 'star';
+  affinityHierarchy.forEach(affinityNode => {
+    if (affinityNode.parent_affinity_id === null || affinityNode.parent_affinity_id === undefined) {
+      affinityNode.category = 'star';
     }
   });
 
   // Pass 2: Categorize Planets
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  affinityHierarchy.forEach(affinityNode => {
+    if (affinityNode.parent_affinity_id) {
+      const parentNode = affinityHierarchy.get(affinityNode.parent_affinity_id);
       if (parentNode && parentNode.category === 'star') {
-        skillNode.category = 'planet';
+        affinityNode.category = 'planet';
       }
     }
   });
 
   // Pass 3: Categorize Moons
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  affinityHierarchy.forEach(affinityNode => {
+    if (affinityNode.parent_affinity_id) {
+      const parentNode = affinityHierarchy.get(affinityNode.parent_affinity_id);
       if (parentNode && parentNode.category === 'planet') {
-        skillNode.category = 'moon';
+        affinityNode.category = 'moon';
       }
     }
   });
 
   // ADD THIS NEW PASS: Categorize Satellites (children of Moons)
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  affinityHierarchy.forEach(affinityNode => {
+    if (affinityNode.parent_affinity_id) {
+      const parentNode = affinityHierarchy.get(affinityNode.parent_affinity_id);
       if (parentNode && parentNode.category === 'moon') {
-        skillNode.category = 'satellite'; // New category
+        affinityNode.category = 'satellite'; // New category
       }
     }
   });
   
-  // Final check for uncategorized skills
-  skillHierarchy.forEach(skillNode => {
+  // Final check for uncategorized affinities
+  affinityHierarchy.forEach(affinityNode => {
     // Update the warning message if 'unknown' is still possible for other reasons
-    if (skillNode.category === 'unknown') {
-      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}, parent ID: ${skillNode.parent_skill_id}) remains uncategorized. This could be an orphan with an unresolved parent link or a new unhandled depth.`);
-    } else if (skillNode.parent_skill_id && !skillHierarchy.has(skillNode.parent_skill_id) && skillNode.category !== 'star') {
-      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}) is categorized as ${skillNode.category} but its parent (ID: ${skillNode.parent_skill_id}) is missing from skillHierarchy.`);
+    if (affinityNode.category === 'unknown') {
+      console.warn(`Affinity ${affinityNode.name} (ID: ${affinityNode.id}, parent ID: ${affinityNode.parent_affinity_id}) remains uncategorized. This could be an orphan with an unresolved parent link or a new unhandled depth.`);
+    } else if (affinityNode.parent_affinity_id && !affinityHierarchy.has(affinityNode.parent_affinity_id) && affinityNode.category !== 'star') {
+      console.warn(`Affinity ${affinityNode.name} (ID: ${affinityNode.id}) is categorized as ${affinityNode.category} but its parent (ID: ${affinityNode.parent_affinity_id}) is missing from affinityHierarchy.`);
     }
   });
 
 
   // Calculate levelForColor
-  const finalOutputSkills = [];
-  skillHierarchy.forEach(skill => {
-    let calculatedLevel = skill.userLevel || 0; // Default to its own level
+  const finalOutputAffinities = [];
+  affinityHierarchy.forEach(affinity => {
+    let calculatedLevel = affinity.userLevel || 0; // Default to its own level
 
-    if (skill.category === 'star') {
-      let starLevelSum = skill.isUnlockedByUser ? skill.userLevel : 0; // Start with star's own level if unlocked
+    if (affinity.category === 'star') {
+      let starLevelSum = affinity.isUnlockedByUser ? affinity.userLevel : 0; // Start with star's own level if unlocked
 
       // Traverse children (planets) and grandchildren (moons)
-      skill.children.forEach(planet => { // planets
+      affinity.children.forEach(planet => { // planets
         if (planet.isUnlockedByUser) {
           starLevelSum += planet.userLevel;
         }
-        const planetNode = skillHierarchy.get(planet.id); // Get full planet node with its children
+        const planetNode = affinityHierarchy.get(planet.id); // Get full planet node with its children
         planetNode.children.forEach(moon => { // moons
           if (moon.isUnlockedByUser) {
             starLevelSum += moon.userLevel;
@@ -245,9 +245,9 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       calculatedLevel = starLevelSum;
     }
     
-    finalOutputSkills.push({
-      ...skill, // includes original properties, userLevel, userExperience, etc.
-      category: skill.category || 'unknown', // Ensure category is set
+    finalOutputAffinities.push({
+      ...affinity, // includes original properties, userLevel, userExperience, etc.
+      category: affinity.category || 'unknown', // Ensure category is set
       levelForColor: calculatedLevel,
       // Remove children property from final output as it was for calculation internal to this function
       children: undefined 
@@ -255,10 +255,10 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   });
   
   // Remove the children property from the final output objects cleanly
-  const cleanedFinalOutputSkills = finalOutputSkills.map(skill => {
-    const { children, ...rest } = skill;
+  const cleanedFinalOutputAffinities = finalOutputAffinities.map(affinity => {
+    const { children, ...rest } = affinity;
     return rest;
   });
 
-  return cleanedFinalOutputSkills;
+  return cleanedFinalOutputAffinities;
 };

@@ -5,22 +5,23 @@ import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Chip } from '@mui/material';
 import './ProjectPages.css';
 import ReactMarkdown from 'react-markdown';
-import useSkillData from '../hooks/useSkillData';
+import useAffinityData from '../hooks/useAffinityData';
+import theme from '../styles/theme';
 
-const ProjectPages = () => {
+const IntentionPages = () => {
   const { user, getAccessTokenSilently } = useAuth0();
-  const [projects, setProjects] = useState([]);
+  const [intentions, setIntentions] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedIntention, setSelectedIntention] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [hasMorePages, setHasMorePages] = useState(true);
-  const [totalProjects, setTotalProjects] = useState(0);
+  const [totalIntentions, setTotalIntentions] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { allSkills } = useSkillData();
+  const { allAffinities } = useAffinityData();
   
   // Fetch user profile for skills
   const fetchUserProfile = async () => {
@@ -36,7 +37,7 @@ const ProjectPages = () => {
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchIntentions = async () => {
     if (!userProfile) return;
     
     setIsLoading(true);
@@ -54,29 +55,24 @@ const ProjectPages = () => {
         }
       });
 
-      const projectsData = response.data;
-      setProjects(projectsData);
+      const intentionsData = response.data;
+      setIntentions(intentionsData);
       
-      // Since your backend uses LIMIT 10, if we get less than 10 projects, 
-      // we're likely on the last page
-      setHasMorePages(projectsData.length === 10);
+      setHasMorePages(intentionsData.length === 10);
       
-      // For display purposes - this won't be perfectly accurate without a count query
-      // but gives users a sense of their position
-      const estimatedTotal = (page - 1) * 10 + projectsData.length;
-      setTotalProjects(hasMorePages ? `${estimatedTotal}+` : estimatedTotal);
+      const estimatedTotal = (page - 1) * 10 + intentionsData.length;
+      setTotalIntentions(hasMorePages ? `${estimatedTotal}+` : estimatedTotal);
       
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
-      setProjects([]);
+      console.error(`Failed to fetch ${theme.terminology.project_plural}:`, error);
+      setIntentions([]);
       setHasMorePages(false);
-      setTotalProjects(0);
+      setTotalIntentions(0);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Updated fetchTasks to include assigned_user_ids and debug logging
   const fetchTasks = async (projectId) => {
     try {
       const token = await getAccessTokenSilently();
@@ -99,12 +95,12 @@ const ProjectPages = () => {
         }
       });
     
-      console.log('Fetched Tasks:', response.data);
+      console.log(`Fetched ${theme.terminology.task_plural}:`, response.data);
       console.log('Current User Profile ID:', userProfile.id);
     
       setTasks(response.data);
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      console.error(`Failed to fetch ${theme.terminology.task_plural}:`, error);
       if (error.response) {
         console.error('Server response:', error.response.data);
         console.error('Server status:', error.response.status);
@@ -126,27 +122,24 @@ const ProjectPages = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log(`${action} task response:`, response.data);
+      console.log(`${action} ${theme.terminology.task} response:`, response.data);
 
-      if (selectedProject) {
-        fetchTasks(selectedProject.id);
+      if (selectedIntention) {
+        fetchTasks(selectedIntention.id);
       }
     } catch (error) {
-      console.error(`Failed to ${action} task:`, error);
+      console.error(`Failed to ${action} ${theme.terminology.task}:`, error);
       if (error.response) {
         console.error('Server response:', error.response.data);
       }
     }
   };
 
-  // Handle search input change
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-    // Reset to page 1 when search changes
     setPage(1);
   };
 
-  // Handle page navigation
   const handlePreviousPage = () => {
     if (page > 1) {
       setPage(prev => prev - 1);
@@ -166,7 +159,7 @@ const ProjectPages = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchProjects();
+    fetchIntentions();
   }, [userProfile, page, search]);
 
   return (
@@ -176,15 +169,15 @@ const ProjectPages = () => {
           variant="outlined"
           size="small"
           type="text"
-          placeholder="Search Projects..."
+          placeholder={`Search ${theme.terminology.project_plural}...`}
           value={search}
           onChange={handleSearchChange}
           sx={{ flexGrow: 1, marginRight: 1 }}
         />
         <Button
           variant="contained"
-          onClick={() => window.location.href = '/projectcreation'}
-          title="Add New Project"
+          onClick={() => window.location.href = '/intentioncreation'}
+          title={theme.terminology.add_project}
           sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '1.5rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0 }}
         >
           +
@@ -192,11 +185,11 @@ const ProjectPages = () => {
       </div>
 
       <div className="project-list-wrapper">
-        {projects.map((project) => (
-          <div key={project.id} className="project-card">
-            <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+        {intentions.map((intention) => (
+          <div key={intention.id} className="project-card">
+            <Typography variant="h6" sx={{ color: 'primary.main' }}>{intention.name}</Typography>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-              {project.tags.map((tag, index) => (
+              {intention.tags.map((tag, index) => (
                 <Chip
                   className="tag-chip"
                   key={index}
@@ -205,14 +198,14 @@ const ProjectPages = () => {
                 />
               ))}
             </div>
-            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
+            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{intention.description}</ReactMarkdown>
             <Button
               variant="contained"
               size="small"
               sx={{ marginBottom: '5px', backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
               onClick={() => {
-                setSelectedProject(project);
-                fetchTasks(project.id);
+                setSelectedIntention(intention);
+                fetchTasks(intention.id);
               }}
             >
               Contribute
@@ -222,10 +215,10 @@ const ProjectPages = () => {
               size="small"
               sx={{ borderColor: 'primary.main', color: 'primary.main' }}
               onClick={() => {
-                navigate(`/visualizer/${project.id}`);
+                navigate(`/visualizer/${intention.id}`);
               }}
             >
-              Open Project
+              {theme.terminology.view_project}
             </Button>
           </div>
         ))}
@@ -241,7 +234,7 @@ const ProjectPages = () => {
           Previous
         </Button>
         <Typography className="page-text" sx={{ marginX: 2 }}>
-          Page {page} ({projects.length} projects{hasMorePages ? ', more available' : ''})
+          Page {page} ({intentions.length} {theme.terminology.project_plural}{hasMorePages ? ', more available' : ''})
         </Typography>
         <Button
           variant="contained"
@@ -253,10 +246,10 @@ const ProjectPages = () => {
         </Button>
       </div>
 
-      {selectedProject && (
+      {selectedIntention && (
         <div className="task-popup-overlay">
           <div className="task-popup">
-            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedProject.name}</Typography>
+            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>{theme.terminology.task_plural} for {selectedIntention.name}</Typography>
             <div className="ptask-list">
               {tasks.length > 0 ? tasks.map((task) => {
                 const isAssigned = task.assigned_user_ids && 
@@ -268,14 +261,14 @@ const ProjectPages = () => {
                 console.log(`Current user ID:`, userProfile.id);
                 console.log(`Is Assigned:`, isAssigned);
 
-                const skillName = allSkills.find(skill => Number(skill.id) === Number(task.skill_id))?.name || 'Unknown Skill';
+                const skillName = allAffinities.find(skill => Number(skill.id) === Number(task.skill_id))?.name || `Unknown ${theme.terminology.skill}`;
                 return (
                   <div key={task.id} className="task-card">
                     <Typography variant="subtitle1" sx={{ color: 'primary.main' }}>{task.name}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{task.description}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {task.status}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {task.skill_level})</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} tokens</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{theme.terminology.skill}: {skillName} (Level: {task.skill_level})</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} {theme.terminology.project_token}</Typography>
                     <Button
                       variant="contained"
                       size="small"
@@ -288,18 +281,18 @@ const ProjectPages = () => {
                       variant="outlined"
                       size="small"
                       sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-                      onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
+                      onClick={() => navigate(`/visualizer/${selectedIntention.id}/${task.id}`)}
                     >
-                      View Task
+                      {`View ${theme.terminology.task}`}
                     </Button>
                   </div>
                 );
-              }) : <Typography sx={{ color: 'text.secondary' }}>No tasks available</Typography>}
+              }) : <Typography sx={{ color: 'text.secondary' }}>{`No ${theme.terminology.task_plural} available`}</Typography>}
             </div>
             <Button
               variant="contained"
               sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2 }}
-              onClick={() => setSelectedProject(null)}
+              onClick={() => setSelectedIntention(null)}
             >
               Close
             </Button>
@@ -310,4 +303,4 @@ const ProjectPages = () => {
   );
 };
 
-export default ProjectPages;
+export default IntentionPages;

@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import * as d3 from 'd3';
-import './SkillTree.css';
+import './AffinityTree.css';
 import { useAuth0 } from '@auth0/auth0-react';
+import theme from '../styles/theme';
 
-const SkillTree = () => {
+const AffinityTree = () => {
   const svgRef = useRef();
   const transformRef = useRef({ x: 0, y: 0, k: 1 });
-  const [skills, setSkills] = useState([]);
+  const [affinities, setAffinities] = useState([]);
   const gRef = useRef();
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [showFullTree, setShowFullTree] = useState(false);
   
-  // Dimensions state
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth * 0.9,
     height: window.innerHeight * 0.8
@@ -21,7 +21,7 @@ const SkillTree = () => {
   const userIdRef = useRef(null);
 
   useEffect(() => {
-    const fetchSkills = async () => {
+    const fetchAffinities = async () => {
       if (!isAuthenticated || !user) return;
 
       try {
@@ -44,12 +44,12 @@ const SkillTree = () => {
 
         userIdRef.current = profileResponse.data.id;
 
-        const skillsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        const affinitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const processedSkills = skillsResponse.data.map(skill => {
-          let unlockedUsers = skill.unlocked_users || [];
+        const processedAffinities = affinitiesResponse.data.map(affinity => {
+          let unlockedUsers = affinity.unlocked_users || [];
           
           if (typeof unlockedUsers === 'string') {
             try {
@@ -80,150 +80,140 @@ const SkillTree = () => {
           const userLevel = userEntry?.level ?? 0;
           
           return {
-            ...skill,
+            ...affinity,
             unlocked_users: unlockedUsers,
             unlocked: isUnlocked,
-            hidden: false, // No more hiding nodes, always show
+            hidden: false,
             userLevel: userLevel
           };
         });
 
-        setSkills(processedSkills);
+        setAffinities(processedAffinities);
       } catch (error) {
-        console.error('Failed to fetch skills:', error);
+        console.error(`Failed to fetch ${theme.terminology.skill_plural}:`, error);
       }
     };
 
-    fetchSkills();
+    fetchAffinities();
   }, [isAuthenticated, user, getAccessTokenSilently]);
 
   useEffect(() => {
-    if (!skills.length) return;
+    if (!affinities.length) return;
   
     const margin = { top: 60, right: 150, bottom: 60, left: 150 };
     const { width, height } = dimensions;
   
-    // Maximum horizontal spacing for connections to prevent too long lines
-    const maxHorizontalSpacing = 800; // Set a reasonable max width for connections
+    const maxHorizontalSpacing = 800;
     const horizontalSpacing = Math.min(maxHorizontalSpacing, width * 0.8);
   
-    const findRootSkills = () => {
+    const findRootAffinities = () => {
       if (showFullTree) {
-        return skills.filter(skill => skill.parent_skill_id === null);
+        return affinities.filter(affinity => affinity.parent_skill_id === null);
       } else {
-        // When hiding full tree, only consider roots with unlocked skills in their lineage
-        const unlockedSkillIds = skills.filter(skill => skill.unlocked).map(skill => skill.id);
-        const rootSkillIds = new Set();
+        const unlockedAffinityIds = affinities.filter(affinity => affinity.unlocked).map(affinity => affinity.id);
+        const rootAffinityIds = new Set();
         
-        unlockedSkillIds.forEach(skillId => {
-          let currentSkill = skills.find(s => s.id === skillId);
-          while (currentSkill && currentSkill.parent_skill_id !== null) {
-            currentSkill = skills.find(s => s.id === currentSkill.parent_skill_id);
+        unlockedAffinityIds.forEach(affinityId => {
+          let currentAffinity = affinities.find(s => s.id === affinityId);
+          while (currentAffinity && currentAffinity.parent_skill_id !== null) {
+            currentAffinity = affinities.find(s => s.id === currentAffinity.parent_skill_id);
           }
-          if (currentSkill) {
-            rootSkillIds.add(currentSkill.id);
+          if (currentAffinity) {
+            rootAffinityIds.add(currentAffinity.id);
           }
         });
         
-        return skills.filter(skill => rootSkillIds.has(skill.id));
+        return affinities.filter(affinity => rootAffinityIds.has(affinity.id));
       }
     };
   
-    const rootSkills = findRootSkills();
-    if (!rootSkills.length) return;
+    const rootAffinities = findRootAffinities();
+    if (!rootAffinities.length) return;
   
-    function computeAccumulatedLevels(skillId, allSkills) {
-      const skill = allSkills.find(s => s.id === skillId);
-      if (!skill) return 0;
+    function computeAccumulatedLevels(affinityId, allAffinities) {
+      const affinity = allAffinities.find(s => s.id === affinityId);
+      if (!affinity) return 0;
       
-      const children = allSkills.filter(s => s.parent_skill_id === skillId);
+      const children = allAffinities.filter(s => s.parent_skill_id === affinityId);
       if (children.length === 0) {
-        return skill.userLevel || 0;
+        return affinity.userLevel || 0;
       }
       
       return children.reduce((sum, child) => {
-        return sum + computeAccumulatedLevels(child.id, allSkills);
+        return sum + computeAccumulatedLevels(child.id, allAffinities);
       }, 0);
     }
   
     const accumulatedLevels = {};
-    rootSkills.forEach(root => {
-      accumulatedLevels[root.id] = computeAccumulatedLevels(root.id, skills);
+    rootAffinities.forEach(root => {
+      accumulatedLevels[root.id] = computeAccumulatedLevels(root.id, affinities);
     });
 
-    function computeSubtreeHeight(skill, allSkills) {
-      const children = allSkills.filter(s => s.parent_skill_id === skill.id);
+    function computeSubtreeHeight(affinity, allAffinities) {
+      const children = allAffinities.filter(s => s.parent_skill_id === affinity.id);
       if (children.length === 0) {
-        return 1; // Leaf nodes have a height of 1
+        return 1;
       }
-      return children.reduce((sum, child) => sum + computeSubtreeHeight(child, allSkills), 1);
+      return children.reduce((sum, child) => sum + computeSubtreeHeight(child, allAffinities), 1);
     }
 
     const subtreeHeights = {};
-    rootSkills.forEach(root => {
-      subtreeHeights[root.id] = computeSubtreeHeight(root, skills);
+    rootAffinities.forEach(root => {
+      subtreeHeights[root.id] = computeSubtreeHeight(root, affinities);
     });
     
-    function buildTree(skill, allSkills, depth = 0) {
-      const children = allSkills.filter(s => s.parent_skill_id === skill.id);
+    function buildTree(affinity, allAffinities, depth = 0) {
+      const children = allAffinities.filter(s => s.parent_skill_id === affinity.id);
       
-      // Check if this skill or any descendants are unlocked
       const hasUnlockedDescendant = 
-        skill.unlocked || 
+        affinity.unlocked ||
         children.some(child => 
           child.unlocked || 
-          allSkills.some(s => s.parent_skill_id === child.id && s.unlocked)
+          allAffinities.some(s => s.parent_skill_id === child.id && s.unlocked)
         );
       
       const isLeafNode = children.length === 0;
       const displayLevel = isLeafNode 
-        ? (skill.userLevel || 0) 
-        : (accumulatedLevels[skill.id] || 0);
+        ? (affinity.userLevel || 0)
+        : (accumulatedLevels[affinity.id] || 0);
       
-      // When not in full tree mode, we'll only include nodes that are unlocked or are needed
-      // to connect unlocked nodes to their root
-      const shouldIncludeInPartialTree = showFullTree || skill.unlocked || 
-        (hasUnlockedDescendant && (depth === 0 || skill.parent_skill_id === null));
+      const shouldIncludeInPartialTree = showFullTree || affinity.unlocked ||
+        (hasUnlockedDescendant && (depth === 0 || affinity.parent_skill_id === null));
       
-      // Include only necessary children when in partial tree mode
       const filteredChildren = showFullTree ? children : 
         children.filter(child => 
-          child.unlocked || allSkills.some(s => 
+          child.unlocked || allAffinities.some(s =>
             s.parent_skill_id === child.id && s.unlocked
           )
         );
       
       return {
-        name: skill.name,
-        id: skill.id,
-        unlocked: skill.unlocked,
-        isRootSkill: depth === 0,
+        name: affinity.name,
+        id: affinity.id,
+        unlocked: affinity.unlocked,
+        isRootAffinity: depth === 0,
         userLevel: displayLevel,
         hasUnlockedDescendant: hasUnlockedDescendant,
         depth: depth,
-        hidden: false, // No more hiding, always show based on showFullTree
+        hidden: false,
         shouldRender: shouldIncludeInPartialTree,
-        children: filteredChildren.map(child => buildTree(child, allSkills, depth + 1))
+        children: filteredChildren.map(child => buildTree(child, allAffinities, depth + 1))
           .filter(node => node.shouldRender || showFullTree),
       };
     }
   
-    // Process all nodes
     const allNodes = [];
     const allLinks = [];
     
-    // Create hierarchies for each root skill
-    const hierarchies = rootSkills.map((rootSkill, index) => {
-      const treeData = buildTree(rootSkill, skills);
+    const hierarchies = rootAffinities.map((rootAffinity, index) => {
+      const treeData = buildTree(rootAffinity, affinities);
       
-      // Skip empty trees (roots with no unlocked descendants)
       if (!showFullTree && !treeData.shouldRender) {
         return null;
       }
       
       const hierarchy = d3.hierarchy(treeData);
       
-      // Apply tree layout to each hierarchy independently
       const treeLayout = d3.tree()
         .size([hierarchy.descendants().length * 40, horizontalSpacing - margin.left - margin.right])
         .separation((a, b) => (a.parent === b.parent ? 2 : 3));
@@ -231,40 +221,31 @@ const SkillTree = () => {
       treeLayout(hierarchy);
       
       return hierarchy;
-    }).filter(Boolean); // Remove null hierarchies
+    }).filter(Boolean);
     
-    // Calculate vertical offsets for each tree to prevent overlap
     let currentOffset = margin.top;
     hierarchies.forEach((hierarchy, index) => {
-      // Calculate the height of the current tree
       const treeHeight = hierarchy.descendants().length * 40;
       
-      // Set absolute vertical position starting from the current offset
       const verticalOffset = currentOffset;
       
-      // Apply vertical offset to all nodes in this hierarchy
       hierarchy.descendants().forEach(node => {
         node.x += verticalOffset;
       });
       
-      // Update the offset for the next tree
-      currentOffset += treeHeight + 200; // 200px gap between trees
+      currentOffset += treeHeight + 200;
     });
     
-    // Collect all nodes and links
     hierarchies.forEach(hierarchy => {
       allNodes.push(...hierarchy.descendants());
       allLinks.push(...hierarchy.links());
     });
   
-    // Calculate total height needed for all trees
-    const totalTreeHeight = currentOffset - 200; // Subtract the last gap
+    const totalTreeHeight = currentOffset - 200;
     
-    // Calculate appropriate initial position and scale
     const initialX = margin.left;
     const initialY = Math.max(20, (height - totalTreeHeight) / 2);
   
-    // Adjust initial scale based on how many trees we have
     const initialScale = Math.max(0.6, Math.min(0.9, width / 1200));
     
     transformRef.current = { 
@@ -280,10 +261,8 @@ const SkillTree = () => {
      .attr('viewBox', `0 0 ${width} ${height}`)
      .attr('preserveAspectRatio', 'xMidYMid meet');
 
-    // Add definitions for gradients
     const defs = svg.append('defs');
     
-    // Green orb gradient
     const greenGradient = defs.append('radialGradient')
       .attr('id', 'greenOrbGradient')
       .attr('cx', '30%')
@@ -304,7 +283,6 @@ const SkillTree = () => {
       .attr('offset', '100%')
       .attr('stop-color', '#008800');
     
-    // Gray socket gradient
     const grayGradient = defs.append('radialGradient')
       .attr('id', 'graySocketGradient')
       .attr('cx', '50%')
@@ -327,7 +305,6 @@ const SkillTree = () => {
       .attr('transform', `translate(${transformRef.current.x},${transformRef.current.y}) scale(${initialScale})`);
     gRef.current = g;
   
-    // Create the links between nodes
     g.selectAll('.link')
       .data(allLinks)
       .enter().append('line')
@@ -340,49 +317,41 @@ const SkillTree = () => {
       .attr('stroke-width', 2)
       .style('display', d => (showFullTree || (!d.target.data.hidden && !d.source.data.hidden)) ? 'block' : 'none');
   
-    // Create node groups
     const node = g.selectAll('.node')
       .data(allNodes)
       .enter().append('g')
-      .attr('class', d => `node ${d.data.isRootSkill ? 'root-node' : ''}`)
+      .attr('class', d => `node ${d.data.isRootAffinity ? 'root-node' : ''}`)
       .attr('transform', d => `translate(${d.y},${d.x})`)
       .style('display', d => (showFullTree || !d.data.hidden) ? 'block' : 'none');
       
-    // Root node circle size calculation
     function calculateRootNodeSize(d) {
-      // Base size for regular nodes
-      if (!d.data.isRootSkill) return 15;
+      if (!d.data.isRootAffinity) return 15;
       
-      // For root nodes, size based on name length and level
       const nameLength = d.data.name.length;
       const levelDigits = d.data.userLevel ? d.data.userLevel.toString().length : 0;
       
-      // Adjust size based on name length and level digits
-      // Minimum size of 20, with 0.3 additional radius for each character/digit
       return Math.max(20, 20 + (nameLength * 0.3) + (levelDigits * 1));
     }
   
-    // Add socket rings for all nodes
     node.append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-socket' : 'socket')
+      .attr('class', d => d.data.isRootAffinity ? 'root-socket' : 'socket')
       .attr('r', d => calculateRootNodeSize(d) + 2)
       .attr('fill', '#222')
       .attr('stroke', '#C3CDD4')
       .attr('stroke-width', 2);
       
-    // Add inner circles for nodes with 3D effect
     node.append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-orb' : 'orb')
+      .attr('class', d => d.data.isRootAffinity ? 'root-orb' : 'orb')
       .attr('r', d => calculateRootNodeSize(d))
       .attr('fill', d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootAffinity) {
           return d.data.hasUnlockedDescendant ? 'url(#greenOrbGradient)' : 'url(#graySocketGradient)';
         } else {
           return d.data.unlocked ? 'url(#greenOrbGradient)' : 'url(#graySocketGradient)';
         }
       })
       .attr('stroke', d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootAffinity) {
           return d.data.hasUnlockedDescendant ? '#006600' : '#333';
         } else {
           return d.data.unlocked ? '#006600' : '#333';
@@ -390,14 +359,12 @@ const SkillTree = () => {
       })
       .attr('stroke-width', .5);
       
-    // Add highlight spot for 3D effect (only for green orbs)
-    // Explicitly set stroke to none and stroke-width to 0
-    node.filter(d => d.data.unlocked || (d.data.isRootSkill && d.data.hasUnlockedDescendant))
+    node.filter(d => d.data.unlocked || (d.data.isRootAffinity && d.data.hasUnlockedDescendant))
       .append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-highlight' : 'highlight')
+      .attr('class', d => d.data.isRootAffinity ? 'root-highlight' : 'highlight')
       .attr('r', d => {
         const baseSize = calculateRootNodeSize(d);
-        return baseSize / 3; // Highlight is 1/3 the size of the node
+        return baseSize / 3;
       })
       .attr('cx', d => -calculateRootNodeSize(d) * 0.4)
       .attr('cy', d => -calculateRootNodeSize(d) * 0.4)
@@ -405,113 +372,94 @@ const SkillTree = () => {
       .attr('stroke', 'none')
       .attr('stroke-width', 0);
   
-    // Add level text inside nodes
     node.append('text')
-      .attr('class', d => d.data.isRootSkill ? 'root-level-text' : 'level-text')
+      .attr('class', d => d.data.isRootAffinity ? 'root-level-text' : 'level-text')
       .attr('dy', 4)
       .attr('text-anchor', 'middle')
-      .style('font-size', d => d.data.isRootSkill ? '16px' : '14px')
+      .style('font-size', d => d.data.isRootAffinity ? '16px' : '14px')
       .style('fill', 'white')
       .style('pointer-events', 'none')
       .text(d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootAffinity) {
           return d.data.hasUnlockedDescendant ? d.data.userLevel : '';
         }
         return d.data.unlocked ? d.data.userLevel : '';
       })
       .style('dominant-baseline', 'middle');
 
-    // Create a separate top layer for node labels
     const labelLayer = svg.append('g')
       .attr('class', 'label-layer')
       .attr('transform', `translate(${transformRef.current.x},${transformRef.current.y}) scale(${initialScale})`);
   
-    // Add node labels with special handling for root nodes
     labelLayer.selectAll('.node-label')
       .data(allNodes)
       .enter()
       .append('text')
-      .attr('class', d => d.data.isRootSkill ? 'root-label' : 'node-label')
+      .attr('class', d => d.data.isRootAffinity ? 'root-label' : 'node-label')
       .attr('x', d => d.y + 25)
       .attr('y', d => d.x + 4)
       .text(d => d.data.name)
       .style('fill', 'white')
-      .style('font-size', d => d.data.isRootSkill ? '16px' : '12px')
-      .style('font-weight', d => d.data.isRootSkill ? 'bold' : 'normal')
+      .style('font-size', d => d.data.isRootAffinity ? '16px' : '12px')
+      .style('font-weight', d => d.data.isRootAffinity ? 'bold' : 'normal')
       .style('display', d => (showFullTree || !d.data.hidden) ? 'block' : 'none');
   
-    // Define min and max sizes for root nodes during zoom
-    const MIN_ROOT_SIZE_MULTIPLIER = 0.6; // At max zoom out, node won't get smaller than 60% of original
-    const MAX_ROOT_SIZE_MULTIPLIER = 3.5; // At max zoom in, node won't get larger than 150% of original
-    const MIN_ROOT_LABEL_SIZE = 12; // Minimum font size for root labels
-    const MAX_ROOT_LABEL_SIZE = 72; // Maximum font size for root labels
+    const MIN_ROOT_SIZE_MULTIPLIER = 0.6;
+    const MAX_ROOT_SIZE_MULTIPLIER = 3.5;
+    const MIN_ROOT_LABEL_SIZE = 12;
+    const MAX_ROOT_LABEL_SIZE = 72;
   
-    // Update zoom configuration with constraints on node scaling
     const zoom = d3.zoom()
       .scaleExtent([0.2, 3])
       .on('zoom', (event) => {
-        // Update both the main layer and the label layer
         g.attr('transform', event.transform);
         labelLayer.attr('transform', event.transform);
         
-        // Store the current transform for reference
         transformRef.current = { 
           x: event.transform.x, 
           y: event.transform.y,
           k: event.transform.k
         };
         
-        // Calculate size adjustment factor with constraints
         const sizeAdjustFactor = Math.min(
           MAX_ROOT_SIZE_MULTIPLIER, 
           Math.max(MIN_ROOT_SIZE_MULTIPLIER, 1 / event.transform.k)
         );
         
-        // Calculate font size adjustment with constraints
         const fontSizeAdjust = Math.min(
           MAX_ROOT_LABEL_SIZE, 
           Math.max(MIN_ROOT_LABEL_SIZE, 16 / event.transform.k)
         );
         
-        // Adjust root node text size based on zoom level with constraints
         labelLayer.selectAll('.root-label')
           .style('font-size', `${fontSizeAdjust}px`);
           
-        // Adjust root orb size based on zoom level with constraints
         g.selectAll('.root-orb')
           .attr('r', d => {
             const baseSize = calculateRootNodeSize(d);
-            // Apply constrained inverse zoom scaling
             return baseSize * sizeAdjustFactor;
           });
           
-        // Adjust root socket size based on zoom level with constraints
         g.selectAll('.root-socket')
           .attr('r', d => {
             const baseSize = calculateRootNodeSize(d);
-            // Apply constrained inverse zoom scaling
             return (baseSize + 2) * sizeAdjustFactor;
           });
           
-        // Adjust root highlight size and position based on zoom level with constraints
         g.selectAll('.root-highlight')
           .attr('r', d => {
             const baseSize = calculateRootNodeSize(d);
-            // Apply constrained inverse zoom scaling
             return (baseSize / 3) * sizeAdjustFactor;
           })
           .attr('cx', d => {
             const baseSize = calculateRootNodeSize(d);
-            // Apply constrained inverse zoom scaling
             return (-baseSize * 0.4) * sizeAdjustFactor;
           })
           .attr('cy', d => {
             const baseSize = calculateRootNodeSize(d);
-            // Apply constrained inverse zoom scaling
             return (-baseSize * 0.4) * sizeAdjustFactor;
           });
           
-        // Adjust root level text size based on zoom level with constraints
         g.selectAll('.root-level-text')
           .style('font-size', `${fontSizeAdjust}px`);
       });
@@ -521,29 +469,24 @@ const SkillTree = () => {
         .translate(initialX, initialY)
         .scale(initialScale));
   
-    // Add visual indicators for tree separation
     hierarchies.forEach((hierarchy, index) => {
       if (index > 0) {
         const prevTree = hierarchies[index - 1];
         const currentTree = hierarchy;
         
-        // Find the lowest node of the previous tree
         const lowestPrevNode = prevTree.descendants()
           .reduce((lowest, node) => node.x > lowest.x ? node : lowest, prevTree);
         
-        // Find the highest node of the current tree
         const highestCurrentNode = currentTree.descendants()
           .reduce((highest, node) => node.x < highest.x ? node : highest, currentTree);
         
-        // Calculate the midpoint between trees
         const midpointY = (lowestPrevNode.x + highestCurrentNode.x) / 2;
         
-        // Add a subtle indicator line
         g.append('line')
           .attr('class', 'tree-separator')
           .attr('x1', 0)
           .attr('y1', midpointY)
-          .attr('x2', 50) // Short line
+          .attr('x2', 50)
           .attr('y2', midpointY)
           .attr('stroke', '#444')
           .attr('stroke-width', 1)
@@ -551,7 +494,7 @@ const SkillTree = () => {
       }
     });
     
-  }, [skills, dimensions, showFullTree]);
+  }, [affinities, dimensions, showFullTree]);
 
   useEffect(() => {
     function handleResize() {
@@ -572,7 +515,7 @@ const SkillTree = () => {
   return (
     <div className='treepage' style={{ width: '100%', height: '80vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Skill Tree</h2>
+        <h2>{theme.terminology.skill} Tree</h2>
         <button 
           onClick={toggleFullTree}
           style={{
@@ -596,4 +539,4 @@ const SkillTree = () => {
   );
 };
 
-export default SkillTree;
+export default AffinityTree;

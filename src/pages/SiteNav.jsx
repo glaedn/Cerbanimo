@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link, useLocation } from "react-router-dom";
 import "./SiteNav.css";
+import theme from "../styles/theme";
 import {
   Badge,
   IconButton,
@@ -16,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import ExploreIcon from "@mui/icons-material/Explore";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import CancelIcon from "@mui/icons-material/Cancel";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
@@ -66,14 +68,14 @@ const SiteNav = () => {
     switch (
       type.toLowerCase() // Use toLowerCase for case-insensitive matching
     ) {
-      case "task-approved":
-        return <TaskAltIcon style={{ marginRight: "8px" }} />;
-      case "task-rejected":
+      case "quest-approved":
+        return <ExploreIcon style={{ marginRight: "8px" }} />;
+      case "quest-rejected":
         return <CancelIcon style={{ marginRight: "8px" }} />;
-      case "task-submitted":
+      case "quest-submitted":
         return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
-      case "task":
-        return <ListAltIcon style={{ marginRight: "8px" }} />;
+      case "quest":
+        return <ExploreIcon style={{ marginRight: "8px" }} />;
       default:
         return <InfoIcon style={{ marginRight: "8px" }} />;
     }
@@ -211,61 +213,6 @@ const SiteNav = () => {
         <h1 className="site-title">Cerbanimo</h1>
       </div>
 
-      {isAuthenticated && (
-        <div className="notification-container">
-          <IconButton color="inherit" onClick={handleOpen}>
-            <Badge badgeContent={unreadCount} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            {recentNotifications.length === 0 ? (
-              <MenuItem className="notification-menu">
-                No new notifications
-              </MenuItem>
-            ) : (
-              recentNotifications.map((notif, index) => {
-                const icon = getSiteNavNotificationIcon(notif.type);
-                return (
-                    <MenuItem
-                        key={index}
-                        className="notification-menu"
-                        style={{
-                            whiteSpace: "normal",
-                            wordBreak: "break-word",
-                            maxWidth: 320,
-                            lineHeight: 1.4,
-                        }}
-                    >
-                        {icon}
-                        <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
-                            {notif.projectId && notif.taskId ? (
-                                <Link
-                                    to={`/visualizer/${notif.projectId}/${notif.taskId}`}
-                                    style={{
-                                        textDecoration: "underline",
-                                        color: "#8db8ff",
-                                        wordBreak: "break-word",
-                                        whiteSpace: "normal",
-                                    }}
-                                >
-                                    {notif.messageText}
-                                </Link>
-                            ) : (
-                                notif.messageText
-                            )}
-                        </span>
-                    </MenuItem>
-                );
-              })
-            )}
-          </Menu>
-        </div>
-      )}
 
       <div className="sidebar-toggle" onClick={toggleSidebar}>
         <span className={`hamburger ${isSidebarOpen ? "open" : ""}`} />
@@ -302,43 +249,43 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/projects") ? "active" : ""
+                  location.pathname.startsWith("/intentions") ? "active" : ""
                 }`}
-                to="/projects"
+                to="/intentions"
                 onClick={closeSidebar}
               >
-                Projects
+                {theme.terminology.project_plural}
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/communities") ? "active" : ""
+                  location.pathname.startsWith("/dreamcircles") ? "active" : ""
                 }`}
-                to="/communities"
+                to="/dreamcircles"
                 onClick={closeSidebar}
               >
-                Communities
+                {theme.terminology.community_plural}
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/projectcreation")
+                  location.pathname.startsWith("/intentioncreation")
                     ? "active"
                     : ""
                 }`}
-                to="/projectcreation"
+                to="/intentioncreation"
                 onClick={closeSidebar}
               >
-                Create a Project
+                {theme.terminology.create_project}
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/communitycreation")
+                  location.pathname.startsWith("/createdreamcircle")
                     ? "active"
                     : ""
                 }`}
-                to="/communitycreation"
+                to="/createdreamcircle"
                 onClick={closeSidebar}
               >
-                Create a Community
+                Create a {theme.terminology.community}
               </Link>
               {/* Declare a Need Button */}
               <Button

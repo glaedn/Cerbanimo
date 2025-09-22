@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const useSkillData = () => {
+const useAffinityData = () => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const [allSkills, setAllSkills] = useState([]);
+  const [allAffinities, setAllAffinities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,13 +15,13 @@ const useSkillData = () => {
         scope: 'openid profile email', // Adjust scopes as needed
       });
     } catch (e) {
-      console.error('Error getting access token in useSkillData', e);
+      console.error('Error getting access token in useAffinityData', e);
       throw e;
     }
   };
 
   useEffect(() => {
-    const fetchAllSkills = async () => {
+    const fetchAllAffinities = async () => {
       if (!isAuthenticated) {
         setLoading(false);
         // Optionally set an error or specific state if user is not authenticated
@@ -33,27 +33,27 @@ const useSkillData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/affinities/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        // Assuming response.data is the array of all skill objects
-        // Each skill object might look like: { id, name, category, parent_skill_id, description, ... }
-        setAllSkills(Array.isArray(response.data) ? response.data : []);
+        // Assuming response.data is the array of all affinity objects
+        // Each affinity object might look like: { id, name, category, parent_affinity_id, description, ... }
+        setAllAffinities(Array.isArray(response.data) ? response.data : []);
         
       } catch (err) {
-        console.error('Error fetching all skills:', err.response?.data || err.message);
-        setError(err.response?.data?.error || err.message || 'Failed to fetch all skills');
-        setAllSkills([]); // Clear skills on error
+        console.error('Error fetching all affinities:', err.response?.data || err.message);
+        setError(err.response?.data?.error || err.message || 'Failed to fetch all affinities');
+        setAllAffinities([]); // Clear affinities on error
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllSkills();
+    fetchAllAffinities();
   }, [isAuthenticated, getAccessTokenSilently]); // Dependencies
 
-  return { allSkills, loading, error };
+  return { allAffinities, loading, error };
 };
 
-export default useSkillData;
+export default useAffinityData;

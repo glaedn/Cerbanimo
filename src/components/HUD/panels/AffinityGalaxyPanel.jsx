@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import useSkillData from '../../../hooks/useSkillData';
+import useAffinityData from '../../../hooks/useAffinityData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import * as d3 from 'd3';
-import './SkillGalaxyPanel.css';
+import './AffinityGalaxyPanel.css';
 import '../HUDPanel.css';
 import theme from '../../../styles/theme';
-import { processSkillDataForGalaxy } from '../../../utils/skillUtils';
-import SkillDetailPopup from './SkillDetailPopup';
+import { processAffinityDataForGalaxy } from '../../../utils/affinityUtils';
+import AffinityDetailPopup from './AffinityDetailPopup';
 
 // Helper function to generate pastel colors
 const hexToRgb = (hex) => {
@@ -32,11 +32,11 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const SkillGalaxyPanel = () => {
+const AffinityGalaxyPanel = () => {
   const { user, isAuthenticated } = useAuth0();
-  const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
+  const { allAffinities, loading: affinitiesLoading, error: affinitiesError } = useAffinityData();
   const { profile } = useUserProfile();
-  const [processedSkills, setProcessedSkills] = useState([]);
+  const [processedAffinities, setProcessedAffinities] = useState([]);
   const [d3Nodes, setD3Nodes] = useState([]);
   const [d3Links, setD3Links] = useState([]);
   const svgRef = useRef(null);
@@ -44,7 +44,7 @@ const SkillGalaxyPanel = () => {
   const fixedStarPositionsRef = useRef(new Map()); // For persisting star fx/fy values
   const initialZoomAppliedRef = useRef(false); // To track if initial overview zoom is applied
   const [forceDataUpdate, setForceDataUpdate] = useState(false); // To trigger data reprocessing
-  const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
+  const [selectedAffinityForPopup, setSelectedAffinityForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const panelRef = useRef(null);
 
@@ -78,60 +78,60 @@ const SkillGalaxyPanel = () => {
 
   useEffect(() => {
 
-    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && user?.sub) {
+    if (!affinitiesLoading && allAffinities && allAffinities.length > 0 && isAuthenticated && user?.sub) {
       const userId = profile?.id || user.sub; // Fallback to user.sub if profile.id not available
 
-      const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
-      // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
+      const affinitiesForGalaxy = processAffinityDataForGalaxy(allAffinities, userId);
+      // setProcessedAffinities(affinitiesForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
 
-      // Filter out skills with null or undefined IDs before mapping
-      const validSkillsForGalaxy = skillsForGalaxy.filter(skill => {
-        if (skill && skill.id != null) { // Check for null or undefined ID
+      // Filter out affinities with null or undefined IDs before mapping
+      const validAffinitiesForGalaxy = affinitiesForGalaxy.filter(affinity => {
+        if (affinity && affinity.id != null) { // Check for null or undefined ID
           return true;
         }
-        console.warn('[D3 Data Prep] Filtered out skill due to missing/null ID:', skill);
+        console.warn('[D3 Data Prep] Filtered out affinity due to missing/null ID:', affinity);
         return false;
       });
       
-      if (validSkillsForGalaxy.length !== skillsForGalaxy.length) {
-        console.warn(`[D3 Data Prep] Original skillsForGalaxy count: ${skillsForGalaxy.length}, Valid count after ID filter: ${validSkillsForGalaxy.length}`);
+      if (validAffinitiesForGalaxy.length !== affinitiesForGalaxy.length) {
+        console.warn(`[D3 Data Prep] Original affinitiesForGalaxy count: ${affinitiesForGalaxy.length}, Valid count after ID filter: ${validAffinitiesForGalaxy.length}`);
       }
 
       // When creating new nodes, apply fx/fy from fixedStarPositionsRef for stars
-      const newNodes = validSkillsForGalaxy.map(skill => {
+      const newNodes = validAffinitiesForGalaxy.map(affinity => {
         let fx = null, fy = null;
-        if (skill.category === 'star') {
-          const fixedPos = fixedStarPositionsRef.current.get(skill.id.toString()); // ID is now guaranteed non-null
+        if (affinity.category === 'star') {
+          const fixedPos = fixedStarPositionsRef.current.get(affinity.id.toString()); // ID is now guaranteed non-null
           if (fixedPos) {
             fx = fixedPos.fx;
             fy = fixedPos.fy;
           }
         }
         return {
-          id: skill.id.toString(), // skill.id is non-null here
-          name: skill.name || "Unnamed Skill", // Fallback for name
-          parent: skill.parent_skill_id ? skill.parent_skill_id.toString() : null,
-          level: skill.userLevel,
-          userLevel: skill.userLevel, // Ensure userLevel is present for level text display
-          experience: skill.userExperience,
-          experienceNeeded: skill.experienceNeededForNextLevel,
-          levelForColor: skill.levelForColor !== undefined ? skill.levelForColor : (skill.category === 'star' ? 0 : skill.userLevel),
-          category: skill.category || 'star', // Make sure category is set
-          originalData: skill,
+          id: affinity.id.toString(), // affinity.id is non-null here
+          name: affinity.name || `Unnamed ${theme.terminology.skill}`, // Fallback for name
+          parent: affinity.parent_skill_id ? affinity.parent_skill_id.toString() : null,
+          level: affinity.userLevel,
+          userLevel: affinity.userLevel, // Ensure userLevel is present for level text display
+          experience: affinity.userExperience,
+          experienceNeeded: affinity.experienceNeededForNextLevel,
+          levelForColor: affinity.levelForColor !== undefined ? affinity.levelForColor : (affinity.category === 'star' ? 0 : affinity.userLevel),
+          category: affinity.category || 'star', // Make sure category is set
+          originalData: affinity,
           fx, // Apply stored fixed position
           fy, // Apply stored fixed position
         };
       });
 
       const newLinks = [];
-      skillsForGalaxy.forEach(skill => {
-        if (skill.parent_skill_id) {
-          const parentExists = skillsForGalaxy.find(s => s.id === skill.parent_skill_id); // Check against current skillsForGalaxy
+      affinitiesForGalaxy.forEach(affinity => {
+        if (affinity.parent_skill_id) {
+          const parentExists = affinitiesForGalaxy.find(s => s.id === affinity.parent_skill_id); // Check against current affinitiesForGalaxy
           if (parentExists) {
             newLinks.push({
-              source: skill.parent_skill_id.toString(),
-              target: skill.id.toString(),
-              id: `link-${skill.parent_skill_id}-${skill.id}`
+              source: affinity.parent_skill_id.toString(),
+              target: affinity.id.toString(),
+              id: `link-${affinity.parent_skill_id}-${affinity.id}`
             });
           }
         }
@@ -139,9 +139,9 @@ const SkillGalaxyPanel = () => {
 
       setD3Nodes(newNodes);
       setD3Links(newLinks);
-      // Update processedSkills state if other parts of the component rely on it directly
+      // Update processedAffinities state if other parts of the component rely on it directly
       // For now, assuming d3Nodes is the primary derived state for rendering the galaxy
-      setProcessedSkills(skillsForGalaxy); 
+      setProcessedAffinities(affinitiesForGalaxy);
 
 
     } else {
@@ -149,9 +149,9 @@ const SkillGalaxyPanel = () => {
       // Clear nodes and links if they exist
       if (d3Nodes.length > 0) setD3Nodes([]);
       if (d3Links.length > 0) setD3Links([]);
-      if (processedSkills.length > 0) setProcessedSkills([]);
+      if (processedAffinities.length > 0) setProcessedAffinities([]);
     }
-  }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
+  }, [allAffinities, affinitiesLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
 
   useEffect(() => {
 
@@ -601,29 +601,29 @@ const SkillGalaxyPanel = () => {
     // Key dependencies are d3Nodes, d3Links, and simulation. activeStar removed.
   }, [d3Nodes, d3Links, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor, fixedStarPositionsRef, setForceDataUpdate]);
 
-  if (skillsLoading) {
+  if (affinitiesLoading) {
     return (
-      <div className="skill-galaxy-panel-loading" style={{color: theme.colors.textSecondary}}>
-        Loading Skill Data...
+      <div className="affinity-galaxy-panel-loading" style={{color: theme.colors.textSecondary}}>
+        {`Loading ${theme.terminology.skill} Data...`}
       </div>
     );
   }
   
-  if (skillsError) {
+  if (affinitiesError) {
     return (
-      <div className="skill-galaxy-panel-error" style={{color: theme.colors.error}}>
-        Error loading skills: {skillsError.message || skillsError.toString()}
+      <div className="affinity-galaxy-panel-error" style={{color: theme.colors.error}}>
+        {`Error loading ${theme.terminology.skill_plural}: ${affinitiesError.message || affinitiesError.toString()}`}
       </div>
     );
   }
 
-  if (processedSkills.length === 0 && d3Nodes.length === 0 && !skillsLoading && !skillsError) {
+  if (processedAffinities.length === 0 && d3Nodes.length === 0 && !affinitiesLoading && !affinitiesError) {
     return (
-      <div className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-        <h2 style={{ color: theme.colors.textPrimary }}>Skill Constellations</h2>
-        <div className="skill-galaxy-empty" style={{color: theme.colors.textSecondary, textAlign: 'center', marginTop: '50px'}}>
-          <p>Your Skill Constellation is forming.</p>
-          <p>Unlock skills by completing missions or training!</p>
+      <div className={`hud-panel affinity-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
+        <h2 style={{ color: theme.colors.textPrimary }}>{`${theme.terminology.skill} Constellations`}</h2>
+        <div className="affinity-galaxy-empty" style={{color: theme.colors.textSecondary, textAlign: 'center', marginTop: '50px'}}>
+          <p>{`Your ${theme.terminology.skill} Constellation is forming.`}</p>
+          <p>{`Unlock ${theme.terminology.skill_plural} by completing ${theme.terminology.task_plural} or training!`}</p>
         </div>
       </div>
     );
@@ -632,17 +632,17 @@ const SkillGalaxyPanel = () => {
   return (
     <div 
     ref={panelRef}
-    className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
+    className={`hud-panel affinity-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
        <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Skill Constellations</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}>
+        <h4>{`${theme.terminology.skill} Constellations`}</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? `Expand ${theme.terminology.skill} Constellations` : `Minimize ${theme.terminology.skill} Constellations`}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
         <svg 
           ref={svgRef} 
-          className="skill-galaxy-svg" 
+          className="affinity-galaxy-svg"
           style={{ 
             width: '100%', 
             height: '100%',
@@ -653,10 +653,10 @@ const SkillGalaxyPanel = () => {
           {/* Defs will be appended here by D3 */}
         </svg>
       </div>
-      {selectedSkillForPopup && (
-        <SkillDetailPopup 
-          skillData={selectedSkillForPopup} 
-          onClose={() => setSelectedSkillForPopup(null)}
+      {selectedAffinityForPopup && (
+        <AffinityDetailPopup
+          affinityData={selectedAffinityForPopup}
+          onClose={() => setSelectedAffinityForPopup(null)}
           parentRef ={panelRef} 
         />
       )}
@@ -664,4 +664,4 @@ const SkillGalaxyPanel = () => {
   );
 };
 
-export default SkillGalaxyPanel;
+export default AffinityGalaxyPanel;

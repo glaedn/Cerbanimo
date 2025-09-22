@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import useRelevantTasks from '../../../hooks/useRelevantTasks'; // Adjust path
+import useRelevantQuests from '../../../hooks/useRelevantQuests'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
+import theme from '../../../../styles/theme';
 // import './TargetingScanner.css'; // Optional: For specific TargetingScanner styles
 
 const TargetingScanner = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { relevantTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useRelevantTasks(profile?.id);
+  const { relevantQuests, loading: questsLoading, error: questsError, refetchQuests } = useRelevantQuests(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const toggleMinimize = (e) => {
@@ -18,14 +19,14 @@ const TargetingScanner = () => {
     setIsMinimized(!isMinimized);
   };
 
-  if (profileLoading || tasksLoading) {
+  if (profileLoading || questsLoading) {
     return <div className="hud-panel targeting-scanner">Loading Targeting Scanner...</div>;
   }
   if (profileError) {
     return <div className="hud-panel targeting-scanner">Error loading profile: {profileError.message}</div>;
   }
-  if (tasksError) {
-    return <div className="hud-panel targeting-scanner">Error loading tasks: {tasksError.message}</div>;
+  if (questsError) {
+    return <div className="hud-panel targeting-scanner">{`Error loading ${theme.terminology.task_plural}: ${questsError.message}`}</div>;
   }
   if (!profile) {
     return <div className="hud-panel targeting-scanner">User profile not available for targeting.</div>;
@@ -36,46 +37,46 @@ const TargetingScanner = () => {
   return (
     <div className={`hud-panel targeting-scanner ${isMinimized ? 'minimized' : ''}`}>
       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Targeting Scanner (Relevant Tasks)</h4>
+        <h4>{`Targeting Scanner (Relevant ${theme.terminology.task_plural})`}</h4>
         <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Targeting Scanner" : "Minimize Targeting Scanner"}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       {!isMinimized && (
         <div className="hud-panel-content">
-          {relevantTasks.length > 0 ? (
+          {relevantQuests.length > 0 ? (
             <ul>
-              {relevantTasks.map(task => {
-                const isUrgent = task.status && task.status.toLowerCase().includes('urgent');
+              {relevantQuests.map(quest => {
+                const isUrgent = quest.status && quest.status.toLowerCase().includes('urgent');
                 return (
                   <li 
-                  key={task.id} 
-                  className={`task-item ${isUrgent ? 'urgent-task' : ''}`}
+                  key={quest.id}
+                  className={`quest-item ${isUrgent ? 'urgent-quest' : ''}`}
                   >
-                  <div className="task-info">
+                  <div className="quest-info">
                     <span
-                    className="task-name"
+                    className="quest-name"
                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.project_id}/${task.id}`, '_blank')}
-                    title="View task in visualizer"
+                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${quest.project_id}/${quest.id}`, '_blank')}
+                    title={`View ${theme.terminology.task} in visualizer`}
                     >
-                    {task.name}
+                    {quest.name}
                     </span>
-                    <br/> Status: {task.status}
+                    <br/> Status: {quest.status}
                     <br />
-                    Skill: {task.skill_name ? `${task.skill_name}, Lvl ${task.requiredSkillLevel}` : `ID ${task.requiredSkillId}, Lvl ${task.requiredSkillLevel}`}
+                    {theme.terminology.skill}: {quest.skill_name ? `${quest.skill_name}, Lvl ${quest.requiredAffinityLevel}` : `ID ${quest.requiredAffinityId}, Lvl ${quest.requiredAffinityLevel}`}
                     <br />
-                    Sensitivity: {task.timeSensitivity}
+                    Sensitivity: {quest.timeSensitivity}
                   </div>
-                  <div className="task-actions">
-                    {task.assigned_user_ids?.includes(Number(profile.id)) ? (
+                  <div className="quest-actions">
+                    {quest.assigned_user_ids?.includes(Number(profile.id)) ? (
                     <button 
                       style={{ backgroundColor: '#ff4444', borderColor: '#ff4444', color: '#0A0A2E' }}
                       onClick={async () => {
                       try {
                         const token = await getAccessTokenSilently();
                         await axios.put(
-                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/drop`,
+                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${quest.id}/drop`,
                         { userId: profile.id },
                         {
                           headers: {
@@ -84,10 +85,10 @@ const TargetingScanner = () => {
                           }
                         }
                         );
-                        alert(`Task "${task.name}" dropped successfully!`);
-                        refetchTasks(); // Refetch tasks after dropping
+                        alert(`${theme.terminology.task} "${quest.name}" dropped successfully!`);
+                        refetchQuests(); // Refetch quests after dropping
                       } catch (error) {
-                        console.error('Error dropping task:', error);
+                        console.error(`Error dropping ${theme.terminology.task}:`, error);
                         // Handle error appropriately
                       }
                       }}
@@ -101,7 +102,7 @@ const TargetingScanner = () => {
                       try {
                         const token = await getAccessTokenSilently();
                         const response = await axios.put(
-                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/accept`,
+                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${quest.id}/accept`,
                         { userId: profile.id },
                         {
                           headers: {
@@ -111,11 +112,11 @@ const TargetingScanner = () => {
                         }
                         );
                         if (response.status === 200) {
-                        alert(`Task "${task.name}" accepted successfully!`);
-                        refetchTasks(); // Refetch tasks after accepting
+                        alert(`${theme.terminology.task} "${quest.name}" accepted successfully!`);
+                        refetchQuests(); // Refetch quests after accepting
                         }
                       } catch (error) {
-                        console.error('Error accepting task:', error);
+                        console.error(`Error accepting ${theme.terminology.task}:`, error);
                         // Handle error appropriately
                       }
                       }}
@@ -129,7 +130,7 @@ const TargetingScanner = () => {
               })}
             </ul>
           ) : (
-            <p>No relevant tasks found by scanner.</p>
+            <p>{`No relevant ${theme.terminology.task_plural} found by scanner.`}</p>
           )}
         </div>
       )}

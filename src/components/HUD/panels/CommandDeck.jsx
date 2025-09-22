@@ -1,18 +1,15 @@
-import React, { useState } from 'react'; // Correctly import useState
+import React, { useState } from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile';
-import useUserProjects from '../../../hooks/useUserProjects.js'; // This still needed to sum tokens from projects
-import '../HUDPanel.css'; // Shared panel styles
-// import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
+import useUserIntentions from '../../../hooks/useUserIntentions.js';
+import '../HUDPanel.css';
+import theme from '../../../styles/theme.js';
 
-// Mock data if not available from hooks - REMOVE IF REAL DATA IS PRESENT
-const MOCKED_TOKEN_POOL = 10000; // Example global pool
-const MOCK_PROJECT_TOKENS = true; // Set to false if projects have real token data
-const accentGreen = '#00D787'; // theme.colors.accentGreen
+const accentGreen = '#00D787';
 
 const CommandDeck = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { projects, loading: projectsLoading, error: projectsError } = useUserProjects(profile?.id);
-  const [isMinimized, setIsMinimized] = useState(false); // Use useState
+  const { intentions, loading: intentionsLoading, error: intentionsError } = useUserIntentions(profile?.id);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -21,45 +18,44 @@ const CommandDeck = () => {
     setIsMinimized(!isMinimized);
   };
 
-  if (profileLoading || projectsLoading) {
-    return <div className="hud-panel command-deck">Loading Commmand Deck...</div>;
+  if (profileLoading || intentionsLoading) {
+    return <div className="hud-panel command-deck">Loading Command Deck...</div>;
   }
   
-  // Simplified error display
   if (profileError) {
     console.error("Profile Error in CommandDeck:", profileError);
     return <div className="hud-panel command-deck">Error loading profile data. Check console.</div>;
   }
-  if (projectsError) {
-    console.error("Projects Error in CommandDeck:", projectsError);
-    return <div className="hud-panel command-deck">Error loading project data. Check console.</div>;
+  if (intentionsError) {
+    console.error("Intentions Error in CommandDeck:", intentionsError);
+    return <div className="hud-panel command-deck">Error loading {theme.terminology.project_plural} data. Check console.</div>;
   }
   
   return (
     <div className={`hud-panel command-deck ${isMinimized ? 'minimized' : ''}`}>
       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Command Deck (Managed Projects)</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Galactic Treasury" : "Minimize Galactic Treasury"}>
+        <h4>Command Deck (Managed {theme.terminology.project_plural})</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Command Deck" : "Minimize Command Deck"}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       {!isMinimized && (
         <div className="hud-panel-content">
-           {projects.length > 0 ? (
+           {intentions.length > 0 ? (
 
         <ul>
 
-          {projects.map(p => (
+          {intentions.map(intention => (
 
-            <li key={p.id} className="project-item">
+            <li key={intention.id} className="intention-item">
 
-              <div className="project-info">
+              <div className="intention-info">
 
-                <a className="project-name" href={`/visualizer/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.name}</a>
+                <a className="intention-name" href={`/visualizer/${intention.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{intention.name}</a>
                 <br />
-                <span className="project-details">
+                <span className="intention-details">
 
-                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
+                  {theme.terminology.task_plural}: {intention.questCount} | Active: {intention.activeQuests} | Completed: {intention.completedQuests} <br/> credits: {intention.token_pool - (intention.used_tokens || 0) - (intention.reserved_tokens || 0)}
 
                 </span>
 
@@ -71,17 +67,17 @@ const CommandDeck = () => {
 
                   className="progress-bar" 
 
-                  style={{ width: `${p.progress}%`, backgroundColor: accentGreen }}
+                  style={{ width: `${intention.progress}%`, backgroundColor: accentGreen }}
 
                 >
 
-                  {p.progress}%
+                  {intention.progress}%
 
                 </div>
 
               </div>
 
-              {p.errorFetchingTasks && <span className="error-text"> (Error loading project tasks)</span>}
+              {intention.errorFetchingQuests && <span className="error-text"> (Error loading {theme.terminology.task_plural})</span>}
 
             </li>
 
@@ -91,7 +87,7 @@ const CommandDeck = () => {
 
       ) : (
 
-        <p>No projects currently managed.</p>
+        <p>No {theme.terminology.project_plural} currently managed.</p>
       )}
         </div>
       )}
