@@ -51,7 +51,7 @@ export const AffinityWebPanel = styled(PanelWrapper)({
 export const MapViewort = styled('div')(({ theme }) => ({
   boxSizing: 'border-box',
   border: `2px solid ${theme.palette.primary.main}`,
-  borderRadius: theme.borders.borderRadiusLg,
+  borderRadius: theme.shape.borderRadius * 3,
   boxShadow: `0 0 20px ${theme.palette.primary.main}, inset 0 0 20px ${theme.palette.primary.main}`,
   position: 'absolute',
   top: '150px',

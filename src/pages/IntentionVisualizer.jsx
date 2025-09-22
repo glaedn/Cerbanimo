@@ -483,7 +483,7 @@ useEffect(() => {
   };
 
   const usedSkills = skills.filter((skill) =>
-    tasks.some((task) => task.skill_id === skill.id)
+    quests.some((quest) => quest.skill_id === skill.id)
   );
 
   // Handle mouse leave for the entire visualization container
@@ -629,7 +629,10 @@ useEffect(() => {
     const data = categorizedQuests[activeCategory] || [];
     
     // Exit early if no data
-    if (data.length === 0) return;
+    if (data.length === 0) {
+      d3.select(svgRef.current).selectAll("*").remove();
+      return;
+    }
 
     const { width, height } = svgDimensions;
     const NODE_HORIZONTAL_SPACING = 100; // Fixed horizontal spacing between nodes
@@ -802,8 +805,8 @@ data.forEach((source) => {
   } else {
     // For skill-specific views
     const internalDeps = source.dependencies.filter((depId) => {
-      const depTask = allTasks[depId];
-      return depTask && depTask.skill_id === activeSkillId;
+      const depQuest = allQuests[depId];
+      return depQuest && depQuest.skill_id === activeSkillId;
     });
 
     internalDeps.forEach((depId) => {
@@ -1080,7 +1083,7 @@ links.forEach(link => {
     }
   }, [
     activeCategory,
-    allTasks,
+    allQuests,
     skills,
     isEditMode,
     zoomTransform,
@@ -1310,7 +1313,7 @@ links.forEach(link => {
                               {quest.name}{" "}
                               {quest.skill_id !== activeSkillId
                                 ? `(${
-                                    skills.find((s) => s.id === task.skill_id)
+                                    skills.find((s) => s.id === quest.skill_id)
                                       ?.name || "external"
                                   })`
                                 : ""}

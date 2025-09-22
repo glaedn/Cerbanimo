@@ -54,7 +54,7 @@ const TheInnerSanctum = () => {
             ) : (
               <p>No intentions currently being manifested.</p>
             )}
-            <button>{theme.terminology.open_project}</button>
+            <button>{theme.terminology?.open_project}</button>
           </PanelContent>
         </>
       )}

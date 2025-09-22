@@ -42,7 +42,12 @@ export const ActiveShrineImage = styled('img')({
   left: 0,
   zIndex: 2,
 });
-
+export const ExpandedContent = styled('div')(({ isExpanded }) => ({
+  opacity: isExpanded ? 1 : 0,
+  transition: 'opacity 0.5s ease 0.3s',
+  position: 'relative',
+  zIndex: 3,
+}));
 export const PanelContent = styled('div')({
   position: 'absolute',
   top: '50%',
@@ -59,5 +64,5 @@ export const PanelHeader = styled('div')({
 export const PanelTitle = styled('h2')(({ theme }) => ({
   fontFamily: theme.typography.fontFamilyAccent,
   color: theme.palette.text.primary,
-  textShadow: theme.effects.textShadow,
+  textShadow: theme.effects?.textShadow,
 }));
