@@ -58,15 +58,15 @@
     font-size: 1rem;
 }
 
-/* Tasks Section */
-.tasks-section {
+/* Quests Section */
+.quests-section {
     width: 100%;
     margin-top: 20px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-.tasks-title {
+.quests-title {
     font-size: 1.8rem;
     font-weight: bold;
     color: #00F3FF;
@@ -74,8 +74,8 @@
     text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
 }
 
-/* Add Task Button */
-.add-task-button {
+/* Add Quest Button */
+.add-quest-button {
     background-color: #00F3FF;
     color: #000000;
     font-size: 2rem;
@@ -91,13 +91,13 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
-.add-task-button:hover {
+.add-quest-button:hover {
     background-color: #4DABF7;
     text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text, consider removing or adjusting */
 }
 
-/* Task List */
-.tasks-list {
+/* Quest List */
+.quests-list {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
@@ -107,26 +107,26 @@
 }
 
 /* Custom Scrollbar */
-.tasks-section::-webkit-scrollbar {
+.quests-section::-webkit-scrollbar {
     width: 10px;
 }
 
-.tasks-section::-webkit-scrollbar-track {
+.quests-section::-webkit-scrollbar-track {
     background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
-.tasks-section::-webkit-scrollbar-thumb {
+.quests-section::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
-.tasks-section::-webkit-scrollbar-thumb:hover {
+.quests-section::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency with other scrollbars */
 }
 
-.task-card {
+.quest-card {
     background-color: rgba(28, 28, 30, 0.7);
     border-radius: 10px;
     padding: 15px;
@@ -136,12 +136,12 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
-.task-card:hover {
+.quest-card:hover {
     transform: scale(1.02);
     background: rgba(0, 243, 255, 0.1); /* Updated hover background */
 }
 
-.task-card h3 {
+.quest-card h3 {
     font-size: 1.2rem;
     font-weight: bold;
     color: #00F3FF;
@@ -176,18 +176,18 @@
   box-shadow: 0 0 10px rgba(0, 243, 255, 0.3); /* Updated shadow color */
 }
 
-/* Task Card Description */
-.task-card p {
+/* Quest Card Description */
+.quest-card p {
     font-size: 1rem;
     color: #CCCCCC;
 }
 
-/* Task Card Skill */
-.task-card p strong {
+/* Quest Card Skill */
+.quest-card p strong {
     color: #00F3FF;
 }
 
-.accept-task-button {
+.accept-quest-button {
     background-color: rgba(0, 243, 255, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -197,20 +197,20 @@
     transition: background-color 0.3s ease;
   }
   
-  .accept-task-button:disabled {
+  .accept-quest-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .accept-task-button.drop-task-button {
+  .accept-quest-button.drop-quest-button {
     background-color: rgba(255, 65, 54, 0.8);
     color: #FFFFFF;
   }
-  .accept-task-button.drop-task-button:hover {
+  .accept-quest-button.drop-quest-button:hover {
     background-color: rgba(255, 100, 80, 0.9);
   }
   
-  .edit-task-button {
+  .edit-quest-button {
     background-color: rgba(77, 171, 247, 0.8);
     color: #FFFFFF;
     padding: 5px 10px;
@@ -219,16 +219,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .edit-task-button:hover {
+  .edit-quest-button:hover {
     background-color: rgba(100, 190, 255, 0.9);
   }
   
-  .edit-task-button:disabled {
+  .edit-quest-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
   
-  .submit-task-button {
+  .submit-quest-button {
     background-color: rgba(0, 215, 135, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -237,16 +237,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .submit-task-button:hover {
+  .submit-quest-button:hover {
     background-color: rgba(50, 235, 155, 0.9);
   }
   
-  .submit-task-button:disabled {
+  .submit-quest-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .reject-task-button {
+  .reject-quest-button {
     background-color: rgba(255, 92, 162, 0.8);
     color: #FFFFFF;
     padding: 5px 10px;
@@ -255,16 +255,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .reject-task-button:hover {
+  .reject-quest-button:hover {
     background-color: rgba(255, 120, 180, 0.9);
   }
   
-  .reject-task-button:disabled {
+  .reject-quest-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .approve-task-button {
+  .approve-quest-button {
     background-color: rgba(0, 215, 135, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -273,18 +273,18 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .approve-task-button:hover {
+  .approve-quest-button:hover {
     background-color: rgba(50, 235, 155, 0.9);
   }
   
-  .approve-task-button:disabled {
+  .approve-quest-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
   
 
-/* Task Popup */
-.task-popup-overlay {
+/* Quest Popup */
+.quest-popup-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -297,7 +297,7 @@
     z-index: 100;
 }
 
-.task-popup {
+.quest-popup {
     background: rgba(28, 28, 30, 0.95);
     padding: 20px;
     border-radius: 10px;
@@ -306,14 +306,14 @@
     color: white;
 }
 
-.task-popup h2 {
+.quest-popup h2 {
     font-size: 1.5rem;
     font-weight: bold;
     color: #00F3FF;
     margin-bottom: 15px;
 }
 
-.task-popup input, .task-popup select, .task-popup textarea {
+.quest-popup input, .quest-popup select, .quest-popup textarea {
     width: 90%;
     padding: 10px;
     margin-bottom: 10px;
@@ -324,7 +324,7 @@
     font-size: 1rem;
 }
 
-.task-popup input[type="checkbox"] {
+.quest-popup input[type="checkbox"] {
     margin-right: 5px;
 }
 

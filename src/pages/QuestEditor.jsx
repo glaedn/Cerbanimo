@@ -633,7 +633,7 @@ const QuestEditor = ({
                       <>
                         <Button
                           className={`cyber-button ${
-                            userIsAssigned ? "drop-task" : "accept-task"
+                            userIsAssigned ? "drop-quest" : "accept-quest"
                           }`}
                           onClick={handleQuestAction}
                           disabled={
@@ -686,7 +686,7 @@ const QuestEditor = ({
 
                         {userIsAssigned && !isSubmitted && (
                           <Button
-                            className="cyber-button submit-task"
+                            className="cyber-button submit-quest"
                             onClick={handleQuestSubmission}
                             disabled={
                               proofLinks.length === 0 ||

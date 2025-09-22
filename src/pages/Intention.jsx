@@ -266,12 +266,12 @@ const Intention = () => {
         )}
       </div>
       )}
-      <div className="tasks-section">
-      <h2 className="tasks-title">{theme.terminology.task_plural}</h2>
+      <div className="quests-section">
+      <h2 className="quests-title">{theme.terminology.task_plural}</h2>
       {isIntentionCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleQuestPopupOpen()}>+</Button>}
-      <div className="tasks-list">
+      <div className="quests-list">
         {quests.map((quest) => (
-        <div key={quest.id} className="task-card">
+        <div key={quest.id} className="quest-card">
           <h3>{quest.name || `Untitled ${theme.terminology.task}`}</h3>
           <span className={`status-indicator ${quest.active_ind ? 'active' : 'inactive'}`}>
           {quest.active_ind ? 'Active' : 'Inactive'}

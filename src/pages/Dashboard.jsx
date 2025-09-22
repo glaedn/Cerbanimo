@@ -5,12 +5,15 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
 import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap.jsx';
-import SpaceshipHUD from '../components/HUD/SpaceshipHUD.jsx'; // Adjusted path
+import { useSelector } from 'react-redux';
+import SpaceshipHUD from '../components/HUD/SpaceshipHUD.jsx';
+import MagicalGirlHUD from '../components/MagicalGirlHUD/MagicalGirlHUD.jsx';
 import './Dashboard.css';
 
 
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently, logout } = useAuth0();
+  const themeMode = useSelector((state) => state.theme.mode);
   
   const navigate = useNavigate(); // Properly declare navigate using useNavigate
 
@@ -57,10 +60,12 @@ const Dashboard = () => {
     saveUserToken();
   }, [isAuthenticated, user, getAccessTokenSilently]);
 
+  const HUDComponent = themeMode === 'magicalGirl' ? MagicalGirlHUD : SpaceshipHUD;
+
   return (
-    <SpaceshipHUD>
+    <HUDComponent>
       <GalacticActivityMap />
-    </SpaceshipHUD>
+    </HUDComponent>
   );
 };
 

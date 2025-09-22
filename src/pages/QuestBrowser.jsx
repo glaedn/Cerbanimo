@@ -118,90 +118,90 @@ const QuestBrowser = () => {
   }, [isAuthenticated, getAccessTokenSilently, user, userId]);
 
   return (
-    <Box display="flex" flexDirection="row" className="task-browser">
-      <Box className="task-browser-container" flex={1}>
-        <Typography variant="h4" gutterBottom className="task-title">Available {theme.terminology.task_plural}</Typography>
+    <Box display="flex" flexDirection="row" className="quest-browser">
+      <Box className="quest-browser-container" flex={1}>
+        <Typography variant="h4" gutterBottom className="quest-title">Available {theme.terminology.task_plural}</Typography>
         {error && <Typography color="error">{error}</Typography>}
-        <Paper elevation={5} className="task-list">
+        <Paper elevation={5} className="quest-list">
           <List>
             {quests.length > 0 ? (
               quests.map((quest) => (
-                <ListItem key={quest.id} divider className="task-item">
+                <ListItem key={quest.id} divider className="quest-item">
                   <ListItemText
-                    primary={<span className="task-name">{quest.name}</span>}
+                    primary={<span className="quest-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
+                        <Typography component="span" variant="body2" className="quest-description">{quest.description}</Typography>
                         <br />
-                        <Typography component="span" variant="body2" className="task-tags">
+                        <Typography component="span" variant="body2" className="quest-tags">
                           {quest.sharedTagsCount > 0 ? `🔹 Shared Interests: ${quest.sharedTags.join(', ')}` : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        {quest.project_id && <Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link>}
+                        {quest.project_id && <Link href={`/visualizer/${quest.project_id}`} className="quest-link">🚀 View {theme.terminology.project}</Link>}
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No matching {theme.terminology.task_plural} found.</Typography>}
+            ) : <Typography className="no-quests">No matching {theme.terminology.task_plural} found.</Typography>}
           </List>
         </Paper>
       </Box>
       
-      <Box flex={1} className="task-browser-container">
-        <Typography variant="h4" gutterBottom className="task-title">Accepted {theme.terminology.task_plural}</Typography>
-        <Paper elevation={5} className="task-list">
+      <Box flex={1} className="quest-browser-container">
+        <Typography variant="h4" gutterBottom className="quest-title">Accepted {theme.terminology.task_plural}</Typography>
+        <Paper elevation={5} className="quest-list">
           <List>
             {acceptedQuests.length > 0 ? (
               acceptedQuests.map((quest) => (
-                <ListItem key={quest.id} divider className="task-item">
+                <ListItem key={quest.id} divider className="quest-item">
                   <ListItemText
-                    primary={<span className="task-name">{quest.name}</span>}
+                    primary={<span className="quest-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
+                        <Typography component="span" variant="body2" className="quest-description">{quest.description}</Typography>
                         <br />
-                        <Typography component="span" variant="body2" className="task-status">
+                        <Typography component="span" variant="body2" className="quest-status">
                           {quest.status === 'submitted' && quest.approvals?.length >= 2 ? `⏳ Awaiting ${theme.terminology.project_manager_approval}` :
                            quest.status === 'submitted' ? `✅ Submitted for ${theme.terminology.peer_review_approval}` :
                            `⌛ In Progress`}
                         </Typography>
                         <br />
-                        <Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link>
+                        <Link href={`/visualizer/${quest.project_id}`} className="quest-link">🚀 View {theme.terminology.project}</Link>
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No accepted {theme.terminology.task_plural} yet.</Typography>}
+            ) : <Typography className="no-quests">No accepted {theme.terminology.task_plural} yet.</Typography>}
           </List>
         </Paper>
       </Box>
       
-      <Box flex={1} className="task-browser-container">
-        <Typography variant="h4" gutterBottom className="task-title">Review {theme.terminology.task_plural}</Typography>
-        <Paper elevation={5} className="task-list">
+      <Box flex={1} className="quest-browser-container">
+        <Typography variant="h4" gutterBottom className="quest-title">Review {theme.terminology.task_plural}</Typography>
+        <Paper elevation={5} className="quest-list">
           <List>
             {approvalQuests.length > 0 ? (
               approvalQuests.map((quest) => (
-                <ListItem key={quest.id} divider className="task-item">
+                <ListItem key={quest.id} divider className="quest-item">
                   <ListItemText
-                    primary={<span className="task-name">{quest.name}</span>}
+                    primary={<span className="quest-name">{quest.name}</span>}
                     secondary={
                       <>
-                        <Typography component="span" variant="body2" className="task-description">{quest.description}</Typography>
+                        <Typography component="span" variant="body2" className="quest-description">{quest.description}</Typography>
                         <br />
-                        <Typography component="span" variant="body2" className="task-status">
+                        <Typography component="span" variant="body2" className="quest-status">
                           {`📝 Needs Review (${quest.approvals?.length || 0} approvals, ${quest.rejections?.length || 0} rejections)`}
                         </Typography>
-                        {quest.project_id && <><br /><Link href={`/visualizer/${quest.project_id}`} className="task-link">🚀 View {theme.terminology.project}</Link></>}
-                        {quest.project_id && quest.id && <><br /><Link href={`/visualizer/${quest.project_id}/${quest.id}`} className="task-link">✏️ Review {theme.terminology.task}</Link></>}
+                        {quest.project_id && <><br /><Link href={`/visualizer/${quest.project_id}`} className="quest-link">🚀 View {theme.terminology.project}</Link></>}
+                        {quest.project_id && quest.id && <><br /><Link href={`/visualizer/${quest.project_id}/${quest.id}`} className="quest-link">✏️ Review {theme.terminology.task}</Link></>}
                       </>
                     }
                   />
                 </ListItem>
               ))
-            ) : <Typography className="no-tasks">No {theme.terminology.task_plural} to review.</Typography>}
+            ) : <Typography className="no-quests">No {theme.terminology.task_plural} to review.</Typography>}
           </List>
         </Paper>
       </Box>

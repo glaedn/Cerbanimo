@@ -195,7 +195,7 @@ return (
                                         navigate(`/visualizer/${project.id}`);
                                     }}
                                 >
-                                    Open {theme.terminology.project}
+                                    {theme.terminology.open_project}
                                 </button>
                             </div>
                         )) : <p>No {theme.terminology.project_plural} in this {theme.terminology.community} yet</p>}

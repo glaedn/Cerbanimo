@@ -81,6 +81,9 @@ const theme = {
     community_dashboard: 'Dream Circle Dashboard',
     view_project: 'View Intention',
     add_project: 'Set an Intention',
+    open_project: 'Enter Intention',
+    quest_updated_message: 'Quest Updated',
+    new_notifications_message: 'Astra has written in her Journal!',
   }
 };
 

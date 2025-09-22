@@ -139,7 +139,7 @@ const RewardDashboard = () => {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="task-browser-wrapper"><QuestBrowser /></div>
+                <div className="quest-browser-wrapper"><QuestBrowser /></div>
             </div>
         </div>
     );
