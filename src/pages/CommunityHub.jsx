@@ -32,7 +32,7 @@ import MuiAlert from '@mui/material/Alert';
 import DreamCircleGrimoire from '../components/CommunityChronicle/index.jsx';
 import DreamCircleResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
 import './DreamCircleHub.css';
-import theme from '../../styles/theme';
+import theme from '../styles/theme.js';
 
 const DreamCircleHub = () => {
     const { communityId } = useParams();

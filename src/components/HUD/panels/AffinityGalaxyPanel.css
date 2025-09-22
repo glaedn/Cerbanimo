@@ -3,6 +3,7 @@
   /* height: 98%; Removed to allow parent to control height */
   overflow: hidden;
   color: var(--theme-colors-textPrimary, #FFFFFF);
+  
 } 
 
 .hud-panel.minimized .affinity-galaxy-panel {

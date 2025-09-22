@@ -4,7 +4,7 @@ import useRelevantQuests from '../../../hooks/useRelevantQuests'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
-import theme from '../../../../styles/theme';
+import theme from '../../../styles/theme';
 // import './TargetingScanner.css'; // Optional: For specific TargetingScanner styles
 
 const TargetingScanner = () => {

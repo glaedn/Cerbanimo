@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import TokenAndAffinitySummary from '../components/TokenAndAffinitySummary';
+import TokenAndAffinitySummary from '../components/TokenAndAffinitySummary.jsx';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import './UserGrimoire.css';
 import { Typography } from '@mui/material';

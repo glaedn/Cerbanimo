@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // Import Link
 import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
 import '../HUDPanel.css'; // Shared panel styles
-import theme from '../../../../styles/theme';
+import theme from '../../../styles/theme.js';
 // import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import CancelIcon from '@mui/icons-material/Cancel';

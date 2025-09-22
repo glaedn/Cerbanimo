@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNotifications } from '../../pages/NotificationProvider';
 import './Astra.css';
 import AstraIcon from '../../assets/astra.svg';
-import theme from '../../../styles/theme';
+import theme from '../../styles/theme.js';
 
 const Astra = () => {
   const { notifications, unreadCount, markAsRead } = useNotifications();

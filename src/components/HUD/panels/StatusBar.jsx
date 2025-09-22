@@ -5,7 +5,7 @@ import useAffinityData from '../../../hooks/useAffinityData';
 import { useAuth0 } from '@auth0/auth0-react';
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
-import theme from '../../../../styles/theme';
+import theme from '../../../styles/theme.js';
 
 
 const StatusBar = () => {

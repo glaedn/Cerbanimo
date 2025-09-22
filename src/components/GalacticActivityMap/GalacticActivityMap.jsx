@@ -4,7 +4,7 @@ import "./GalacticActivityMap.css";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
-import theme from '../../../styles/theme';
+import theme from '../../styles/theme.js';
 
 const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);

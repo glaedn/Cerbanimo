@@ -33,7 +33,7 @@ const useAffinityData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/affinities/all`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         

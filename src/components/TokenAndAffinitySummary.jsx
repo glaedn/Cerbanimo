@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Paper } from '@mui/material';
-import theme from '../../styles/theme';
+import theme from '../styles/theme.js';
 
 const TokenAndAffinitySummary = ({ tokens = 0, affinities = [] }) => {
   const validAffinities = Array.isArray(affinities) ? affinities : [];

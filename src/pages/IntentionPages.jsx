@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Chip } from '@mui/material';
-import './ProjectPages.css';
+import './IntentionPages.css';
 import ReactMarkdown from 'react-markdown';
 import useAffinityData from '../hooks/useAffinityData';
 import theme from '../styles/theme';

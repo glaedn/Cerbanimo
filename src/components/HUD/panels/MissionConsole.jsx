@@ -6,7 +6,7 @@ import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import useAssignedQuests from '../../../hooks/useAssignedQuests'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import './MissionConsole.css'; // Optional: For specific MissionConsole styles
-import theme from '../../../../styles/theme';
+import theme from '../../../styles/theme.js';
 
 const MissionConsole = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
