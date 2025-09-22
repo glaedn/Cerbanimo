@@ -187,10 +187,10 @@ const AffinityGalaxyPanel = () => {
     // Define gradients
     // const starColors = [theme.colors.primary, theme.colors.secondary, theme.colors.accentGreen, theme.colors.accentOrange]; // OLD
     const newStarColors = [
-      theme.colors.primary,    // For levels 1-4 (index 0)
-      theme.colors.accentGreen, // For levels 5-9 (index 1)
-      theme.colors.secondary,   // For levels 10-19 (index 2)
-      theme.colors.accentPurple || '#800080' // For levels 20+ (index 3)
+      theme.palette.primary.main,    // For levels 1-4 (index 0)
+      theme.palette.success.main, // For levels 5-9 (index 1)
+      theme.palette.secondary.main,   // For levels 10-19 (index 2)
+      theme.palette.secondary.dark || '#800080' // For levels 20+ (index 3)
     ];
     
     newStarColors.forEach((color, i) => {
@@ -252,7 +252,7 @@ const AffinityGalaxyPanel = () => {
       .selectAll('line')
       .data(displayLinks, d => d.id)
       .join('line')
-      .attr('stroke', theme.colors.border || '#666')
+      .attr('stroke', theme.palette.divider || '#666')
       .attr('stroke-width', 1.5)
       .style('stroke-opacity', 0.6); // Set initial link opacity
 
@@ -299,7 +299,7 @@ const AffinityGalaxyPanel = () => {
               }
               return fillColor;
             })
-            .style('stroke', theme.colors.border || '#666')
+            .style('stroke', theme.palette.divider || '#666')
             .style('stroke-width', 1)
             .on('click', (event, d_clicked) => {
               event.stopPropagation();
@@ -315,7 +315,7 @@ const AffinityGalaxyPanel = () => {
               // Adjust dy for satellites
               return category === 'star' ? -30 : (category === 'planet' ? -20 : (category === 'moon' ? -12 : -9)); // Added satellite dy
             })
-            .style('fill', theme.colors.textPrimary || '#fff')
+            .style('fill', theme.palette.text.primary || '#fff')
             .style('font-size', d => {
               const category = d.category || 'star';
               return category === 'star' ? '14px' : '10px';
@@ -372,7 +372,7 @@ const AffinityGalaxyPanel = () => {
             allLinks.style('stroke', l => {
                 const sourceInConstellation = constellationIds.has(l.source.id || l.source);
                 const targetInConstellation = constellationIds.has(l.target.id || l.target);
-                return (sourceInConstellation && targetInConstellation) ? 'white' : (theme.colors.border || '#666');
+                return (sourceInConstellation && targetInConstellation) ? 'white' : (theme.palette.divider || '#666');
               })
               .style('stroke-width', l => {
                 const sourceInConstellation = constellationIds.has(l.source.id || l.source);
@@ -391,7 +391,7 @@ const AffinityGalaxyPanel = () => {
           })
           .on('mouseleave', function(event, d_hovered) {
             mainGroup.selectAll('.links line')
-              .style('stroke', theme.colors.border || '#666')
+              .style('stroke', theme.palette.divider || '#666')
               .style('stroke-width', 1.5)
               .style('stroke-opacity', 0.6); // Default stroke opacity for links
             
@@ -469,7 +469,7 @@ const AffinityGalaxyPanel = () => {
           })
           .on('mouseleave', function(event, d_hovered) {
             mainGroup.selectAll('.links line')
-              .style('stroke', theme.colors.border || '#666')
+              .style('stroke', theme.palette.divider || '#666')
               .style('stroke-width', 1.5)
               .style('stroke-opacity', 0.6);
             mainGroup.selectAll('.nodes .node-group').style('opacity', 1);

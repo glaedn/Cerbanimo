@@ -3,7 +3,7 @@ import { styled } from '@mui/material/styles';
 export const HUDPanelContainer = styled('div')(({ theme }) => ({
   backgroundColor: 'rgba(10, 10, 46, 0.8)', // Candidate for theme variable
   border: `1px solid ${theme.palette.primary.main}`,
-  boxShadow: theme.effects.glowSubtle(theme.palette.primary.main),
+  boxShadow: `0 0 8px ${theme.palette.primary.main}7F`,
   borderRadius: theme.shape.borderRadius,
   color: theme.palette.text.primary,
   padding: '15px',
