@@ -13,15 +13,10 @@ import {
 import ScrollIcon from '../../../assets/magical-girl/quests-scroll.png';
 import ScrollActiveIcon from '../../../assets/magical-girl/quests-scroll-active.png';
 
-const Quests = () => {
+const Quests = ({ isExpanded, onToggle }) => {
   const { profile } = useUserProfile();
   const { assignedQuests, loading: questsLoading, error: questsError } = useAssignedQuests(profile?.id);
-  const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
-
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
 
   const handleViewQuest = (quest) => {
     navigate(`/visualizer/${quest.projectId}/${quest.id}`);
@@ -36,7 +31,7 @@ const Quests = () => {
   }
 
   return (
-    <QuestsContainer onClick={toggleExpand} isExpanded={isExpanded}>
+    <QuestsContainer onClick={onToggle} isExpanded={isExpanded}>
       <ScrollImage src={ScrollIcon} alt="Quests Scroll" isExpanded={isExpanded} />
       {isExpanded && (
         <>

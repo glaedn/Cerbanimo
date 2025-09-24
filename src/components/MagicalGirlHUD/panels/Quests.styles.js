@@ -17,6 +17,7 @@ export const QuestsContainer = styled('div')(({ isExpanded }) => ({
   width: isExpanded ? '380px' : '100px',
   height: isExpanded ? 'auto' : '100px',
   transition: 'all 0.5s ease',
+  bottom: isExpanded ? '100px' : '0', // Shift upward when expanded
 }));
 
 export const ScrollImage = styled('img')({
@@ -40,6 +41,8 @@ export const QuestsContent = styled('div')({
   transform: 'translate(-50%, -50%)',
   textAlign: 'center',
   width: '80%',
+  height: '80%',
+  clipPath: 'polygon(0% 15%, 100% 15%, 100% 85%, 0% 85%)',
 });
 
 export const QuestsHeader = styled('div')({

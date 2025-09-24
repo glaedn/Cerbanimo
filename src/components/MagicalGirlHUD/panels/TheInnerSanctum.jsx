@@ -13,15 +13,10 @@ import {
 import InnerSanctumIcon from '../../../assets/magical-girl/The-Inner-Sanctum.png';
 import InnerSanctumActiveIcon from '../../../assets/magical-girl/The-Inner-Sanctum-Active.png';
 
-const TheInnerSanctum = () => {
+const TheInnerSanctum = ({ isExpanded, onToggle }) => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { intentions, loading: intentionsLoading, error: intentionsError } = useUserIntentions(profile?.id);
-  const [isExpanded, setIsExpanded] = useState(false);
   const theme = useTheme();
-
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
 
   if (profileLoading || intentionsLoading) {
     return <PanelContainer>Loading Intentions...</PanelContainer>;
@@ -32,7 +27,7 @@ const TheInnerSanctum = () => {
   }
 
   return (
-    <PanelContainer onClick={toggleExpand} isExpanded={isExpanded}>
+    <PanelContainer onClick={onToggle} isExpanded={isExpanded}>
       <ShrineImage src={InnerSanctumIcon} alt="The Inner Sanctum" isExpanded={isExpanded} />
       {isExpanded && (
         <>

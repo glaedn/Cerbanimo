@@ -12,7 +12,7 @@ const shimmer = keyframes`
 export const MirrorContainer = styled('div')(({ isExpanded }) => ({
   position: 'relative',
   cursor: 'pointer',
-  width: isExpanded ? '400px' : '100px',
+  width: isExpanded ? '600px' : '100px', // Expanded by 50%
   height: isExpanded ? 'auto' : '120px',
   transition: 'all 0.5s ease',
 }));
@@ -40,7 +40,7 @@ export const MirrorImage = styled('img')({
 });
 
 export const ActiveMirrorImage = styled('img')({
-  width: '400px',
+  width: '600px', // Expanded by 50%
   height: 'auto',
   position: 'absolute',
   top: 0,
@@ -54,6 +54,8 @@ export const MirrorContent = styled('div')({
   transform: 'translate(-50%, -50%)',
   textAlign: 'center',
   width: '80%',
+  height: '80%',
+  clipPath: 'ellipse(40% 45% at 50% 50%)',
 });
 
 export const MirrorHeader = styled('div')({

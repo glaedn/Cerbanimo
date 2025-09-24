@@ -18,7 +18,7 @@ const pulse = keyframes`
 export const PanelContainer = styled('div')(({ theme, isExpanded }) => ({
   position: 'relative',
   cursor: 'pointer',
-  width: isExpanded ? '400px' : '100px',
+  width: isExpanded ? '600px' : '100px', // Expanded by 50%
   height: isExpanded ? 'auto' : '100px',
   transition: 'all 0.5s ease',
 }));
@@ -35,8 +35,8 @@ export const ShrineImage = styled('img')(({ isExpanded }) => ({
 }));
 
 export const ActiveShrineImage = styled('img')({
-  width: '400px',
-  height: '400px',
+  width: '600px', // Expanded by 50%
+  height: 'auto',
   position: 'absolute',
   top: 0,
   left: 0,
@@ -55,6 +55,8 @@ export const PanelContent = styled('div')({
   transform: 'translate(-50%, -50%)',
   textAlign: 'center',
   width: '80%',
+  height: '80%',
+  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
 });
 
 export const PanelHeader = styled('div')({

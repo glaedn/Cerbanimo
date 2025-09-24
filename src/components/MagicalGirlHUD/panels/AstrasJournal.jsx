@@ -12,17 +12,12 @@ import {
 import JournalIcon from '../../../assets/magical-girl/astras-journal.png';
 import JournalActiveIcon from '../../../assets/magical-girl/astras-journal-active.png';
 
-const AstrasJournal = () => {
+const AstrasJournal = ({ isExpanded, onToggle }) => {
   const { notifications, unreadCount } = useNotifications();
-  const [isExpanded, setIsExpanded] = useState(false);
   const theme = useTheme();
 
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
-
   return (
-    <JournalContainer onClick={toggleExpand} isExpanded={isExpanded}>
+    <JournalContainer onClick={onToggle} isExpanded={isExpanded}>
       <JournalImage src={JournalIcon} alt="Astra's Journal" isExpanded={isExpanded} hasNew={unreadCount > 0} />
       {isExpanded && (
         <>

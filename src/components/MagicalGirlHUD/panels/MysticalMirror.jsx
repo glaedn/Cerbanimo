@@ -13,14 +13,9 @@ import {
 import MirrorIcon from '../../../assets/magical-girl/mystical-mirror.png';
 import MirrorActiveIcon from '../../../assets/magical-girl/mystical-mirror-active.png';
 
-const MysticalMirror = () => {
+const MysticalMirror = ({ isExpanded, onToggle }) => {
   const { profile } = useUserProfile();
   const { relevantQuests, loading: questsLoading, error: questsError } = useRelevantQuests(profile?.id);
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
 
   if (questsLoading) {
     return <MirrorContainer>Gazing into the mystical mirror...</MirrorContainer>;
@@ -31,7 +26,7 @@ const MysticalMirror = () => {
   }
 
   return (
-    <MirrorContainer onClick={toggleExpand} isExpanded={isExpanded}>
+    <MirrorContainer onClick={onToggle} isExpanded={isExpanded}>
       <MirrorImageContainer>
         <MirrorImage src={MirrorIcon} alt="Mystical Mirror" />
       </MirrorImageContainer>
