@@ -1,31 +1,15 @@
-import React, { useState } from 'react';
-import { useUserProfile } from '../../../hooks/useUserProfile';
-import useUserIntentions from '../../../hooks/useUserIntentions.js';
-import { useTheme } from '@mui/material/styles';
+import React from 'react';
 import {
   PanelContainer,
-  PanelHeader,
-  PanelTitle,
-  PanelContent,
   ShrineImage,
   ActiveShrineImage,
+  PanelContent,
 } from './TheInnerSanctum.styles';
 import InnerSanctumIcon from '../../../assets/magical-girl/The-Inner-Sanctum.png';
 import InnerSanctumActiveIcon from '../../../assets/magical-girl/The-Inner-Sanctum-Active.png';
+import CommandDeck from '../../HUD/panels/CommandDeck';
 
 const TheInnerSanctum = ({ isExpanded, onToggle }) => {
-  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { intentions, loading: intentionsLoading, error: intentionsError } = useUserIntentions(profile?.id);
-  const theme = useTheme();
-
-  if (profileLoading || intentionsLoading) {
-    return <PanelContainer>Loading Intentions...</PanelContainer>;
-  }
-
-  if (profileError || intentionsError) {
-    return <PanelContainer>Error loading data.</PanelContainer>;
-  }
-
   return (
     <PanelContainer onClick={onToggle} isExpanded={isExpanded}>
       <ShrineImage src={InnerSanctumIcon} alt="The Inner Sanctum" isExpanded={isExpanded} />
@@ -33,23 +17,7 @@ const TheInnerSanctum = ({ isExpanded, onToggle }) => {
         <>
           <ActiveShrineImage src={InnerSanctumActiveIcon} alt="The Inner Sanctum Active" />
           <PanelContent>
-            <PanelHeader>
-              <PanelTitle>The Inner Sanctum</PanelTitle>
-            </PanelHeader>
-            {intentions.length > 0 ? (
-              <ul>
-                {intentions.map(intention => (
-                  <li key={intention.id}>
-                    <a href={`/visualizer/${intention.id}`}>{intention.name}</a>
-                    <p>Quests: {intention.questCount} | Active: {intention.activeQuests}</p>
-                    <p>Progress: {intention.progress}%</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No intentions currently being manifested.</p>
-            )}
-            <button>{theme.terminology?.open_project}</button>
+            <CommandDeck />
           </PanelContent>
         </>
       )}

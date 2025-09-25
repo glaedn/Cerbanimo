@@ -34,7 +34,7 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const AffinityGalaxyPanel = () => {
+const AffinityGalaxyPanel = ({ isCircular = false }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allAffinities, loading: affinitiesLoading, error: affinitiesError } = useAffinityData();
   const { profile } = useUserProfile();
@@ -237,12 +237,25 @@ const AffinityGalaxyPanel = () => {
     // Create or update simulation
     const currentSim = simulation || d3.forceSimulation();
 
+    const linkForce = d3.forceLink(displayLinks).id(d => d.id).distance(80).strength(0.3);
+    const chargeForce = d3.forceManyBody().strength(-800);
+    const centerForce = d3.forceCenter(width / 2, height / 2);
+    const collideForce = d3.forceCollide().radius(30);
+
     currentSim
       .nodes(displayNodes)
-      .force('link', d3.forceLink(displayLinks).id(d => d.id).distance(80).strength(0.3))
-      .force('charge', d3.forceManyBody().strength(-800))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide().radius(30));
+      .force('link', linkForce)
+      .force('charge', chargeForce)
+      .force('center', centerForce)
+      .force('collide', collideForce);
+
+    if (isCircular) {
+      const radius = Math.min(width, height) / 2 - 50;
+      const radialForce = d3.forceRadial(radius, width / 2, height / 2);
+      currentSim.force('radial', radialForce);
+    } else {
+        currentSim.force('radial', null);
+    }
 
     setSimulation(currentSim);
 

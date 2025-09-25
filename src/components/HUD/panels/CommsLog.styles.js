@@ -12,5 +12,5 @@ export const CommsLogContainer = styled(HUDPanelContainer)({
 });
 
 export const LogItem = styled(HUDPanelListItem)({
-  // Styles for individual log items
+  color: 'inherit',
 });
