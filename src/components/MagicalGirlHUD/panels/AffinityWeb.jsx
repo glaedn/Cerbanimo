@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   AffinityWebContainer,
   OrbImage,
@@ -17,7 +17,7 @@ const AffinityWeb = ({ isExpanded, onToggle }) => {
         <AffinityWebWrapper>
           <ActiveOrbImage src={OrbActiveIcon} alt="Affinity Web" />
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-            <AffinityGalaxyPanel isCircular={true} />
+            <AffinityGalaxyPanel isCircular={true} showHeader={false} />
           </div>
         </AffinityWebWrapper>
       )}

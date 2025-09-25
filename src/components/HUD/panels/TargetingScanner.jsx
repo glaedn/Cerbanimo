@@ -10,7 +10,7 @@ import {
 } from './TargetingScanner.styles';
 import { HUDPanelHeader, HUDPanelTitle, HUDPanelList, HUDPanelButton } from '../HUDPanel.styles';
 
-const TargetingScanner = () => {
+const TargetingScanner = ({ showHeader = true }) => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { relevantQuests, loading: questsLoading, error: questsError, refetchQuests } = useRelevantQuests(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -39,14 +39,16 @@ const TargetingScanner = () => {
 
   return (
     <TargetingScannerContainer>
-      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <HUDPanelTitle>Targeting Scanner (Relevant Quests)</HUDPanelTitle>
-        <button onClick={toggleMinimize} aria-label={isMinimized ? "Expand Targeting Scanner" : "Minimize Targeting Scanner"}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </HUDPanelHeader>
+      {showHeader && (
+        <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <HUDPanelTitle>Targeting Scanner (Relevant Quests)</HUDPanelTitle>
+          <button onClick={toggleMinimize} aria-label={isMinimized ? "Expand Targeting Scanner" : "Minimize Targeting Scanner"}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </HUDPanelHeader>
+      )}
       {!isMinimized && (
-        <div>
+        <div style={{ height: '100%', overflowY: 'auto' }}>
           {relevantQuests.length > 0 ? (
             <HUDPanelList>
               {relevantQuests.map(quest => {

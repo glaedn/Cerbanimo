@@ -36,13 +36,28 @@ export const ActiveScrollImage = styled('img')({
 
 export const QuestsContent = styled('div')({
   position: 'absolute',
-  top: '50%',
+  top: 'calc(50% + 100px)',
   left: '50%',
   transform: 'translate(-50%, -50%)',
   textAlign: 'center',
-  width: '80%',
-  height: '80%',
+  width: '56%',
+  height: '320%',
   clipPath: 'polygon(0% 15%, 100% 15%, 100% 85%, 0% 85%)',
+  overflowY: 'auto',
+  '::-webkit-scrollbar': {
+    width: '8px',
+  },
+  '::-webkit-scrollbar-track': {
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '10px',
+  },
+  '::-webkit-scrollbar-thumb': {
+    background: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: '10px',
+  },
+  '::-webkit-scrollbar-thumb:hover': {
+    background: 'rgba(255, 255, 255, 0.5)',
+  },
 });
 
 export const QuestsHeader = styled('div')({

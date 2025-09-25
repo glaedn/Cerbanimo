@@ -34,7 +34,7 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const AffinityGalaxyPanel = ({ isCircular = false }) => {
+const AffinityGalaxyPanel = ({ isCircular = false, showHeader = true }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allAffinities, loading: affinitiesLoading, error: affinitiesError } = useAffinityData();
   const { profile } = useUserProfile();
@@ -644,15 +644,17 @@ const AffinityGalaxyPanel = ({ isCircular = false }) => {
 
   return (
     <AffinityGalaxyPanelContainer ref={panelRef}>
-      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <HUDPanelTitle>Skill Constellations</HUDPanelTitle>
-        <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Skill Constellations` : `Minimize Skill Constellations`}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </HUDPanelHeader>
+      {showHeader && (
+        <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <HUDPanelTitle>Skill Constellations</HUDPanelTitle>
+          <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Skill Constellations` : `Minimize Skill Constellations`}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </HUDPanelHeader>
+      )}
       {!isMinimized && (
         <>
-          <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
+          <div style={{ width: '100%', height: '100%', minHeight: '400px' }}>
             <svg
               ref={svgRef}
               style={{

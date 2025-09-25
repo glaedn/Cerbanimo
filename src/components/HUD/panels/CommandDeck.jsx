@@ -12,7 +12,7 @@ import {
 
 const accentGreen = '#00D787';
 
-const CommandDeck = () => {
+const CommandDeck = ({ showHeader = true }) => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { intentions, loading: intentionsLoading, error: intentionsError } = useUserIntentions(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -40,14 +40,16 @@ const CommandDeck = () => {
   
   return (
     <HUDPanelContainer>
-      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <HUDPanelTitle>Command Deck (Managed Intentions)</HUDPanelTitle>
-        <button onClick={toggleMinimize} aria-label={isMinimized ? "Expand Command Deck" : "Minimize Command Deck"}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </HUDPanelHeader>
+      {showHeader && (
+        <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <HUDPanelTitle>Command Deck (Managed Intentions)</HUDPanelTitle>
+          <button onClick={toggleMinimize} aria-label={isMinimized ? "Expand Command Deck" : "Minimize Command Deck"}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </HUDPanelHeader>
+      )}
       {!isMinimized && (
-        <div>
+        <div style={{ height: '100%', overflowY: 'auto' }}>
            {intentions.length > 0 ? (
             <HUDPanelList>
               {intentions.map(intention => (

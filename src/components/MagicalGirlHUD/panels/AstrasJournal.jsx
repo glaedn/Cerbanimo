@@ -4,8 +4,6 @@ import {
   JournalImage,
   ActiveJournalImage,
   JournalContent,
-  JournalHeader,
-  JournalTitle,
 } from './AstrasJournal.styles';
 import JournalIcon from '../../../assets/magical-girl/astras-journal.png';
 import JournalActiveIcon from '../../../assets/magical-girl/astras-journal-active.png';
@@ -21,7 +19,7 @@ const AstrasJournal = ({ isExpanded, onToggle }) => {
         <>
           <ActiveJournalImage src={JournalActiveIcon} alt="Astra's Journal Open" />
           <JournalContent>
-            <CommsLog />
+            <CommsLog showHeader={false} />
           </JournalContent>
         </>
       )}

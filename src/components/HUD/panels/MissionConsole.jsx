@@ -15,7 +15,7 @@ import {
 } from './MissionConsole.styles';
 import { HUDPanelHeader, HUDPanelTitle, HUDPanelList } from '../HUDPanel.styles';
 
-const MissionConsole = () => {
+const MissionConsole = ({ showHeader = true }) => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { assignedQuests, loading: questsLoading, error: questsError, refetchQuests } = useAssignedQuests(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -78,14 +78,16 @@ const MissionConsole = () => {
 
   return (
     <MissionConsoleContainer>
-      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <HUDPanelTitle>Quest Console (Assigned Quests)</HUDPanelTitle>
-        <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Quest Console` : `Minimize Quest Console`}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </HUDPanelHeader>
+      {showHeader && (
+        <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <HUDPanelTitle>Quest Console (Assigned Quests)</HUDPanelTitle>
+          <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Quest Console` : `Minimize Quest Console`}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </HUDPanelHeader>
+      )}
       {!isMinimized && (
-        <div>
+        <div style={{ height: '100%', overflowY: 'auto' }}>
           {assignedQuests.length > 0 ? (
             <HUDPanelList>
               {assignedQuests.map(quest => (

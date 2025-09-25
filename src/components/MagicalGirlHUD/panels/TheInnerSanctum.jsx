@@ -17,7 +17,7 @@ const TheInnerSanctum = ({ isExpanded, onToggle }) => {
         <>
           <ActiveShrineImage src={InnerSanctumActiveIcon} alt="The Inner Sanctum Active" />
           <PanelContent>
-            <CommandDeck />
+            <CommandDeck showHeader={false} />
           </PanelContent>
         </>
       )}

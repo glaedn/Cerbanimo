@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
-import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap.jsx';
+import CrystalBallView from '../components/CrystalBallView/CrystalBallView.jsx';
 import MagicalGirlHUD from '../components/MagicalGirlHUD/MagicalGirlHUD.jsx';
 import './Dashboard.css';
 
@@ -59,7 +59,7 @@ const Dashboard = () => {
 
   return (
     <MagicalGirlHUD>
-      <GalacticActivityMap />
+      <CrystalBallView showHeader={false} />
     </MagicalGirlHUD>
   );
 };

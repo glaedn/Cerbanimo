@@ -28,23 +28,62 @@ const MagicalGirlHUD = ({ children }) => {
     setExpandedPanel(expandedPanel === panelName ? null : panelName);
   };
 
+  const panelComponents = {
+    innerSanctum: TheInnerSanctum,
+    mysticalMirror: MysticalMirror,
+    quests: Quests,
+    astrasJournal: AstrasJournal,
+    affinityWeb: AffinityWeb,
+  };
+
+  const panelContainers = {
+    innerSanctum: InnerSanctumPanel,
+    mysticalMirror: MysticalMirrorPanel,
+    quests: QuestsPanel,
+    astrasJournal: AstrasJournalPanel,
+    affinityWeb: AffinityWebPanel,
+  };
+
+  const handleOutsideClick = (e) => {
+    if (expandedPanel && !e.target.closest('.hud-panel')) {
+      setExpandedPanel(null);
+    }
+  };
+
+  useEffect(() => {
+    if (expandedPanel) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    } else {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [expandedPanel]);
+
+  const renderPanel = (panelName) => {
+    if (expandedPanel && expandedPanel !== panelName) {
+      return null;
+    }
+    const PanelContainer = panelContainers[panelName];
+    const PanelComponent = panelComponents[panelName];
+    return (
+      <PanelContainer className="hud-panel">
+        <PanelComponent
+          isExpanded={expandedPanel === panelName}
+          onToggle={() => handlePanelClick(panelName)}
+        />
+      </PanelContainer>
+    );
+  };
+
   return (
     <MagicalGirlHUDContainer>
-      <InnerSanctumPanel className={expandedPanel && expandedPanel !== 'innerSanctum' ? 'hidden' : ''}>
-        <TheInnerSanctum isExpanded={expandedPanel === 'innerSanctum'} onToggle={() => handlePanelClick('innerSanctum')} />
-      </InnerSanctumPanel>
-      <MysticalMirrorPanel className={expandedPanel && expandedPanel !== 'mysticalMirror' ? 'hidden' : ''}>
-        <MysticalMirror isExpanded={expandedPanel === 'mysticalMirror'} onToggle={() => handlePanelClick('mysticalMirror')} />
-      </MysticalMirrorPanel>
-      <QuestsPanel className={expandedPanel && expandedPanel !== 'quests' ? 'hidden' : ''}>
-        <Quests isExpanded={expandedPanel === 'quests'} onToggle={() => handlePanelClick('quests')} />
-      </QuestsPanel>
-      <AstrasJournalPanel className={expandedPanel && expandedPanel !== 'astrasJournal' ? 'hidden' : ''}>
-        <AstrasJournal isExpanded={expandedPanel === 'astrasJournal'} onToggle={() => handlePanelClick('astrasJournal')} />
-      </AstrasJournalPanel>
-      <AffinityWebPanel className={expandedPanel && expandedPanel !== 'affinityWeb' ? 'hidden' : ''}>
-        <AffinityWeb isExpanded={expandedPanel === 'affinityWeb'} onToggle={() => handlePanelClick('affinityWeb')} />
-      </AffinityWebPanel>
+      {renderPanel('innerSanctum')}
+      {renderPanel('mysticalMirror')}
+      {renderPanel('quests')}
+      {renderPanel('astrasJournal')}
+      {renderPanel('affinityWeb')}
       <MapViewort isExpanded={isMapExpanded} onClick={!isMapExpanded ? toggleMap : undefined}>
         {isMapExpanded && children}
         <MapToggleButton onClick={isMapExpanded ? toggleMap : undefined}>

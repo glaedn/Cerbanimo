@@ -53,9 +53,9 @@ export const MirrorContent = styled('div')({
   left: '50%',
   transform: 'translate(-50%, -50%)',
   textAlign: 'center',
-  width: '80%',
-  height: '80%',
-  clipPath: 'ellipse(40% 45% at 50% 50%)',
+  width: '67.5%',
+  height: '32%',
+  clipPath: 'ellipse(30% 48% at 50% 50%)',
 });
 
 export const MirrorHeader = styled('div')({

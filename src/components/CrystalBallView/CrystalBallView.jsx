@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import "./GalacticActivityMap.css";
+import "./CrystalBallView.css";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import theme from '../../styles/theme.js';
 
-const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
+const CrystalBallView = ({ showHeader = true, showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   const [starData, setStarData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,11 +133,11 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
   useEffect(() => {
     window.twinkleTimeoutIds = window.twinkleTimeoutIds || [];
-    d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+    d3.select("body").selectAll(".crystal-ball-tooltip-managed-by-d3").remove();
 
     const tooltipD3 = d3.select("body")
       .append("div")
-      .attr("class", "galactic-tooltip galactic-tooltip-managed-by-d3")
+      .attr("class", "crystal-ball-tooltip crystal-ball-tooltip-managed-by-d3")
       .style("opacity", 0)
       .style("position", "absolute")
       .style("pointer-events", "none")
@@ -333,7 +333,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       }
     }
     return () => {
-      d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+      d3.select("body").selectAll(".crystal-ball-tooltip-managed-by-d3").remove();
 
       if (window.starTwinkleIntervalId) {
         clearInterval(window.starTwinkleIntervalId);
@@ -348,8 +348,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   if (isLoading) {
     if (showLoadingText) {
       return (
-        <div className="galactic-activity-map-container">
-          <h1>Galactic Activity Map</h1>
+        <div className="crystal-ball-view-container">
+          {showHeader && <h1>Crystal Ball View</h1>}
           <p>Loading celestial data...</p>
         </div>
       );
@@ -359,15 +359,16 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   }
   if (error) {
     return (
-      <div className="galactic-activity-map-container">
-        <h1>Galactic Activity Map</h1>
+      <div className="crystal-ball-view-container">
+        {showHeader && <h1>Crystal Ball View</h1>}
         <p style={{ color: "red" }}>Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="galactic-activity-map-container">
+    <div className="crystal-ball-view-container">
+      {showHeader && <h1>Crystal Ball View</h1>}
       <div
         ref={d3Container}
         style={{
@@ -382,4 +383,4 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   );
 };
 
-export default GalacticActivityMap;
+export default CrystalBallView;

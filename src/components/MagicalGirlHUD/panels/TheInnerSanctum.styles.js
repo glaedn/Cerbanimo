@@ -57,6 +57,8 @@ export const PanelContent = styled('div')({
   width: '80%',
   height: '80%',
   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+  zIndex: 3,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
 });
 
 export const PanelHeader = styled('div')({

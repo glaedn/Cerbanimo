@@ -18,7 +18,7 @@ export const JournalContainer = styled('div')(({ isExpanded }) => ({
   width: isExpanded ? '525px' : '100px', // Expanded by ~50%
   height: isExpanded ? 'auto' : '120px',
   transition: 'all 0.5s ease',
-  bottom: isExpanded ? '50px' : '0', // Shift upward when expanded
+  bottom: isExpanded ? '110px' : '0', // Shift upward when expanded
 }));
 
 export const JournalImage = styled('img')(({ hasNew }) => ({

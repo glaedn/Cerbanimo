@@ -29,7 +29,7 @@ const getNotificationIcon = (type) => {
   }
 };
 
-const CommsLog = () => {
+const CommsLog = ({ showHeader = true }) => {
   const { notifications } = useNotifications();
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -42,14 +42,16 @@ const CommsLog = () => {
 
   return (
     <CommsLogContainer>
-      <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <HUDPanelTitle>Comms Log</HUDPanelTitle>
-        <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Comms Log` : `Minimize Comms Log`}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </HUDPanelHeader>
+      {showHeader && (
+        <HUDPanelHeader onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <HUDPanelTitle>Comms Log</HUDPanelTitle>
+          <button onClick={toggleMinimize} aria-label={isMinimized ? `Expand Comms Log` : `Minimize Comms Log`}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </HUDPanelHeader>
+      )}
       {!isMinimized && (
-        <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '100%', overflowY: 'auto' }}>
           {notifications === null || notifications === undefined ? (
             <p>Loading transmissions...</p>
           ) : notifications.length > 0 ? (

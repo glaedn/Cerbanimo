@@ -20,7 +20,7 @@ const MysticalMirror = ({ isExpanded, onToggle }) => {
         <>
           <ActiveMirrorImage src={MirrorActiveIcon} alt="Mystical Mirror Active" />
           <MirrorContent>
-            <TargetingScanner />
+            <TargetingScanner showHeader={false} />
           </MirrorContent>
         </>
       )}

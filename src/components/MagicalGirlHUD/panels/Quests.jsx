@@ -17,7 +17,7 @@ const Quests = ({ isExpanded, onToggle }) => {
         <>
           <ActiveScrollImage src={ScrollActiveIcon} alt="Quests Scroll Open" />
           <QuestsContent>
-            <MissionConsole />
+            <MissionConsole showHeader={false} />
           </QuestsContent>
         </>
       )}
