@@ -22,10 +22,10 @@ import {
   pink,
   indigo,
 } from "@mui/material/colors";
-import "./ProjectCreation.css";
+import "./IntentionCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
 
-const ProjectCreation = () => {
+const IntentionCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -77,16 +77,16 @@ const ProjectCreation = () => {
     fetchTags();
   }, [getAccessTokenSilently]);
 
-  const handleCreateProject = async () => {
-    setLoadingPopupMessages(["Creating your project..."]);
+  const handleCreateIntention = async () => {
+    setLoadingPopupMessages(["Declaring your intention..."]);
     setLoadingPopupOpen(true);
     try {
       const token = await getAccessTokenSilently();
 
-      // Step 1: Create the project
+      // Step 1: Create the intention
 
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/projects/create`,
+        `${import.meta.env.VITE_BACKEND_URL}/intentions/create`,
         {
           name: name,
           description: description,
@@ -101,19 +101,19 @@ const ProjectCreation = () => {
       );
 
       if (response.status === 201) {
-        const projectId = response.data.id;
-        setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
+        const intentionId = response.data.id;
+        setLoadingPopupMessages(prevMessages => [...prevMessages, "Intention declared successfully!"]);
 
         if (autoGenerateTasks) {
           setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
           // Step 2: Auto-generate tasks using LLM
-          const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/auto-generate`, {
+          const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/intentions/auto-generate`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ projectId }), // Send the new project ID
+            body: JSON.stringify({ intentionId }), // Send the new intention ID
 
           });
           const result = await generateResponse.json();
@@ -125,25 +125,25 @@ const ProjectCreation = () => {
           }
         }
 
-        // Step 3: Navigate to the project visualizer either way
-        navigate(`/visualizer/${projectId}`);
+        // Step 3: Navigate to the intention visualizer either way
+        navigate(`/lotus-map/${intentionId}`);
       }
     } catch (error) {
-      console.error("Failed to create project:", error);
-      setLoadingPopupMessages(["Error creating project. Please try again."]);
+      console.error("Failed to create intention:", error);
+      setLoadingPopupMessages(["Error creating intention. Please try again."]);
       setLoadingPopupOpen(true); // Ensure it's open if it wasn't already
     }
   };
 
   return (
-    <div className="project-creation-background">
+    <div className="intention-creation-background">
     <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
-    <Box className="project-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
+    <Box className="intention-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
       <Typography variant="h4" className="form-title">
-        Create a New Project
+        Declare an Intention
       </Typography>
       <TextField
-        label="Project Name"
+        label="Intention Name"
         variant="outlined"
         sx={{ width: '100%' }}
         value={name}
@@ -151,7 +151,7 @@ const ProjectCreation = () => {
         margin="normal"
       />
       <TextField
-        label="Project Description"
+        label="Intention Description"
         variant="outlined"
         fullWidth
         multiline
@@ -199,20 +199,20 @@ const ProjectCreation = () => {
             color="primary"
           />
         }
-        label="Auto-generate project tasks using AI"
+        label="Auto-generate intention tasks using AI"
         sx={{ marginTop: 2, marginBottom: 1 }}
       />
       <Button
         variant="contained"
         color="primary"
-        onClick={handleCreateProject}
+        onClick={handleCreateIntention}
         sx={{ marginTop: 2, paddingY: '10px', paddingX: '20px', fontWeight: 'bold' }}
       >
-        Create Project
+        Declare Intention
       </Button>
     </Box>
     </div>
   );
 };
 
-export default ProjectCreation;
+export default IntentionCreation;

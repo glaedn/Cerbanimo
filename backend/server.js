@@ -18,6 +18,9 @@ import notificationRoutes from './routes/notifications.js';
 import taskController from './controllers/taskController.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
+import intentionsRoutes from './routes/intentions.js';
+import realmsRoutes from './routes/realms.js';
+import capabilitiesRoutes from './routes/capabilities.js';
 import endorsementsRoutes from './routes/endorsements.js';
 import resourceRoutes from './routes/resources.js';
 import needRoutes from './routes/needs.js';
@@ -25,9 +28,12 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
+import resonanceRoutes from './routes/resonances.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
+import { createResonancesTable } from './models/resonances.js';
+import { createChroniclesTable } from './models/chronicles.js';
 //import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
 //import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
 //import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
@@ -151,6 +157,15 @@ app.use('/projects', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, projectRoutes);
 
+app.use('/intentions', (req, res, next) => {
+  if (req.path.match(/^\/\d+$/)) return next();
+  return jwtCheck(req, res, next);
+}, intentionsRoutes);
+
+app.use('/realms', jwtCheck, realmsRoutes);
+
+app.use('/capabilities', jwtCheck, capabilitiesRoutes);
+
 app.use('/communities', jwtCheck, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
@@ -166,6 +181,7 @@ app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
+app.use('/resonances', jwtCheck, resonanceRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
@@ -196,6 +212,8 @@ const PORT = process.env.PORT || 4000;
 async function initializeDatabase() {
   try {
     // Create tables first
+    await createResonancesTable();
+    await createChroniclesTable();
     //await createResourcesTable();
     //await createNeedsTable();
     //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id

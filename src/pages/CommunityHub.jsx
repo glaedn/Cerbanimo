@@ -34,17 +34,17 @@ import CommunityResourceManagement from '../components/CommunityResourceManageme
 import './CommunityHub.css';
 
 const CommunityHub = () => {
-    const { communityId } = useParams();
+    const { realmId } = useParams();
     const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-    const [community, setCommunity] = useState(null);
+    const [realm, setRealm] = useState(null);
     const [members, setMembers] = useState([]);
     const [membershipRequests, setMembershipRequests] = useState([]);
     const [proposals, setProposals] = useState([]);
-    const [approvedProjects, setApprovedProjects] = useState([]);
+    const [approvedIntentions, setApprovedIntentions] = useState([]);
     const [userId, setUserId] = useState(null);
     const [voteDelegations, setVoteDelegations] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -108,8 +108,8 @@ const CommunityHub = () => {
     }, [isAuthenticated, user, getAccessTokenSilently]);
 
     useEffect(() => {
-        const fetchCommunityData = async () => {
-            if (!communityId || !userId) { setIsLoading(false); return; }
+        const fetchRealmData = async () => {
+            if (!realmId || !userId) { setIsLoading(false); return; }
             
             try {
                 setIsLoading(true);
@@ -118,60 +118,60 @@ const CommunityHub = () => {
                     scope: 'openid profile email',
                 });
 
-                // Fetch community details
-                console.log('Fetching community data for ID:', communityId);
-const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-});
-console.log('Community Data:', communityResponse.data);
-setCommunity(communityResponse.data);
+                // Fetch realm details
+                console.log('Fetching realm data for ID:', realmId);
+                const realmResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log('Realm Data:', realmResponse.data);
+                setRealm(realmResponse.data);
 
-// Debug members array
-console.log('Members array:', communityResponse.data.members);
-console.log('Members array type:', typeof communityResponse.data.members);
+                // Debug members array
+                console.log('Members array:', realmResponse.data.members);
+                console.log('Members array type:', typeof realmResponse.data.members);
 
-// Fetch member details
-if (communityResponse.data.members && communityResponse.data.members.length > 0) {
-    const memberPromises = communityResponse.data.members.map(memberId => {
-        console.log('Fetching member:', memberId);
-        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).catch(error => {
-            console.error(`Failed to fetch member ${memberId}:`, error);
-            return null;
-        });
-    });
-    
-    const memberResults = await Promise.all(memberPromises);
-    const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
-    console.log('Fetched members:', validMembers);
-    setMembers(validMembers);
+                // Fetch member details
+                if (realmResponse.data.members && realmResponse.data.members.length > 0) {
+                    const memberPromises = realmResponse.data.members.map(memberId => {
+                        console.log('Fetching member:', memberId);
+                        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        }).catch(error => {
+                            console.error(`Failed to fetch member ${memberId}:`, error);
+                            return null;
+                        });
+                    });
 
-    // Fetch member scores
-    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
-        try {
-            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            console.log('Fetched member scores:', scoresResponse.data);
-            setMemberScores(scoresResponse.data);
-        } catch (scoresError) {
-            console.error('Failed to fetch member scores:', scoresError);
-            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
-            setMemberScores([]); 
-        }
-    } else {
-        setMemberScores([]); // No members, so no scores
-    }
+                    const memberResults = await Promise.all(memberPromises);
+                    const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
+                    console.log('Fetched members:', validMembers);
+                    setMembers(validMembers);
 
-} else {
-    console.log('No members in this community');
-    setMembers([]);
-    setMemberScores([]); // No members, so no scores
-}
+                    // Fetch member scores
+                    if (realmResponse.data.members && realmResponse.data.members.length > 0) {
+                        try {
+                            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/scores`, {
+                                headers: { Authorization: `Bearer ${token}` },
+                            });
+                            console.log('Fetched member scores:', scoresResponse.data);
+                            setMemberScores(scoresResponse.data);
+                        } catch (scoresError) {
+                            console.error('Failed to fetch member scores:', scoresError);
+                            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
+                            setMemberScores([]);
+                        }
+                    } else {
+                        setMemberScores([]); // No members, so no scores
+                    }
+
+                } else {
+                    console.log('No members in this realm');
+                    setMembers([]);
+                    setMemberScores([]); // No members, so no scores
+                }
                 
                 // Fetch membership requests
-                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/membership-requests`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 console.log('Membership Requests:', requestsResponse.data);
@@ -197,9 +197,9 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 setMembershipRequests(requestUsers);
                 
                 // Fetch proposal details
-                if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                    const proposalPromises = communityResponse.data.proposals.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                if (realmResponse.data.proposals && realmResponse.data.proposals.length > 0) {
+                    const proposalPromises = realmResponse.data.proposals.map(intentionId =>
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
@@ -208,41 +208,41 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     setProposals(proposalResults.map(result => result.data));
                 }
                 
-                // Fetch approved projects
-                if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                    const projectPromises = communityResponse.data.approved_projects.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                // Fetch approved intentions
+                if (realmResponse.data.approved_intentions && realmResponse.data.approved_intentions.length > 0) {
+                    const intentionPromises = realmResponse.data.approved_intentions.map(intentionId =>
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
                     
-                    const projectResults = await Promise.all(projectPromises);
-                    setApprovedProjects(projectResults.map(result => result.data));
+                    const intentionResults = await Promise.all(intentionPromises);
+                    setApprovedIntentions(intentionResults.map(result => result.data));
                 }
                 
             } catch (error) {
-                console.error('Failed to fetch community data:', error);
-                setError('Failed to load community data. Please try again later.');
+                console.error('Failed to fetch realm data:', error);
+                setError('Failed to load realm data. Please try again later.');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchCommunityData();
-    }, [communityId, getAccessTokenSilently, userId]);
+        fetchRealmData();
+    }, [realmId, getAccessTokenSilently, userId]);
 
     // This is the updated useEffect for delegation status
     useEffect(() => {
         // Check if we have all the necessary data
-        if (community && userId && members.length > 0) {
-            // Check if community has vote_delegations property and if user has delegated their vote
-            if (community.vote_delegations) {
+        if (realm && userId && members.length > 0) {
+            // Check if realm has vote_delegations property and if user has delegated their vote
+            if (realm.vote_delegations) {
                 const userIdStr = String(userId);
-                const isDelegatingNow = Object.keys(community.vote_delegations).includes(userIdStr);
+                const isDelegatingNow = Object.keys(realm.vote_delegations).includes(userIdStr);
                 setIsDelegating(isDelegatingNow);
                 
                 if (isDelegatingNow) {
-                    const delegatedToId = community.vote_delegations[userIdStr];
+                    const delegatedToId = realm.vote_delegations[userIdStr];
                     const delegatedMember = members.find(member => 
                         String(member.id) === String(delegatedToId)
                     );
@@ -256,18 +256,18 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 setDelegatedTo(null);
             }
         }
-    }, [community, userId, members]); // Dependencies ensure it runs when any of these change
+    }, [realm, userId, members]); // Dependencies ensure it runs when any of these change
 
     useEffect(() => {
-        if (community && userId) {
-            // Check if userId exists in community.members array
+        if (realm && userId) {
+            // Check if userId exists in realm.members array
             // Note: We use String() to ensure type consistency in comparison
-            const memberCheck = community.members.some(memberId => 
+            const memberCheck = realm.members.some(memberId =>
                 String(memberId) === String(userId)
             );
             setIsMember(memberCheck);
         }
-    }, [community, userId]);
+    }, [realm, userId]);
 
     const handleRequestJoin = async () => {
         try {
@@ -276,7 +276,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/request`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/request`,
                 { userId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -290,7 +290,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         }
     };
 
-    const handleVoteProject = async (projectId, vote) => {
+    const handleVoteIntention = async (intentionId, vote) => {
         if (!isMember) return;
         
         try {
@@ -299,12 +299,12 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
     
-            // Get the project name before voting for potential notification
-            const projectBeforeVote = proposals.find(p => p.id === projectId);
-            const projectName = projectBeforeVote?.name || "Project";
+            // Get the intention name before voting for potential notification
+            const intentionBeforeVote = proposals.find(p => p.id === intentionId);
+            const intentionName = intentionBeforeVote?.name || "Intention";
     
             // Send vote to server
-            const voteResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/${projectId}`,
+            const voteResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/vote/${intentionId}`,
                 { userId, vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -316,24 +316,24 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             // Show appropriate message if consensus was reached
             
             if (wasApproved) {
-                showNotification(`${projectName} has been approved by the community and moved to active projects!`, 'success');
+                showNotification(`${intentionName} has been approved by the realm and moved to active intentions!`, 'success');
             } else if (wasRejected) {
-                showNotification(`${projectName} has been rejected by the community.`);
+                showNotification(`${intentionName} has been rejected by the realm.`);
             }
             
     
-            // Refresh the entire community data after voting
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh the entire realm data after voting
+            const realmResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setRealm(realmResponse.data);
     
-            // After voting, we need to fully refresh both proposals and approved projects
+            // After voting, we need to fully refresh both proposals and approved intentions
             // First, get all current proposals from the API
-            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                const proposalPromises = communityResponse.data.proposals.map(propId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${propId}`, {
+            if (realmResponse.data.proposals && realmResponse.data.proposals.length > 0) {
+                const proposalPromises = realmResponse.data.proposals.map(propId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${propId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
@@ -345,23 +345,23 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 setProposals([]);
             }
             
-            // Then get all approved projects from the API
-            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                const projectPromises = communityResponse.data.approved_projects.map(projId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projId}`, {
+            // Then get all approved intentions from the API
+            if (realmResponse.data.approved_intentions && realmResponse.data.approved_intentions.length > 0) {
+                const intentionPromises = realmResponse.data.approved_intentions.map(projId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${projId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 );
                 
-                const projectResults = await Promise.all(projectPromises);
-                setApprovedProjects(projectResults.map(result => result.data));
+                const intentionResults = await Promise.all(intentionPromises);
+                setApprovedIntentions(intentionResults.map(result => result.data));
             } else {
-                // If no approved projects, set to empty array
-                setApprovedProjects([]);
+                // If no approved intentions, set to empty array
+                setApprovedIntentions([]);
             }
             
         } catch (error) {
-            console.error('Failed to vote on project:', error);
+            console.error('Failed to vote on intention:', error);
             alert('Failed to submit your vote. Please try again.');
         }
     };
@@ -375,14 +375,14 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/vote/member/${requestUserId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/vote/member/${requestUserId}`,
                 { userId,                  
                  vote },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Refresh membership requests after voting
-            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/membership-requests`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
@@ -399,12 +399,12 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             const requestUsers = await Promise.all(requestUserPromises);
             setMembershipRequests(requestUsers);
             
-            // Refresh community to get updated member list
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh realm to get updated member list
+            const realmResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setRealm(realmResponse.data);
             
         } catch (error) {
             console.error('Failed to vote on membership:', error);
@@ -421,7 +421,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/delegate/${userId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/delegate/${userId}`,
                 { delegateTo: delegateToUserId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -429,15 +429,15 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             // Update local state with delegation
             setVoteDelegations({
                 ...voteDelegations,
-                [communityId]: delegateToUserId
+                [realmId]: delegateToUserId
             });
             
-            // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh realm data to get updated vote delegations
+            const realmResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setRealm(realmResponse.data);
             
             showNotification('Vote delegation successful!');
             
@@ -456,22 +456,22 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 scope: 'openid profile email',
             });
 
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/revoke/${userId}`,
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/revoke/${userId}`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Update local state
             const newDelegations = { ...voteDelegations };
-            delete newDelegations[communityId];
+            delete newDelegations[realmId];
             setVoteDelegations(newDelegations);
             
-            // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
+            // Refresh realm data to get updated vote delegations
+            const realmResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            setCommunity(communityResponse.data);
+            setRealm(realmResponse.data);
             
             showNotification('Vote delegation revoked!');
             
@@ -482,26 +482,26 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
     };
 
     if (isLoading) {
-        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading community data...</Typography>;
+        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading realm data...</Typography>;
     }
 
     if (error) {
         return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{error}</Typography>;
     }
 
-    if (!community) {
-        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Community not found</Typography>;
+    if (!realm) {
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Realm not found</Typography>;
     }
 
     return (
         <div className="community-hub">
-            <Typography variant="h4" className="hub-title">{community.name}</Typography>
+            <Typography variant="h4" className="hub-title">{realm.name}</Typography>
             
-            {/* Community Info Section */}
+            {/* Realm Info Section */}
             <div className="community-info">
-                <Typography variant="body1" className="community-description">{community.description}</Typography>
+                <Typography variant="body1" className="community-description">{realm.description}</Typography>
                 <div className="tag-container">
-                    {community.interest_tags && community.interest_tags.map((tag, index) => (
+                    {realm.interest_tags && realm.interest_tags.map((tag, index) => (
                         <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
                     ))}
                 </div>
@@ -511,10 +511,10 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     <Box mt={3} display="flex" justifyContent="center">
                         <Paper elevation={3} className="join-request-container" sx={{ padding: 3, maxWidth: 500 }}>
                             <Typography variant="h6" align="center" gutterBottom>
-                                You're not a member of this community yet
+                                You're not a member of this realm yet
                             </Typography>
                             <Typography variant="body2" align="center" paragraph>
-                                Join this community to participate in voting, propose projects, and connect with other members.
+                                Join this realm to participate in voting, propose intentions, and connect with other members.
                             </Typography>
                             <Box display="flex" justifyContent="center">
                                 {hasRequestedJoin ? (
@@ -576,7 +576,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                 </div>
                             )}
                             
-                            <List className="member-list" key={`member-list-${communityId}`}>
+                            <List className="member-list" key={`member-list-${realmId}`}>
                                 {members.map((member) => (
                                     <ListItem 
                                         key={member.id} 
@@ -609,7 +609,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                             secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
                                             primary={member.username} 
                                             secondary={`ID: ${member.id} - Score: ${
-                                                memberScores.find(scoreEntry => scoreEntry.id === member.id)?.communityScore || 0
+                                                memberScores.find(scoreEntry => scoreEntry.id === member.id)?.realmScore || 0
                                             }`} 
                                         />
                                         {isMember && !isDelegating && userId !== member.id && (
@@ -641,13 +641,13 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
                 
-                {/* Voting Card - Projects */}
+                {/* Voting Card - Intentions */}
                 {isMember && (
                     <div className="hub-grid-item">
                         <Card className="hub-card voting-card">
                             <CardContent>
                                 <HowToVoteIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Project Proposals</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Intention Proposals</Typography>
                                 {proposals.length === 0 ? (
                                     <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active proposals</Typography>
                                 ) : (
@@ -658,7 +658,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     <Link
                                                         component="button"
                                                         variant="h6"
-                                                        onClick={() => navigate(`/visualizer/${proposal.id}`)}
+                                                        onClick={() => navigate(`/lotus-map/${proposal.id}`)}
                                                         className="clickable-title" // CSS handles base style
                                                         sx={{ 
                                                             textAlign: 'center', 
@@ -698,7 +698,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     <div className="vote-actions">
                                                         <Tooltip title="Approve">
                                                             <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, true)}
+                                                                onClick={() => handleVoteIntention(proposal.id, true)}
                                                                 sx={{ 
                                                                     color: 'var(--hud-success-color)', 
                                                                     '&:hover': { 
@@ -712,7 +712,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         </Tooltip>
                                                         <Tooltip title="Reject">
                                                             <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, false)}
+                                                                onClick={() => handleVoteIntention(proposal.id, false)}
                                                                 sx={{ 
                                                                     color: 'var(--hud-error-color)', 
                                                                     '&:hover': { 
@@ -817,39 +817,39 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                         </Card>
                     </div>
                 )}
-                {/* Active Projects Card - Visible to all */}
+                {/* Active Intentions Card - Visible to all */}
                 <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
                     <Card className="hub-card projects-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Projects</Typography>
-                            {approvedProjects.length === 0 ? (
-                                <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Intentions</Typography>
+                            {approvedIntentions.length === 0 ? (
+                                <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active intentions</Typography>
                             ) : (
                                 <div className="projects-grid">
-                                    {approvedProjects.map((project) => (
-                                        <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
+                                    {approvedIntentions.map((intention) => (
+                                        <Card key={intention.id} className="project-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
                                                 <Link
                                                     component="button"
                                                     variant="h6"
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                    onClick={() => navigate(`/lotus-map/${intention.id}`)}
                                                     className="clickable-title" // CSS handles base style
                                                     sx={{ textAlign: 'center', display: 'block', marginBottom: '8px' }}
                                                 >
-                                                    {project.name}
+                                                    {intention.name}
                                                 </Link>
                                                 <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
-                                                    {project.description}
+                                                    {intention.description}
                                                 </Typography>
                                                 <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
-                                                    {project.tags && project.tags.map((tag, idx) => (
+                                                    {intention.tags && intention.tags.map((tag, idx) => (
                                                         <Chip key={idx} label={tag} size="small" /* sx from CSS */ />
                                                     ))}
                                                 </div>
                                                 <Button 
                                                     variant="outlined" 
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                    onClick={() => navigate(`/lotus-map/${intention.id}`)}
                                                     className="view-project-btn" // CSS handles margin-top: auto
                                                     sx={{
                                                         color: 'var(--hud-primary-color)',
@@ -861,7 +861,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         }
                                                     }}
                                                 >
-                                                    View Project
+                                                    View Intention
                                                 </Button>
                                             </CardContent>
                                         </Card>
@@ -872,8 +872,8 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
-            <CommunityResourceManagement communityId={communityId} />
-            <CommunityChronicle communityId={communityId} />
+            <CommunityResourceManagement communityId={realmId} />
+            <CommunityChronicle communityId={realmId} />
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 

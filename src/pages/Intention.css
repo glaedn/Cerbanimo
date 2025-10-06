@@ -1,5 +1,5 @@
-/* Container for the Project Page */
-.project-page-container {
+/* Container for the Intention Page */
+.intention-page-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -14,8 +14,12 @@
     font-family: 'Orbitron', sans-serif;
 }
 
-/* Project Header Section */
-.project-header {
+.intention-page-container.resonated .intention-header {
+    box-shadow: 0 0 25px #FF00FF, 0 0 40px #FF5CA2;
+}
+
+/* Intention Header Section */
+.intention-header {
     width: 90%;
     background: rgba(28, 28, 30, 0.9);
     border-radius: 10px;
@@ -23,10 +27,22 @@
     margin-bottom: 20px;
     margin-top: 20px;
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+    transition: box-shadow 0.5s ease-in-out;
 }
 
-/* Project Title */
-.project-title {
+.resonance-section {
+    margin: 15px 0;
+    text-align: center;
+}
+
+.resonance-section .MuiTypography-h6 {
+    color: #FF5CA2;
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px #FF00FF;
+}
+
+/* Intention Title */
+.intention-title {
     font-size: 2rem;
     font-weight: bold;
     color: #00F3FF;
@@ -34,8 +50,8 @@
     margin-bottom: 10px;
 }
 
-/* Project Description */
-.project-description {
+/* Intention Description */
+.intention-description {
     font-size: 1rem;
     color: #CCCCCC;
     margin-bottom: 5px;
@@ -46,8 +62,8 @@
     resize: none;
 }
 
-/* Project Tags Input (for creators) */
-.project-tags-input {
+/* Intention Tags Input (for creators) */
+.intention-tags-input {
     width: 90%;
     padding: 10px;
     margin-top: 10px;
@@ -371,7 +387,7 @@
 }
 
 /* Sci-Fi Themed Buttons */
-.project-button {
+.intention-button {
     background-color: rgba(109, 213, 237, 0.8);
     color: white;
     font-family: 'Orbitron', sans-serif;
@@ -383,7 +399,7 @@
     text-shadow: 0 0 10px rgba(109, 213, 237, 1);
 }
 
-.save-project-button {
+.save-intention-button {
     background-color: rgba(0, 243, 255, 0.8);
     color: #000000;
     font-family: 'Orbitron', sans-serif;
@@ -396,11 +412,11 @@
     text-shadow: 0 0 10px rgba(0, 243, 255, 1); /* Updated shadow color */
 }
 
-.save-project-button:hover {
+.save-intention-button:hover {
     background-color: rgba(77, 171, 247, 0.9);
 }
 
-.back-to-projects-button {
+.back-to-intentions-button {
     background-color: rgba(156, 39, 176, 0.8);
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
@@ -412,11 +428,11 @@
     text-shadow: 0 0 10px rgba(156, 39, 176, 1); /* Updated shadow color */
 }
 
-.back-to-projects-button:hover {
+.back-to-intentions-button:hover {
     background-color: rgba(176, 60, 196, 0.9);
 }
 
-.project-controls {
+.intention-controls {
     height: 160px;
     margin-top: 0px;
     padding: 0px;

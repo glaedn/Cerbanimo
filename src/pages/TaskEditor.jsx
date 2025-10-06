@@ -23,9 +23,9 @@ const TaskEditor = ({
   onSubmit,
   skills,
   isEdit = true,
-  projectId,
+  intentionId,
   currentUser,
-  projectCreatorId,
+  intentionCreatorId,
   isReviewer,
 }) => {
   const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
@@ -79,16 +79,16 @@ const TaskEditor = ({
     setProofLinks(taskForm.proof_of_work_links || [""]);
   }, [taskForm.proof_of_work_links]);
 
-  // Fetch all tasks for the project when component mounts or projectId changes
+  // Fetch all tasks for the intention when component mounts or intentionId changes
   useEffect(() => {
-    const fetchProjectTasks = async () => {
+    const fetchIntentionTasks = async () => {
       try {
         const token = await getAccessTokenSilently({
           audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: "openid profile email",
         });
         const response = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/tasks/p/${projectId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/tasks/p/${intentionId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -102,14 +102,14 @@ const TaskEditor = ({
 
         setDependencyOptions(options);
       } catch (error) {
-        console.error("Error fetching project tasks:", error);
+        console.error("Error fetching intention tasks:", error);
       }
     };
 
-    if (projectId && open) {
-      fetchProjectTasks();
+    if (intentionId && open) {
+      fetchIntentionTasks();
     }
-  }, [projectId, open, taskForm.id, getAccessTokenSilently]);
+  }, [intentionId, open, taskForm.id, getAccessTokenSilently]);
 
   // Load names for existing dependencies
   useEffect(() => {
@@ -260,7 +260,7 @@ const TaskEditor = ({
       const formData = {
         ...taskForm,
         active: statusParts[0] !== "inactive",
-        projectId: taskForm.project_id || projectId,
+        intentionId: taskForm.intention_id || intentionId,
         skill_level: parseInt(taskForm.skill_level || 0, 10),
         reward_tokens: parseInt(taskForm.reward_tokens || 0, 10),
         dependencies: (taskForm.dependencies || []).map((id) =>
@@ -272,7 +272,7 @@ const TaskEditor = ({
       console.log("Form data before submission:", formData);
 
       // Clean up before submission
-      delete formData.project_id;
+      delete formData.intention_id;
       delete formData.dependenciesWithNames;
       if (!formData.id) delete formData.id;
 
@@ -396,8 +396,8 @@ const TaskEditor = ({
       alert('Failed to reject task');
     }
   };
-  const isProjectManager = Number(platformUserId) === Number(projectCreatorId);
-  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager, 'taskForm.status:', taskForm.status);
+  const isIntentionManager = Number(platformUserId) === Number(intentionCreatorId);
+  console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isIntentionManager:', isIntentionManager, 'taskForm.status:', taskForm.status);
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
@@ -789,7 +789,7 @@ const TaskEditor = ({
                         </>
                       )}
 
-                    { isProjectManager && taskForm.status === 'submitted' && (
+                    { isIntentionManager && taskForm.status === 'submitted' && (
                         <>
                           <Button
                             className="cyber-button approve"
