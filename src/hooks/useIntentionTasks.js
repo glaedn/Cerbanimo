@@ -1,13 +1,13 @@
-// hooks/useProjectTasks.js
+// hooks/useIntentionTasks.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-export const useProjectTasks = (projectId, user, setUnreadCount) => {
+export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
   const { getAccessTokenSilently } = useAuth0();
   const [skills, setSkills] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [project, setProject] = useState(null);
+  const [intention, setIntention] = useState(null);
   const [profileData, setProfileData] = useState({ id: '', username: '', skills: [] });
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +44,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${intentionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -61,25 +61,25 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     }
   };
 
-  const fetchProject = async () => {
+  const fetchIntention = async () => {
     try {
       const token = await getToken();
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProject(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
-      console.log('Project data:', res.data);
-      return res.data; // Return project data for chaining
+      setIntention(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
+      console.log('Intention data:', res.data);
+      return res.data; // Return intention data for chaining
     } catch (error) {
-      console.error('Error fetching project:', error);
+      console.error('Error fetching intention:', error);
       throw error;
     }
   };
 
-  // New function to update project locally
-  const updateProject = (updates) => {
-    if (project) {
-      setProject(prevProject => ({ ...prevProject, ...updates }));
+  // New function to update intention locally
+  const updateIntention = (updates) => {
+    if (intention) {
+      setIntention(prevIntention => ({ ...prevIntention, ...updates }));
     }
   };
 
@@ -120,7 +120,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   
       // Only refresh if successful
       await fetchTasks();
-      await fetchProject();
+      await fetchIntention();
       
       return {
         ...response.data,
@@ -143,21 +143,21 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   }, [user]);
 
   useEffect(() => {
-    if (skills.length && projectId) {
-      fetchProject();
+    if (skills.length && intentionId) {
+      fetchIntention();
       fetchTasks();
     }
-  }, [skills.length, projectId]);
+  }, [skills.length, intentionId]);
 
   return {
     skills,
     tasks,
-    project,
+    intention,
     profileData,
     loading,
     fetchTasks,
-    fetchProject,
+    fetchIntention,
     handleTaskAction,
-    updateProject, // Export the new function
+    updateIntention, // Export the new function
   };
 };

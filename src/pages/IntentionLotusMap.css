@@ -1,4 +1,4 @@
-/* Project Hierarchy Visualization Styles */
+/* Intention Lotus Map Visualization Styles */
   
   .skill-hierarchy-container {
     font-family: 'Inter', sans-serif;
@@ -506,7 +506,7 @@
   }
 
   /* Easter additions */
-  /* Add to ProjectVisualizer.css */
+  /* Add to IntentionLotusMap.css */
 .token-pool {
   display: flex;
   gap: 1rem;
@@ -523,7 +523,7 @@
   border: 1px solid #00f3ff;
 }
 
-.vproject-tags {
+.vintention-tags {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;

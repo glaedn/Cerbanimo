@@ -1,5 +1,5 @@
-/* Container for Project Pages */
-.project-pages-container {
+/* Container for Intention Pages */
+.intention-pages-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -17,7 +17,7 @@
 }
 
 /* Page Title */
-.project-page-title {
+.intention-page-title {
     font-size: 2rem;
     font-weight: bold;
     color: #00F3FF;
@@ -46,8 +46,8 @@
 }
 /* Note: Hover/focus for search-input would ideally be separate or handled in JS/MUI */
 
-/* Project List Wrapper */
-.project-list-wrapper {
+/* Intention List Wrapper */
+.intention-list-wrapper {
     flex-grow: 1;
     width: 80%;
     max-width: 1200px;
@@ -60,27 +60,27 @@
 }
 
 /* Custom Scrollbar */
-.project-list-wrapper::-webkit-scrollbar {
+.intention-list-wrapper::-webkit-scrollbar {
     width: 10px;
 }
 
-.project-list-wrapper::-webkit-scrollbar-track {
+.intention-list-wrapper::-webkit-scrollbar-track {
     background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
-.project-list-wrapper::-webkit-scrollbar-thumb {
+.intention-list-wrapper::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
-.project-list-wrapper::-webkit-scrollbar-thumb:hover {
+.intention-list-wrapper::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
-/* Project Card */
-.project-card {
+/* Intention Card */
+.intention-card {
     background-color: rgba(10, 10, 46, 0.7);
     border-radius: 10px;
     padding: 15px;
@@ -91,14 +91,14 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
-.project-card:hover {
+.intention-card:hover {
     transform: scale(1.02);
     background: rgba(0, 243, 255, 0.1);
 }
 
-/* Project Title (inside card) - this selector is identical to page title, be careful */
-/* Assuming this rule is for the title inside .project-card based on its position in the original CSS */
-.project-card .project-title { /* Made selector more specific */
+/* Intention Title (inside card) - this selector is identical to page title, be careful */
+/* Assuming this rule is for the title inside .intention-card based on its position in the original CSS */
+.intention-card .intention-title { /* Made selector more specific */
     font-size: 1.5rem;
     font-weight: bold;
     color: #00F3FF;
@@ -106,15 +106,15 @@
     margin-bottom: 10px;
 }
 
-/* Project Description */
-.project-description {
+/* Intention Description */
+.intention-description {
     font-size: 1rem;
     color: #CCCCCC;
     margin-bottom: 5px;
 }
 
-/* Project Tags */
-.project-tags {
+/* Intention Tags */
+.intention-tags {
     display: flex;
     flex-wrap: wrap;
     margin-top: 10px;
@@ -140,8 +140,8 @@
 /* If it's a different one, its specific properties would need to be addressed. */
 /* For now, I'll assume it's the same and the previous changes apply. */
 
-/* Add Project Button */
-.add-project-button {
+/* Add Intention Button */
+.add-intention-button {
     background-color: #00F3FF;
     color: #000000;
     font-size: 1.5rem;
@@ -156,12 +156,12 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
-.add-project-button:hover {
+.add-intention-button:hover {
     background-color: #4DABF7;
 }
 
 /* Sci-Fi Themed Buttons */
-.open-project-button {
+.open-intention-button {
     background-color: #00F3FF;
     color: #000000;
     font-family: 'Orbitron', sans-serif;
@@ -174,7 +174,7 @@
     margin: 5px;
 }
 
-.open-project-button:hover {
+.open-intention-button:hover {
     background-color: #4DABF7;
 }
 

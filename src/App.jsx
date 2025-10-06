@@ -3,21 +3,21 @@ import * as React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import PrivateRoute from "./components/PrivateRoute.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
+import Orbit from "./pages/Orbit.jsx";
 import ProfilePage from "./pages/ProfilePage/ProfilePage.jsx";
-import ProjectPages from "./pages/ProjectPages.jsx";
+import IntentionPages from "./pages/IntentionPages.jsx";
 import SiteNav from "./pages/SiteNav.jsx";
-import ProjectCreation from "./pages/ProjectCreation.jsx";
-import Project from "./pages/Project.jsx";
-import SkillTree from "./pages/SkillTree.jsx";
+import IntentionCreation from "./pages/IntentionCreation.jsx";
+import Intention from "./pages/Intention.jsx";
+import CapabilityTree from "./pages/CapabilityTree.jsx";
 import RewardDashboard from "./pages/RewardDashboard.jsx";
 import PublicProfile from "./pages/PublicProfile.jsx";
 import BadgeCreation from "./pages/BadgeCreation.jsx";
 import HomePage from "./pages/HomePage.jsx";
-import ProjectVisualizer from "./pages/ProjectVisualizer.jsx";
-import CommunityCreation from "./pages/CommunityCreation.jsx";
+import IntentionLotusMap from "./pages/IntentionLotusMap.jsx";
+import RealmCreation from "./pages/RealmCreation.jsx";
 import CommunityHub from "./pages/CommunityHub.jsx";
-import Communities from "./pages/Communities.jsx";
+import Realms from "./pages/Realms.jsx";
 import UserPortfolio from "./pages/UserPortfolio.jsx";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -46,10 +46,10 @@ const App = () => {
             }
           />
           <Route
-            path="/dashboard"
+            path="/orbit"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <Orbit />
               </PrivateRoute>
             }
           />
@@ -70,48 +70,48 @@ const App = () => {
             }
           />
           <Route
-            path="/projects"
+            path="/intentions"
             element={
               <PrivateRoute>
-                <ProjectPages />
+                <IntentionPages />
               </PrivateRoute>
             }
           />
           <Route
-            path="/projectcreation"
+            path="/declare-intention"
             element={
               <PrivateRoute>
-                <ProjectCreation />
+                <IntentionCreation />
               </PrivateRoute>
             }
           />
           <Route
-            path="/project/:projectId"
+            path="/intention/:intentionId"
             element={
               <PrivateRoute>
-                <Project />
+                <Intention />
               </PrivateRoute>
             }
           />
           <Route path="/profile/public/:userId" element={<PublicProfile />} />
           <Route
-            path="/profile/skilltree"
+            path="/profile/capability-tree"
             element={
               <PrivateRoute>
-                <SkillTree />
+                <CapabilityTree />
               </PrivateRoute>
             }
           />
           <Route
-            path="/communitycreation"
+            path="/form-new-realm"
             element={
               <PrivateRoute>
-                <CommunityCreation />
+                <RealmCreation />
               </PrivateRoute>
             }
           />
           <Route
-            path="/communityhub/:communityId"
+            path="/realm/:realmId"
             element={
               <PrivateRoute>
                 <CommunityHub />
@@ -119,10 +119,10 @@ const App = () => {
             }
           />
           <Route
-            path="/communities"
+            path="/realms"
             element={
               <PrivateRoute>
-                <Communities />
+                <Realms />
               </PrivateRoute>
             }
           />
@@ -135,18 +135,18 @@ const App = () => {
             }
           />
           <Route
-            path="/Visualizer/:projectId"
+            path="/lotus-map/:intentionId"
             element={
               <PrivateRoute>
-                <ProjectVisualizer />
+                <IntentionLotusMap />
               </PrivateRoute>
             }
           />
           <Route
-            path="/Visualizer/:projectId/:taskId"
+            path="/lotus-map/:intentionId/:taskId"
             element={
               <PrivateRoute>
-                <ProjectVisualizer />
+                <IntentionLotusMap />
               </PrivateRoute>
             }
           />

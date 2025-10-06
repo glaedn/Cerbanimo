@@ -2,23 +2,23 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import axios from "axios";
 import TaskEditor from "./TaskEditor";
-import { useProjectTasks } from "../hooks/useProjectTasks";
-import "./ProjectVisualizer.css";
+import { useIntentionTasks } from "../hooks/useIntentionTasks";
+import "./IntentionLotusMap.css";
 import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 
-const ProjectVisualizer = () => {
+const IntentionLotusMap = () => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
-  const { projectId, taskId } = useParams();
+  const { intentionId, taskId } = useParams();
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
-  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
-    useProjectTasks(projectId, user);
+  const { tasks, skills, intention, handleTaskAction, fetchTasks, updateIntention } =
+    useIntentionTasks(intentionId, user);
   const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -44,10 +44,10 @@ const ProjectVisualizer = () => {
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
   // Check if any task is active, completed, or urgent
-  const [projectIsActive, setProjectIsActive] = useState(false);
+  const [intentionIsActive, setIntentionIsActive] = useState(false);
 
   useEffect(() => {
-    setProjectIsActive(
+    setIntentionIsActive(
       tasks.some(
         (task) =>
           task.status === "completed" ||
@@ -97,8 +97,8 @@ const ProjectVisualizer = () => {
   };
 
   // Function to handle granularization of tasks
-  const handleGranularizeTasks = async (projectId) => {
-    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the project.');
+  const handleGranularizeTasks = async (intentionId) => {
+    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the intention.');
     if (!confirm) return;
 
     setLoading(true);
@@ -108,13 +108,13 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${intentionId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({ intentionId }),
       });
 
       if (!response.ok) {
@@ -158,7 +158,7 @@ const ProjectVisualizer = () => {
       });
   
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${intentionId}`,
         {
           method: 'POST',
           headers: {
@@ -171,8 +171,8 @@ const ProjectVisualizer = () => {
         throw new Error('Failed to submit proposal');
       }
   
-      // Update the project to mark it as a community project
-      updateProject({ community_id: selectedCommunity.id });
+      // Update the intention to mark it as a community intention
+      updateIntention({ community_id: selectedCommunity.id });
       
       // Close the popup and navigate to the community hub
       setShowCommunityProposalPopup(false);
@@ -189,7 +189,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });// Use the token for authorized request
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -203,9 +203,9 @@ const ProjectVisualizer = () => {
       }
   
       // Update the UI immediately without waiting for a refresh
-      updateProject({ tags: newTags });
+      updateIntention({ tags: newTags });
       
-      // No need to call fetchProject() since we've already updated the UI
+      // No need to call fetchIntention() since we've already updated the UI
     } catch (error) {
       console.error('Error updating tags:', error);
     }
@@ -333,7 +333,7 @@ useEffect(() => {
     status: "inactive-unassigned",
     dependencies: [],
     skill_id: 0,
-    project_id: projectId,
+    intention_id: intentionId,
     reward_tokens: 10
   };
 
@@ -407,7 +407,7 @@ useEffect(() => {
     const currentSkill = skills.find((s) => s.name === activeCategory);
     const form = {
       ...initialForm,
-      project_id: projectId,
+      intention_id: intentionId,
       skill_id: currentSkill?.id || "",
     };
     
@@ -1207,7 +1207,7 @@ links.forEach(link => {
               onClick={() => {
                 setTaskForm({
                   ...initialForm,
-                  project_id: projectId,
+                    intention_id: intentionId,
                   skill_id: "" // No skill pre-selected
                 });
                 setShowTaskPopup(true);
@@ -1230,7 +1230,7 @@ links.forEach(link => {
           width={svgDimensions.width}
           height={svgDimensions.height}
         ></svg>
-        {project?.creator_id === Number(userId) && (
+        {intention?.creator_id === Number(userId) && (
           <div className="edit-buttons">
             {isEditMode && (
               <button
@@ -1242,18 +1242,18 @@ links.forEach(link => {
                 + New Task
               </button>
             )}
-            {!projectIsActive && (
+            {!intentionIsActive && (
             <button
               className={`new-task-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
-                handleGranularizeTasks(projectId);
+                handleGranularizeTasks(intentionId);
               }}
               disabled={loading}
             >
-              {loading ? 'Granularizing...' : 'Granularize all project tasks'}
+              {loading ? 'Granularizing...' : 'Granularize all intention tasks'}
             </button>
             )}
-            {project?.community_id === null && (
+            {intention?.community_id === null && (
               <button
                 className="community-proposal-button"
                 onClick={() => {
@@ -1378,36 +1378,36 @@ links.forEach(link => {
         </div>
       )}
 
-      <div className="project-info">
-        <h3>{project?.name}</h3>
-        <p className="project-description">{project?.description}</p>
+      <div className="intention-info">
+        <h3>{intention?.name}</h3>
+        <p className="intention-description">{intention?.description}</p>
         <br />
         <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">
           <div className="token-metric">
             <span className="token-label">Allocated:</span>
-            <span className="token-value">{project?.reserved_tokens}</span>
+            <span className="token-value">{intention?.reserved_tokens}</span>
           </div>
           <div className="token-metric">
             <span className="token-label">DIstributed:</span>
-            <span className="token-value">{project?.used_tokens}</span>
+            <span className="token-value">{intention?.used_tokens}</span>
           </div>
           <div className="token-metric">
             <span className="token-label">Available:</span>
             <span className="token-value">
-              {Number(project?.token_pool || 0) -
-                Number(project?.used_tokens || 0) -
-                Number(project?.reserved_tokens || 0)}
+              {Number(intention?.token_pool || 0) -
+                Number(intention?.used_tokens || 0) -
+                Number(intention?.reserved_tokens || 0)}
             </span>
           </div>
         </div>
-        <div className="vproject-tags">
+        <div className="vintention-tags">
           {isEditMode ? (
             <Autocomplete
               multiple
               freeSolo
               options={interests || []}
-              value={project?.tags || []}
+              value={intention?.tags || []}
               onChange={(event, newValue) => {
                 handleUpdateTags(newValue);
               }}
@@ -1428,7 +1428,7 @@ links.forEach(link => {
                       padding: "5px 10px",
                     }}
                     onDelete={() => {
-                      const newTags = [...(project?.tags || [])];
+                      const newTags = [...(intention?.tags || [])];
                       newTags.splice(index, 1);
                       handleUpdateTags(newTags);
                     }}
@@ -1487,7 +1487,7 @@ links.forEach(link => {
               }}
             />
           ) : (
-            project?.tags?.map((tag, index) => (
+            intention?.tags?.map((tag, index) => (
               <Chip
                 key={index}
                 label={tag}
@@ -1513,7 +1513,7 @@ links.forEach(link => {
           setShowTaskPopup(false);
           refreshTasks();
         }}
-        projectId={projectId}
+        intentionId={intentionId}
         taskForm={taskForm}
         setTaskForm={setTaskForm}
         onSubmit={async (formData) => {
@@ -1528,7 +1528,7 @@ links.forEach(link => {
         skills={skills}
         isEdit={isEditMode}
         currentUser={user}
-        projectCreatorId={project?.creator_id}
+        intentionCreatorId={intention?.creator_id}
         isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
       />
 
@@ -1580,7 +1580,7 @@ links.forEach(link => {
             <div className="cyber-border">
               <h3 className="cyber-title">Submit to Community</h3>
               <div className="cyber-content">
-                <p>Select a community to submit this project to:</p>
+                <p>Select a community to submit this intention to:</p>
 
                 <Autocomplete
                   options={userCommunities}
@@ -1626,4 +1626,4 @@ links.forEach(link => {
   );
 };
 
-export default ProjectVisualizer;
+export default IntentionLotusMap;

@@ -1,4 +1,4 @@
-/* CommunityHub Styling */
+/* RealmHub Styling */
 :root {
     --hud-bg-color: #0A0A2E;
     --hud-panel-bg-color: rgba(10, 10, 30, 0.75); /* Darker, more blueish translucent */
@@ -18,7 +18,7 @@
     --hud-success-color: #2ECC40; 
 }
 
-.community-hub {
+.realm-hub {
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - 60px); /* Use min-height to ensure it fills screen */
@@ -41,7 +41,7 @@
     font-size: 2.5rem; /* Larger title */
 }
 
-.community-info {
+.realm-info {
     max-width: 900px;
     text-align: center;
     margin-bottom: 30px;
@@ -53,7 +53,7 @@
     color: var(--hud-text-secondary);
 }
 
-.community-description {
+.realm-description {
     margin-bottom: 15px;
     color: var(--hud-text-secondary);
     line-height: 1.6;
@@ -282,7 +282,7 @@
 }
 
 .proposal-description,
-.project-description {
+.intention-description {
     color: var(--hud-text-secondary);
     margin: 8px 0;
     font-size: 0.9rem;
@@ -290,15 +290,15 @@
     line-height: 1.5;
 }
 
-/* Projects Grid */
-.projects-grid {
+/* Intentions Grid */
+.intentions-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Larger cards */
     gap: 20px; /* Increased gap */
     margin-top: 15px;
 }
 
-.projects-grid .project-card {
+.intentions-grid .intention-card {
     background: var(--hud-panel-bg-color);
     border: 1px solid var(--hud-border-color);
     box-shadow: 0 0 5px rgba(var(--hud-primary-color-rgb),0.2);
@@ -309,19 +309,19 @@
     overflow-y: auto;
 }
 
-.projects-grid .project-card:hover {
+.intentions-grid .intention-card:hover {
     transform: translateY(-5px);
     background: var(--hud-panel-bg-opaque); /* Darken on hover */
     box-shadow: 0 0 10px var(--hud-glow-color);
 }
 
-.projects-grid .project-card .MuiCardContent-root {
+.intentions-grid .intention-card .MuiCardContent-root {
     display: flex;
     flex-direction: column;
     flex-grow: 1; /* Content fills card */
 }
 
-.projects-grid .project-card .view-project-btn { /* Target button inside project card */
+.intentions-grid .intention-card .view-intention-btn { /* Target button inside intention card */
     margin-top: auto; /* Push button to bottom */
     align-self: center; /* Center button */
 }

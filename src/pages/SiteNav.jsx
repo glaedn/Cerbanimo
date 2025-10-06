@@ -208,7 +208,7 @@ const SiteNav = () => {
   return (
     <nav className={`site-nav ${isSidebarOpen ? "open" : ""}`}>
       <div className="title-container">
-        <h1 className="site-title">Cerbanimo</h1>
+        <h1 className="site-title">Manifest with intention — co-create, converge, become.</h1>
       </div>
 
       {isAuthenticated && (
@@ -245,7 +245,7 @@ const SiteNav = () => {
                         <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
                             {notif.projectId && notif.taskId ? (
                                 <Link
-                                    to={`/visualizer/${notif.projectId}/${notif.taskId}`}
+                                    to={`/lotus-map/${notif.projectId}/${notif.taskId}`}
                                     style={{
                                         textDecoration: "underline",
                                         color: "#8db8ff",
@@ -284,12 +284,12 @@ const SiteNav = () => {
             <>
               <Link
                 className={`nav-link ${
-                  location.pathname === "/dashboard" ? "active" : ""
+                  location.pathname === "/orbit" ? "active" : ""
                 }`}
-                to="/dashboard"
+                to="/orbit"
                 onClick={closeSidebar}
               >
-                Dashboard
+                Orbit
               </Link>
               <Link
                 className={`nav-link ${
@@ -302,43 +302,43 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/projects") ? "active" : ""
+                  location.pathname.startsWith("/intentions") ? "active" : ""
                 }`}
-                to="/projects"
+                to="/intentions"
                 onClick={closeSidebar}
               >
-                Projects
+                Intentions
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/communities") ? "active" : ""
+                  location.pathname.startsWith("/realms") ? "active" : ""
                 }`}
-                to="/communities"
+                to="/realms"
                 onClick={closeSidebar}
               >
-                Communities
+                Realms
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/projectcreation")
+                  location.pathname.startsWith("/declare-intention")
                     ? "active"
                     : ""
                 }`}
-                to="/projectcreation"
+                to="/declare-intention"
                 onClick={closeSidebar}
               >
-                Create a Project
+                Declare an Intention
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname.startsWith("/communitycreation")
+                  location.pathname.startsWith("/form-new-realm")
                     ? "active"
                     : ""
                 }`}
-                to="/communitycreation"
+                to="/form-new-realm"
                 onClick={closeSidebar}
               >
-                Create a Community
+                Form a New Realm
               </Link>
               {/* Declare a Need Button */}
               <Button

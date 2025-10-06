@@ -3,20 +3,20 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Typography, Chip } from '@mui/material';
-import './ProjectPages.css';
+import './IntentionPages.css';
 import ReactMarkdown from 'react-markdown';
 import useSkillData from '../hooks/useSkillData';
 
-const ProjectPages = () => {
+const IntentionPages = () => {
   const { user, getAccessTokenSilently } = useAuth0();
-  const [projects, setProjects] = useState([]);
+  const [intentions, setIntentions] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedIntention, setSelectedIntention] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [hasMorePages, setHasMorePages] = useState(true);
-  const [totalProjects, setTotalProjects] = useState(0);
+  const [totalIntentions, setTotalIntentions] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -36,14 +36,14 @@ const ProjectPages = () => {
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchIntentions = async () => {
     if (!userProfile) return;
     
     setIsLoading(true);
     try {
       const token = await getAccessTokenSilently();
 
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/personal`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/personal`, {
         params: { 
           search: search.trim(),
           page: page,
@@ -54,30 +54,30 @@ const ProjectPages = () => {
         }
       });
 
-      const projectsData = response.data;
-      setProjects(projectsData);
+      const intentionsData = response.data;
+      setIntentions(intentionsData);
       
-      // Since your backend uses LIMIT 10, if we get less than 10 projects, 
+      // Since your backend uses LIMIT 10, if we get less than 10 intentions,
       // we're likely on the last page
-      setHasMorePages(projectsData.length === 10);
+      setHasMorePages(intentionsData.length === 10);
       
       // For display purposes - this won't be perfectly accurate without a count query
       // but gives users a sense of their position
-      const estimatedTotal = (page - 1) * 10 + projectsData.length;
-      setTotalProjects(hasMorePages ? `${estimatedTotal}+` : estimatedTotal);
+      const estimatedTotal = (page - 1) * 10 + intentionsData.length;
+      setTotalIntentions(hasMorePages ? `${estimatedTotal}+` : estimatedTotal);
       
     } catch (error) {
-      console.error('Failed to fetch projects:', error);
-      setProjects([]);
+      console.error('Failed to fetch intentions:', error);
+      setIntentions([]);
       setHasMorePages(false);
-      setTotalProjects(0);
+      setTotalIntentions(0);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Updated fetchTasks to include assigned_user_ids and debug logging
-  const fetchTasks = async (projectId) => {
+  const fetchTasks = async (intentionId) => {
     try {
       const token = await getAccessTokenSilently();
       
@@ -88,7 +88,7 @@ const ProjectPages = () => {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/prelevant`, {
         params: { 
           skills: skillNames,
-          projectId: projectId,
+          intentionId: intentionId,
           returnAssignedUserIds: true
         },
         headers: {
@@ -128,8 +128,8 @@ const ProjectPages = () => {
 
       console.log(`${action} task response:`, response.data);
 
-      if (selectedProject) {
-        fetchTasks(selectedProject.id);
+      if (selectedIntention) {
+        fetchTasks(selectedIntention.id);
       }
     } catch (error) {
       console.error(`Failed to ${action} task:`, error);
@@ -166,37 +166,37 @@ const ProjectPages = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchProjects();
+    fetchIntentions();
   }, [userProfile, page, search]);
 
   return (
-    <div className="project-pages-container">
+    <div className="intention-pages-container">
       <div className="search-bar-container">
         <TextField
           variant="outlined"
           size="small"
           type="text"
-          placeholder="Search Projects..."
+          placeholder="Search Intentions..."
           value={search}
           onChange={handleSearchChange}
           sx={{ flexGrow: 1, marginRight: 1 }}
         />
         <Button
           variant="contained"
-          onClick={() => window.location.href = '/projectcreation'}
-          title="Add New Project"
+          onClick={() => navigate('/declare-intention')}
+          title="Declare New Intention"
           sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '1.5rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0 }}
         >
           +
         </Button>
       </div>
 
-      <div className="project-list-wrapper">
-        {projects.map((project) => (
-          <div key={project.id} className="project-card">
-            <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+      <div className="intention-list-wrapper">
+        {intentions.map((intention) => (
+          <div key={intention.id} className="intention-card">
+            <Typography variant="h6" sx={{ color: 'primary.main' }}>{intention.name}</Typography>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-              {project.tags.map((tag, index) => (
+              {intention.tags.map((tag, index) => (
                 <Chip
                   className="tag-chip"
                   key={index}
@@ -205,14 +205,14 @@ const ProjectPages = () => {
                 />
               ))}
             </div>
-            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
+            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{intention.description}</ReactMarkdown>
             <Button
               variant="contained"
               size="small"
               sx={{ marginBottom: '5px', backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
               onClick={() => {
-                setSelectedProject(project);
-                fetchTasks(project.id);
+                setSelectedIntention(intention);
+                fetchTasks(intention.id);
               }}
             >
               Contribute
@@ -222,10 +222,10 @@ const ProjectPages = () => {
               size="small"
               sx={{ borderColor: 'primary.main', color: 'primary.main' }}
               onClick={() => {
-                navigate(`/visualizer/${project.id}`);
+                navigate(`/lotus-map/${intention.id}`);
               }}
             >
-              Open Project
+              Open Intention
             </Button>
           </div>
         ))}
@@ -241,7 +241,7 @@ const ProjectPages = () => {
           Previous
         </Button>
         <Typography className="page-text" sx={{ marginX: 2 }}>
-          Page {page} ({projects.length} projects{hasMorePages ? ', more available' : ''})
+          Page {page} ({intentions.length} intentions{hasMorePages ? ', more available' : ''})
         </Typography>
         <Button
           variant="contained"
@@ -253,10 +253,10 @@ const ProjectPages = () => {
         </Button>
       </div>
 
-      {selectedProject && (
+      {selectedIntention && (
         <div className="task-popup-overlay">
           <div className="task-popup">
-            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedProject.name}</Typography>
+            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedIntention.name}</Typography>
             <div className="ptask-list">
               {tasks.length > 0 ? tasks.map((task) => {
                 const isAssigned = task.assigned_user_ids && 
@@ -288,7 +288,7 @@ const ProjectPages = () => {
                       variant="outlined"
                       size="small"
                       sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-                      onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
+                      onClick={() => navigate(`/lotus-map/${selectedIntention.id}/${task.id}`)}
                     >
                       View Task
                     </Button>
@@ -299,7 +299,7 @@ const ProjectPages = () => {
             <Button
               variant="contained"
               sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2 }}
-              onClick={() => setSelectedProject(null)}
+              onClick={() => setSelectedIntention(null)}
             >
               Close
             </Button>
@@ -310,4 +310,4 @@ const ProjectPages = () => {
   );
 };
 
-export default ProjectPages;
+export default IntentionPages;

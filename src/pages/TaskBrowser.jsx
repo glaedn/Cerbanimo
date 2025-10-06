@@ -136,7 +136,7 @@ const TaskBrowser = () => {
                           {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        {task.project_id && <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>}
+                        {task.project_id && <Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link>}
                       </>
                     }
                   />
@@ -166,7 +166,7 @@ const TaskBrowser = () => {
                            `⌛ In Progress`}
                         </Typography>
                         <br />
-                        <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>
+                        <Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link>
                       </>
                     }
                   />
@@ -193,8 +193,8 @@ const TaskBrowser = () => {
                         <Typography component="span" variant="body2" className="task-status">
                           {`📝 Needs Review (${task.approvals?.length || 0} approvals, ${task.rejections?.length || 0} rejections)`}
                         </Typography>
-                        {task.project_id && <><br /><Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link></>}
-                        {task.project_id && task.id && <><br /><Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
+                        {task.project_id && <><br /><Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link></>}
+                        {task.project_id && task.id && <><br /><Link href={`/lotus-map/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
                       </>
                     }
                   />

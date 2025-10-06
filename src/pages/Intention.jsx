@@ -1,4 +1,4 @@
-// At the top of your Project.jsx file
+// At the top of your Intention.jsx file
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -6,8 +6,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { Chip, Autocomplete, TextField, Button } from '@mui/material';
 import { useNotifications } from "./NotificationProvider.jsx"; 
-import './Project.css';
-import { useProjectTasks } from "../hooks/useProjectTasks";
+import './Intention.css';
+import { useIntentionTasks } from "../hooks/useIntentionTasks";
 import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
 
 // Updated axios interceptor to handle errors more comprehensively
@@ -26,8 +26,8 @@ axios.interceptors.response.use(
     }
 );
 
-const Project = () => {
-  const { projectId } = useParams();
+const Intention = () => {
+  const { intentionId } = useParams();
   const navigate = useNavigate();
   const { user, getAccessTokenSilently } = useAuth0();
   const notificationContext = useNotifications();
@@ -37,16 +37,19 @@ const Project = () => {
   const { 
     tasks, 
     skills, 
-    project, 
+    intention,
     handleTaskAction, 
     fetchTasks,
-    fetchProject 
-  } = useProjectTasks(projectId, user);
+    fetchIntention,
+    updateIntention
+  } = useIntentionTasks(intentionId, user);
 
   // Keep other state that's not managed by the hook
   const [interestsPool, setInterestsPool] = useState([]);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
-  const [isProjectCreator, setIsProjectCreator] = useState(false);
+  const [isIntentionCreator, setIsIntentionCreator] = useState(false);
+  const [resonanceCount, setResonanceCount] = useState(0);
+  const [hasResonated, setHasResonated] = useState(false);
   const [profileData, setProfileData] = useState({
     username: '',
     skills: [],
@@ -113,20 +116,20 @@ const Project = () => {
     }
   };
 
-  // Save project method
-  const saveProject = async () => {
+  // Save intention method
+  const saveIntention = async () => {
     try {
       const token = await getToken();
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, project, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}`, intention, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      alert('Project saved successfully!');
+      alert('Intention saved successfully!');
     } catch (error) {
-      console.error('Failed to save project:', error);
-      alert(`Failed to save project: ${error.response?.data?.message || error.message}`);
+      console.error('Failed to save intention:', error);
+      alert(`Failed to save intention: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -136,18 +139,59 @@ const Project = () => {
   }, [user]);
 
   useEffect(() => {
-    if (skills.length > 0 && projectId) {
-      fetchProject();
+    if (skills.length > 0 && intentionId) {
+      fetchIntention();
       fetchTasks();
     }
-  }, [skills.length, projectId]);
+  }, [skills.length, intentionId]);
 
   useEffect(() => {
-    if (project && profileData.id) {
-      // Convert both to numbers for comparison
-      setIsProjectCreator(Number(project.creator_id) === Number(profileData.id));
+    const fetchResonanceData = async () => {
+      if (!intentionId || !profileData.id) return;
+      try {
+        const token = await getToken();
+        // Fetch resonance count
+        const countRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resonances/count/${intentionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setResonanceCount(countRes.data.count);
+
+        // Check if user has resonated
+        const userRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resonances/user/${profileData.id}/intention/${intentionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setHasResonated(userRes.data.hasResonated);
+      } catch (error) {
+        console.error("Failed to fetch resonance data:", error);
+      }
+    };
+
+    fetchResonanceData();
+  }, [intentionId, profileData.id]);
+
+  const handleResonate = async () => {
+    if (!profileData.id) return;
+    try {
+      const token = await getToken();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resonances`, {
+        userId: profileData.id,
+        intentionId: intentionId,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setHasResonated(true);
+      setResonanceCount(prev => prev + 1);
+    } catch (error) {
+      console.error("Failed to resonate:", error);
     }
-  }, [project, profileData]);
+  };
+
+  useEffect(() => {
+    if (intention && profileData.id) {
+      // Convert both to numbers for comparison
+      setIsIntentionCreator(Number(intention.creator_id) === Number(profileData.id));
+    }
+  }, [intention, profileData]);
 
   const handleTaskFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -186,7 +230,7 @@ const Project = () => {
     const taskData = {
       ...taskForm,
       reward_tokens: rewardTokens,
-      projectId: Number(projectId), // Ensure number
+      intentionId: Number(intentionId), // Ensure number
       user: Number(profileData.id), // Convert to number
       skill_id: Number(taskForm.skill_id) // Convert to number if needed
     };
@@ -195,7 +239,7 @@ const Project = () => {
       const action = taskForm.id ? 'update' : 'create';
       await handleTaskAction(taskData, action);
   
-      await fetchProject();
+      await fetchIntention();
       await fetchTasks();
       
       setShowTaskPopup(false);
@@ -232,36 +276,56 @@ const Project = () => {
 
 
   return (
-    <div className="project-page-container">
-      {project && (
-      <div className="project-header">
-        <h1 className="project-title">{project.name}</h1>
+    <div className={`intention-page-container ${hasResonated ? 'resonated' : ''}`}>
+      {intention && (
+      <div className="intention-header">
+        <h1 className="intention-title">{intention.name}</h1>
+        <div className="resonance-section">
+          <Typography variant="h6">{resonanceCount} Resonances</Typography>
+          <Button
+            variant="contained"
+            onClick={handleResonate}
+            disabled={hasResonated}
+            sx={{
+              background: 'linear-gradient(45deg, #FF00FF, #FF5CA2)',
+              color: 'common.white',
+              fontFamily: 'Orbitron, sans-serif',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              padding: '8px 15px',
+              marginY: 1,
+              boxShadow: hasResonated ? '0 0 20px #FF00FF' : 'none',
+            }}
+          >
+            {hasResonated ? 'Resonated' : 'Resonate'}
+          </Button>
+        </div>
         <textarea
-        className="project-description"
-        value={project.description}
-        onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
-        readOnly={!isProjectCreator}
+        className="intention-description"
+        value={intention.description}
+        onChange={(e) => isIntentionCreator && updateIntention({ description: e.target.value })}
+        readOnly={!isIntentionCreator}
         />
-        {isProjectCreator && (
+        {isIntentionCreator && (
         <div className="token-display">
-          <div><strong>Total Token Pool:</strong> {project.token_pool || 250}</div>
-          <div><strong>Tokens Allocated:</strong> {project.reserved_tokens}</div>
-          <div><strong>Tokens Spent:</strong> {project.used_tokens || 0}</div>
-          <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
+          <div><strong>Total Token Pool:</strong> {intention.token_pool || 250}</div>
+          <div><strong>Tokens Allocated:</strong> {intention.reserved_tokens}</div>
+          <div><strong>Tokens Spent:</strong> {intention.used_tokens || 0}</div>
+          <div><strong>Tokens Available:</strong> {(intention.token_pool || 250) - (intention.used_tokens || 0) - (intention.reserved_tokens || 0)}</div>
         </div>
         )}
-        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
-        {isProjectCreator && (
+        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/lotus-map/${intentionId}`)}>Visualize</Button>
+        {isIntentionCreator && (
         <Autocomplete
           multiple
           options={interestsPool}
-          value={project.tags || []}
-          onChange={(event, newValue) => setProject({ ...project, tags: newValue })}
+          value={intention.tags || []}
+          onChange={(event, newValue) => updateIntention({ tags: newValue })}
           renderInput={(params) => (
           <TextField
             {...params}
             variant="outlined"
-            label="Project Tags"
+            label="Intention Tags"
             placeholder="Add tags"
           />
           )}
@@ -284,7 +348,7 @@ const Project = () => {
       )}
       <div className="tasks-section">
       <h2 className="tasks-title">Tasks</h2>
-      {isProjectCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleTaskPopupOpen()}>+</Button>}
+      {isIntentionCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleTaskPopupOpen()}>+</Button>}
       <div className="tasks-list">
         {tasks.map((task) => (
         <div key={task.id} className="task-card">
@@ -295,12 +359,12 @@ const Project = () => {
           <p>{task.description || 'No description provided.'}</p>
           <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
           <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
-          {task.submitted && isProjectCreator && task.active_ind && (
+          {task.submitted && isIntentionCreator && task.active_ind && (
           <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'approve')}>
             Approve Work
           </Button>
           )}
-          {isProjectCreator && (
+          {isIntentionCreator && (
           <Button variant="contained" sx={{ backgroundColor: 'accentBlue.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskPopupOpen(task)}>
             Edit
           </Button>
@@ -324,7 +388,7 @@ const Project = () => {
           >
             {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
           </Button>
-          {isProjectCreator && task.submitted && (
+          {isIntentionCreator && task.submitted && (
           <Button variant="contained" sx={{ backgroundColor: 'secondary.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'reject')}>
             Reject Work
           </Button>
@@ -333,12 +397,12 @@ const Project = () => {
         ))}
       </div>
       </div>
-      <div className="project-controls">
-      <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={saveProject}>
-        Save Project
+      <div className="intention-controls">
+      <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={saveIntention}>
+        Save Intention
       </Button>
-      <Button variant="contained" sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={() => window.location.href = '/projects'}>
-        Projects
+      <Button variant="contained" sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={() => window.location.href = '/intentions'}>
+        Intentions
       </Button>
       </div>
 
@@ -350,12 +414,12 @@ const Project = () => {
   onSubmit={handleSubmitTask}
   skills={skills}
   isEdit={!!taskForm.id} // This should check if we're editing an existing task
-  projectId={Number(projectId)} // Convert to number
+  intentionId={Number(intentionId)} // Convert to number
   currentUser={user}
-  projectCreatorId={Number(project?.creator_id)} // Convert to number
+  intentionCreatorId={Number(intention?.creator_id)} // Convert to number
 />
     </div>
     );
 };
 
-export default Project;
+export default Intention;

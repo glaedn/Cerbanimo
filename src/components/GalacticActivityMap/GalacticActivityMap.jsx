@@ -38,7 +38,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     const now = new Date();
     const ageDays = (now - new Date(item.lastActivity)) / (1000 * 60 * 60 * 24);
     let baseRadius =
-      item.type === "task" ? 0.5 : item.type === "project" ? 1 : 1.75; // downscaled
+      item.type === "task" ? 0.5 : item.type === "intention" ? 1 : 1.75; // downscaled
     if (item.status.toLowerCase().includes("urgent")) baseRadius *= 1.3;
     const ageScale = Math.max(0.4, 1 - ageDays / 60);
     return baseRadius * ageScale + Math.min(item.contributors / 8, 1); // also scaled
@@ -64,14 +64,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           cacheMode: "off",
         });
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        const [tasksRes, projectsRes, communitiesRes] = await Promise.all([
+        const [tasksRes, intentionsRes, communitiesRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks`, config),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects`, config),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions`, config),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, config),
         ]);
         const processedData = [];
         console.log("Tasks:", tasksRes.data);
-        console.log("Projects:", projectsRes.data);
+        console.log("Intentions:", intentionsRes.data);
         console.log("Communities:", communitiesRes.data);
         tasksRes.data.forEach((task) => {
           processedData.push({
@@ -87,32 +87,32 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           });
         });
 
-        projectsRes.data.forEach((project) => {
-          let projectStatus = "active";
-          const urgentTasksInProject = tasksRes.data.filter(
+        intentionsRes.data.forEach((intention) => {
+          let intentionStatus = "active";
+          const urgentTasksInIntention = tasksRes.data.filter(
             (t) =>
-              `project-${t.project_id}` === `project-${project.id}` &&
+              t.project_id === intention.id &&
               (t.status || "").toLowerCase().includes("urgent")
           );
-          const activeTasksInProject = tasksRes.data.filter(
+          const activeTasksInIntention = tasksRes.data.filter(
             (t) =>
-              `project-${t.project_id}` === `project-${project.id}` &&
+              t.project_id === intention.id &&
               (t.status || "").toLowerCase().startsWith("active")
           );
 
-          if (urgentTasksInProject.length > 0) projectStatus = "urgent";
-          else if (activeTasksInProject.length < 1) projectStatus = "inactive";
+          if (urgentTasksInIntention.length > 0) intentionStatus = "urgent";
+          else if (activeTasksInIntention.length < 1) intentionStatus = "inactive";
 
           processedData.push({
-            id: `project-${project.id}`,
-            type: "project",
-            name: project.name,
-            status: projectStatus,
+            id: `intention-${intention.id}`,
+            type: "intention",
+            name: intention.name,
+            status: intentionStatus,
             lastActivity: new Date(
-              project.updated_at || project.created_at || Date.now()
+              intention.updated_at || intention.created_at || Date.now()
             ),
-            contributors: project.creator_id ? 1 : 0,
-            raw_data: project,
+            contributors: intention.creator_id ? 1 : 0,
+            raw_data: intention,
           });
         });
         const communities =
@@ -319,14 +319,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           const [type, idOnly] = d.id.split('-'); 
 
           if (type === "task") {
-            const projectId = d.raw_data.project_id;
-            if (projectId) {
-              navigate(`/visualizer/${projectId}/${idOnly}`);
+            const intentionId = d.raw_data.project_id;
+            if (intentionId) {
+              navigate(`/lotus-map/${intentionId}/${idOnly}`);
             } else {
-              console.error("Project ID not found for task:", d);
+              console.error("Intention ID not found for task:", d);
             }
-          } else if (type === "project") {
-            navigate(`/visualizer/${idOnly}/`);
+          } else if (type === "intention") {
+            navigate(`/lotus-map/${idOnly}/`);
           } else if (type === "community") {
             navigate(`/communityhub/${idOnly}`);
           }

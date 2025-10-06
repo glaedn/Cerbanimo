@@ -4,7 +4,7 @@ import { Box, TextField, MenuItem, Paper, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import './FilterPanel.css'; // Assuming you have a CSS file for styles  
 
-const FilterPanel = ({ filters, setFilters, skills = [], projects = [], communities = [] }) => {
+const FilterPanel = ({ filters, setFilters, skills = [], intentions = [], communities = [] }) => {
   return (
     <Paper sx={{ p: 2, bgcolor: '#111', color: '#fff' }}>
       <Typography variant="h6" sx={{ color: '#0ff' }}>Filters</Typography>
@@ -39,9 +39,9 @@ const FilterPanel = ({ filters, setFilters, skills = [], projects = [], communit
         <TextField
           className="filter-input"
           select
-          label="Project"
-          value={filters.project || ''}
-          onChange={(e) => setFilters({ ...filters, project: e.target.value })}
+          label="Intention"
+          value={filters.intention || ''}
+          onChange={(e) => setFilters({ ...filters, intention: e.target.value })}
           sx={{
             minWidth: 120,
             '& .MuiInputBase-input, & .MuiInputLabel-root, & .MuiSelect-icon, & .MuiOutlinedInput-notchedOutline': {
@@ -60,7 +60,7 @@ const FilterPanel = ({ filters, setFilters, skills = [], projects = [], communit
           }}
         >
           <MenuItem value="" sx={{ color: '#82aaff' }}>All</MenuItem>
-          {projects.map(p => <MenuItem key={p} value={p} sx={{ color: '#82aaff' }}>{p}</MenuItem>)}
+          {intentions.map(p => <MenuItem key={p} value={p} sx={{ color: '#82aaff' }}>{p}</MenuItem>)}
         </TextField>
 
         <TextField

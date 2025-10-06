@@ -167,12 +167,12 @@ describe('OnboardingPage', () => {
   });
 
 
-  test('successful form submission navigates to project page', async () => {
+  test('successful form submission navigates to intention page', async () => {
     axios.post.mockResolvedValue({ 
         data: { 
             message: 'Onboarding successful', 
             user: { username: 'testuser' },
-            project: { projectId: '123', projectName: 'Test Project' }
+            intention: { intentionId: '123', intentionName: 'Test Intention' }
         } 
     });
 
@@ -214,16 +214,16 @@ describe('OnboardingPage', () => {
     expect(mockFormDataAppend).toHaveBeenCalledWith('interests', JSON.stringify([{name: 'I1'}, {name: 'I2'}, {name: 'I3'}]));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/project/123');
+      expect(mockNavigate).toHaveBeenCalledWith('/intention/123');
     });
   });
 
-  test('successful form submission navigates to dashboard if no project ID', async () => {
+  test('successful form submission navigates to orbit if no intention ID', async () => {
     axios.post.mockResolvedValue({ 
         data: { 
             message: 'Onboarding successful', 
             user: { username: 'testuser' },
-            project: null // No project ID
+            intention: null // No intention ID
         } 
     });
 
@@ -245,7 +245,7 @@ describe('OnboardingPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      expect(mockNavigate).toHaveBeenCalledWith('/orbit');
     });
   });
 

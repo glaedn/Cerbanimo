@@ -1,10 +1,10 @@
 const theme = {
   colors: {
     backgroundDefault: '#0A0A2E', // deep blue/purple
-    backgroundPaper: '#1C1C1E', // dark gray, like ProjectVisualizer's container
+    backgroundPaper: '#1C1C1E', // dark gray, like IntentionLotusMap's container
     backgroundBlack: '#000000',
     primary: '#00F3FF', // neon cyan/blue, from cyber-modal
-    secondary: '#FF5CA2', // neon pink, from ProjectVisualizer tabs/nodes
+    secondary: '#FF5CA2', // neon pink, from IntentionLotusMap tabs/nodes
     accentGreen: '#00D787', // neon green
     accentBlue: '#4DABF7', // bright blue
     accentOrange: '#FF9F40', // orange
