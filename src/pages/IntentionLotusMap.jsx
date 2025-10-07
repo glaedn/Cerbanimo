@@ -37,9 +37,9 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const hoverTimeout = useRef(null);
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
-  const [showCommunityProposalPopup, setShowCommunityProposalPopup] = useState(false);
-  const [userCommunities, setUserCommunities] = useState([]);
-  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [showRealmProposalPopup, setShowRealmProposalPopup] = useState(false);
+  const [userRealms, setUserRealms] = useState([]);
+  const [selectedRealm, setSelectedRealm] = useState(null);
   const [loading, setLoading] = useState(false);
   const [popupLaunched, setPopupLaunched] = useState(false);
   const [interests, setInterests] = useState([]);
@@ -81,7 +81,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   }, [tasks]);
 
 
-  const fetchUserCommunities = async () => {
+  const fetchUserRealms = async () => {
     if (!userId) {
       console.log('No userId available');
       return;
@@ -93,7 +93,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         scope: "openid profile email",
       });
   
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/realms/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -101,18 +101,18 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch communities: ${errorText}`);
+        throw new Error(`Failed to fetch realms: ${errorText}`);
       }
   
       const data = await response.json();
       
       if (Array.isArray(data)) {
-        setUserCommunities(data);
+        setUserRealms(data);
       } else {
-        setUserCommunities([]);
+        setUserRealms([]);
       }
     } catch (error) {
-      setUserCommunities([]);
+      setUserRealms([]);
     }
   };
 
@@ -161,15 +161,15 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   };
 
 
-  // Add useEffect to handle initial communities fetch
+  // Add useEffect to handle initial realms fetch
   useEffect(() => {
     if (userId) {
-      fetchUserCommunities();
+      fetchUserRealms();
     }
   }, [userId]);
 
-  const handleSubmitCommunityProposal = async () => {
-    if (!selectedCommunity) return;
+  const handleSubmitRealmProposal = async () => {
+    if (!selectedRealm) return;
   
     try {
       const token = await getAccessTokenSilently({
@@ -178,7 +178,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
       });
   
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${intentionId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/realms/${selectedRealm.id}/submit/${intentionId}`,
         {
           method: 'POST',
           headers: {
@@ -191,12 +191,12 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         throw new Error('Failed to submit proposal');
       }
   
-      // Update the intention to mark it as a community intention
-      updateIntention({ community_id: selectedCommunity.id });
+      // Update the intention to mark it as a realm intention
+      updateIntention({ realm_id: selectedRealm.id });
       
-      // Close the popup and navigate to the community hub
-      setShowCommunityProposalPopup(false);
-      window.location.href = `/communityhub/${selectedCommunity.id}`;
+      // Close the popup and navigate to the realm hub
+      setShowRealmProposalPopup(false);
+      window.location.href = `/realmhub/${selectedRealm.id}`;
     } catch (error) {
       console.error('Error submitting proposal:', error);
     }
@@ -1287,15 +1287,15 @@ links.forEach(link => {
               {loading ? 'Granularizing...' : 'Granularize all intention tasks'}
             </button>
             )}
-            {intention?.community_id === null && (
+            {intention?.realm_id === null && (
               <button
-                className="community-proposal-button"
+                className="realm-proposal-button"
                 onClick={() => {
-                  fetchUserCommunities();
-                  setShowCommunityProposalPopup(true);
+                  fetchUserRealms();
+                  setShowRealmProposalPopup(true);
                 }}
               >
-                Propose to Community
+                Propose to Realm
               </button>
             )}
 
@@ -1614,22 +1614,22 @@ links.forEach(link => {
           Dashed circles indicate external dependencies
         </div>
       </div>
-      {showCommunityProposalPopup && (
+      {showRealmProposalPopup && (
         <div className="cyber-modal-overlay">
           <div className="cyber-modal">
             <div className="cyber-border">
-              <h3 className="cyber-title">Submit to Community</h3>
+              <h3 className="cyber-title">Submit to Realm</h3>
               <div className="cyber-content">
-                <p>Select a community to submit this intention to:</p>
+                <p>Select a realm to submit this intention to:</p>
 
                 <Autocomplete
-                  options={userCommunities}
+                  options={userRealms}
                   getOptionLabel={(option) => option.name}
-                  onChange={(event, newValue) => setSelectedCommunity(newValue)}
+                  onChange={(event, newValue) => setSelectedRealm(newValue)}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Select Community"
+                      label="Select Realm"
                       variant="outlined"
                       fullWidth
                       className="cyber-input"
@@ -1644,15 +1644,15 @@ links.forEach(link => {
 
                 <div className="cyber-button-group">
                   <button
-                    onClick={() => setShowCommunityProposalPopup(false)}
+                    onClick={() => setShowRealmProposalPopup(false)}
                     className="cyber-button cancel"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleSubmitCommunityProposal}
+                    onClick={handleSubmitRealmProposal}
                     className="cyber-button"
-                    disabled={!selectedCommunity}
+                    disabled={!selectedRealm}
                   >
                     Submit Proposal
                   </button>

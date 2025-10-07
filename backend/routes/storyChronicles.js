@@ -102,4 +102,25 @@ router.get('/user/:id/summary', async (req, res) => {
   }
 });
 
+// GET /chronicles/resonance
+router.get('/resonance', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        i.id,
+        i.name,
+        COUNT(r.id) AS resonance_score
+      FROM intentions i
+      JOIN resonances r ON i.id = r.intention_id
+      GROUP BY i.id, i.name
+      ORDER BY resonance_score DESC
+      LIMIT 15
+    `);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error fetching chronicle resonance:', err);
+    res.status(500).json({ error: 'Failed to fetch chronicle resonance' });
+  }
+});
+
 export default router;

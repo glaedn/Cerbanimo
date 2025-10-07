@@ -57,6 +57,43 @@ router.get('/personal', async (req, res) => {
     }
   });
 
+// Fetch "near" intentions (from user's realms, excluding their own)
+router.get('/near', async (req, res) => {
+  const { auth0Id } = req.query;
+
+  if (!auth0Id) {
+    return res.status(400).json({ message: 'Auth0 ID is required' });
+  }
+
+  try {
+    // Get internal user ID from Auth0 ID
+    const userResult = await pool.query('SELECT id FROM users WHERE auth0_id = $1', [auth0Id]);
+    const userId = userResult.rows[0]?.id;
+
+    if (!userId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch intentions from realms the user is a member of, excluding their own intentions, and include resonance score
+    const query = `
+      SELECT i.*, COUNT(r.id) as resonance_score
+      FROM intentions i
+      LEFT JOIN resonances r ON i.id = r.intention_id
+      WHERE i.realm_id IN (SELECT realm_id FROM realm_members WHERE user_id = $1)
+      AND i.creator_id != $1
+      GROUP BY i.id
+      ORDER BY resonance_score DESC
+      LIMIT 10;
+    `;
+
+    const result = await pool.query(query, [userId]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error fetching near intentions:', err);
+    res.status(500).json({ message: 'Failed to fetch near intentions' });
+  }
+});
+
 // Fetch only user-created intentions
 router.get('/userintentions', async (req, res) => {
   try {
@@ -361,7 +398,45 @@ router.post('/auto-generate', async (req, res) => {
   }
 });
 
+// Resonate with an intention
+router.post('/:intentionId/resonate', async (req, res) => {
+  const { intentionId } = req.params;
+  const { userId } = req.body;
+  try {
+    const query = 'INSERT INTO resonances (user_id, intention_id) VALUES ($1, $2) ON CONFLICT (user_id, intention_id) DO NOTHING RETURNING *';
+    const result = await pool.query(query, [userId, intentionId]);
+    if (result.rows.length === 0) {
+      return res.status(200).json({ message: 'User has already resonated with this intention.' });
+    }
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating resonance:', error);
+    res.status(500).json({ message: 'Failed to create resonance' });
+  }
+});
 
+// Get resonance data for an intention
+router.get('/:intentionId/resonances', async (req, res) => {
+  const { intentionId } = req.params;
+  const { userId } = req.query;
+  try {
+    const countQuery = 'SELECT COUNT(*) FROM resonances WHERE intention_id = $1';
+    const countResult = await pool.query(countQuery, [intentionId]);
+    const count = parseInt(countResult.rows[0].count, 10);
+
+    let userHasResonated = false;
+    if (userId) {
+      const userQuery = 'SELECT * FROM resonances WHERE user_id = $1 AND intention_id = $2';
+      const userResult = await pool.query(userQuery, [userId, intentionId]);
+      userHasResonated = userResult.rows.length > 0;
+    }
+
+    res.status(200).json({ count, userHasResonated });
+  } catch (error) {
+    console.error('Error fetching resonance data:', error);
+    res.status(500).json({ message: 'Failed to fetch resonance data' });
+  }
+});
 
 
 export default router;
