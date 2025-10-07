@@ -7,7 +7,7 @@ jest.mock('./panels/CommandDeck', () => () => <div data-testid="command-deck-pan
 jest.mock('./panels/MissionConsole', () => () => <div data-testid="mission-console-panel">MissionConsole</div>);
 jest.mock('./panels/TargetingScanner', () => () => <div data-testid="targeting-scanner-panel">TargetingScanner</div>);
 jest.mock('./panels/CommsLog', () => () => <div data-testid="comms-log-panel">CommsLog</div>);
-jest.mock('./panels/SkillGalaxyPanel', () => () => <div data-testid="skill-galaxy-panel">SkillGalaxy</div>);
+jest.mock('./panels/CapabilityGalaxyPanel', () => () => <div data-testid="capability-galaxy-panel">CapabilityGalaxy</div>);
 jest.mock('./panels/StatusBar', () => () => <div data-testid="status-bar">StatusBar</div>);
 
 // Mock HUDSettingsPanel (to ensure it's not rendered)

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 // Removed useNotifications hook
-import useSkillData from '../../../hooks/useSkillData';
+import useCapabilityData from '../../../hooks/useCapabilityData';
 import { useAuth0 } from '@auth0/auth0-react';
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
@@ -9,25 +9,25 @@ import './StatusBar.css'; // Specific styles for StatusBar
 
 const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
+  const { allCapabilities, loading: capabilitiesLoading, error: capabilitiesError } = useCapabilityData();
   const { user, isAuthenticated } = useAuth0();
 
   const primaryColor = '#00F3FF'; // theme.colors.primary
   const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
 
-  if (profileLoading || skillsLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
-  if (profileError || skillsError) return <div className="hud-panel status-bar">Error: {profileError?.message || skillsError?.message}</div>;
-  if (!profile || !allSkills || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, skills, or authentication unavailable.</div>;
+  if (profileLoading || capabilitiesLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
+  if (profileError || capabilitiesError) return <div className="hud-panel status-bar">Error: {profileError?.message || capabilitiesError?.message}</div>;
+  if (!profile || !allCapabilities || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, capabilities, or authentication unavailable.</div>;
   
-  console.log('[StatusBar Debug] allSkills:', allSkills);
+  console.log('[StatusBar Debug] allCapabilities:', allCapabilities);
   console.log('[StatusBar Debug] profile.id:', profile ? profile.id : 'Profile or profile.id not available');
-  // Calculate Total Global Experience from allSkills
+  // Calculate Total Global Experience from allCapabilities
   let totalGlobalExp = 0;
-  if (allSkills && profile && profile.id) { // Ensure data is available
-    allSkills.forEach(skill => {
-      console.log('[StatusBar Debug] Processing skill:', skill.name, skill.unlocked_users);
-      if (skill.unlocked_users && Array.isArray(skill.unlocked_users)) {
-        skill.unlocked_users.forEach(userEntry => { // userEntry is now an object
+  if (allCapabilities && profile && profile.id) { // Ensure data is available
+    allCapabilities.forEach(capability => {
+      console.log('[StatusBar Debug] Processing capability:', capability.name, capability.unlocked_users);
+      if (capability.unlocked_users && Array.isArray(capability.unlocked_users)) {
+        capability.unlocked_users.forEach(userEntry => { // userEntry is now an object
           console.log('[StatusBar Debug] Checking userEntry:', userEntry);
           if (userEntry && typeof profile.id !== 'undefined') { // Ensure profile.id is available
             const entryUserId = parseInt(userEntry.user_id, 10);

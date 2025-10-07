@@ -30,8 +30,8 @@ const IntentionCreation = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [availableTags, setAvailableTags] = useState([]);
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [availableCapabilities, setAvailableCapabilities] = useState([]);
+  const [selectedCapabilities, setSelectedCapabilities] = useState([]);
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
@@ -60,7 +60,7 @@ const IntentionCreation = () => {
   };
 
   useEffect(() => {
-    const fetchTags = async () => {
+    const fetchCapabilities = async () => {
       try {
         const token = await getAccessTokenSilently();
         const response = await axios.get(
@@ -69,12 +69,12 @@ const IntentionCreation = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setAvailableTags(response.data.interestsPool);
+        setAvailableCapabilities(response.data.skillsPool || []);
       } catch (error) {
-        console.error("Failed to fetch tags:", error);
+        console.error("Failed to fetch capabilities:", error);
       }
     };
-    fetchTags();
+    fetchCapabilities();
   }, [getAccessTokenSilently]);
 
   const handleCreateIntention = async () => {
@@ -90,7 +90,8 @@ const IntentionCreation = () => {
         {
           name: name,
           description: description,
-          tags: selectedTags,
+          tags: [], // Tags are deprecated for now, send empty array
+          capabilities: selectedCapabilities.map(c => c.name),
           auth0_id: user.sub,
         },
         {
@@ -162,18 +163,18 @@ const IntentionCreation = () => {
       />
       <Autocomplete
         multiple
-        options={availableTags}
+        options={availableCapabilities}
         getOptionLabel={(option) => option.name}
-        value={selectedTags}
-        onChange={(event, newValue) => setSelectedTags(newValue)}
+        value={selectedCapabilities}
+        onChange={(event, newValue) => setSelectedCapabilities(newValue)}
         freeSolo
         sx={{ width: '100%' }}
         renderInput={(params) => (
           <TextField
             {...params}
             variant="outlined"
-            label="Tags"
-            placeholder="Add tags"
+            label="Capability Needs"
+            placeholder="Add capabilities"
             margin="normal"
           />
         )}
