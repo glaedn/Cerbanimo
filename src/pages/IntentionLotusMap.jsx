@@ -468,26 +468,21 @@ useEffect(() => {
     return acc;
   }, {});
 
-  const getNodeColor = (status) => {
+  const getPetalColor = (status) => {
     switch (status) {
       case "completed":
-        return "#FF69B4";
-      case "submitted":
-        return "#FFA500";
-      case "urgent-unassigned":
-        return "#888888";
-      case "urgent-assigned":
-        return "#32CD32";
-      case "inactive-unassigned":
-        return "#87CEFA";
-      case "inactive-assigned":
-        return "#4682B4";
+        return "#2ECC71"; // 🟢 Completed
       case "active-assigned":
-        return "#32CD32";
       case "active-unassigned":
-        return "#00FF00";
+        return "#3498DB"; // 🔵 In Progress
+      case "urgent-assigned":
+      case "urgent-unassigned":
+      case "submitted":
+        return "#9B59B6"; // 🟣 Active
+      case "inactive-unassigned":
+      case "inactive-assigned":
       default:
-        return "#CCCCCC";
+        return "#FDFEFE"; // ⚪ Future
     }
   };
 
@@ -495,25 +490,9 @@ useEffect(() => {
     if (linksGroupRef.current) {
       linksGroupRef.current
         .selectAll(".link")
-        .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
+        .attr("stroke", d => d.targetStatus === "completed" ? getPetalColor("completed") : "#999");
     }
   }
-
-  const getNodeStroke = (status) => {
-    if (status === "active-unassigned" || status === "active-assigned")
-      return "#32CD32";
-    if (status === "inactive-unassigned" || status === "inactive-assigned")
-      return "#4682B4";
-    if (status === "urgent-unassigned" || status === "urgent-assigned")
-      return "#FF0000";
-    if (status === "completed") return "#FF69B4";
-    return "#CCCCCC";
-  };
-
-  const getNodeFill = (status) => {
-    if (status.includes("unassigned")) return "#888888";
-    return getNodeColor(status);
-  };
 
   const truncateText = (text, maxLength = 13) => {
     if (text.length <= maxLength) return text;
@@ -695,6 +674,17 @@ useEffect(() => {
       .attr("height", height)
       .call(zoomRef.current);
 
+    // Define the glow filter
+    const defs = svg.append('defs');
+    const filter = defs.append('filter')
+      .attr('id', 'lotus-glow');
+    filter.append('feGaussianBlur')
+      .attr('stdDeviation', '4.5')
+      .attr('result', 'coloredBlur');
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
     // Create a main group that will be transformed during zooming
     const mainGroup = svg
       .append("g")
@@ -748,77 +738,69 @@ useEffect(() => {
     })
     .map((node) => node.id);
 
-    // Perform topological sorting to assign levels
+    // --- New Lotus Layout Logic ---
     const assignLevels = () => {
-      // Mark all root nodes as level 0
-      rootNodes.forEach((id) => {
-        graph[id].level = 0;
-      });
-
+      rootNodes.forEach(id => { graph[id].level = 1; });
       let hasChanged = true;
-
-      // Continue until no more changes
       while (hasChanged) {
         hasChanged = false;
-
-        // Check all nodes
-        Object.values(graph).forEach((node) => {
+        Object.values(graph).forEach(node => {
           if (node.level === -1) {
-            // Check if all dependencies have levels assigned
-            const internalDeps = node.dependencies.filter(
-              (depId) => graph[depId]
-            );
-            const allDepsAssigned = internalDeps.every(
-              (depId) => graph[depId].level !== -1
-            );
-
+            const internalDeps = node.dependencies.filter(depId => graph[depId]);
+            const allDepsAssigned = internalDeps.every(depId => graph[depId].level !== -1);
             if (allDepsAssigned) {
-              // Find maximum level of dependencies and add 1
-              const maxDepLevel = Math.max(
-                ...internalDeps.map((depId) => graph[depId].level),
-                -1
-              );
+              const maxDepLevel = Math.max(...internalDeps.map(depId => graph[depId].level), 0);
               node.level = maxDepLevel + 1;
               hasChanged = true;
             }
           }
         });
       }
-
-      // Handle any remaining nodes (possible circular dependencies)
-      Object.values(graph).forEach((node) => {
-        if (node.level === -1) {
-          node.level = 0; // Assign to root level as fallback
-        }
-      });
+      Object.values(graph).forEach(node => { if (node.level === -1) node.level = 1; });
     };
 
     assignLevels();
 
-    // Group nodes by level
-    const levels = [];
-    const maxLevel = Math.max(
-      ...Object.values(graph).map((node) => node.level)
-    );
+    const maxLevel = Math.max(...Object.values(graph).map(node => node.level), 0);
+    const levels = Array.from({ length: maxLevel + 1 }, () => []);
+    Object.values(graph).forEach(node => {
+      if (node.level >= 0) levels[node.level].push(node);
+    });
 
-    for (let i = 0; i <= maxLevel; i++) {
-      levels[i] = Object.values(graph).filter((node) => node.level === i);
-    }
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const baseRadius = 100;
+    const radiusStep = 120;
 
-    // Calculate positions with fixed level height
-    // For each level, calculate horizontal positions
+    // Position nodes in concentric circles
     levels.forEach((levelNodes, levelIndex) => {
-      // Calculate the total width of nodes in this level
-      const levelWidth = NODE_HORIZONTAL_SPACING * (levelNodes.length - 1);
-
-      // Start X is based on centering just this level — starting from 0
-      const startX = 200 - levelWidth / 2;
-
+      if (levelIndex === 0) return; // Skip level 0, which is the center
+      const radius = baseRadius + (levelIndex - 1) * radiusStep;
+      const angleStep = (2 * Math.PI) / levelNodes.length;
       levelNodes.forEach((node, nodeIndex) => {
-        node.x = startX + NODE_HORIZONTAL_SPACING * nodeIndex;
-        node.y = FIXED_LEVEL_HEIGHT * (levelIndex + 0.5);
+        const angle = nodeIndex * angleStep;
+        node.x = centerX + radius * Math.cos(angle);
+        node.y = centerY + radius * Math.sin(angle);
       });
     });
+
+    // Center Intention Node
+    const centerNode = mainGroup.append("g")
+      .attr("transform", `translate(${centerX}, ${centerY})`)
+      .attr("class", "intention-center-node");
+
+    centerNode.append("circle")
+      .attr("r", 40)
+      .attr("fill", "#4a0e6b") // Deep purple for core
+      .attr("stroke", "#c471ed")
+      .attr("stroke-width", 3);
+
+    centerNode.append("text")
+      .text("⊙")
+      .attr("text-anchor", "middle")
+      .attr("dy", 5)
+      .attr("fill", "white")
+      .style("font-size", "24px");
 
     // 1. First create your links array with IDs for reference
 const links = [];
@@ -974,14 +956,8 @@ links.forEach(link => {
           externalNodeGroup
             .append("circle")
             .attr("r", 7)
-            .attr(
-              "fill",
-              dep.petalInfo ? getNodeFill(dep.petalInfo.status) : "#CCCCCC"
-            )
-            .attr(
-              "stroke",
-              dep.petalInfo ? getNodeStroke(dep.petalInfo.status) : "#999999"
-            )
+            .attr("fill", dep.petalInfo ? getPetalColor(dep.petalInfo.status) : "#CCCCCC")
+            .attr("stroke", "#999999")
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
         });
@@ -1032,14 +1008,8 @@ links.forEach(link => {
           externalNodeGroup
             .append("circle")
             .attr("r", 7)
-            .attr(
-              "fill",
-              dep.petalInfo ? getNodeFill(dep.petalInfo.status) : "#CCCCCC"
-            )
-            .attr(
-              "stroke",
-              dep.petalInfo ? getNodeStroke(dep.petalInfo.status) : "#999999"
-            )
+            .attr("fill", dep.petalInfo ? getPetalColor(dep.petalInfo.status) : "#CCCCCC")
+            .attr("stroke", "#999999")
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
         });
@@ -1068,9 +1038,10 @@ links.forEach(link => {
     nodeGroups
       .append("circle")
       .attr("r", 15)
-      .attr("fill", (d) => getNodeFill(d.status))
-      .attr("stroke", (d) => getNodeStroke(d.status))
-      .attr("stroke-width", 2);
+      .attr("fill", (d) => getPetalColor(d.status))
+      .style("filter", "url(#lotus-glow)")
+       // TODO: Replace with actual resonance data when available
+      .style("opacity", d => 0.5 + Math.random() * 0.5);
 
     nodeGroups
       .append("text")
@@ -1264,32 +1235,35 @@ links.forEach(link => {
           width={svgDimensions.width}
           height={svgDimensions.height}
         ></svg>
-        {intention?.creator_id === Number(userId) && (
-          <div className="edit-buttons">
-            {isEditMode && (
-              <button
-                className="new-petal-button"
-                onClick={() => {
-                  handleAddPetal();
-                }}
-              >
-                + New Petal
+
+        <div className="intention-lotus-controls">
+          {intention?.creator_id === Number(userId) && (
+            <>
+              <button className="control-button" onClick={() => handleAddPetal()}>[ Add Petal ]</button>
+              <button className="control-button" onClick={() => setIsEditMode(!isEditMode)}>
+                {isEditMode ? "[ Finish Editing ]" : "[ Edit Links ]"}
               </button>
-            )}
+            </>
+          )}
+          <button className="control-button">[ Manifest View 🌠 ]</button>
+        </div>
+
+        {intention?.creator_id === Number(userId) && (
+          <div className="admin-buttons">
             {!intentionIsActive && (
             <button
-              className={`new-petal-button ${loading ? 'disabled' : ''}`}
+              className={`admin-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
                 handleGranularizePetals(intentionId);
               }}
               disabled={loading}
             >
-              {loading ? 'Granularizing...' : 'Granularize all intention petals'}
+              {loading ? 'Granularizing...' : 'Granularize'}
             </button>
             )}
             {intention?.realm_id === null && (
               <button
-                className="realm-proposal-button"
+                className="admin-button"
                 onClick={() => {
                   fetchUserRealms();
                   setShowRealmProposalPopup(true);
@@ -1298,16 +1272,8 @@ links.forEach(link => {
                 Propose to Realm
               </button>
             )}
-
-            <button
-              className="edit-mode-button"
-              onClick={() => setIsEditMode(!isEditMode)}
-            >
-              {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
-            </button>
           </div>
         )}
-
       </div>
 
       {hoveredNode && (

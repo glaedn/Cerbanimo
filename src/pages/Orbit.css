@@ -1,5 +1,6 @@
 .orbit-container {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
@@ -7,6 +8,38 @@
   background-color: #0A0A2E;
   overflow: hidden;
   position: relative;
+}
+
+.orbit-header {
+  position: absolute;
+  top: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  color: white;
+  z-index: 10;
+}
+
+.user-level {
+  font-size: 1.2rem;
+  font-family: 'monospace';
+  color: #a9a9a9;
+}
+
+.toggle-capabilities-btn {
+  background: none;
+  border: 1px solid #a9a9a9;
+  color: #a9a9a9;
+  padding: 10px 15px;
+  font-family: 'monospace';
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-capabilities-btn:hover {
+  background-color: #a9a9a9;
+  color: #0a0a1a;
 }
 
 .lotus-map-overlay {

@@ -35,7 +35,7 @@ const PublicProfile = () => {
         // Safely parse profile data
         const parsedProfile = {
           ...profileResponse.data,
-          skills: Array.isArray(profileResponse.data.skills) 
+          capabilities: Array.isArray(profileResponse.data.skills)
             ? profileResponse.data.skills.map(skill => {
                 if (typeof skill === 'string') {
                   try {
@@ -175,10 +175,10 @@ const PublicProfile = () => {
 
       <UserPortfolio userId={userId} />
       <Typography variant="h6" gutterBottom>
-        Skills:
+        Capabilities:
       </Typography>
       <div className="skills-container">
-        {renderChips(profile.skills)}
+        {renderChips(profile.capabilities)}
       </div>
       
       <Typography variant="h6" gutterBottom>

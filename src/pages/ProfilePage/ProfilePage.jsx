@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
 import UserPortfolio from '../UserPortfolio.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import CapabilitiesConstellation from '../../components/CapabilitiesConstellation';
 
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
@@ -38,13 +39,13 @@ const ProfilePage = () => {
 
   const [profileData, setProfileData] = useState({
     username: '',
-    skills: [],
+    capabilities: [],
     interests: [],
     experience: [],
     profile_picture: '', // This will hold the file path or URL of the profile picture
     contact_links: ['', '', ''], // Initialize with 3 empty strings
   });
-  const [skillsPool, setSkillsPool] = useState([]);
+  const [capabilitiesPool, setCapabilitiesPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
   const [error, setError] = useState(null);
   const [newProfilePicture, setNewProfilePicture] = useState(null); // New state for the file input
@@ -102,7 +103,7 @@ const ProfilePage = () => {
             const fetchedProfileData = {
             id: profileResponse.data.id,
             username: profileResponse.data.username || '',
-            skills: (profileResponse.data.skills || []).map(skill => {
+            capabilities: (profileResponse.data.skills || []).map(skill => {
               if (typeof skill === 'string') {
               try {
                 return JSON.parse(skill);
@@ -139,8 +140,8 @@ const ProfilePage = () => {
               Authorization: `Bearer ${token}`,
             },
           });
-          const skills = optionsResponse.data?.skillsPool;
-          setSkillsPool(Array.isArray(skills) ? skills : []);
+          const capabilities = optionsResponse.data?.skillsPool;
+          setCapabilitiesPool(Array.isArray(capabilities) ? capabilities : []);
           // Transform interest strings into objects with name property
           const interests = optionsResponse.data?.interestsPool;
           setInterestsPool(Array.isArray(interests) ? interests.map(interest =>
@@ -369,7 +370,7 @@ const ProfilePage = () => {
 
       const formData = new FormData();
       formData.append('username', profileData.username);
-      formData.append('skills', JSON.stringify(profileData.skills));
+      formData.append('capabilities', JSON.stringify(profileData.capabilities));
       formData.append('interests', JSON.stringify(profileData.interests));
 
       // Handle contact_links
@@ -559,25 +560,33 @@ const ProfilePage = () => {
       ))}
       </Box> 
 
-      {/* Skillset Analysis Panel */}
+      {/* Capabilities Constellation */}
       <Box sx={panelStyle}>
         <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
-          Skillset Analysis
+          Capabilities Constellation
+        </Typography>
+        <CapabilitiesConstellation capabilities={profileData.capabilities} />
+      </Box>
+
+      {/* Capabilities Analysis Panel */}
+      <Box sx={panelStyle}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Capabilities Analysis
         </Typography>
         <Autocomplete
           multiple
           fullWidth // Takes width of panel constraint
-          options={skillsPool}
+          options={capabilitiesPool}
           getOptionLabel={(option) => option.name || ''} 
-          value={profileData.skills || []}
-          onChange={(event, newValue) => handleInputChange('skills', newValue)}
+          value={profileData.capabilities || []}
+          onChange={(event, newValue) => handleInputChange('capabilities', newValue)}
           freeSolo
           renderInput={(params) => (
             <TextField 
               {...params} 
               variant="outlined" 
-              label="Skills" 
-              placeholder="Add skills"
+              label="Capabilities"
+              placeholder="Add capabilities"
               sx={{
                 // Styles for TextField wrapper of Autocomplete are mostly from panelStyle or default
                 '& .MuiInputLabel-root': { 
@@ -663,46 +672,33 @@ const ProfilePage = () => {
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
         
-            // Ensure we have a full skill object
-            let fullSkill = skillsPool.find(skill => skill.name === option.name) || option;
+            // Ensure we have a full capability object
+            let fullCapability = capabilitiesPool.find(capability => capability.name === option.name) || option;
         
-            // console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
+            let label = fullCapability.name || '';
+            let capabilityLevel = 0;
         
-            let label = fullSkill.name || '';
-            let skillLevel = 0;
-        
-            if (Array.isArray(fullSkill.unlocked_users)) {
-              // console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
-        
-              const userEntry = fullSkill.unlocked_users.find(u => u.user_id == profileData.id);
+            if (Array.isArray(fullCapability.unlocked_users)) {
+              const userEntry = fullCapability.unlocked_users.find(u => u.user_id == profileData.id);
         
               if (userEntry) {
-                skillLevel = userEntry.level || 0;
+                capabilityLevel = userEntry.level || 0;
               }
             }
         
-            // ChipProps above handles the primary styling
             return (
               <Chip
                 key={key}
-                label={`${label} (Lvl ${skillLevel})`}
+                label={`${label} (Level ${capabilityLevel})`}
                 {...otherProps}
-                // sx prop here would override ChipProps if needed for specific tags
               />
             );
           })
         }
-        
-        
-        
-        
-        
-        
-        
       />
         <Button 
           variant="outlined" 
-          onClick={goToSkillTree}
+          onClick={() => navigate('/profile/capability-tree')}
           sx={{ 
             borderColor: theme.colors.accentGreen,
             color: theme.colors.accentGreen,
@@ -716,7 +712,7 @@ const ProfilePage = () => {
             }
           }}
         >
-          Skill Tree
+          Capability Tree
         </Button>
         <Autocomplete
           multiple
