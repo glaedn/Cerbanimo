@@ -40,25 +40,25 @@ router.post('/initiate', authenticate, async (req, res) => {
 
 // --- Future Endpoints Placeholder Comments ---
 
-// POST /exchange/confirm_pickup/:taskId 
+// POST /exchange/confirm_pickup/:petalId
 // Description: Confirms that the resource has been picked up by the recipient or a courier.
-// Logic: Updates the status of the coordination task and potentially the resource.
-// router.post('/confirm_pickup/:taskId', authenticate, async (req, res) => { /* ... */ });
+// Logic: Updates the status of the coordination petal and potentially the resource.
+// router.post('/confirm_pickup/:petalId', authenticate, async (req, res) => { /* ... */ });
 
-// POST /exchange/confirm_delivery/:taskId
+// POST /exchange/confirm_delivery/:petalId
 // Description: Confirms that the resource has been delivered to the need requestor.
-// Logic: Updates the status of the coordination task and potentially the resource/need.
-// router.post('/confirm_delivery/:taskId', authenticate, async (req, res) => { /* ... */ });
+// Logic: Updates the status of the coordination petal and potentially the resource/need.
+// router.post('/confirm_delivery/:petalId', authenticate, async (req, res) => { /* ... */ });
 
-// POST /exchange/verify_exchange/:taskId
+// POST /exchange/verify_exchange/:petalId
 // Description: Final verification by both parties (or an admin) that the exchange is complete and satisfactory.
-// Logic: Updates related task, need, and resource statuses to 'completed' or 'exchanged'. Triggers rewards/reputation updates.
-// router.post('/verify_exchange/:taskId', authenticate, async (req, res) => { /* ... */ });
+// Logic: Updates related petal, need, and resource statuses to 'completed' or 'exchanged'. Triggers rewards/reputation updates.
+// router.post('/verify_exchange/:petalId', authenticate, async (req, res) => { /* ... */ });
 
-// POST /exchange/cancel/:taskId
+// POST /exchange/cancel/:petalId
 // Description: Allows a user involved in the exchange (or admin) to cancel the exchange process.
-// Logic: Updates task, need, and resource statuses to reflect cancellation (e.g., back to 'open' or 'available' if appropriate, or 'cancelled').
-// router.post('/cancel/:taskId', authenticate, async (req, res) => { /* ... */ });
+// Logic: Updates petal, need, and resource statuses to reflect cancellation (e.g., back to 'open' or 'available' if appropriate, or 'cancelled').
+// router.post('/cancel/:petalId', authenticate, async (req, res) => { /* ... */ });
 
 
 export default router; // For ES6 modules

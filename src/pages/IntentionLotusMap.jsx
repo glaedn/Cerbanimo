@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import axios from "axios";
-import TaskEditor from "./TaskEditor";
-import { useIntentionTasks } from "../hooks/useIntentionTasks";
+import PetalEditor from "./PetalEditor";
+import { useIntentionPetals } from "../hooks/useIntentionPetals";
 import "./IntentionLotusMap.css";
 import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -13,14 +13,14 @@ import { Autocomplete, TextField } from "@mui/material";
 const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
-  const { intentionId: paramIntentionId, taskId } = useParams();
+  const { intentionId: paramIntentionId, petalId } = useParams();
   const intentionId = propIntentionId || paramIntentionId;
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
-  const { tasks, skills, intention, handleTaskAction, fetchTasks, updateIntention } =
-    useIntentionTasks(intentionId, user);
-  const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
+  const { petals, skills, intention, handlePetalAction, fetchPetals, updateIntention } =
+    useIntentionPetals(intentionId, user);
+  const [activeCategory, setActiveCategory] = useState("All Petals"); // Default to All Petals
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -44,7 +44,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const [popupLaunched, setPopupLaunched] = useState(false);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
-  // Check if any task is active, completed, or urgent
+  // Check if any petal is active, completed, or urgent
   const [intentionIsActive, setIntentionIsActive] = useState(false);
   const [resonanceCount, setResonanceCount] = useState(0);
   const [userHasResonated, setUserHasResonated] = useState(false);
@@ -68,17 +68,17 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
 
   useEffect(() => {
     setIntentionIsActive(
-      tasks.some(
-        (task) =>
-          task.status === "completed" ||
-          task.status === "active-assigned" ||
-          task.status === "active-unassigned" ||
-          task.status === "urgent-unassigned" ||
-          task.status === "urgent-assigned" ||
-          task.status === "submitted"
+      petals.some(
+        (petal) =>
+          petal.status === "completed" ||
+          petal.status === "active-assigned" ||
+          petal.status === "active-unassigned" ||
+          petal.status === "urgent-unassigned" ||
+          petal.status === "urgent-assigned" ||
+          petal.status === "submitted"
       )
     );
-  }, [tasks]);
+  }, [petals]);
 
 
   const fetchUserRealms = async () => {
@@ -116,9 +116,9 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
     }
   };
 
-  // Function to handle granularization of tasks
-  const handleGranularizeTasks = async (intentionId) => {
-    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the intention.');
+  // Function to handle granularization of petals
+  const handleGranularizePetals = async (intentionId) => {
+    const confirm = window.confirm('Are you sure? This will delete and replace ALL petals in the intention.');
     if (!confirm) return;
 
     setLoading(true);
@@ -128,7 +128,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         scope: "openid profile email",
       });
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${intentionId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/petals/${intentionId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,21 +139,21 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to granularize task: ${errorText}`);
+        throw new Error(`Failed to granularize petal: ${errorText}`);
       }
       
       const data = await response.json();
 
       if (data.success) {
-        // Refresh tasks after successful granularization
-        await fetchTasks();
-        alert('Task granularization successful!');
+        // Refresh petals after successful granularization
+        await fetchPetals();
+        alert('Petal granularization successful!');
       } else {
-        alert('Task granularization failed: ' + data.error);
+        alert('Petal granularization failed: ' + data.error);
       }
     } catch (error) {
-      console.error('Error granularizing task:', error);
-      alert('Error granularizing task: ' + error.message);
+      console.error('Error granularizing petal:', error);
+      alert('Error granularizing petal: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -280,14 +280,14 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   }, [getAccessTokenSilently]);
 
   
-  // Modify your fetchTasks call to preserve the category
-const refreshTasks = async () => {
-  console.log("Refreshing tasks...");
+  // Modify your fetchPetals call to preserve the category
+const refreshPetals = async () => {
+  console.log("Refreshing petals...");
   const currentCategory = activeCategory; // Save before refresh
   const currentSkillId = activeSkillId;
   
-  const updatedTasks = await fetchTasks();
-  console.log("Refreshed tasks data:", updatedTasks);
+  const updatedPetals = await fetchPetals();
+  console.log("Refreshed petals data:", updatedPetals);
   
   // Restore the active category after refresh
   if (currentCategory) {
@@ -342,23 +342,23 @@ useEffect(() => {
     };
   }, []);
 
-  const categorizedTasks = useMemo(() => {
-    // First create the all-tasks entry
-    const taskMap = {
-      "All Tasks": [...tasks] // Include all tasks
+  const categorizedPetals = useMemo(() => {
+    // First create the all-petals entry
+    const petalMap = {
+      "All Petals": [...petals] // Include all petals
     };
   
     // Then add the skill-specific categories
     const filteredSkills = skills.filter((skill) =>
-      tasks.some((task) => task.skill_id === skill.id)
+      petals.some((petal) => petal.skill_id === skill.id)
     );
   
     filteredSkills.forEach((skill) => {
-      taskMap[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
+      petalMap[skill.name] = petals.filter((petal) => petal.skill_id === skill.id);
     });
   
-    return taskMap;
-  }, [tasks, skills]);
+    return petalMap;
+  }, [petals, skills]);
 
   const initialForm = {
     id: null,
@@ -372,8 +372,8 @@ useEffect(() => {
   };
 
   // local modal control here
-  const [taskForm, setTaskForm] = useState(initialForm);
-  const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [petalForm, setPetalForm] = useState(initialForm);
+  const [showPetalPopup, setShowPetalPopup] = useState(false);
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -416,28 +416,28 @@ useEffect(() => {
     tabsContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  const handleEditTask = (task) => {
-    setTaskForm(task); // Fill in form with task values
-    setShowTaskPopup(true); // Show the TaskEditor modal
+  const handleEditPetal = (petal) => {
+    setPetalForm(petal); // Fill in form with petal values
+    setShowPetalPopup(true); // Show the PetalEditor modal
   };
 
-  const handleViewTask = async (task) => {
+  const handleViewPetal = async (petal) => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/petals/${petal.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setTaskForm(response.data);
-      setShowTaskPopup(true);
+      setPetalForm(response.data);
+      setShowPetalPopup(true);
     } catch (error) {
-      console.error("Error fetching full task details:", error);
-      setTaskForm(task);
-      setShowTaskPopup(true);
+      console.error("Error fetching full petal details:", error);
+      setPetalForm(petal);
+      setShowPetalPopup(true);
     }
   };
 
-  const handleAddTask = (dependencyId = null) => {
+  const handleAddPetal = (dependencyId = null) => {
     const currentSkill = skills.find((s) => s.name === activeCategory);
     const form = {
       ...initialForm,
@@ -448,23 +448,23 @@ useEffect(() => {
     // If dependencyId exists, create both the numeric dependencies array
     // and the named version needed for display
     if (dependencyId) {
-      const depTask = allTasks[dependencyId];
+      const depPetal = allPetals[dependencyId];
       form.dependencies = [parseInt(dependencyId, 10)];
-      form.dependenciesWithNames = depTask ? [
-        { id: parseInt(dependencyId, 10), name: depTask.name }
+      form.dependenciesWithNames = depPetal ? [
+        { id: parseInt(dependencyId, 10), name: depPetal.name }
       ] : [];
     }
     
-    setTaskForm(form);
-    setShowTaskPopup(true);
+    setPetalForm(form);
+    setShowPetalPopup(true);
   };
 
   const FIXED_LEVEL_HEIGHT = 120;
   const MAX_EXTERNAL_DEPS = 3;
 
-  // All tasks across all skills - used to find external dependencies
-  const allTasks = tasks.reduce((acc, task) => {
-    acc[task.id] = task;
+  // All petals across all skills - used to find external dependencies
+  const allPetals = petals.reduce((acc, petal) => {
+    acc[petal.id] = petal;
     return acc;
   }, {});
 
@@ -521,7 +521,7 @@ useEffect(() => {
   };
 
   const usedSkills = skills.filter((skill) =>
-    tasks.some((task) => task.skill_id === skill.id)
+    petals.some((petal) => petal.skill_id === skill.id)
   );
 
   // Handle mouse leave for the entire visualization container
@@ -536,10 +536,10 @@ useEffect(() => {
 useEffect(() => {
   // Only set initial values if both activeCategory and activeSkillId are not set
   if (!activeCategory) {
-    setActiveCategory("All Tasks");
+    setActiveCategory("All Petals");
     setActiveSkillId(null);
   }
-}, [skills, tasks]); // Dependencies remain the same
+}, [skills, petals]); // Dependencies remain the same
 
 useEffect(() => {
   if (hoveredNode && tooltipRef.current) {
@@ -665,8 +665,8 @@ useEffect(() => {
   useEffect(() => {
     if (!svgRef.current) return;
     
-    // Get tasks for the current category
-    const data = categorizedTasks[activeCategory] || [];
+    // Get petals for the current category
+    const data = categorizedPetals[activeCategory] || [];
     
     // Exit early if no data
     if (data.length === 0) return;
@@ -731,17 +731,17 @@ useEffect(() => {
       });
     });
 
-    // Find root nodes - different logic for All Tasks view vs skill-specific views
+    // Find root nodes - different logic for All Petals view vs skill-specific views
     const rootNodes = data
     .filter((node) => {
-      if (activeCategory === "All Tasks") {
-        // For All Tasks view, a root node has no dependencies at all
+      if (activeCategory === "All Petals") {
+        // For All Petals view, a root node has no dependencies at all
         return node.dependencies.length === 0;
       } else {
         // For skill-specific views
         const internalDeps = node.dependencies.filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id === activeSkillId;
+          const depPetal = allPetals[depId];
+          return depPetal && depPetal.skill_id === activeSkillId;
         });
         return internalDeps.length === 0;
       }
@@ -828,8 +828,8 @@ data.forEach((source) => {
   const sourceNode = graph[source.id];
   if (!sourceNode) return;
 
-  // For All Tasks view, include all dependencies
-  if (activeCategory === "All Tasks") {
+  // For All Petals view, include all dependencies
+  if (activeCategory === "All Petals") {
     source.dependencies.forEach((depId) => {
       const targetNode = graph[depId];
       if (targetNode) {
@@ -845,8 +845,8 @@ data.forEach((source) => {
   } else {
     // For skill-specific views
     const internalDeps = source.dependencies.filter((depId) => {
-      const depTask = allTasks[depId];
-      return depTask && depTask.skill_id === activeSkillId;
+      const depPetal = allPetals[depId];
+      return depPetal && depPetal.skill_id === activeSkillId;
     });
 
     internalDeps.forEach((depId) => {
@@ -884,7 +884,7 @@ const linkElements = linksGroup
     }`;
   });
 
-// 3. Now go through and update the colors for completed tasks directly
+// 3. Now go through and update the colors for completed petals directly
 links.forEach(link => {
   if (link.targetStatus === "completed") {
     d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
@@ -892,34 +892,34 @@ links.forEach(link => {
 });
 
 
-    // Only process external dependencies if we're not in All Tasks view
-    if (activeCategory !== "All Tasks") {
+    // Only process external dependencies if we're not in All Petals view
+    if (activeCategory !== "All Petals") {
       Object.values(graph).forEach((node) => {
         // Get external dependencies (things this node depends on)
         const externalDeps = node.dependencies
           .filter((depId) => {
-            const depTask = allTasks[depId];
-            return depTask && depTask.skill_id !== activeSkillId;
+            const depPetal = allPetals[depId];
+            return depPetal && depPetal.skill_id !== activeSkillId;
           })
           .map((depId) => ({
             id: depId,
             sourceNode: node,
             type: "depends-on",
-            taskInfo: allTasks[depId],
+            petalInfo: allPetals[depId],
           }));
     
         // Get external dependents (things that depend on this node)
-        const externalDependents = Object.values(allTasks)
+        const externalDependents = Object.values(allPetals)
           .filter(
-            (task) =>
-              task.skill_id !== activeSkillId &&
-              task.dependencies.includes(node.id)
+            (petal) =>
+              petal.skill_id !== activeSkillId &&
+              petal.dependencies.includes(node.id)
           )
-          .map((task) => ({
-            id: task.id,
+          .map((petal) => ({
+            id: petal.id,
             sourceNode: node,
             type: "depended-by",
-            taskInfo: task,
+            petalInfo: petal,
           }));
     
         // Limit to MAX_EXTERNAL_DEPS dependencies of each type
@@ -954,12 +954,12 @@ links.forEach(link => {
             .attr("transform", `translate(${x2}, ${y2})`)
             .style("pointer-events", "visible")
             .on("mouseover", (event) => {
-              if (dep.taskInfo) {
+              if (dep.petalInfo) {
                 setHoveredNode({
                   id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
+                  name: dep.petalInfo.name,
+                  status: dep.petalInfo.status,
+                  category: dep.petalInfo.category,
                   type: dep.type,
                   rawX: event.clientX,
                   rawY: event.clientY,
@@ -969,18 +969,18 @@ links.forEach(link => {
             })
             .on("mouseout", handleMouseOut)
             .on("mouseleave", handleMouseOut) 
-            .on("click", () => handleEditTask(dep.taskInfo.id));
+            .on("click", () => handleEditPetal(dep.petalInfo.id));
 
           externalNodeGroup
             .append("circle")
             .attr("r", 7)
             .attr(
               "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+              dep.petalInfo ? getNodeFill(dep.petalInfo.status) : "#CCCCCC"
             )
             .attr(
               "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+              dep.petalInfo ? getNodeStroke(dep.petalInfo.status) : "#999999"
             )
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
@@ -1013,12 +1013,12 @@ links.forEach(link => {
             .attr("transform", `translate(${x2}, ${y2})`)
             .on("mouseover", (event) => {
               const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
-              if (dep.taskInfo) {
+              if (dep.petalInfo) {
                 setHoveredNode({
                   id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
+                  name: dep.petalInfo.name,
+                  status: dep.petalInfo.status,
+                  category: dep.petalInfo.category,
                   type: dep.type,
                   rawX: event.clientX,
                   rawY: event.clientY,
@@ -1034,11 +1034,11 @@ links.forEach(link => {
             .attr("r", 7)
             .attr(
               "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
+              dep.petalInfo ? getNodeFill(dep.petalInfo.status) : "#CCCCCC"
             )
             .attr(
               "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
+              dep.petalInfo ? getNodeStroke(dep.petalInfo.status) : "#999999"
             )
             .attr("stroke-width", 1.5)
             .attr("stroke-dasharray", "2,1");
@@ -1060,9 +1060,9 @@ links.forEach(link => {
       .on("click", function (event, d) {
         event.stopPropagation(); // Prevent event bubbling
         if (isEditMode) {
-          handleEditTask(d);
+          handleEditPetal(d);
         } else {
-          handleViewTask(d);
+          handleViewPetal(d);
         }
       });
     nodeGroups
@@ -1107,7 +1107,7 @@ links.forEach(link => {
           .on("click", function (event) {
             // Move click handler here
             event.stopPropagation();
-            handleAddTask(node.id);
+            handleAddPetal(node.id);
           });
 
         addButtonGroup
@@ -1128,46 +1128,46 @@ links.forEach(link => {
     }
   }, [
     activeCategory,
-    allTasks,
+    allPetals,
     skills,
     isEditMode,
     zoomTransform,
     svgDimensions,
-    tasks,
+    petals,
   ]);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
 
     useEffect(() => {
-    const fetchFullTask = async () => {
-      if (taskId && !popupLaunched) {
+    const fetchFullPetal = async () => {
+      if (petalId && !popupLaunched) {
         try {
           const token = await getAccessTokenSilently();
           const response = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`,
+            `${import.meta.env.VITE_BACKEND_URL}/petals/${petalId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const task = response.data;
-          if (task) {
-            setTaskForm(task);
+          const petal = response.data;
+          if (petal) {
+            setPetalForm(petal);
             setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
+            setActiveSkillId(petal.skill_id);
+            setShowPetalPopup(true);
+            const skill = skills.find(s => s.id === petal.skill_id);
             if (skill) {
               setActiveCategory(skill.name);
             }
           }
         } catch (error) {
-          console.error("Error fetching full task details for deep link:", error);
-          // Fallback to tasks array
-          const task = tasks.find(t => t.id === parseInt(taskId, 10));
-          if (task) {
-            setTaskForm(task);
+          console.error("Error fetching full petal details for deep link:", error);
+          // Fallback to petals array
+          const petal = petals.find(t => t.id === parseInt(petalId, 10));
+          if (petal) {
+            setPetalForm(petal);
             setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
+            setActiveSkillId(petal.skill_id);
+            setShowPetalPopup(true);
+            const skill = skills.find(s => s.id === petal.skill_id);
             if (skill) {
               setActiveCategory(skill.name);
             }
@@ -1175,10 +1175,10 @@ links.forEach(link => {
         }
       }
     };
-    fetchFullTask();
-  }, [taskId, tasks, skills, popupLaunched, getAccessTokenSilently]);
+    fetchFullPetal();
+  }, [petalId, petals, skills, popupLaunched, getAccessTokenSilently]);
 
-  // Add these debug logs right before the TaskEditor component in the return statement
+  // Add these debug logs right before the PetalEditor component in the return statement
 
   return (
     <div
@@ -1197,18 +1197,18 @@ links.forEach(link => {
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
         >
-          {/* Add the All Tasks tab first */}
+          {/* Add the All Petals tab first */}
           <button
-            key="all-tasks"
-            className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
+            key="all-petals"
+            className={`tab all-petals ${activeCategory === "All Petals" ? "active" : ""}`}
             onClick={() => {
-              setActiveCategory("All Tasks");
-              setActiveSkillId(null); // No specific skill for All Tasks view
+              setActiveCategory("All Petals");
+              setActiveSkillId(null); // No specific skill for All Petals view
             }}
             style={{ flex: "0 0 auto" }}
           >
-            All Tasks
-            {activeCategory === "All Tasks" && (
+            All Petals
+            {activeCategory === "All Petals" && (
               <span className="active-indicator" />
             )}
           </button>
@@ -1239,12 +1239,12 @@ links.forEach(link => {
             <button
               className="tab new-skill-tab"
               onClick={() => {
-                setTaskForm({
+                setPetalForm({
                   ...initialForm,
                     intention_id: intentionId,
                   skill_id: "" // No skill pre-selected
                 });
-                setShowTaskPopup(true);
+                setShowPetalPopup(true);
               }}
               style={{ flex: "0 0 auto" }}
             >
@@ -1268,23 +1268,23 @@ links.forEach(link => {
           <div className="edit-buttons">
             {isEditMode && (
               <button
-                className="new-task-button"
+                className="new-petal-button"
                 onClick={() => {
-                  handleAddTask();
+                  handleAddPetal();
                 }}
               >
-                + New Task
+                + New Petal
               </button>
             )}
             {!intentionIsActive && (
             <button
-              className={`new-task-button ${loading ? 'disabled' : ''}`}
+              className={`new-petal-button ${loading ? 'disabled' : ''}`}
               onClick={() => {
-                handleGranularizeTasks(intentionId);
+                handleGranularizePetals(intentionId);
               }}
               disabled={loading}
             >
-              {loading ? 'Granularizing...' : 'Granularize all intention tasks'}
+              {loading ? 'Granularizing...' : 'Granularize all intention petals'}
             </button>
             )}
             {intention?.realm_id === null && (
@@ -1330,7 +1330,7 @@ links.forEach(link => {
             <h4>{hoveredNode.name}</h4>
             {hoveredNode.isAddButton ? (
               <p>
-                Creates a new task connected to node{" "}
+                Creates a new petal connected to node{" "}
                 {hoveredNode.connectedToNodeId}
               </p>
             ) : (
@@ -1344,8 +1344,8 @@ links.forEach(link => {
                   <p>
                     Relationship:{" "}
                     {hoveredNode.type === "depends-on"
-                      ? "Current task depends on this"
-                      : "This depends on current task"}
+                      ? "Current petal depends on this"
+                      : "This depends on current petal"}
                   </p>
                 )}
                 {hoveredNode.dependencies &&
@@ -1354,14 +1354,14 @@ links.forEach(link => {
                       <p>Depends on:</p>
                       <ul>
                         {hoveredNode.dependencies
-                          .map((depId) => allTasks[depId]) // Resolve ID to task object
+                          .map((depId) => allPetals[depId]) // Resolve ID to petal object
                           .filter(Boolean) // Remove undefined (invalid dependencies)
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
+                          .map((petal) => (
+                            <li key={petal.id}>
+                              {petal.name}{" "}
+                              {petal.skill_id !== activeSkillId
                                 ? `(${
-                                    skills.find((s) => s.id === task.skill_id)
+                                    skills.find((s) => s.id === petal.skill_id)
                                       ?.name || "external"
                                   })`
                                 : ""}
@@ -1376,16 +1376,16 @@ links.forEach(link => {
                     <div>
                       <p>Required by:</p>
                       <ul>
-                        {Object.values(allTasks)
-                          .filter((task) =>
-                            task.dependencies.includes(hoveredNode.id)
+                        {Object.values(allPetals)
+                          .filter((petal) =>
+                            petal.dependencies.includes(hoveredNode.id)
                           )
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
+                          .map((petal) => (
+                            <li key={petal.id}>
+                              {petal.name}{" "}
+                              {petal.skill_id !== activeSkillId
                                 ? `(${
-                                    skills.find((s) => s.id === task.skill_id)
+                                    skills.find((s) => s.id === petal.skill_id)
                                       ?.name || "external"
                                   })`
                                 : ""}
@@ -1395,12 +1395,12 @@ links.forEach(link => {
                     </div>
                   )}
 
-                {/* Reviewer info for this specific task */}
-                {allTasks[hoveredNode.id]?.reviewer_ids && (
+                {/* Reviewer info for this specific petal */}
+                {allPetals[hoveredNode.id]?.reviewer_ids && (
                   <div>
                     <p>Reviewers:</p>
                     <ul>
-                      {allTasks[hoveredNode.id].reviewer_ids.map((rid, idx) => (
+                      {allPetals[hoveredNode.id].reviewer_ids.map((rid, idx) => (
                         <li key={idx}>{rid}</li>
                       ))}
                     </ul>
@@ -1547,20 +1547,20 @@ links.forEach(link => {
         </div>
       </div>
 
-      <TaskEditor
-        open={showTaskPopup}
+      <PetalEditor
+        open={showPetalPopup}
         onClose={() => {
-          setShowTaskPopup(false);
-          refreshTasks();
+          setShowPetalPopup(false);
+          refreshPetals();
         }}
         intentionId={intentionId}
-        taskForm={taskForm}
-        setTaskForm={setTaskForm}
+        petalForm={petalForm}
+        setPetalForm={setPetalForm}
         onSubmit={async (formData) => {
           const action = formData.id ? 'update' : 'create'; 
-          const result = await handleTaskAction(formData, action);
+          const result = await handlePetalAction(formData, action);
           if (!result.error) {
-            await refreshTasks();
+            await refreshPetals();
             updateLinkColors();
           }
           return result;
@@ -1569,13 +1569,13 @@ links.forEach(link => {
         isEdit={isEditMode}
         currentUser={user}
         intentionCreatorId={intention?.creator_id}
-        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
+        isReviewer={allPetals[petalForm?.id]?.reviewer_ids?.includes(Number(userId))}
       />
 
       <div className="legend">
         <div>
           <span style={{ color: "#FF69B4" }}>● </span>Pink indicates a completed
-          task
+          petal
         </div>
         <div>
           <span style={{ color: "#FF0000" }}>● </span>Red circle indicates

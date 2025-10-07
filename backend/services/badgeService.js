@@ -35,19 +35,19 @@ async function checkAndAwardBadges(userId) {
         }
 
         // Fetch data needed for badge check functions
-        const completedUserTasks = await getCompletedTasksForUser(userId);
+        const completedUserPetals = await getCompletedPetalsForUser(userId);
         
         let skillCategoriesMap = new Map();
-        if (completedUserTasks.length > 0) {
-            const uniqueSkillIds = Array.from(new Set(completedUserTasks.map(task => task.skill_id).filter(id => id != null)));
+        if (completedUserPetals.length > 0) {
+            const uniqueSkillIds = Array.from(new Set(completedUserPetals.map(petal => petal.skill_id).filter(id => id != null)));
             if (uniqueSkillIds.length > 0) {
                 skillCategoriesMap = await getSkillCategories(uniqueSkillIds);
             }
         }
         // TODO: As more badges are implemented, fetch other necessary data here (e.g., userActivity)
-        const userEndorsementsWithDetails = await getUserEndorsementsWithTaskDetails(userId);
+        const userEndorsementsWithPetalDetails = await getUserEndorsementsWithPetalDetails(userId);
         const createdUserProjects = await getProjectsCreatedByUser(userId);
-        const createdUserTasksWithAssignees = await getTasksCreatedByUserWithAssignees(userId);
+        const createdPetalsWithAssignees = await getPetalsCreatedByUserWithAssignees(userId);
         const userAccountData = await getUserAccountData(userId);
         
         // Placeholder for data needed by other badges not yet implemented with specific data retrieval
@@ -65,37 +65,37 @@ async function checkAndAwardBadges(userId) {
             let qualifies = false;
             switch (badge.name) {
                 case "Bounty Hunter":
-                    qualifies = await checkBountyHunter(userId, completedUserTasks);
+                    qualifies = await checkBountyHunter(userId, completedUserPetals);
                     break;
                 case "Cosmic Contractor":
-                    qualifies = await checkCosmicContractor(userId, completedUserTasks);
+                    qualifies = await checkCosmicContractor(userId, completedUserPetals);
                     break;
                 case "Legendary Outlaw":
-                    qualifies = await checkLegendaryOutlaw(userId, completedUserTasks);
+                    qualifies = await checkLegendaryOutlaw(userId, completedUserPetals);
                     break;
                 case "Warp Speed Worker": // Assuming "Warp Speed Worker" is the exact name in the badges table
-                    qualifies = await checkWarpSpeedWorker(userId, completedUserTasks);
+                    qualifies = await checkWarpSpeedWorker(userId, completedUserPetals);
                     break;
                 case "Space Engineer":
-                    qualifies = await checkSpaceEngineer(userId, completedUserTasks, skillCategoriesMap);
+                    qualifies = await checkSpaceEngineer(userId, completedUserPetals, skillCategoriesMap);
                     break;
                 case "Stellar Artisan":
-                    qualifies = await checkStellarArtisan(userId, completedUserTasks, skillCategoriesMap);
+                    qualifies = await checkStellarArtisan(userId, completedUserPetals, skillCategoriesMap);
                     break;
                 case "Interstellar Fixer":
-                    qualifies = await checkInterstellarFixer(userId, userEndorsementsWithDetails);
+                    qualifies = await checkInterstellarFixer(userId, userEndorsementsWithPetalDetails);
                     break;
                 case "Captain Of The Crew": // Ensure this name matches the 'name' column in the 'badges' table
                     qualifies = await checkCaptainOfTheCrew(userId, createdUserProjects);
                     break;
                 case "Cosmic Collaborator": // Ensure this name matches the 'name' column in the 'badges' table
-                    qualifies = await checkCosmicCollaborator(userId, completedUserTasks);
+                    qualifies = await checkCosmicCollaborator(userId, completedUserPetals);
                     break;
                 case "Quantum Mentor": // Ensure this name matches the 'name' column in the 'badges' table
-                    qualifies = await checkQuantumMentor(userId, userEndorsementsWithDetails);
+                    qualifies = await checkQuantumMentor(userId, userEndorsementsWithPetalDetails);
                     break;
                 case "Lunar Visionary": // Ensure this name matches the 'name' column in the 'badges' table
-                    qualifies = await checkLunarVisionary(userId, createdUserTasksWithAssignees);
+                    qualifies = await checkLunarVisionary(userId, createdPetalsWithAssignees);
                     break;
                 case "Space Cowboy":
                     qualifies = await checkSpaceCowboy(userId, userAccountData);
@@ -146,55 +146,55 @@ async function checkAndAwardBadges(userId) {
 /**
  * Checks if the user qualifies for Bounty Hunter.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @returns {boolean}
  */
-async function checkBountyHunter(userId, completedTasks) {
-    console.log(`User ${userId} completed ${completedTasks.length} tasks. Checking for Bounty Hunter (5 tasks).`);
-    return completedTasks.length >= 5;
+async function checkBountyHunter(userId, completedPetals) {
+    console.log(`User ${userId} completed ${completedPetals.length} petals. Checking for Bounty Hunter (5 petals).`);
+    return completedPetals.length >= 5;
 }
 
 /**
  * Checks if the user qualifies for Cosmic Contractor.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @returns {boolean}
  */
-async function checkCosmicContractor(userId, completedTasks) {
-    console.log(`User ${userId} completed ${completedTasks.length} tasks. Checking for Cosmic Contractor (10 tasks).`);
-    return completedTasks.length >= 10;
+async function checkCosmicContractor(userId, completedPetals) {
+    console.log(`User ${userId} completed ${completedPetals.length} petals. Checking for Cosmic Contractor (10 petals).`);
+    return completedPetals.length >= 10;
 }
 
 /**
  * Checks if the user qualifies for Legendary Outlaw.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @returns {boolean}
  */
-async function checkLegendaryOutlaw(userId, completedTasks) {
-    console.log(`User ${userId} completed ${completedTasks.length} tasks. Checking for Legendary Outlaw (50 tasks).`);
-    return completedTasks.length >= 50;
+async function checkLegendaryOutlaw(userId, completedPetals) {
+    console.log(`User ${userId} completed ${completedPetals.length} petals. Checking for Legendary Outlaw (50 petals).`);
+    return completedPetals.length >= 50;
 }
 
 /**
  * Checks if the user qualifies for Warp Speed Worker.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @returns {boolean}
  */
-async function checkWarpSpeedWorker(userId, completedTasks) {
-    // Using task.created_at as a proxy for claimed_at as per current schema limitations.
-    console.log(`User ${userId}: Checking for Warp-Speed Worker. Found ${completedTasks.length} completed tasks.`);
+async function checkWarpSpeedWorker(userId, completedPetals) {
+    // Using petal.created_at as a proxy for claimed_at as per current schema limitations.
+    console.log(`User ${userId}: Checking for Warp-Speed Worker. Found ${completedPetals.length} completed petals.`);
     const oneHourInMs = 3600000; // 1 hour = 60 * 60 * 1000 milliseconds
 
-    for (const task of completedTasks) {
-        if (task.submitted_at && task.created_at) {
-            const submittedAt = new Date(task.submitted_at).getTime();
-            const createdAt = new Date(task.created_at).getTime();
+    for (const petal of completedPetals) {
+        if (petal.submitted_at && petal.created_at) {
+            const submittedAt = new Date(petal.submitted_at).getTime();
+            const createdAt = new Date(petal.created_at).getTime();
             const diffInMs = submittedAt - createdAt;
 
             if (diffInMs < oneHourInMs && diffInMs >= 0) { // Ensure diff is positive and less than 1 hour
-                console.log(`User ${userId} qualifies for Warp-Speed Worker with task ${task.id}. Time: ${diffInMs} ms.`);
+                console.log(`User ${userId} qualifies for Warp-Speed Worker with petal ${petal.id}. Time: ${diffInMs} ms.`);
                 return true;
             }
         }
@@ -205,17 +205,17 @@ async function checkWarpSpeedWorker(userId, completedTasks) {
 /**
  * Checks if the user qualifies for Space Engineer.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @param {Map<number, string>} skillCategoriesMap - Map of skill IDs to their categories.
  * @returns {boolean}
  */
-async function checkSpaceEngineer(userId, completedTasks, skillCategoriesMap) {
-    console.log(`User ${userId}: Checking for Space Engineer. Examining ${completedTasks.length} tasks.`);
-    for (const task of completedTasks) {
-        if (task.skill_id) {
-            const category = skillCategoriesMap.get(task.skill_id);
+async function checkSpaceEngineer(userId, completedPetals, skillCategoriesMap) {
+    console.log(`User ${userId}: Checking for Space Engineer. Examining ${completedPetals.length} petals.`);
+    for (const petal of completedPetals) {
+        if (petal.skill_id) {
+            const category = skillCategoriesMap.get(petal.skill_id);
             if (category === 'technical/coding') {
-                console.log(`User ${userId} qualifies for Space Engineer with task ${task.id} (skill category: ${category}).`);
+                console.log(`User ${userId} qualifies for Space Engineer with petal ${petal.id} (skill category: ${category}).`);
                 return true;
             }
         }
@@ -226,17 +226,17 @@ async function checkSpaceEngineer(userId, completedTasks, skillCategoriesMap) {
 /**
  * Checks if the user qualifies for Stellar Artisan.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @param {Map<number, string>} skillCategoriesMap - Map of skill IDs to their categories.
  * @returns {boolean}
  */
-async function checkStellarArtisan(userId, completedTasks, skillCategoriesMap) {
-    console.log(`User ${userId}: Checking for Stellar Artisan. Examining ${completedTasks.length} tasks.`);
-    for (const task of completedTasks) {
-        if (task.skill_id) {
-            const category = skillCategoriesMap.get(task.skill_id);
+async function checkStellarArtisan(userId, completedPetals, skillCategoriesMap) {
+    console.log(`User ${userId}: Checking for Stellar Artisan. Examining ${completedPetals.length} petals.`);
+    for (const petal of completedPetals) {
+        if (petal.skill_id) {
+            const category = skillCategoriesMap.get(petal.skill_id);
             if (category === 'creative') {
-                console.log(`User ${userId} qualifies for Stellar Artisan with task ${task.id} (skill category: ${category}).`);
+                console.log(`User ${userId} qualifies for Stellar Artisan with petal ${petal.id} (skill category: ${category}).`);
                 return true;
             }
         }
@@ -247,20 +247,20 @@ async function checkStellarArtisan(userId, completedTasks, skillCategoriesMap) {
 /**
  * Checks if the user qualifies for Interstellar Fixer.
  * An Interstellar Fixer is a user who provides a meaningful comment (endorsement)
- * on another user's task *before* that task is submitted.
+ * on another user's petal *before* that petal is submitted.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} userEndorsementsWithTaskDetails - Array of endorsement objects with task details.
+ * @param {Array<object>} userEndorsementsWithPetalDetails - Array of endorsement objects with petal details.
  * @returns {boolean}
  */
-async function checkInterstellarFixer(userId, userEndorsementsWithTaskDetails) {
-    console.log(`User ${userId}: Checking for Interstellar Fixer. Examining ${userEndorsementsWithTaskDetails.length} endorsements made by user.`);
-    for (const endorsement of userEndorsementsWithTaskDetails) {
-        // Ensure task_submitted_at is not null before creating a Date object from it
-        if (endorsement.task_creator_id !== userId &&
-            endorsement.task_submitted_at != null && // Check that the task was actually submitted
-            new Date(endorsement.endorsement_created_at) < new Date(endorsement.task_submitted_at)) {
+async function checkInterstellarFixer(userId, userEndorsementsWithPetalDetails) {
+    console.log(`User ${userId}: Checking for Interstellar Fixer. Examining ${userEndorsementsWithPetalDetails.length} endorsements made by user.`);
+    for (const endorsement of userEndorsementsWithPetalDetails) {
+        // Ensure petal_submitted_at is not null before creating a Date object from it
+        if (endorsement.petal_creator_id !== userId &&
+            endorsement.petal_submitted_at != null && // Check that the petal was actually submitted
+            new Date(endorsement.endorsement_created_at) < new Date(endorsement.petal_submitted_at)) {
             // For now, any comment (endorsement) counts as "meaningful"
-            console.log(`User ${userId} qualifies for Interstellar Fixer with endorsement on task linked to story_node ${endorsement.story_node_id} (Task creator: ${endorsement.task_creator_id}).`);
+            console.log(`User ${userId} qualifies for Interstellar Fixer with endorsement on petal linked to story_node ${endorsement.story_node_id} (Petal creator: ${endorsement.petal_creator_id}).`);
             return true;
         }
     }
@@ -288,18 +288,18 @@ async function checkCaptainOfTheCrew(userId, createdProjects) {
 
 /**
  * Checks if the user qualifies for Cosmic Collaborator.
- * A Cosmic Collaborator is a user who has completed a task that had more than one assigned user.
+ * A Cosmic Collaborator is a user who has completed a petal that had more than one assigned user.
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} completedTasks - Array of completed task objects for the user.
+ * @param {Array<object>} completedPetals - Array of completed petal objects for the user.
  * @returns {boolean}
  */
-async function checkCosmicCollaborator(userId, completedTasks) {
-    console.log(`User ${userId}: Checking for Cosmic Collaborator. Examining ${completedTasks.length} completed tasks.`);
-    for (const task of completedTasks) {
-        if (task.assigned_user_ids && task.assigned_user_ids.length > 1) {
-            // Check if the current user is one of the assigned users for this completed task
-            if (task.assigned_user_ids.includes(userId)) {
-                 console.log(`User ${userId} qualifies for Cosmic Collaborator with task ${task.id} having ${task.assigned_user_ids.length} collaborators.`);
+async function checkCosmicCollaborator(userId, completedPetals) {
+    console.log(`User ${userId}: Checking for Cosmic Collaborator. Examining ${completedPetals.length} completed petals.`);
+    for (const petal of completedPetals) {
+        if (petal.assigned_user_ids && petal.assigned_user_ids.length > 1) {
+            // Check if the current user is one of the assigned users for this completed petal
+            if (petal.assigned_user_ids.includes(userId)) {
+                 console.log(`User ${userId} qualifies for Cosmic Collaborator with petal ${petal.id} having ${petal.assigned_user_ids.length} collaborators.`);
                  return true;
             }
         }
@@ -309,15 +309,15 @@ async function checkCosmicCollaborator(userId, completedTasks) {
 
 /**
  * Checks if the user qualifies for Quantum Mentor.
- * A Quantum Mentor is a user who has made at least 10 unique task comments (via story nodes).
+ * A Quantum Mentor is a user who has made at least 10 unique petal comments (via story nodes).
  * @param {number} userId - The ID of the user.
- * @param {Array<object>} userEndorsementsWithTaskDetails - Array of endorsement objects made by the user.
+ * @param {Array<object>} userEndorsementsWithPetalDetails - Array of endorsement objects made by the user.
  * @returns {boolean}
  */
-async function checkQuantumMentor(userId, userEndorsementsWithTaskDetails) {
-    // userEndorsementsWithTaskDetails is already filtered for the current userId by getUserEndorsementsWithTaskDetails
-    const uniqueStoryNodeIds = new Set(userEndorsementsWithTaskDetails.map(e => e.story_node_id));
-    console.log(`User ${userId}: Checking for Quantum Mentor. User made ${uniqueStoryNodeIds.size} unique task comments (via story nodes).`);
+async function checkQuantumMentor(userId, userEndorsementsWithPetalDetails) {
+    // userEndorsementsWithPetalDetails is already filtered for the current userId by getUserEndorsementsWithPetalDetails
+    const uniqueStoryNodeIds = new Set(userEndorsementsWithPetalDetails.map(e => e.story_node_id));
+    console.log(`User ${userId}: Checking for Quantum Mentor. User made ${uniqueStoryNodeIds.size} unique petal comments (via story nodes).`);
     if (uniqueStoryNodeIds.size >= 10) {
         console.log(`User ${userId} qualifies for Quantum Mentor.`);
         return true;
@@ -327,19 +327,19 @@ async function checkQuantumMentor(userId, userEndorsementsWithTaskDetails) {
 
 /**
  * Checks if the user qualifies for Lunar Visionary.
- * A Lunar Visionary is a user who created a task that was completed by another user(s).
+ * A Lunar Visionary is a user who created a petal that was completed by another user(s).
  * @param {number} userId - The ID of the user (creator).
- * @param {Array<object>} createdTasksWithAssignees - Array of task objects created by the user, including assignees and status.
+ * @param {Array<object>} createdPetalsWithAssignees - Array of petal objects created by the user, including assignees and status.
  * @returns {boolean}
  */
-async function checkLunarVisionary(userId, createdTasksWithAssignees) {
-    console.log(`User ${userId}: Checking for Lunar Visionary. Found ${createdTasksWithAssignees.length} created tasks.`);
-    for (const task of createdTasksWithAssignees) {
-        if (task.status === 'completed' &&
-            task.assigned_user_ids &&
-            task.assigned_user_ids.length > 0 &&
-            !task.assigned_user_ids.includes(userId)) {
-            console.log(`User ${userId} qualifies for Lunar Visionary with task ${task.id} completed by others.`);
+async function checkLunarVisionary(userId, createdPetalsWithAssignees) {
+    console.log(`User ${userId}: Checking for Lunar Visionary. Found ${createdPetalsWithAssignees.length} created petals.`);
+    for (const petal of createdPetalsWithAssignees) {
+        if (petal.status === 'completed' &&
+            petal.assigned_user_ids &&
+            petal.assigned_user_ids.length > 0 &&
+            !petal.assigned_user_ids.includes(userId)) {
+            console.log(`User ${userId} qualifies for Lunar Visionary with petal ${petal.id} completed by others.`);
             return true;
         }
     }
@@ -461,24 +461,24 @@ async function getUserAccountData(userId) {
 }
 
 /**
- * Fetches tasks created by a specific user, including their assignees and status.
+ * Fetches petals created by a specific user, including their assignees and status.
  * @param {number} userId - The ID of the user.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of task objects.
- * Each task object includes 'id', 'assigned_user_ids', and 'status'.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of petal objects.
+ * Each petal object includes 'id', 'assigned_user_ids', and 'status'.
  */
-async function getTasksCreatedByUserWithAssignees(userId) {
-    console.log(`Fetching tasks created by user ${userId} with assignees and status.`);
+async function getPetalsCreatedByUserWithAssignees(userId) {
+    console.log(`Fetching petals created by user ${userId} with assignees and status.`);
     try {
-        const query = `SELECT id, assigned_user_ids, status FROM tasks WHERE creator_id = $1;`;
+        const query = `SELECT id, assigned_user_ids, status FROM petals WHERE creator_id = $1;`;
         const { rows } = await pool.query(query, [userId]);
         if (rows.length === 0) {
-            console.log(`No tasks found created by user ${userId}.`);
+            console.log(`No petals found created by user ${userId}.`);
         } else {
-            console.log(`Fetched ${rows.length} tasks created by user ${userId}.`);
+            console.log(`Fetched ${rows.length} petals created by user ${userId}.`);
         }
         return rows;
     } catch (error) {
-        console.error(`Error fetching created tasks for user ${userId}:`, error);
+        console.error(`Error fetching created petals for user ${userId}:`, error);
         return []; // Return an empty array in case of error
     }
 }
@@ -507,39 +507,39 @@ async function getProjectsCreatedByUser(userId) {
 }
 
 /**
- * Fetches endorsements made by a user, along with details of the tasks associated with those endorsements.
+ * Fetches endorsements made by a user, along with details of the petals associated with those endorsements.
  * @param {number} userId - The ID of the user who made the endorsements.
  * @returns {Promise<Array<object>>} A promise that resolves to an array of objects, each containing:
  *  - endorsement_created_at: timestamp of the endorsement
  *  - story_node_id: ID of the story node endorsed
- *  - task_creator_id: ID of the creator of the task linked to the story node
- *  - task_submitted_at: timestamp of when the linked task was submitted
- *  - task_status: status of the linked task
+ *  - petal_creator_id: ID of the creator of the petal linked to the story node
+ *  - petal_submitted_at: timestamp of when the linked petal was submitted
+ *  - petal_status: status of the linked petal
  */
-async function getUserEndorsementsWithTaskDetails(userId) {
-    console.log(`Fetching endorsements with task details for user ${userId}`);
+async function getUserEndorsementsWithPetalDetails(userId) {
+    console.log(`Fetching endorsements with petal details for user ${userId}`);
     try {
         const query = `
             SELECT
                 e.created_at AS endorsement_created_at,
                 e.story_node_id, 
-                t.creator_id AS task_creator_id,
-                t.submitted_at AS task_submitted_at,
-                t.status AS task_status
+                t.creator_id AS petal_creator_id,
+                t.submitted_at AS petal_submitted_at,
+                t.status AS petal_status
             FROM endorsements e
             JOIN story_nodes sn ON e.story_node_id = sn.id
-            JOIN tasks t ON sn.task_id = t.id
+            JOIN petals t ON sn.petal_id = t.id
             WHERE e.endorser_id = $1;
         `;
         const { rows } = await pool.query(query, [userId]);
         if (rows.length === 0) {
             console.log(`No endorsements found for user ${userId}.`);
         } else {
-            console.log(`Fetched ${rows.length} endorsements with task details for user ${userId}.`);
+            console.log(`Fetched ${rows.length} endorsements with petal details for user ${userId}.`);
         }
         return rows;
     } catch (error) {
-        console.error(`Error fetching endorsements with task details for user ${userId}:`, error);
+        console.error(`Error fetching endorsements with petal details for user ${userId}:`, error);
         return []; // Return an empty array in case of error
     }
 }
@@ -622,22 +622,22 @@ async function getSkillCategories(skillIds) {
 }
 
 /**
- * Fetches completed tasks for a specific user.
+ * Fetches completed petals for a specific user.
  * @param {number} userId - The ID of the user.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of completed task objects.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of completed petal objects.
  */
-async function getCompletedTasksForUser(userId) {
+async function getCompletedPetalsForUser(userId) {
     try {
         const query = `
             SELECT * 
-            FROM tasks 
+            FROM petals
             WHERE $1 = ANY(assigned_user_ids) AND status = 'completed';
         `;
         const { rows } = await pool.query(query, [userId]);
-        console.log(`Fetched ${rows.length} completed tasks for user ${userId}`);
+        console.log(`Fetched ${rows.length} completed petals for user ${userId}`);
         return rows;
     } catch (error) {
-        console.error(`Error fetching completed tasks for user ${userId}:`, error);
+        console.error(`Error fetching completed petals for user ${userId}:`, error);
         return []; // Return an empty array in case of error
     }
 }

@@ -6,7 +6,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import TaskBrowser from './TaskBrowser.jsx';
+import PetalBrowser from './PetalBrowser.jsx';
 
 import './RewardDashboard.css';
 
@@ -139,7 +139,7 @@ const RewardDashboard = () => {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="task-browser-wrapper"><TaskBrowser /></div>
+                <div className="petal-browser-wrapper"><PetalBrowser /></div>
             </div>
         </div>
     );

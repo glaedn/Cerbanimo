@@ -1,12 +1,12 @@
-// hooks/useIntentionTasks.js
+// hooks/useIntentionPetals.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
+export const useIntentionPetals = (intentionId, user, setUnreadCount) => {
   const { getAccessTokenSilently } = useAuth0();
   const [skills, setSkills] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [petals, setPetals] = useState([]);
   const [intention, setIntention] = useState(null);
   const [profileData, setProfileData] = useState({ id: '', username: '', skills: [] });
   const [loading, setLoading] = useState(false);
@@ -40,21 +40,21 @@ export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchPetals = async () => {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${intentionId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/petals/p/${intentionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const tasksData = res.data;
-      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
-      setTasks(updated);
-      console.log('Tasks data:', updated);
-      return updated; // Return the tasks for chaining
+      const petalsData = res.data;
+      const updated = Array.isArray(petalsData) ? petalsData.map(petal => ({...petal, skill_name: skills.find(s => s.id === petal.skill_id)?.name || 'Not specified'})) : [];
+      setPetals(updated);
+      console.log('Petals data:', updated);
+      return updated; // Return the petals for chaining
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error('Error fetching petals:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
     }
   };
 
-  const handleTaskAction = async (formData, action) => {
+  const handlePetalAction = async (formData, action) => {
     try {
       setLoading(true);
       const token = await getToken();
@@ -99,27 +99,27 @@ export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
       
       switch(action) {
         case 'accept':
-          endpoint = `/tasks/${formData.id}/accept`;
+          endpoint = `/petals/${formData.id}/accept`;
           break;
         case 'drop':
-          endpoint = `/tasks/${formData.id}/drop`;
+          endpoint = `/petals/${formData.id}/drop`;
           break;
         case 'submit':
-          endpoint = `/tasks/${formData.id}/submit`;
+          endpoint = `/petals/${formData.id}/submit`;
           break;
         case 'create':
-          endpoint = `/tasks/newtask`;
+          endpoint = `/petals/newpetal`;
           method = 'post';
           break;
         default: // update
-          endpoint = `/tasks/update/${formData.id}`;
+          endpoint = `/petals/update/${formData.id}`;
       }
       const response = await axios[method](`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
   
       // Only refresh if successful
-      await fetchTasks();
+      await fetchPetals();
       await fetchIntention();
       
       return {
@@ -127,9 +127,9 @@ export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
         success: true
       };
     } catch (error) {
-      console.error('Task action failed:', error.response?.data || error.message);
+      console.error('Petal action failed:', error.response?.data || error.message);
       return {
-        error: error.response?.data?.error || 'Failed to update task',
+        error: error.response?.data?.error || 'Failed to update petal',
         success: false
       };
     } finally {
@@ -145,19 +145,19 @@ export const useIntentionTasks = (intentionId, user, setUnreadCount) => {
   useEffect(() => {
     if (skills.length && intentionId) {
       fetchIntention();
-      fetchTasks();
+      fetchPetals();
     }
   }, [skills.length, intentionId]);
 
   return {
     skills,
-    tasks,
+    petals,
     intention,
     profileData,
     loading,
-    fetchTasks,
+    fetchPetals,
     fetchIntention,
-    handleTaskAction,
+    handlePetalAction,
     updateIntention, // Export the new function
   };
 };

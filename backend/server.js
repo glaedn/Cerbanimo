@@ -10,12 +10,12 @@ import cron from 'node-cron';
 // Import routes
 import authRoutes from './routes/auth.js';
 import profileRoutes from './routes/profile.js';
-import taskRoutes from './routes/tasks.js';
+import petalRoutes from './routes/petals.js';
 import skillsRoutes from './routes/skills.js';
 import projectRoutes from './routes/projects.js';
 import rewardsRoutes from './routes/rewards.js';
 import notificationRoutes from './routes/notifications.js';
-import taskController from './controllers/taskController.js';
+import petalController from './controllers/petalController.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
 import intentionsRoutes from './routes/intentions.js';
@@ -35,7 +35,7 @@ import { createResonancesTable } from './models/resonances.js';
 import { createChroniclesTable } from './models/chronicles.js';
 //import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
 //import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
-//import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
+//import { createPetalTable, createPetalUpdatedAtTrigger } from './models/petals.js';
 //import { createTokenTransactionsTable } from './models/tokenTransactions.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
 // If they had similar exported creation functions, they would be imported here too.
@@ -72,33 +72,33 @@ app.set('io', io);
 
 // Function to send notifications
 export const sendNotification = async (userId, notification) => {
-  const { taskId, message } = notification;
+  const { petalId, message } = notification;
 
-  // Check if notification for the same task already exists for the user
+  // Check if notification for the same petal already exists for the user
   const checkQuery = `
       SELECT * FROM notifications
-      WHERE user_id = $1 AND task_id = $2 AND read = false
+      WHERE user_id = $1 AND petal_id = $2 AND read = false
   `;
 
   try {
-      const existingNotification = await pool.query(checkQuery, [userId, taskId]);
+      const existingNotification = await pool.query(checkQuery, [userId, petalId]);
 
       // If notification exists, skip sending
       if (existingNotification.rows.length > 0) {
-          console.log(`Notification for task ${taskId} already exists for user ${userId}. Skipping.`);
+          console.log(`Notification for petal ${petalId} already exists for user ${userId}. Skipping.`);
           return;  // Skip sending the notification
       }
 
       // Store notification in database
       const notificationQuery = `
-          INSERT INTO notifications (user_id, task_id, message, type, created_at, read) 
+          INSERT INTO notifications (user_id, petal_id, message, type, created_at, read)
           VALUES ($1, $2, $3, $4, NOW(), false)
           RETURNING *
       `;
       
       const result = await pool.query(notificationQuery, [
           userId,
-          taskId,
+          petalId,
           message,
           notification.type || 'general'
       ]);
@@ -144,10 +144,10 @@ app.use('/profile', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, profileRoutes);
 
-app.use('/tasks', (req, res, next) => {
+app.use('/petals', (req, res, next) => {
   if (req.path.match(/^\/\d+$/)) return next();
   return jwtCheck(req, res, next);
-}, taskRoutes);
+}, petalRoutes);
 
 app.use('/skills', jwtCheck, skillsRoutes);
 
@@ -181,20 +181,20 @@ app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
 
-// Nightly task reset
+// Nightly petal reset
 cron.schedule('0 0 * * *', async () => {
   console.log('Running nightly reset of spent points');
   try {
-    const result = await taskController.resetAllSpentPoints();
+    const result = await petalController.resetAllSpentPoints();
     console.log('Reset completed:', result);
   } catch (error) {
     console.error('Failed to reset spent points:', error);
   }
 });
 
-// Task timeout checker
+// Petal timeout checker
 cron.schedule('*/5 * * * *', async () => {
-    console.log('Running task timeout check');
+    console.log('Running petal timeout check');
     try {
         await timeoutService.checkTimeouts(io);
         console.log('Timeout check completed successfully');
@@ -214,7 +214,7 @@ async function initializeDatabase() {
     await createChroniclesTable();
     //await createResourcesTable();
     //await createNeedsTable();
-    //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
+    //await createPetalTable(); // Includes new schema with petal_type, related_resource_id, related_need_id
     //await createTokenTransactionsTable();
     
     // Then create triggers that depend on these tables

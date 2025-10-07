@@ -69,7 +69,7 @@ const UserPortfolio = ({ userId: propUserId }) => {
               tokens: tokensMap.get(currentSkillName) || 0, // Default to 0 if not found
               // Add level and exp with defaults if TokenAndSkillSummary expects them,
               // otherwise, TokenAndSkillSummary needs to handle their absence.
-              // For this task, only name and tokens are specified from this transformation.
+              // For this petal, only name and tokens are specified from this transformation.
               // TokenAndSkillSummary expects skill_level and skill_exp. Let's add defaults.
               skill_level: 0, // Default level
               skill_exp: 'N/A' // Default experience

@@ -7,8 +7,8 @@ const createTokenTransactionsTable = async () => {
       sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Can be null for system-issued tokens
       receiver_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Can be null if tokens are "spent" to the system
       amount INTEGER NOT NULL CHECK (amount <> 0), -- Ensure amount is not zero; can be positive or negative
-      reason TEXT, -- e.g., 'task_completion_reward', 'exchange_fee', 'manual_grant', 'purchase_service_X'
-      related_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      reason TEXT, -- e.g., 'petal_completion_reward', 'exchange_fee', 'manual_grant', 'purchase_service_X'
+      related_petal_id INTEGER REFERENCES petals(id) ON DELETE SET NULL,
       related_exchange_id INTEGER, -- No direct FK yet, depends on how exchanges are logged
       transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       notes TEXT -- Additional details or metadata
@@ -29,7 +29,7 @@ const createTokenTransactionsTable = async () => {
       receiver_id INTEGER REFERENCES users(id) ON DELETE NOT NULL, -- Tokens are awarded to a user
       amount INTEGER NOT NULL CHECK (amount > 0), -- Typically, transactions log positive amounts for awards
       reason VARCHAR(255), 
-      related_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      related_petal_id INTEGER REFERENCES petals(id) ON DELETE SET NULL,
       related_exchange_id INTEGER REFERENCES exchanges(id) ON DELETE SET NULL, -- Updated line
       transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       notes TEXT 
