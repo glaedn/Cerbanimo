@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import './CommunityCreation.css';
 
-const CommunityCreation = () => {
+const RealmCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -62,9 +62,9 @@ const CommunityCreation = () => {
         fetchUserId();
     }, [getAccessTokenSilently]);
 
-    const handleCreateCommunity = async () => {
+    const handleCreateRealm = async () => {
       if (!name.trim()) {
-        alert('Please enter a community name');
+        alert('Please enter a realm name');
         return;
       }
     
@@ -82,7 +82,7 @@ const CommunityCreation = () => {
           return tag.id; // If it's already an object
         }).filter(id => id !== null);
     
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/`, {
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/realms/`, {
           name: name,
           description: description,
           id: userId,
@@ -94,24 +94,24 @@ const CommunityCreation = () => {
         });
       
         if (response.status === 201) {
-          alert('Community created successfully!');
-          navigate(`/communityhub/${response.data.communityId}`);
+          alert('Realm created successfully!');
+          navigate(`/realm/${response.data.realmId}`);
         }
       } catch (error) {
-        console.error('Failed to create community:', error);
-        alert('Error creating community. Please try again.');
+        console.error('Failed to create realm:', error);
+        alert('Error creating realm. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
   return (
-    <Box className="community-creation-container">
-      <Typography variant="h4" className="form-title">Create a New Community</Typography>
+    <Box className="realm-creation-container">
+      <Typography variant="h4" className="form-title">Form a New Realm</Typography>
       
       <div className="cosmic-field-container">
         <TextField
-          label="Community Name"
+          label="Realm Name"
           variant="outlined"
           fullWidth
           value={name}
@@ -124,7 +124,7 @@ const CommunityCreation = () => {
       
       <div className="cosmic-field-container">
         <TextField
-          label="Community Description"
+          label="Realm Description"
           variant="outlined"
           fullWidth
           multiline
@@ -169,11 +169,11 @@ const CommunityCreation = () => {
       <Button
         variant="contained"
         color="primary"
-        onClick={handleCreateCommunity}
+        onClick={handleCreateRealm}
         disabled={isLoading}
         sx={{ marginTop: 3, paddingY: '12px', paddingX: '24px', fontWeight: 'bold' }}
       >
-        {isLoading ? 'Creating...' : 'Launch Community'}
+        {isLoading ? 'Creating...' : 'Form New Realm'}
       </Button>
       
       <div className="space-particles">
@@ -185,4 +185,4 @@ const CommunityCreation = () => {
   );
 };
 
-export default CommunityCreation;
+export default RealmCreation;

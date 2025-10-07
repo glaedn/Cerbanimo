@@ -401,7 +401,7 @@
     background-color: #333;
   }
   
-  .project-info {
+  .intention-info {
     margin-top: 20px;
     max-width: 98%;
     padding: 15px;
@@ -410,13 +410,13 @@
     background-color: #1a1a1a;
   }
   
-  .project-info h3 {
+  .intention-info h3 {
     margin-top: 0;
     margin-bottom: 10px;
     color: #fff;
   }
   
-  .project-info p {
+  .intention-info p {
     margin: 5px 0;
     color: #ccc;
   }
@@ -514,6 +514,32 @@
   flex-wrap: wrap;
 }
 
+.resonance-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resonate-button {
+  background-color: #00f3ff;
+  color: #0a0a2e;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.resonate-button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.resonance-count {
+  color: #00f3ff;
+  font-weight: bold;
+}
+
 
 
 .token-metric {
@@ -550,49 +576,49 @@
   z-index: 9999 !important; /* Ensure dropdown appears above other elements */
 }
 
-.vproject-tags .MuiAutocomplete-root {
+.vintention-tags .MuiAutocomplete-root {
   width: 100%;
   background: #222222;
   border-radius: 4px;
   padding: 4px;
 }
 
-.vproject-tags .MuiOutlinedInput-root {
+.vintention-tags .MuiOutlinedInput-root {
   padding: 0 !important;
 }
 
-.vproject-tags .MuiOutlinedInput-notchedOutline {
+.vintention-tags .MuiOutlinedInput-notchedOutline {
   border: none !important;
 }
 
-.vproject-tags .MuiAutocomplete-inputRoot {
+.vintention-tags .MuiAutocomplete-inputRoot {
   color: white !important;
   padding: 4px !important;
 }
 
-.vproject-tags .MuiAutocomplete-popupIndicator {
+.vintention-tags .MuiAutocomplete-popupIndicator {
   color: white !important;
 }
 
-.vproject-tags .MuiAutocomplete-clearIndicator {
+.vintention-tags .MuiAutocomplete-clearIndicator {
   color: white !important;
 }
 
-.vproject-tags .MuiAutocomplete-listbox {
+.vintention-tags .MuiAutocomplete-listbox {
   background: #222;
   color: white;
 }
 
-.vproject-tags .MuiAutocomplete-option {
+.vintention-tags .MuiAutocomplete-option {
   color: white;
 }
 
-.vproject-tags .MuiAutocomplete-option[data-focus="true"] {
+.vintention-tags .MuiAutocomplete-option[data-focus="true"] {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Add to your CSS */
-.vproject-tags {
+.vintention-tags {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
@@ -606,7 +632,7 @@
   transition: border 0.2s ease;
 }
 
-.vproject-tags:focus-within {
+.vintention-tags:focus-within {
   border-color: #4dabf7;
 }
 

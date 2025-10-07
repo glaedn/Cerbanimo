@@ -4,13 +4,13 @@ const createMembershipRequestsTable = async () => {
   const membershipRequestsTableQuery = `
     CREATE TABLE IF NOT EXISTS membership_requests (
       id SERIAL PRIMARY KEY,
-      community_id INTEGER NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+      realm_id INTEGER NOT NULL REFERENCES realms(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       votes JSONB DEFAULT '{}'::jsonb, -- To store voter IDs and their boolean votes
       status VARCHAR(50) DEFAULT 'pending', -- e.g., pending, approved, rejected
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (community_id, user_id) -- Ensures a user can only request to join a community once
+      UNIQUE (realm_id, user_id) -- Ensures a user can only request to join a realm once
     );
   `;
 

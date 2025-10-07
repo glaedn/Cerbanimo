@@ -72,7 +72,7 @@ async function calculateVoteWeight(
     );
 
     const totalPossibleWeight = parseFloat(rows[0]?.total_tokens ||
-      (await client.query('SELECT ARRAY_LENGTH(members, 1) FROM communities WHERE id = $1', [realmId])).rows[0]?.array_length || 1);
+      (await client.query('SELECT ARRAY_LENGTH(members, 1) FROM realms WHERE id = $1', [realmId])).rows[0]?.array_length || 1);
     return { totalPossibleWeight };
   }
 }
@@ -87,8 +87,8 @@ router.get("/", async (req, res) => {
     const query = `
       WITH realm_data AS (
         SELECT id, name, description, members, interest_tags, proposals,
-             approved_projects, vote_delegations
-        FROM communities
+             approved_intentions, vote_delegations
+        FROM realms
         WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
         ORDER BY name
         LIMIT $2 OFFSET $3
@@ -116,7 +116,7 @@ router.get("/", async (req, res) => {
     }));
 
     const totalCountQuery = `
-      SELECT COUNT(*) FROM communities
+      SELECT COUNT(*) FROM realms
       WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
     `;
     const totalCountResult = await client.query(totalCountQuery, [
@@ -199,8 +199,8 @@ router.get("/user/:userId", async (req, res) => {
   try {
     const query = `
         SELECT id, name, description, members, interest_tags, proposals,
-              approved_projects, vote_delegations
-        FROM communities
+              approved_intentions, vote_delegations
+        FROM realms
         WHERE $1::integer = ANY(members)
         ORDER BY name
       `;
@@ -226,7 +226,7 @@ router.post("/", async (req, res) => {
     const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
     const query = `
-          INSERT INTO communities (name, description, members, interest_tags)
+          INSERT INTO realms (name, description, members, interest_tags)
           VALUES ($1, $2, $3, $4) RETURNING id
       `;
     const values = [
@@ -261,8 +261,8 @@ router.get("/:realmId", async (req, res) => {
               SELECT id, name, description,
                      COALESCE(members, ARRAY[]::integer[]) as members,
                      interest_tags, proposals,
-                     approved_projects, vote_delegations
-              FROM communities
+                     approved_intentions, vote_delegations
+              FROM realms
               WHERE id = $1
           )
           SELECT
@@ -305,7 +305,7 @@ router.get("/:realmId/membership-requests", async (req, res) => {
   const client = await pool.connect();
   try {
     const query = `
-            SELECT user_id, votes FROM membership_requests WHERE community_id = $1
+            SELECT user_id, votes FROM membership_requests WHERE realm_id = $1
         `;
     const result = await client.query(query, [realmId]);
     res.status(200).json(result.rows);
@@ -327,13 +327,13 @@ router.post("/:realmId/submit/:intentionId", async (req, res) => {
 
     // Set realm_id and token_pool on intention
     await client.query(
-      `UPDATE projects SET community_id = $1, token_pool = 0 WHERE id = $2`,
+      `UPDATE intentions SET realm_id = $1, token_pool = 0 WHERE id = $2`,
       [realmId, intentionId]
     );
 
     // Add to proposals array if not already there
     await client.query(
-      `UPDATE communities SET proposals = array_append(proposals, $1)
+      `UPDATE realms SET proposals = array_append(proposals, $1)
        WHERE id = $2 AND NOT proposals @> ARRAY[$1]::integer[]`,
       [intentionId, realmId]
     );
@@ -362,13 +362,13 @@ router.post("/:realmId/vote/member/:requestUserId", async (req, res) => {
     await client.query(
       `UPDATE membership_requests SET votes = jsonb_set(
         COALESCE(votes, '{}'), $1::text[], to_jsonb($2::boolean), true
-      ) WHERE community_id = $3 AND user_id = $4`,
+      ) WHERE realm_id = $3 AND user_id = $4`,
       [[userId], vote, realmId, requestUserId]
     );
 
     // Fetch current votes
     const voteRes = await client.query(
-      `SELECT votes FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
+      `SELECT votes FROM membership_requests WHERE realm_id = $1 AND user_id = $2`,
       [realmId, requestUserId]
     );
     const votes = voteRes.rows[0]?.votes || {};
@@ -395,11 +395,11 @@ router.post("/:realmId/vote/member/:requestUserId", async (req, res) => {
 
     if (majorityReached) {
       await client.query(
-        `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
+        `UPDATE realms SET members = array_append(members, $1) WHERE id = $2`,
         [requestUserId, realmId]
       );
       await client.query(
-        `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
+        `DELETE FROM membership_requests WHERE realm_id = $1 AND user_id = $2`,
         [realmId, requestUserId]
       );
     }
@@ -430,18 +430,18 @@ router.post("/:realmId/vote/:intentionId", async (req, res) => {
 
     // Cast the vote from this user
     await client.query(
-      `UPDATE projects SET community_votes = jsonb_set(
-        COALESCE(community_votes, '{}'), $1::text[], to_jsonb($2::boolean), true
+      `UPDATE intentions SET realm_votes = jsonb_set(
+        COALESCE(realm_votes, '{}'), $1::text[], to_jsonb($2::boolean), true
       ) WHERE id = $3`,
       [[userId], vote, intentionId]
     );
 
     // Fetch current votes
     const voteRes = await client.query(
-      `SELECT community_votes FROM projects WHERE id = $1`,
+      `SELECT realm_votes FROM intentions WHERE id = $1`,
       [intentionId]
     );
-    const votes = voteRes.rows[0]?.community_votes || {};
+    const votes = voteRes.rows[0]?.realm_votes || {};
 
     let yesWeight = 0;
     let totalVoteWeight = 0;
@@ -468,24 +468,24 @@ router.post("/:realmId/vote/:intentionId", async (req, res) => {
 
     if (majorityPassed) {
       await client.query(
-        `UPDATE communities
+        `UPDATE realms
          SET proposals = array_remove(proposals, $1),
-             approved_projects = array_append(approved_projects, $1)
+             approved_intentions = array_append(approved_intentions, $1)
          WHERE id = $2`,
         [intentionId, realmId]
       );
-      await client.query(`UPDATE projects SET token_pool = 400 WHERE id = $1`, [
+      await client.query(`UPDATE intentions SET token_pool = 400 WHERE id = $1`, [
         intentionId,
       ]);
     }
 
     if (majorityRejected) {
       await client.query(
-        `UPDATE communities SET proposals = array_remove(proposals, $1) WHERE id = $2`,
+        `UPDATE realms SET proposals = array_remove(proposals, $1) WHERE id = $2`,
         [intentionId, realmId]
       );
       await client.query(
-        `UPDATE projects SET token_pool = 80, community_id = NULL, community_votes = NULL WHERE id = $1`,
+        `UPDATE intentions SET token_pool = 80, realm_id = NULL, realm_votes = NULL WHERE id = $1`,
         [intentionId]
       );
     }
@@ -517,7 +517,7 @@ router.post("/:realmId/delegate/:userId", async (req, res) => {
 
     // Fetch members
     const { rows } = await client.query(
-      `SELECT members FROM communities WHERE id = $1`,
+      `SELECT members FROM realms WHERE id = $1`,
       [realmId]
     );
     const realm = rows[0];
@@ -531,7 +531,7 @@ router.post("/:realmId/delegate/:userId", async (req, res) => {
 
     // Set delegation
     await client.query(
-      `UPDATE communities SET vote_delegations = jsonb_set(
+      `UPDATE realms SET vote_delegations = jsonb_set(
           COALESCE(vote_delegations, '{}'),
           $1::text[],
           to_jsonb($2::text),
@@ -561,7 +561,7 @@ router.post("/:realmId/revoke/:userId", async (req, res) => {
 
     // Fetch members
     const { rows } = await client.query(
-      `SELECT members FROM communities WHERE id = $1`,
+      `SELECT members FROM realms WHERE id = $1`,
       [realmId]
     );
     const realm = rows[0];
@@ -575,7 +575,7 @@ router.post("/:realmId/revoke/:userId", async (req, res) => {
 
     // Revoke delegation
     await client.query(
-      `UPDATE communities SET vote_delegations = vote_delegations - $1
+      `UPDATE realms SET vote_delegations = vote_delegations - $1
        WHERE id = $2`,
       [userId.toString(), realmId]
     );
@@ -603,7 +603,7 @@ router.post("/:realmId/request", async (req, res) => {
     // Check for existing request
     const checkQuery = `
       SELECT id FROM membership_requests
-      WHERE community_id = $1 AND user_id = $2
+      WHERE realm_id = $1 AND user_id = $2
     `;
     const checkResult = await client.query(checkQuery, [realmId, userId]);
 
@@ -616,7 +616,7 @@ router.post("/:realmId/request", async (req, res) => {
 
     // Insert new request
     const insertQuery = `
-      INSERT INTO membership_requests (community_id, user_id)
+      INSERT INTO membership_requests (realm_id, user_id)
       VALUES ($1, $2) RETURNING id
     `;
     const result = await client.query(insertQuery, [realmId, userId]);

@@ -61,7 +61,7 @@ export default function Homepage() {
           transition={{ duration: 0.6 }}
         >
           <h2>Run You Own Community, and Join Others</h2>
-          <p>Communities get a pool of tokens to allocate every day. Make your own project and generate tokens for others, and take on tasks for projects doing things that matter to you.</p>
+          <p>Communities get a pool of tokens to allocate every day. Make your own intention and generate tokens for others, and take on tasks for intentions doing things that matter to you.</p>
         </motion.div>
       </section>
 
@@ -78,7 +78,7 @@ export default function Homepage() {
           whileInView={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.8 }}
         >
-          Cerbanimo is building the foundation for a new kind of internet-native collaboration—one where equity, transparency, and creativity drive the engine. We're just getting started. Expect features like a smart ledger for the skill-based leveling system, governance tools for the platform and projects and skill guilds within, and crypto-integrated reward systems in the near future.
+          Cerbanimo is building the foundation for a new kind of internet-native collaboration—one where equity, transparency, and creativity drive the engine. We're just getting started. Expect features like a smart ledger for the capability-based leveling system, governance tools for the platform and intentions and capability guilds within, and crypto-integrated reward systems in the near future.
         </motion.p>
       </section>
 

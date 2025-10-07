@@ -190,10 +190,10 @@ const OnboardingPage = () => {
         },
       });
       console.log('Onboarding successful:', response.data);
-      // Navigate to dashboard or a specific project page if ID is available
+      // Navigate to dashboard or a specific intention page if ID is available
       // For now, navigating to dashboard
-      if (response.data.project && response.data.project.projectId) {
-        navigate(`/visualizer/${response.data.project.projectId}`, { 
+      if (response.data.intention && response.data.intention.intentionId) {
+        navigate(`/visualizer/${response.data.intention.intentionId}`, {
                 state: { 
                     onboardingJustCompleted: true, 
                     updatedUserFromOnboarding: response.data.user 

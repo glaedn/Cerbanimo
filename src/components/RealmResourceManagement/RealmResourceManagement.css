@@ -1,10 +1,10 @@
 /*
-  CommunityResourceManagement.css
+  RealmResourceManagement.css
   This file can be used for custom CSS that is not easily achievable
   with Material-UI's sx prop or styled-components.
 
   For now, most styling is expected to be handled directly within the
-  CommunityResourceManagement.jsx file using Material-UI's styling solutions.
+  RealmResourceManagement.jsx file using Material-UI's styling solutions.
 */
 
 /* Example of a custom style:
@@ -14,7 +14,7 @@
 }
 */
 
-/*.community-resource-management-container {
+/*.realm-resource-management-container {
   /* Styles for the main container if needed */
 /*}
 */

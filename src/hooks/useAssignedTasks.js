@@ -31,8 +31,8 @@ const useAssignedTasks = (userId) => {
         id: task.id,
         name: task.name,
         status: task.status || 'Unknown',
-        projectName: task.project_name || 'N/A',
-        projectId: task.project_id || null,
+        intentionName: task.intention_name || 'N/A',
+        intentionId: task.intention_id || null,
         timeRemaining: 'N/A', // Placeholder
       }));
       

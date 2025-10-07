@@ -66,9 +66,9 @@ const CommsLog = () => {
                 return (
                   <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
                     {icon} {/* Render the icon */}
-                    {notification.projectId && notification.taskId ? (
+                    {notification.intentionId && notification.taskId ? (
                       <Link 
-                        to={`/visualizer/${notification.projectId}/${notification.taskId}`} 
+                        to={`/visualizer/${notification.intentionId}/${notification.taskId}`}
                         style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
                       >
                         {notification.messageText}

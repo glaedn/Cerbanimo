@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ message: "Valid category is required" });
     }
 
-    const query = `SELECT DISTINCT name FROM skills WHERE category = $1`;
+    const query = `SELECT DISTINCT name FROM capabilities WHERE category = $1`;
     const result = await pool.query(query, [category]);
 
     if (result.rows.length === 0) {
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
 router.get('/all', async (req, res) => {
   try {
 
-    const query = `SELECT * FROM skills`;
+    const query = `SELECT * FROM capabilities`;
     const result = await pool.query(query);
 
     if (result.rows.length === 0) {

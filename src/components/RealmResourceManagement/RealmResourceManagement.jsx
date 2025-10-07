@@ -10,8 +10,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ResourceListingForm from '../ResourceListingForm/ResourceListingForm'; // Adjust path if needed
 
-const CommunityResourceManagement = ({ communityId }) => {
-  const [communityResources, setCommunityResources] = useState([]);
+const RealmResourceManagement = ({ realmId }) => {
+  const [realmResources, setRealmResources] = useState([]);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,29 +29,29 @@ const CommunityResourceManagement = ({ communityId }) => {
     setNotification({ ...notification, open: false });
   };
 
-  const fetchCommunityResources = useCallback(async () => {
-    if (!communityId) return;
+  const fetchRealmResources = useCallback(async () => {
+    if (!realmId) return;
     setLoading(true);
     setError(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/community/${communityId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/realm/${realmId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCommunityResources(response.data);
+      setRealmResources(response.data);
     } catch (err) {
-      console.error('Error fetching community resources:', err);
-      const errorMessage = err.response?.data?.error || 'Failed to fetch community resources.';
+      console.error('Error fetching realm resources:', err);
+      const errorMessage = err.response?.data?.error || 'Failed to fetch realm resources.';
       setError(errorMessage);
       showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  }, [communityId]);
+  }, [realmId]);
 
   useEffect(() => {
-    fetchCommunityResources();
-  }, [fetchCommunityResources]);
+    fetchRealmResources();
+  }, [fetchRealmResources]);
 
   const handleOpenResourceModal = (resource = null) => {
     setEditingResource(resource);
@@ -75,18 +75,18 @@ const CommunityResourceManagement = ({ communityId }) => {
       const payload = { ...resourceData };
 
       if (editingResource) {
-        // Ensure owner_community_id is maintained if present, or added if this is primarily a community resource
-        payload.owner_community_id = payload.owner_community_id || communityId;
+        // Ensure owner_realm_id is maintained if present, or added if this is primarily a realm resource
+        payload.owner_realm_id = payload.owner_realm_id || realmId;
         response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Resource updated successfully!', 'success');
       } else {
-        payload.owner_community_id = communityId; // Explicitly set for new community resource
-        // Regarding owner_user_id for new community resources:
+        payload.owner_realm_id = realmId; // Explicitly set for new realm resource
+        // Regarding owner_user_id for new realm resources:
         // If the form includes owner_user_id (e.g., from a hidden field or if admin is creating for specific user), it will be part of `resourceData`.
-        // If it should be explicitly nulled for community resources, do: payload.owner_user_id = null;
-        // For now, we assume the backend handles logic if both owner_user_id and owner_community_id are present,
+        // If it should be explicitly nulled for realm resources, do: payload.owner_user_id = null;
+        // For now, we assume the backend handles logic if both owner_user_id and owner_realm_id are present,
         // or that `ResourceListingForm` doesn't set `owner_user_id` when used in this context.
         response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
           headers: { Authorization: `Bearer ${token}` },
@@ -94,7 +94,7 @@ const CommunityResourceManagement = ({ communityId }) => {
         showNotification('Resource created successfully!', 'success');
       }
       
-      fetchCommunityResources();
+      fetchRealmResources();
       handleCloseResourceModal();
     } catch (err) {
       console.error('Error submitting resource:', err.response ? err.response.data : err.message);
@@ -113,7 +113,7 @@ const CommunityResourceManagement = ({ communityId }) => {
     }
     // Basic permission check placeholder:
     // In a real app, check if loggedInUserId has rights to delete,
-    // e.g., is resource owner or community admin.
+    // e.g., is resource owner or realm admin.
     // For now, this component assumes parent/caller handles higher-level permissions.
 
     if (window.confirm('Are you sure you want to delete this resource?')) {
@@ -124,7 +124,7 @@ const CommunityResourceManagement = ({ communityId }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Resource deleted successfully!', 'success');
-        fetchCommunityResources(); // Refresh list
+        fetchRealmResources(); // Refresh list
       } catch (err) {
         console.error('Error deleting resource:', err);
         const errorMsg = err.response?.data?.error || 'Failed to delete resource.';
@@ -138,12 +138,12 @@ const CommunityResourceManagement = ({ communityId }) => {
   return (
     <Paper className="resource-modal-paper" elevation={2} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
       <Typography variant="h6" gutterBottom component="div">
-        Community Resources
+        Realm Resources
       </Typography>
       
-      {/* Consider adding a check here if loggedInUserId has rights to add resources in this communityId */}
+      {/* Consider adding a check here if loggedInUserId has rights to add resources in this realmId */}
       <Button variant="contained" color="primary" onClick={() => handleOpenResourceModal()} sx={{ mb: 2 }} disabled={loading}>
-        List New Community Resource
+        List New Realm Resource
       </Button>
 
       {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}
@@ -154,19 +154,19 @@ const CommunityResourceManagement = ({ communityId }) => {
         </Typography>
       )}
 
-      {!loading && !error && communityResources.length === 0 && (
-        <Typography sx={{ my: 2 }}>No resources listed for this community yet.</Typography>
+      {!loading && !error && realmResources.length === 0 && (
+        <Typography sx={{ my: 2 }}>No resources listed for this realm yet.</Typography>
       )}
 
-      {!loading && !error && communityResources.length > 0 && (
+      {!loading && !error && realmResources.length > 0 && (
         <List>
-          {communityResources.map((resource) => (
+          {realmResources.map((resource) => (
             <ListItem
               key={resource.id}
               divider
               secondaryAction={
                 <>
-                  {/* Consider more granular permissions for edit/delete based on loggedInUserId vs resource.owner_user_id or community role */}
+                  {/* Consider more granular permissions for edit/delete based on loggedInUserId vs resource.owner_user_id or realm role */}
                   <IconButton edge="end" aria-label="edit" onClick={() => handleOpenResourceModal(resource)} sx={{ mr: 0.5 }} disabled={loading}>
                     <EditIcon />
                   </IconButton>
@@ -214,7 +214,7 @@ const CommunityResourceManagement = ({ communityId }) => {
           borderRadius: 2,
         }}>
           <Typography variant="h6" id="resource-listing-form-modal-title" gutterBottom>
-            {editingResource ? 'Edit Community Resource' : 'List New Community Resource'}
+            {editingResource ? 'Edit Realm Resource' : 'List New Realm Resource'}
           </Typography>
           <ResourceListingForm
             initialResourceData={editingResource}
@@ -238,9 +238,9 @@ const CommunityResourceManagement = ({ communityId }) => {
   );
 };
 
-CommunityResourceManagement.propTypes = {
-  communityId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+RealmResourceManagement.propTypes = {
+  realmId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   loggedInUserId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Optional, for future permission checks
 };
 
-export default CommunityResourceManagement;
+export default RealmResourceManagement;

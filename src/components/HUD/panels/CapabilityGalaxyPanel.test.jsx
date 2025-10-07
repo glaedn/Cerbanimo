@@ -1,4 +1,4 @@
-// src/components/HUD/panels/SkillGalaxyPanel.test.jsx
+// src/components/HUD/panels/CapabilityGalaxyPanel.test.jsx
 import React from 'react';
 
 const mockTheme = {
@@ -26,9 +26,9 @@ const getStarGradientUrlLogic = (level) => {
   return 'url(#star-gradient-0)';
 };
 
-describe('SkillGalaxyPanel color and gradient logic', () => {
+describe('CapabilityGalaxyPanel color and gradient logic', () => {
   describe('getStarColorLogic', () => {
-    it('returns correct colors for skill tiers', () => {
+    it('returns correct colors for capability tiers', () => {
       expect(getStarColorLogic(0, mockTheme)).toBe(mockTheme.colors.primary);
       expect(getStarColorLogic(1, mockTheme)).toBe(mockTheme.colors.primary);
       expect(getStarColorLogic(4, mockTheme)).toBe(mockTheme.colors.primary);
@@ -42,7 +42,7 @@ describe('SkillGalaxyPanel color and gradient logic', () => {
   });
 
   describe('getStarGradientUrlLogic', () => {
-    it('returns correct gradient URLs for skill tiers', () => {
+    it('returns correct gradient URLs for capability tiers', () => {
       expect(getStarGradientUrlLogic(0)).toBe('url(#star-gradient-0)');
       expect(getStarGradientUrlLogic(1)).toBe('url(#star-gradient-0)');
       expect(getStarGradientUrlLogic(4)).toBe('url(#star-gradient-0)');

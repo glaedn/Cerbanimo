@@ -28,18 +28,23 @@ const Orbit = () => {
         setPersonalIntentions(personalRes.data);
 
         // Fetch "near" intentions (from realms the user is a member of)
-        // This is a placeholder; a more complex query would be needed for a full implementation
-        const nearRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions`, {
+        const realmsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/user/${user.sub}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        setNearIntentions(nearRes.data.filter(intention => !personalRes.data.some(p => p.id === intention.id)).slice(0, 10)); // Placeholder logic
+        const nearIntentionsPromises = realmsRes.data.map(realm =>
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions?realmId=${realm.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        );
+        const nearIntentionsResponses = await Promise.all(nearIntentionsPromises);
+        const nearIntentions = nearIntentionsResponses.flatMap(res => res.data);
+        setNearIntentions(nearIntentions.filter(intention => !personalRes.data.some(p => p.id === intention.id)).slice(0, 10));
 
         // Fetch chronicle resonance data
-        // This is also a placeholder
-        const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chronicles`, {
+        const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chronicles/resonance`, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        setChronicleResonance(chronicleRes.data.slice(0, 15)); // Placeholder logic
+        setChronicleResonance(chronicleRes.data.slice(0, 15));
 
       } catch (error) {
         console.error("Failed to fetch Orbit data:", error);
@@ -127,7 +132,7 @@ const Orbit = () => {
     return (
       <div className="lotus-map-overlay">
         <button onClick={() => setSelectedIntention(null)} className="close-overlay-btn">Close</button>
-        <IntentionLotusMap />
+        <IntentionLotusMap intentionId={selectedIntention} />
       </div>
     );
   }

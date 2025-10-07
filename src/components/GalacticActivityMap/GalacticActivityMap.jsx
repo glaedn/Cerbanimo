@@ -91,12 +91,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           let intentionStatus = "active";
           const urgentTasksInIntention = tasksRes.data.filter(
             (t) =>
-              t.project_id === intention.id &&
+              t.intention_id === intention.id &&
               (t.status || "").toLowerCase().includes("urgent")
           );
           const activeTasksInIntention = tasksRes.data.filter(
             (t) =>
-              t.project_id === intention.id &&
+              t.intention_id === intention.id &&
               (t.status || "").toLowerCase().startsWith("active")
           );
 
@@ -319,7 +319,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           const [type, idOnly] = d.id.split('-'); 
 
           if (type === "task") {
-            const intentionId = d.raw_data.project_id;
+            const intentionId = d.raw_data.intention_id;
             if (intentionId) {
               navigate(`/lotus-map/${intentionId}/${idOnly}`);
             } else {

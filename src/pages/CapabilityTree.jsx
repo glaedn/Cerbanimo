@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import * as d3 from 'd3';
-import './SkillTree.css';
+import './CapabilityTree.css';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const SkillTree = () => {
+const CapabilityTree = () => {
   const svgRef = useRef();
   const transformRef = useRef({ x: 0, y: 0, k: 1 });
-  const [skills, setSkills] = useState([]);
+  const [capabilities, setCapabilities] = useState([]);
   const gRef = useRef();
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [showFullTree, setShowFullTree] = useState(false);
@@ -21,7 +21,7 @@ const SkillTree = () => {
   const userIdRef = useRef(null);
 
   useEffect(() => {
-    const fetchSkills = async () => {
+    const fetchCapabilities = async () => {
       if (!isAuthenticated || !user) return;
 
       try {
@@ -44,12 +44,12 @@ const SkillTree = () => {
 
         userIdRef.current = profileResponse.data.id;
 
-        const skillsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        const capabilitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/capabilities/all`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const processedSkills = skillsResponse.data.map(skill => {
-          let unlockedUsers = skill.unlocked_users || [];
+        const processedCapabilities = capabilitiesResponse.data.map(capability => {
+          let unlockedUsers = capability.unlocked_users || [];
           
           if (typeof unlockedUsers === 'string') {
             try {
@@ -80,7 +80,7 @@ const SkillTree = () => {
           const userLevel = userEntry?.level ?? 0;
           
           return {
-            ...skill,
+            ...capability,
             unlocked_users: unlockedUsers,
             unlocked: isUnlocked,
             hidden: false, // No more hiding nodes, always show
@@ -88,17 +88,17 @@ const SkillTree = () => {
           };
         });
 
-        setSkills(processedSkills);
+        setCapabilities(processedCapabilities);
       } catch (error) {
-        console.error('Failed to fetch skills:', error);
+        console.error('Failed to fetch capabilities:', error);
       }
     };
 
-    fetchSkills();
+    fetchCapabilities();
   }, [isAuthenticated, user, getAccessTokenSilently]);
 
   useEffect(() => {
-    if (!skills.length) return;
+    if (!capabilities.length) return;
   
     const margin = { top: 60, right: 150, bottom: 60, left: 150 };
     const { width, height } = dimensions;
@@ -107,103 +107,103 @@ const SkillTree = () => {
     const maxHorizontalSpacing = 800; // Set a reasonable max width for connections
     const horizontalSpacing = Math.min(maxHorizontalSpacing, width * 0.8);
   
-    const findRootSkills = () => {
+    const findRootCapabilities = () => {
       if (showFullTree) {
-        return skills.filter(skill => skill.parent_skill_id === null);
+        return capabilities.filter(capability => capability.parent_capability_id === null);
       } else {
-        // When hiding full tree, only consider roots with unlocked skills in their lineage
-        const unlockedSkillIds = skills.filter(skill => skill.unlocked).map(skill => skill.id);
-        const rootSkillIds = new Set();
+        // When hiding full tree, only consider roots with unlocked capabilities in their lineage
+        const unlockedCapabilityIds = capabilities.filter(capability => capability.unlocked).map(capability => capability.id);
+        const rootCapabilityIds = new Set();
         
-        unlockedSkillIds.forEach(skillId => {
-          let currentSkill = skills.find(s => s.id === skillId);
-          while (currentSkill && currentSkill.parent_skill_id !== null) {
-            currentSkill = skills.find(s => s.id === currentSkill.parent_skill_id);
+        unlockedCapabilityIds.forEach(capabilityId => {
+          let currentCapability = capabilities.find(s => s.id === capabilityId);
+          while (currentCapability && currentCapability.parent_capability_id !== null) {
+            currentCapability = capabilities.find(s => s.id === currentCapability.parent_capability_id);
           }
-          if (currentSkill) {
-            rootSkillIds.add(currentSkill.id);
+          if (currentCapability) {
+            rootCapabilityIds.add(currentCapability.id);
           }
         });
         
-        return skills.filter(skill => rootSkillIds.has(skill.id));
+        return capabilities.filter(capability => rootCapabilityIds.has(capability.id));
       }
     };
   
-    const rootSkills = findRootSkills();
-    if (!rootSkills.length) return;
+    const rootCapabilities = findRootCapabilities();
+    if (!rootCapabilities.length) return;
   
-    function computeAccumulatedLevels(skillId, allSkills) {
-      const skill = allSkills.find(s => s.id === skillId);
-      if (!skill) return 0;
+    function computeAccumulatedLevels(capabilityId, allCapabilities) {
+      const capability = allCapabilities.find(s => s.id === capabilityId);
+      if (!capability) return 0;
       
-      const children = allSkills.filter(s => s.parent_skill_id === skillId);
+      const children = allCapabilities.filter(s => s.parent_capability_id === capabilityId);
       if (children.length === 0) {
-        return skill.userLevel || 0;
+        return capability.userLevel || 0;
       }
       
       return children.reduce((sum, child) => {
-        return sum + computeAccumulatedLevels(child.id, allSkills);
+        return sum + computeAccumulatedLevels(child.id, allCapabilities);
       }, 0);
     }
   
     const accumulatedLevels = {};
-    rootSkills.forEach(root => {
-      accumulatedLevels[root.id] = computeAccumulatedLevels(root.id, skills);
+    rootCapabilities.forEach(root => {
+      accumulatedLevels[root.id] = computeAccumulatedLevels(root.id, capabilities);
     });
 
-    function computeSubtreeHeight(skill, allSkills) {
-      const children = allSkills.filter(s => s.parent_skill_id === skill.id);
+    function computeSubtreeHeight(capability, allCapabilities) {
+      const children = allCapabilities.filter(s => s.parent_capability_id === capability.id);
       if (children.length === 0) {
         return 1; // Leaf nodes have a height of 1
       }
-      return children.reduce((sum, child) => sum + computeSubtreeHeight(child, allSkills), 1);
+      return children.reduce((sum, child) => sum + computeSubtreeHeight(child, allCapabilities), 1);
     }
 
     const subtreeHeights = {};
-    rootSkills.forEach(root => {
-      subtreeHeights[root.id] = computeSubtreeHeight(root, skills);
+    rootCapabilities.forEach(root => {
+      subtreeHeights[root.id] = computeSubtreeHeight(root, capabilities);
     });
     
-    function buildTree(skill, allSkills, depth = 0) {
-      const children = allSkills.filter(s => s.parent_skill_id === skill.id);
+    function buildTree(capability, allCapabilities, depth = 0) {
+      const children = allCapabilities.filter(s => s.parent_capability_id === capability.id);
       
-      // Check if this skill or any descendants are unlocked
+      // Check if this capability or any descendants are unlocked
       const hasUnlockedDescendant = 
-        skill.unlocked || 
+        capability.unlocked ||
         children.some(child => 
           child.unlocked || 
-          allSkills.some(s => s.parent_skill_id === child.id && s.unlocked)
+          allCapabilities.some(s => s.parent_capability_id === child.id && s.unlocked)
         );
       
       const isLeafNode = children.length === 0;
       const displayLevel = isLeafNode 
-        ? (skill.userLevel || 0) 
-        : (accumulatedLevels[skill.id] || 0);
+        ? (capability.userLevel || 0)
+        : (accumulatedLevels[capability.id] || 0);
       
       // When not in full tree mode, we'll only include nodes that are unlocked or are needed
       // to connect unlocked nodes to their root
-      const shouldIncludeInPartialTree = showFullTree || skill.unlocked || 
-        (hasUnlockedDescendant && (depth === 0 || skill.parent_skill_id === null));
+      const shouldIncludeInPartialTree = showFullTree || capability.unlocked ||
+        (hasUnlockedDescendant && (depth === 0 || capability.parent_capability_id === null));
       
       // Include only necessary children when in partial tree mode
       const filteredChildren = showFullTree ? children : 
         children.filter(child => 
-          child.unlocked || allSkills.some(s => 
-            s.parent_skill_id === child.id && s.unlocked
+          child.unlocked || allCapabilities.some(s =>
+            s.parent_capability_id === child.id && s.unlocked
           )
         );
       
       return {
-        name: skill.name,
-        id: skill.id,
-        unlocked: skill.unlocked,
-        isRootSkill: depth === 0,
+        name: capability.name,
+        id: capability.id,
+        unlocked: capability.unlocked,
+        isRootCapability: depth === 0,
         userLevel: displayLevel,
         hasUnlockedDescendant: hasUnlockedDescendant,
         depth: depth,
         hidden: false, // No more hiding, always show based on showFullTree
         shouldRender: shouldIncludeInPartialTree,
-        children: filteredChildren.map(child => buildTree(child, allSkills, depth + 1))
+        children: filteredChildren.map(child => buildTree(child, allCapabilities, depth + 1))
           .filter(node => node.shouldRender || showFullTree),
       };
     }
@@ -212,9 +212,9 @@ const SkillTree = () => {
     const allNodes = [];
     const allLinks = [];
     
-    // Create hierarchies for each root skill
-    const hierarchies = rootSkills.map((rootSkill, index) => {
-      const treeData = buildTree(rootSkill, skills);
+    // Create hierarchies for each root capability
+    const hierarchies = rootCapabilities.map((rootCapability, index) => {
+      const treeData = buildTree(rootCapability, capabilities);
       
       // Skip empty trees (roots with no unlocked descendants)
       if (!showFullTree && !treeData.shouldRender) {
@@ -344,14 +344,14 @@ const SkillTree = () => {
     const node = g.selectAll('.node')
       .data(allNodes)
       .enter().append('g')
-      .attr('class', d => `node ${d.data.isRootSkill ? 'root-node' : ''}`)
+      .attr('class', d => `node ${d.data.isRootCapability ? 'root-node' : ''}`)
       .attr('transform', d => `translate(${d.y},${d.x})`)
       .style('display', d => (showFullTree || !d.data.hidden) ? 'block' : 'none');
       
     // Root node circle size calculation
     function calculateRootNodeSize(d) {
       // Base size for regular nodes
-      if (!d.data.isRootSkill) return 15;
+      if (!d.data.isRootCapability) return 15;
       
       // For root nodes, size based on name length and level
       const nameLength = d.data.name.length;
@@ -364,7 +364,7 @@ const SkillTree = () => {
   
     // Add socket rings for all nodes
     node.append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-socket' : 'socket')
+      .attr('class', d => d.data.isRootCapability ? 'root-socket' : 'socket')
       .attr('r', d => calculateRootNodeSize(d) + 2)
       .attr('fill', '#222')
       .attr('stroke', '#C3CDD4')
@@ -372,17 +372,17 @@ const SkillTree = () => {
       
     // Add inner circles for nodes with 3D effect
     node.append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-orb' : 'orb')
+      .attr('class', d => d.data.isRootCapability ? 'root-orb' : 'orb')
       .attr('r', d => calculateRootNodeSize(d))
       .attr('fill', d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootCapability) {
           return d.data.hasUnlockedDescendant ? 'url(#greenOrbGradient)' : 'url(#graySocketGradient)';
         } else {
           return d.data.unlocked ? 'url(#greenOrbGradient)' : 'url(#graySocketGradient)';
         }
       })
       .attr('stroke', d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootCapability) {
           return d.data.hasUnlockedDescendant ? '#006600' : '#333';
         } else {
           return d.data.unlocked ? '#006600' : '#333';
@@ -392,9 +392,9 @@ const SkillTree = () => {
       
     // Add highlight spot for 3D effect (only for green orbs)
     // Explicitly set stroke to none and stroke-width to 0
-    node.filter(d => d.data.unlocked || (d.data.isRootSkill && d.data.hasUnlockedDescendant))
+    node.filter(d => d.data.unlocked || (d.data.isRootCapability && d.data.hasUnlockedDescendant))
       .append('circle')
-      .attr('class', d => d.data.isRootSkill ? 'root-highlight' : 'highlight')
+      .attr('class', d => d.data.isRootCapability ? 'root-highlight' : 'highlight')
       .attr('r', d => {
         const baseSize = calculateRootNodeSize(d);
         return baseSize / 3; // Highlight is 1/3 the size of the node
@@ -407,14 +407,14 @@ const SkillTree = () => {
   
     // Add level text inside nodes
     node.append('text')
-      .attr('class', d => d.data.isRootSkill ? 'root-level-text' : 'level-text')
+      .attr('class', d => d.data.isRootCapability ? 'root-level-text' : 'level-text')
       .attr('dy', 4)
       .attr('text-anchor', 'middle')
-      .style('font-size', d => d.data.isRootSkill ? '16px' : '14px')
+      .style('font-size', d => d.data.isRootCapability ? '16px' : '14px')
       .style('fill', 'white')
       .style('pointer-events', 'none')
       .text(d => {
-        if (d.data.isRootSkill) {
+        if (d.data.isRootCapability) {
           return d.data.hasUnlockedDescendant ? d.data.userLevel : '';
         }
         return d.data.unlocked ? d.data.userLevel : '';
@@ -431,13 +431,13 @@ const SkillTree = () => {
       .data(allNodes)
       .enter()
       .append('text')
-      .attr('class', d => d.data.isRootSkill ? 'root-label' : 'node-label')
+      .attr('class', d => d.data.isRootCapability ? 'root-label' : 'node-label')
       .attr('x', d => d.y + 25)
       .attr('y', d => d.x + 4)
       .text(d => d.data.name)
       .style('fill', 'white')
-      .style('font-size', d => d.data.isRootSkill ? '16px' : '12px')
-      .style('font-weight', d => d.data.isRootSkill ? 'bold' : 'normal')
+      .style('font-size', d => d.data.isRootCapability ? '16px' : '12px')
+      .style('font-weight', d => d.data.isRootCapability ? 'bold' : 'normal')
       .style('display', d => (showFullTree || !d.data.hidden) ? 'block' : 'none');
   
     // Define min and max sizes for root nodes during zoom
@@ -551,7 +551,7 @@ const SkillTree = () => {
       }
     });
     
-  }, [skills, dimensions, showFullTree]);
+  }, [capabilities, dimensions, showFullTree]);
 
   useEffect(() => {
     function handleResize() {
@@ -572,7 +572,7 @@ const SkillTree = () => {
   return (
     <div className='treepage' style={{ width: '100%', height: '80vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Skill Tree</h2>
+        <h2>Capability Tree</h2>
         <button 
           onClick={toggleFullTree}
           style={{
@@ -596,4 +596,4 @@ const SkillTree = () => {
   );
 };
 
-export default SkillTree;
+export default CapabilityTree;

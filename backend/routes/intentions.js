@@ -11,7 +11,7 @@ const pool = new Pool({
 
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM projects');
+    const result = await pool.query('SELECT * FROM intentions');
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching intentions:', err);
@@ -37,7 +37,7 @@ router.get('/personal', async (req, res) => {
 
       // Fetch intentions, prioritizing those created by the user
       const intentionsQuery = `
-        SELECT * FROM projects
+        SELECT * FROM intentions
         WHERE
           LOWER(name) LIKE LOWER($1) OR
           LOWER(description) LIKE LOWER($1)
@@ -64,7 +64,7 @@ router.get('/userintentions', async (req, res) => {
     const offset = (page - 1) * pageSize;
 
     const query = `
-      SELECT * FROM projects
+      SELECT * FROM intentions
       WHERE creator_id = $1
       ORDER BY id ASC
       LIMIT $2 OFFSET $3
@@ -84,7 +84,7 @@ router.get('/userintentions', async (req, res) => {
 router.get('/:intentionId', async (req, res) => {
   const { intentionId } = req.params;
   try {
-    const query = 'SELECT * FROM projects WHERE id = $1';
+    const query = 'SELECT * FROM intentions WHERE id = $1';
     const result = await pool.query(query, [intentionId]);
 
     if (result.rows.length === 0) {
@@ -104,7 +104,7 @@ router.patch('/:intentionId', async (req, res) => {
   const { tags } = req.body;
 
   try {
-    const query = 'UPDATE projects SET tags = $1 WHERE id = $2 RETURNING *';
+    const query = 'UPDATE intentions SET tags = $1 WHERE id = $2 RETURNING *';
     const result = await pool.query(query, [tags, intentionId]);
 
     if (result.rows.length === 0) {
@@ -142,7 +142,7 @@ router.post('/create', async (req, res) => {
 
     // Step 2: Insert the new intention with the derived creator_id
     const insertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id)
+      INSERT INTO intentions (name, description, tags, creator_id)
       VALUES ($1, $2, $3, $4)
       RETURNING *;
     `;
@@ -166,7 +166,7 @@ router.put('/:intentionId', async (req, res) => {
 
   try {
       await pool.query(
-          `UPDATE projects
+          `UPDATE intentions
           SET name = $1, description = $2, tags = $3
           WHERE id = $4`,
           [name, description, tags, intentionId]
@@ -184,7 +184,7 @@ router.get('/:intentionId/export', async (req, res) => {
   const { intentionId } = req.params;
   try {
     // Fetch intention
-    const intentionQuery = 'SELECT * FROM projects WHERE id = $1';
+    const intentionQuery = 'SELECT * FROM intentions WHERE id = $1';
     const intentionResult = await pool.query(intentionQuery, [intentionId]);
 
     if (intentionResult.rows.length === 0) {
@@ -194,7 +194,7 @@ router.get('/:intentionId/export', async (req, res) => {
     const intention = intentionResult.rows[0];
 
     // Fetch tasks
-    const tasksQuery = 'SELECT * FROM tasks WHERE project_id = $1';
+    const tasksQuery = 'SELECT * FROM tasks WHERE intention_id = $1';
     const tasksResult = await pool.query(tasksQuery, [intentionId]);
 
     const exportData = {
@@ -248,7 +248,7 @@ router.post('/import', async (req, res) => {
 
     // Insert new intention
     const intentionInsertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id, token_pool, used_tokens, reserved_tokens)
+      INSERT INTO intentions (name, description, tags, creator_id, token_pool, used_tokens, reserved_tokens)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id;
     `;
@@ -265,7 +265,7 @@ router.post('/import', async (req, res) => {
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
       const insertTaskQuery = `
-        INSERT INTO tasks (name, description, project_id, creator_id, reward_tokens, status, skill_id)
+        INSERT INTO tasks (name, description, intention_id, creator_id, reward_tokens, status, skill_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id;
       `;
@@ -311,7 +311,7 @@ router.post('/auto-generate', async (req, res) => {
 
   try {
     // 1. Fetch intention details
-    const intentionResult = await pool.query('SELECT name, description FROM projects WHERE id = $1', [intentionId]);
+    const intentionResult = await pool.query('SELECT name, description FROM intentions WHERE id = $1', [intentionId]);
     const intention = intentionResult.rows[0];
 
     if (!intention) {
@@ -329,7 +329,7 @@ router.post('/auto-generate', async (req, res) => {
 
     for (const task of tasks) {
       const result = await pool.query(
-        'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens) VALUES ($1, $2, $3, $4, $5, $6::int[], $7) RETURNING id',
+        'INSERT INTO tasks (intention_id, name, description, skill_id, status, dependencies, reward_tokens) VALUES ($1, $2, $3, $4, $5, $6::int[], $7) RETURNING id',
         [intentionId, task.name, task.description, task.skill_id, 'inactive-unassigned', [], task.reward_tokens]
       );
       const dbId = result.rows[0].id;
