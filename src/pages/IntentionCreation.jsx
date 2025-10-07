@@ -8,56 +8,48 @@ import {
   Typography,
   Autocomplete,
   Chip,
+  FormControl,
+  FormLabel,
+  RadioGroup,
   FormControlLabel,
-  Checkbox,
+  Radio,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import {
-  blue,
-  red,
-  green,
-  orange,
-  purple,
-  teal,
-  pink,
-  indigo,
-} from "@mui/material/colors";
 import "./IntentionCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
+
+const Seed = ({ growth }) => {
+  let seedSymbol = '✦';
+  let className = 'seed';
+  if (growth > 5) {
+    seedSymbol = '🌱';
+    className += ' sprout-1';
+  }
+  if (growth > 20) {
+    seedSymbol = '🌿';
+    className += ' sprout-2';
+  }
+  if (growth > 40) {
+    seedSymbol = '🌸';
+    className += ' sprout-3';
+  }
+  return <div className={className}>{seedSymbol}</div>;
+};
 
 const IntentionCreation = () => {
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [archetype, setArchetype] = useState("Civic");
+  const [tags, setTags] = useState([]);
+  const [capabilities, setCapabilities] = useState([]);
+
   const [availableCapabilities, setAvailableCapabilities] = useState([]);
-  const [selectedCapabilities, setSelectedCapabilities] = useState([]);
-  const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
+  const [availableTags, setAvailableTags] = useState(['Growth', 'Food', 'Education', 'Art', 'Technology']);
+  const [matchingRealms, setMatchingRealms] = useState([]);
+
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
-
-  const colorPalette = [
-    blue[100],
-    red[100],
-    green[100],
-    orange[100],
-    purple[100],
-    teal[100],
-    pink[100],
-    indigo[100],
-    blue[200],
-    red[200],
-    green[200],
-    orange[200],
-    purple[200],
-    teal[200],
-    pink[200],
-    indigo[200],
-  ];
-
-  const getRandomColorFromPalette = () => {
-    return colorPalette[Math.floor(Math.random() * colorPalette.length)];
-  };
 
   useEffect(() => {
     const fetchCapabilities = async () => {
@@ -65,9 +57,7 @@ const IntentionCreation = () => {
         const token = await getAccessTokenSilently();
         const response = await axios.get(
           `${import.meta.env.VITE_BACKEND_URL}/profile/options`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setAvailableCapabilities(response.data.skillsPool || []);
       } catch (error) {
@@ -77,141 +67,119 @@ const IntentionCreation = () => {
     fetchCapabilities();
   }, [getAccessTokenSilently]);
 
+  useEffect(() => {
+    if (name.length > 5) {
+      // Mock fetching matching realms
+      setMatchingRealms([
+        { name: "Soluna", alignment: 0.84 },
+        { name: "Gaia Circuit", alignment: 0.69 },
+      ]);
+    } else {
+      setMatchingRealms([]);
+    }
+  }, [name]);
+
   const handleCreateIntention = async () => {
     setLoadingPopupMessages(["Declaring your intention..."]);
     setLoadingPopupOpen(true);
     try {
       const token = await getAccessTokenSilently();
-
-      // Step 1: Create the intention
-
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/intentions/create`,
         {
           name: name,
-          description: description,
-          tags: [], // Tags are deprecated for now, send empty array
-          capabilities: selectedCapabilities.map(c => c.name),
+          description: `Archetype: ${archetype}`, // Pass archetype in description
+          tags: tags,
+          capabilities: capabilities.map(c => typeof c === 'string' ? c : c.name),
           auth0_id: user.sub,
         },
-        {
-          headers: {
-        Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.status === 201) {
         const intentionId = response.data.id;
-        setLoadingPopupMessages(prevMessages => [...prevMessages, "Intention declared successfully!"]);
+        setLoadingPopupMessages(prev => [...prev, "Intention declared successfully!"]);
+        setLoadingPopupMessages(prev => [...prev, "Auto-generating petals..."]);
 
-        if (autoGenerateTasks) {
-          setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
-          // Step 2: Auto-generate tasks using LLM
-          const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/intentions/auto-generate`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ intentionId }), // Send the new intention ID
+        // Auto-generate tasks is now default
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/intentions/auto-generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ intentionId }),
+        });
 
-          });
-          const result = await generateResponse.json();
-
-          if (result.success) {
-            setLoadingPopupMessages(prevMessages => [...prevMessages, "Tasks generated successfully!"]);
-          } else {
-            setLoadingPopupMessages(prevMessages => [...prevMessages, "Task generation failed: " + result.error]);
-          }
-        }
-
-        // Step 3: Navigate to the intention visualizer either way
+        setLoadingPopupMessages(prev => [...prev, "Petals generated!"]);
         navigate(`/lotus-map/${intentionId}`);
       }
     } catch (error) {
       console.error("Failed to create intention:", error);
       setLoadingPopupMessages(["Error creating intention. Please try again."]);
-      setLoadingPopupOpen(true); // Ensure it's open if it wasn't already
     }
   };
 
   return (
     <div className="intention-creation-background">
-    <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
-    <Box className="intention-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
-      <Typography variant="h4" className="form-title">
-        Declare an Intention
-      </Typography>
-      <TextField
-        label="Intention Name"
-        variant="outlined"
-        sx={{ width: '100%' }}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        margin="normal"
-      />
-      <TextField
-        label="Intention Description"
-        variant="outlined"
-        fullWidth
-        multiline
-        rows={4}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        margin="normal"
-      />
-      <Autocomplete
-        multiple
-        options={availableCapabilities}
-        getOptionLabel={(option) => option.name}
-        value={selectedCapabilities}
-        onChange={(event, newValue) => setSelectedCapabilities(newValue)}
-        freeSolo
-        sx={{ width: '100%' }}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="outlined"
-            label="Capability Needs"
-            placeholder="Add capabilities"
-            margin="normal"
-          />
+      <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
+      <Box className="intention-creation-container">
+        <Typography variant="h4" className="form-title">
+          🌱 DECLARE AN INTENTION 🌱
+        </Typography>
+
+        <Seed growth={name.length} />
+
+        <Typography variant="body1" className="input-label">
+          Describe your intention in one line:
+        </Typography>
+        <TextField
+          variant="outlined"
+          fullWidth
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="intention-input"
+        />
+
+        <FormControl component="fieldset" margin="normal">
+          <FormLabel component="legend" className="input-label">Choose archetype:</FormLabel>
+          <RadioGroup row value={archetype} onChange={(e) => setArchetype(e.target.value)}>
+            <FormControlLabel value="Creative" control={<Radio />} label="Creative" />
+            <FormControlLabel value="Civic" control={<Radio />} label="Civic" />
+            <FormControlLabel value="Research" control={<Radio />} label="Research" />
+          </RadioGroup>
+        </FormControl>
+
+        <Autocomplete
+          multiple freeSolo options={availableTags} value={tags}
+          onChange={(event, newValue) => setTags(newValue)}
+          renderInput={(params) => (
+            <TextField {...params} variant="outlined" label="Add tags" />
+          )}
+          className="autocomplete-field"
+        />
+
+        <Autocomplete
+          multiple freeSolo options={availableCapabilities.map(c => c.name)} value={capabilities}
+          onChange={(event, newValue) => setCapabilities(newValue)}
+          renderInput={(params) => (
+            <TextField {...params} variant="outlined" label="Capability needs" />
+          )}
+          className="autocomplete-field"
+        />
+
+        {matchingRealms.length > 0 && (
+          <Box className="matching-realms">
+            <Typography variant="h6">Showing matches:</Typography>
+            <ul>
+              {matchingRealms.map(realm => (
+                <li key={realm.name}>→ Realm “{realm.name}” ({realm.alignment} alignment)</li>
+              ))}
+            </ul>
+          </Box>
         )}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
-            const { key, ...otherProps } = getTagProps({ index });
-            return (
-              <Chip
-                key={key}
-                label={option.name}
-                {...otherProps}
-                sx={{ margin: '2px' }}
-              />
-            );
-          })
-        }
-      />
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={autoGenerateTasks}
-            onChange={(e) => setAutoGenerateTasks(e.target.checked)}
-            color="primary"
-          />
-        }
-        label="Auto-generate intention tasks using AI"
-        sx={{ marginTop: 2, marginBottom: 1 }}
-      />
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleCreateIntention}
-        sx={{ marginTop: 2, paddingY: '10px', paddingX: '20px', fontWeight: 'bold' }}
-      >
-        Declare Intention
-      </Button>
-    </Box>
+
+        <Button onClick={handleCreateIntention} className="declare-button">
+          [ DECLARE INTENTION ✦ ]
+        </Button>
+      </Box>
     </div>
   );
 };

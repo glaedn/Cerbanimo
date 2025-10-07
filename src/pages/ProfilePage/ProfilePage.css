@@ -1,189 +1,127 @@
-/* Profile Page - Space Game Theme */
+/* ProfilePage.css - Rebranded for The Chronicle */
+
 .profile-container {
-    padding: 20px;
-    color: #FFFFFF; /* theme.colors.textPrimary */
-    font-family: 'Orbitron', sans-serif; /* Sci-Fi Font */
-    text-align: center;
-    background: #0A0A2E; /* theme.colors.backgroundDefault */
-    height: calc(100% - 60px);
+    padding: 40px 20px;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    background: #0A0A2E;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    overflow-y: auto;
-    overflow-x: hidden;
-    margin-top: 60px;
+    gap: 30px;
 }
 
-.profile-container::-webkit-scrollbar {
-    width: 10px;
-}
-
-.profile-container::-webkit-scrollbar-track {
-    background: rgba(10, 10, 46, 0.7); /* Darker, theme.colors.backgroundDefault with alpha */
-    border-radius: 5px;
-}
-
-.profile-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00F3FF, #4DABF7); /* theme.colors.primary to a lighter shade */
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* theme.colors.primary with alpha */
-}
-
-.profile-container::-webkit-scrollbar-thumb:hover {
-    background: #FF5CA2; /* theme.colors.accentMagenta */
-    box-shadow: 0 0 5px #FF5CA2; /* theme.colors.accentMagenta */
-}
-
-/* Profile Title */
 .profile-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #00F3FF; /* theme.colors.primary */
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); /* theme.colors.primary with alpha */
-    margin-bottom: 20px; /* This is fine, sx on component will override if needed */
+    font-family: 'Orbitron', sans-serif !important;
+    color: #FF5CA2 !important;
+    text-shadow: 0 0 10px #FF5CA2;
 }
 
-/* Profile Fields - Likely redundant due to panel structure and sx styling */
-/*
-.profile-field {
-    max-width: 1200px;
-    margin: 10px 0;
-    justify-content: center;
-}
-
-.profile-textfield {
-    max-width: 500px;
-    min-width: 200px;
-    margin-left: 10px;
-}
-*/
-
-/* Direct MUI component styling for TextFields and Autocomplete removed below - These were already commented */
-/* .profile-textfield .MuiOutlinedInput-root ... */
-/* .profile-textfield label ... */
-/* .profile-autocomplete .MuiInputBase-root ... */
-/* .profile-autocomplete label ... */
-/* .profile-autocomplete .MuiOutlinedInput-notchedOutline ... */
-/* .profile-autocomplete .MuiAutocomplete-tag ... */
-
-/* Buttons removed as they will be styled using MUI props in JSX - These were already commented */
-/* .profile-footer ... */
-/* .profile-buttons ... */
-/* .profile-button ... */
-
-/* Experience Section - Styling now primarily handled by `panelStyle` in sx prop */
-.profile-experience-container {
-    /* background-color: #1C1C1E; */ /* Handled by sx */
-    /* border-radius: 10px; */ /* Handled by sx */
-    /* padding: 15px; */ /* Handled by sx */
-    /* margin-top: 20px; */ /* Handled by sx (panelStyle.marginBottom) */
-    /* margin-left: 20px; */ /* Handled by sx (panel alignment) */
-    /* margin-right: 20px; */ /* Handled by sx (panel alignment) */
-    /* margin-bottom: 60px; */ /* Handled by sx (panelStyle.marginBottom) */
-    /* width: 95%; */ /* Handled by sx (panelStyle.width & maxWidth) */
-    /* max-width: 600px; */ /* Handled by sx (panelStyle.maxWidth) */
-    min-height: 300px; /* Retain if specific scrolling height is needed */
-    max-height: 500px; /* Retain if specific scrolling height is needed */
-    overflow-y: auto;   /* Retain if specific scrolling behavior is needed */
-    text-align: center; /* Panel content alignment is center via sx, this is fine */
-    /* box-shadow: 0 0 15px rgba(0, 243, 255, 0.6); */ /* Handled by sx */
-}
-
-.profile-experience-title { /* This rule might be duplicated or conflict if UserPortfolio also has titles */
-    font-size: 1.5rem; /* Panel titles are h6, this might be for content inside UserPortfolio */
-    font-weight: bold;
-    color: #00F3FF; /* theme.colors.primary */
-    /* text-shadow: 0 0 10px #6dd5ed, 0 0 20px #2193b0; */ 
-    margin-bottom: 10px;
-}
-
-/* Experience List - These styles would apply if UserPortfolio uses these class names internally */
-.profile-experience-list {
-    list-style: none;
-    padding: 0;
-}
-
-.profile-experience-list li {
-    margin: 10px 0;
-}
-
-/* Experience Links - These styles would apply if UserPortfolio uses these class names internally */
-.profile-experience-link {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #00F3FF; /* theme.colors.primary */
-    text-decoration: none;
-    padding: 10px 15px;
-    background: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
-    border-radius: 8px;
-    transition: 0.3s ease-in-out;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5); /* theme.colors.primary with alpha */
-    display: inline-block;
-}
-
-.profile-experience-link:hover {
-    color: #50FFFF; /* Lighter shade of theme.colors.primary */
-    background: rgba(0, 243, 255, 0.4); /* theme.colors.primary with higher alpha */
-    box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* theme.colors.primary */
-}
-
-/* Petal Browser Wrapper - This seems specific to a PetalBrowser component, not directly ProfilePage panels */
-  .petal-browser-wrapper {
-    flex-grow: 1;
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(10, 10, 46, 0.7);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #9B59B6;
     width: 100%;
-    max-width: 1200px;
-    display: flex;
-    justify-content: center;
-    overflow-y: auto;
-    padding-bottom: 80px; /* Keeps it from colliding with the footer */
+    max-width: 800px;
 }
-  
-  /* This second .profile-experience-title rule is more specific or later in cascade. Update it too. */
-  .profile-experience-title { 
-    color: #00F3FF; /* theme.colors.primary */
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    text-transform: uppercase;
-  }
-  
-  .experience-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .experience-item {
-    background-color: rgba(10, 10, 46, 0.8); /* Slightly lighter, translucent version of backgroundDefault */
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .petal-name {
-    color: #00F3FF; /* theme.colors.primary */
-    font-weight: bold;
-  }
-  
-  .petal-description {
-    color: #E0E0E0; /* Lighter gray, close to textPrimary but distinct */
-  }
-  
-  .view-intention-link {
-    align-self: flex-start;
-    background-color: rgba(0, 243, 255, 0.1); /* theme.colors.primary with alpha */
-    color: #00F3FF; /* theme.colors.primary */
-    padding: 8px 15px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-  }
-  
-  .view-intention-link:hover {
-    background-color: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
-  }
 
-  
+.profile-avatar {
+    width: 100px !important;
+    height: 100px !important;
+    border: 3px solid #00f3ff;
+}
+
+.user-info {
+    text-align: left;
+    flex-grow: 1;
+}
+
+.user-info h5 {
+    font-family: 'Orbitron', sans-serif;
+}
+
+.user-info h6 {
+    font-family: 'monospace';
+    color: #a9a9a9;
+}
+
+.xp-bar-container {
+    width: 100%;
+    height: 10px;
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 5px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.xp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #9B59B6, #FF5CA2);
+    border-radius: 5px;
+    box-shadow: 0 0 8px #FF5CA2;
+}
+
+.xp-text {
+    text-align: right;
+    font-size: 0.8rem !important;
+    color: #ccc;
+    margin-top: 5px !important;
+}
+
+.capabilities-panel,
+.timeline-panel {
+    background: rgba(10, 10, 46, 0.7);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #3498DB;
+    width: 100%;
+    max-width: 800px;
+}
+
+.panel-title {
+    font-family: 'Orbitron', sans-serif !important;
+    color: #00f3ff;
+    margin-bottom: 20px !important;
+    text-align: center;
+}
+
+.timeline-panel .user-portfolio-container {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.timeline-panel .timeline-item {
+    background: rgba(0,0,0,0.2);
+    border-left: 3px solid #00f3ff;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    color: #eee;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 20px;
+}
+
+.control-button {
+    background: none;
+    border: 1px solid #a9a9a9;
+    color: #a9a9a9;
+    padding: 10px 20px;
+    font-family: 'monospace';
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 5px;
+}
+
+.control-button:hover {
+    background-color: #a9a9a9;
+    color: #0a0a1a;
+    box-shadow: 0 0 10px #a9a9a9;
+}

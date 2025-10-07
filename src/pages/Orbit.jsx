@@ -63,10 +63,10 @@ const Orbit = () => {
         setPersonalIntentions(personalRes.data);
 
         const nearRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/near`, { ...config, params: { auth0Id: user.sub } });
-        setNearIntentions(nearRes.data.slice(0, 10));
+        setNearIntentions(nearRes.data.slice(0, 16));
 
         const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chronicles/resonance`, config);
-        setChronicleResonance(chronicleRes.data.slice(0, 15));
+        setChronicleResonance(chronicleRes.data.slice(0, 24));
 
       } catch (error) {
         console.error("Failed to fetch Orbit data:", error);
@@ -86,7 +86,6 @@ const Orbit = () => {
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // Define the glow filter
       const defs = svg.append('defs');
       const filter = defs.append('filter')
         .attr('id', 'glow');
@@ -109,26 +108,24 @@ const Orbit = () => {
       const hideTooltip = () => setTooltip({ visible: false, content: '', x: 0, y: 0 });
 
       const rings = [
-        { radius: 150, data: personalIntentions, type: 'personal', color: 'gold', size: 10 },
-        { radius: 250, data: nearIntentions, type: 'near', color: 'cyan', size: 8 },
-        { radius: 350, data: chronicleResonance, type: 'chronicle', color: 'magenta', size: 6 }
+        { radius: 150, data: personalIntentions, type: 'personal', size: 8 },
+        { radius: 250, data: nearIntentions, type: 'near', size: 7 },
+        { radius: 350, data: chronicleResonance, type: 'chronicle', size: 9 }
       ];
 
-      // Draw orbit rings
       rings.forEach(ring => {
         svg.append('circle')
           .attr('cx', centerX)
           .attr('cy', centerY)
           .attr('r', ring.radius)
           .attr('fill', 'none')
-          .attr('stroke', 'rgba(255, 255, 255, 0.1)')
+          .attr('stroke', 'rgba(255, 255, 255, 0.2)')
           .attr('class', 'orbit-ring');
       });
 
       const allNodes = rings.flatMap(r => r.data);
       const maxResonance = Math.max(...allNodes.map(d => d.resonance_score || 0), 1);
 
-      // Draw nodes on rings
       rings.forEach(ring => {
         const angleStep = ring.data.length > 0 ? 360 / ring.data.length : 0;
         ring.data.forEach((d, i) => {
@@ -145,17 +142,26 @@ const Orbit = () => {
             .on('mouseout', hideTooltip);
 
           const isResonated = d.userHasResonated || false;
+          const resonanceOpacity = d.resonance_score ? 0.3 + (d.resonance_score / maxResonance) * 0.7 : 0.3;
 
-          const resonanceOpacity = d.resonance_score ? (d.resonance_score / maxResonance) : 0.2;
-
-          node.append('circle')
-            .attr('r', ring.size)
-            .attr('fill', ring.color)
-            .attr('stroke', isResonated ? '#00ff00' : 'none')
-            .attr('stroke-width', isResonated ? 2 : 0)
-            .attr('class', 'orbit-node')
-            .style('filter', 'url(#glow)')
-            .style('opacity', resonanceOpacity);
+          if (ring.type === 'personal' || ring.type === 'near') {
+            node.append('circle')
+              .attr('r', ring.size)
+              .attr('fill', isResonated ? 'white' : 'none')
+              .attr('stroke', 'white')
+              .attr('stroke-width', 1.5)
+              .style('filter', 'url(#glow)')
+              .style('opacity', resonanceOpacity);
+          } else if (ring.type === 'chronicle') {
+            node.append('text')
+              .text('✧')
+              .attr('text-anchor', 'middle')
+              .attr('dy', ring.size / 2)
+              .attr('fill', 'white')
+              .style('font-size', `${ring.size * 2}px`)
+              .style('filter', 'url(#glow)')
+              .style('opacity', resonanceOpacity);
+          }
 
           const handleResonate = async (intentionId) => {
             if (!profile) return;
@@ -197,7 +203,6 @@ const Orbit = () => {
         });
       });
 
-      // Center element (User's Core)
       const center = svg.append('g').attr('transform', `translate(${centerX}, ${centerY})`);
       center.append('circle')
         .attr('r', 50)
@@ -224,6 +229,8 @@ const Orbit = () => {
   return (
     <div className="orbit-container">
       <div className="orbit-header">
+        <h1>✦ YOUR ORBIT ✦</h1>
+        <p>(Dashboard + Intention Lotus)</p>
         <div className="user-level">
           [ Level {userLevel} — {userTitle} ]
         </div>
@@ -231,8 +238,15 @@ const Orbit = () => {
           [ Toggle Capabilities ⊕ ]
         </button>
       </div>
+      <div className="orbit-legend">
+        <span>○ = Petal / Intention</span>
+        <span>◎ = Resonated Intention</span>
+        <span>☀ = Your Core Intentions</span>
+        <span>✧ = Realms / Connections</span>
+      </div>
       {tooltip.visible && <div className="tooltip" style={{ left: tooltip.x + 15, top: tooltip.y + 15 }}>{tooltip.content}</div>}
       <svg ref={svgRef} width="800" height="800"></svg>
+      <button className="align-button">[ ALIGN ]</button>
     </div>
   );
 };

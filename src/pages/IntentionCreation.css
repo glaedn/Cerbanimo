@@ -1,47 +1,115 @@
-/* Intention Creation Page - Space Game Theme */
+/* IntentionCreation.css - Rebranded for Manifestation Lotus */
 
+.intention-creation-background {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #0A0A2E;
+  padding: 20px;
+}
 
 .intention-creation-container {
-    padding: 20px;
-    color: #FFFFFF;
-    font-family: 'Orbitron', sans-serif;
-    text-align: center;
-    height: calc(100vh - 60px);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow-y: auto;
-    padding-top: 80px;
+  background: rgba(10, 10, 46, 0.8);
+  border: 1px solid #FF5CA2;
+  box-shadow: 0 0 20px rgba(255, 92, 162, 0.3);
+  padding: 40px;
+  border-radius: 15px;
+  max-width: 700px;
+  width: 100%;
+  text-align: center;
+  color: white;
 }
 
-/* Title Styling */
 .form-title {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #00F3FF;
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
-    margin-bottom: 20px;
+  font-family: 'Orbitron', sans-serif;
+  color: #FF5CA2;
+  margin-bottom: 2rem !important;
 }
 
-/* Input Fields */
-.form-input {
-    width: 100%;
-    max-width: 600px;
-    margin: 10px 0;
-    /* border-radius: 10px; Removed as it was likely for the input field */
+.seed {
+  font-size: 2rem;
+  color: #00f3ff;
+  margin-bottom: 1.5rem;
+  transition: all 0.5s ease-in-out;
+}
+.seed.sprout-1 { transform: scale(1.2) rotate(-5deg); color: #9B59B6; }
+.seed.sprout-2 { transform: scale(1.4) rotate(5deg); color: #2ECC71; }
+.seed.sprout-3 { transform: scale(1.6) rotate(0deg); color: #FF5CA2; }
+
+.input-label {
+  color: #ccc;
+  margin-bottom: 0.5rem !important;
 }
 
-/* MUI Input styling rules removed */
-/* .form-input label { ... } */
-/* .form-input .MuiOutlinedInput-root { ... } */
-/* .form-input .MuiOutlinedInput-notchedOutline { ... } */
-/* .form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { ... } */
-
-.MuiAutocomplete-root {
-    width: 100%;
-    max-width: 600px;
+.intention-input .MuiOutlinedInput-root {
+  background-color: rgba(255,255,255,0.05);
+  color: white;
+}
+.intention-input .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: #9B59B6;
+}
+.intention-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #FF5CA2;
 }
 
-/* Create Button rule removed */
-/* .create-button { ... } */
-/* .create-button:hover { ... } */
+.MuiFormLabel-root, .MuiFormControlLabel-label {
+  color: #ccc !important;
+}
+.MuiRadio-root {
+  color: #9B59B6 !important;
+}
+.Mui-checked {
+  color: #FF5CA2 !important;
+}
+
+.autocomplete-field {
+  margin-top: 1rem !important;
+}
+
+.autocomplete-field .MuiOutlinedInput-root {
+  background-color: rgba(255,255,255,0.05);
+}
+.autocomplete-field .MuiInputLabel-root {
+  color: #ccc;
+}
+.autocomplete-field .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: #3498DB;
+}
+.autocomplete-field .MuiChip-root {
+  background-color: #3498DB;
+  color: white;
+}
+
+.matching-realms {
+  margin-top: 2rem;
+  text-align: left;
+  background: rgba(0,0,0,0.2);
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #00f3ff;
+}
+.matching-realms h6 {
+  color: #00f3ff;
+}
+.matching-realms ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+  color: #eee;
+}
+
+.declare-button {
+  margin-top: 2rem !important;
+  background: transparent !important;
+  border: 2px solid #FF5CA2 !important;
+  color: #FF5CA2 !important;
+  padding: 12px 25px !important;
+  font-family: 'monospace' !important;
+  transition: all 0.3s ease !important;
+}
+
+.declare-button:hover {
+  background: rgba(255, 92, 162, 0.1) !important;
+  box-shadow: 0 0 15px #FF5CA2 !important;
+}
