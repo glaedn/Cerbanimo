@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const useSkillData = () => {
+const useCapabilityData = () => {
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const [allSkills, setAllSkills] = useState([]);
+  const [allCapabilities, setAllCapabilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,13 +15,13 @@ const useSkillData = () => {
         scope: 'openid profile email', // Adjust scopes as needed
       });
     } catch (e) {
-      console.error('Error getting access token in useSkillData', e);
+      console.error('Error getting access token in useCapabilityData', e);
       throw e;
     }
   };
 
   useEffect(() => {
-    const fetchAllSkills = async () => {
+    const fetchAllCapabilities = async () => {
       if (!isAuthenticated) {
         setLoading(false);
         // Optionally set an error or specific state if user is not authenticated
@@ -33,27 +33,27 @@ const useSkillData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/capabilities/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        // Assuming response.data is the array of all skill objects
-        // Each skill object might look like: { id, name, category, parent_skill_id, description, ... }
-        setAllSkills(Array.isArray(response.data) ? response.data : []);
+        // Assuming response.data is the array of all capability objects
+        // Each capability object might look like: { id, name, category, parent_capability_id, description, ... }
+        setAllCapabilities(Array.isArray(response.data) ? response.data : []);
         
       } catch (err) {
-        console.error('Error fetching all skills:', err.response?.data || err.message);
-        setError(err.response?.data?.error || err.message || 'Failed to fetch all skills');
-        setAllSkills([]); // Clear skills on error
+        console.error('Error fetching all capabilities:', err.response?.data || err.message);
+        setError(err.response?.data?.error || err.message || 'Failed to fetch all capabilities');
+        setAllCapabilities([]); // Clear capabilities on error
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllSkills();
+    fetchAllCapabilities();
   }, [isAuthenticated, getAccessTokenSilently]); // Dependencies
 
-  return { allSkills, loading, error };
+  return { allCapabilities, loading, error };
 };
 
-export default useSkillData;
+export default useCapabilityData;

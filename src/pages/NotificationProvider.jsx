@@ -30,7 +30,7 @@ const NotificationProvider = ({ children }) => {
       return {
         ...notif,
         messageText: parsedJson.text,
-        projectId: parsedJson.projectId,
+        intentionId: parsedJson.intentionId,
         taskId: parsedJson.taskId,
         originalMessage: originalMsg,
       };
@@ -38,7 +38,7 @@ const NotificationProvider = ({ children }) => {
       return {
         ...notif,
         messageText: originalMsg,
-        projectId: null,
+        intentionId: null,
         taskId: null,
         originalMessage: originalMsg,
       };

@@ -1,7 +1,7 @@
 /**
  * Calculates the experience needed for the next level.
  * This is a placeholder and can be adjusted based on actual game mechanics.
- * @param {number} currentLevel - The current level of the skill.
+ * @param {number} currentLevel - The current level of the capability.
  * @returns {number} - Experience needed for the next level.
  */
 export const calculateExperienceNeeded = (currentLevel) => {
@@ -16,7 +16,7 @@ export const calculateExperienceNeeded = (currentLevel) => {
  * Parses the unlocked_users field, which is expected to be a string
  * that might represent an array of JSON strings, or a direct JSON array string.
  * Handles cases where unlocked_users might be null, undefined, or malformed.
- * @param {string | string[] | Object[]} unlockedUsersInput - The raw unlocked_users data from the skill.
+ * @param {string | string[] | Object[]} unlockedUsersInput - The raw unlocked_users data from the capability.
  * @returns {Array<Object>} - An array of parsed user progress objects, or an empty array if parsing fails or input is empty.
  */
 const parseUnlockedUsers = (unlockedUsersInput) => {
@@ -40,7 +40,7 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
         // would be an array of strings if properly fetched by the backend.
         // If it's a single text column with "json1","json2", that's harder.
         // The provided example `{"{"exp": 0,...}"}` looks like a set string representation.
-        // Given `skills.unlocked_users (content format: {"{"exp": 0,...}","{"level": 2,...}"})`
+        // Given `capabilities.unlocked_users (content format: {"{"exp": 0,...}","{"level": 2,...}"})`
         // This looks like a string from postgres representing a TEXT[] array like `{"{json_string_1}", "{json_string_2}"}`
         // Or it could be a single string: `{"json_string_1", "json_string_2"}`.
         // Let's try to match the issue's format: `{"{"exp": 0,...}"}` suggests a set of strings.
@@ -96,30 +96,30 @@ const parseUnlockedUsers = (unlockedUsersInput) => {
 
 
 /**
- * Processes raw skill data to filter for the current user and categorize skills.
- * @param {Array<Object>} allSkills - Array of all skill objects from the API.
+ * Processes raw capability data to filter for the current user and categorize capabilities.
+ * @param {Array<Object>} allCapabilities - Array of all capability objects from the API.
  * @param {string} currentUserId - The ID of the current user.
- * @returns {Array<Object>} - Processed and categorized skill data for D3.
+ * @returns {Array<Object>} - Processed and categorized capability data for D3.
  */
-export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
-  if (!allSkills || !currentUserId) {
+export const processCapabilityDataForGalaxy = (allCapabilities, currentUserId) => {
+  if (!allCapabilities || !currentUserId) {
     return [];
   }
 
-  const allSkillsMap = new Map();
-  allSkills.forEach(skill => {
-    allSkillsMap.set(skill.id, { ...skill });
+  const allCapabilitiesMap = new Map();
+  allCapabilities.forEach(capability => {
+    allCapabilitiesMap.set(capability.id, { ...capability });
   });
 
-  const skillsToProcess = new Map();
+  const capabilitiesToProcess = new Map();
 
-  // Add all user-unlocked skills
-  allSkills.forEach(skill => {
-    const parsedUsers = parseUnlockedUsers(skill.unlocked_users);
+  // Add all user-unlocked capabilities
+  allCapabilities.forEach(capability => {
+    const parsedUsers = parseUnlockedUsers(capability.unlocked_users);
     const userData = parsedUsers.find(u => u.user_id?.toString() === currentUserId?.toString());
     if (userData) {
-      skillsToProcess.set(skill.id, {
-        ...skill,
+      capabilitiesToProcess.set(capability.id, {
+        ...capability,
         userLevel: userData.level,
         userExperience: userData.experience,
         experienceNeededForNextLevel: calculateExperienceNeeded(userData.level),
@@ -128,114 +128,114 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  // Add necessary parent skills for hierarchy completion
+  // Add necessary parent capabilities for hierarchy completion
   // Iterate over a copy of keys if modifying the map during iteration, or use a temporary array.
-  const skillsToConsiderForParents = Array.from(skillsToProcess.values());
-  skillsToConsiderForParents.forEach(skill => {
-    let current = skill;
-    while (current && current.parent_skill_id) {
-      if (!skillsToProcess.has(current.parent_skill_id)) {
-        const parentSkill = allSkillsMap.get(current.parent_skill_id);
-        if (parentSkill) {
-          skillsToProcess.set(parentSkill.id, {
-            ...parentSkill,
+  const capabilitiesToConsiderForParents = Array.from(capabilitiesToProcess.values());
+  capabilitiesToConsiderForParents.forEach(capability => {
+    let current = capability;
+    while (current && current.parent_capability_id) {
+      if (!capabilitiesToProcess.has(current.parent_capability_id)) {
+        const parentCapability = allCapabilitiesMap.get(current.parent_capability_id);
+        if (parentCapability) {
+          capabilitiesToProcess.set(parentCapability.id, {
+            ...parentCapability,
             userLevel: 0, // Default for structural parents not unlocked by user
             userExperience: 0,
             experienceNeededForNextLevel: calculateExperienceNeeded(0),
             isUnlockedByUser: false,
           });
-          current = parentSkill; // Move up to the next parent
+          current = parentCapability; // Move up to the next parent
         } else {
-          console.warn(`Parent skill with ID ${current.parent_skill_id} not found in allSkillsMap.`);
+          console.warn(`Parent capability with ID ${current.parent_capability_id} not found in allCapabilitiesMap.`);
           break; // Parent not found, stop ascending
         }
       } else {
-        // Parent already in skillsToProcess, stop ascending this path
-        current = skillsToProcess.get(current.parent_skill_id); // ensure current is updated from the map for next iteration
+        // Parent already in capabilitiesToProcess, stop ascending this path
+        current = capabilitiesToProcess.get(current.parent_capability_id); // ensure current is updated from the map for next iteration
         // break; // This was causing issues if a parent was added by another branch earlier
       }
     }
   });
   
 
-  const processedSkillsArray = Array.from(skillsToProcess.values());
-  const skillHierarchy = new Map(processedSkillsArray.map(s => [s.id, { ...s, children: [], category: 'unknown' }]));
+  const processedCapabilitiesArray = Array.from(capabilitiesToProcess.values());
+  const capabilityHierarchy = new Map(processedCapabilitiesArray.map(s => [s.id, { ...s, children: [], category: 'unknown' }]));
 
   // Build children arrays first
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  capabilityHierarchy.forEach(capabilityNode => {
+    if (capabilityNode.parent_capability_id) {
+      const parentNode = capabilityHierarchy.get(capabilityNode.parent_capability_id);
       if (parentNode) {
-        parentNode.children.push(skillNode);
+        parentNode.children.push(capabilityNode);
       } else {
-        // This warning is valid if a parent_skill_id points to a skill not included in skillsToProcess
-        console.warn(`Structural issue: Parent node with ID ${skillNode.parent_skill_id} for skill ${skillNode.name} (ID: ${skillNode.id}) not found in skillHierarchy. This skill might be orphaned or data needs checking.`);
+        // This warning is valid if a parent_capability_id points to a capability not included in capabilitiesToProcess
+        console.warn(`Structural issue: Parent node with ID ${capabilityNode.parent_capability_id} for capability ${capabilityNode.name} (ID: ${capabilityNode.id}) not found in capabilityHierarchy. This capability might be orphaned or data needs checking.`);
       }
     }
   });
 
   // Pass 1: Categorize Stars
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id === null || skillNode.parent_skill_id === undefined) {
-      skillNode.category = 'star';
+  capabilityHierarchy.forEach(capabilityNode => {
+    if (capabilityNode.parent_capability_id === null || capabilityNode.parent_capability_id === undefined) {
+      capabilityNode.category = 'star';
     }
   });
 
   // Pass 2: Categorize Planets
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  capabilityHierarchy.forEach(capabilityNode => {
+    if (capabilityNode.parent_capability_id) {
+      const parentNode = capabilityHierarchy.get(capabilityNode.parent_capability_id);
       if (parentNode && parentNode.category === 'star') {
-        skillNode.category = 'planet';
+        capabilityNode.category = 'planet';
       }
     }
   });
 
   // Pass 3: Categorize Moons
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  capabilityHierarchy.forEach(capabilityNode => {
+    if (capabilityNode.parent_capability_id) {
+      const parentNode = capabilityHierarchy.get(capabilityNode.parent_capability_id);
       if (parentNode && parentNode.category === 'planet') {
-        skillNode.category = 'moon';
+        capabilityNode.category = 'moon';
       }
     }
   });
 
   // ADD THIS NEW PASS: Categorize Satellites (children of Moons)
-  skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
-      const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
+  capabilityHierarchy.forEach(capabilityNode => {
+    if (capabilityNode.parent_capability_id) {
+      const parentNode = capabilityHierarchy.get(capabilityNode.parent_capability_id);
       if (parentNode && parentNode.category === 'moon') {
-        skillNode.category = 'satellite'; // New category
+        capabilityNode.category = 'satellite'; // New category
       }
     }
   });
   
-  // Final check for uncategorized skills
-  skillHierarchy.forEach(skillNode => {
+  // Final check for uncategorized capabilities
+  capabilityHierarchy.forEach(capabilityNode => {
     // Update the warning message if 'unknown' is still possible for other reasons
-    if (skillNode.category === 'unknown') {
-      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}, parent ID: ${skillNode.parent_skill_id}) remains uncategorized. This could be an orphan with an unresolved parent link or a new unhandled depth.`);
-    } else if (skillNode.parent_skill_id && !skillHierarchy.has(skillNode.parent_skill_id) && skillNode.category !== 'star') {
-      console.warn(`Skill ${skillNode.name} (ID: ${skillNode.id}) is categorized as ${skillNode.category} but its parent (ID: ${skillNode.parent_skill_id}) is missing from skillHierarchy.`);
+    if (capabilityNode.category === 'unknown') {
+      console.warn(`Capability ${capabilityNode.name} (ID: ${capabilityNode.id}, parent ID: ${capabilityNode.parent_capability_id}) remains uncategorized. This could be an orphan with an unresolved parent link or a new unhandled depth.`);
+    } else if (capabilityNode.parent_capability_id && !capabilityHierarchy.has(capabilityNode.parent_capability_id) && capabilityNode.category !== 'star') {
+      console.warn(`Capability ${capabilityNode.name} (ID: ${capabilityNode.id}) is categorized as ${capabilityNode.category} but its parent (ID: ${capabilityNode.parent_capability_id}) is missing from capabilityHierarchy.`);
     }
   });
 
 
   // Calculate levelForColor
-  const finalOutputSkills = [];
-  skillHierarchy.forEach(skill => {
-    let calculatedLevel = skill.userLevel || 0; // Default to its own level
+  const finalOutputCapabilities = [];
+  capabilityHierarchy.forEach(capability => {
+    let calculatedLevel = capability.userLevel || 0; // Default to its own level
 
-    if (skill.category === 'star') {
-      let starLevelSum = skill.isUnlockedByUser ? skill.userLevel : 0; // Start with star's own level if unlocked
+    if (capability.category === 'star') {
+      let starLevelSum = capability.isUnlockedByUser ? capability.userLevel : 0; // Start with star's own level if unlocked
 
       // Traverse children (planets) and grandchildren (moons)
-      skill.children.forEach(planet => { // planets
+      capability.children.forEach(planet => { // planets
         if (planet.isUnlockedByUser) {
           starLevelSum += planet.userLevel;
         }
-        const planetNode = skillHierarchy.get(planet.id); // Get full planet node with its children
+        const planetNode = capabilityHierarchy.get(planet.id); // Get full planet node with its children
         planetNode.children.forEach(moon => { // moons
           if (moon.isUnlockedByUser) {
             starLevelSum += moon.userLevel;
@@ -245,9 +245,9 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
       calculatedLevel = starLevelSum;
     }
     
-    finalOutputSkills.push({
-      ...skill, // includes original properties, userLevel, userExperience, etc.
-      category: skill.category || 'unknown', // Ensure category is set
+    finalOutputCapabilities.push({
+      ...capability, // includes original properties, userLevel, userExperience, etc.
+      category: capability.category || 'unknown', // Ensure category is set
       levelForColor: calculatedLevel,
       // Remove children property from final output as it was for calculation internal to this function
       children: undefined 
@@ -255,10 +255,10 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   });
   
   // Remove the children property from the final output objects cleanly
-  const cleanedFinalOutputSkills = finalOutputSkills.map(skill => {
-    const { children, ...rest } = skill;
+  const cleanedFinalOutputCapabilities = finalOutputCapabilities.map(capability => {
+    const { children, ...rest } = capability;
     return rest;
   });
 
-  return cleanedFinalOutputSkills;
+  return cleanedFinalOutputCapabilities;
 };

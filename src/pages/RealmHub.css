@@ -391,8 +391,8 @@
         margin-left: 0px;
         margin-right: 0px;
     }
-    .projects-grid {
-        grid-template-columns: 1fr; /* Single column for projects */
+    .intentions-grid {
+        grid-template-columns: 1fr; /* Single column for intentions */
     }
     .hub-card {
         padding: 0px; /* Reduce padding on smaller cards */

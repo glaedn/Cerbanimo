@@ -5,7 +5,7 @@ const createResonancesTable = async () => {
     CREATE TABLE IF NOT EXISTS resonances (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      intention_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      intention_id INTEGER NOT NULL REFERENCES intentions(id) ON DELETE CASCADE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       UNIQUE (user_id, intention_id)
     );

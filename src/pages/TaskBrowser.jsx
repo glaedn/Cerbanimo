@@ -61,18 +61,18 @@ const TaskBrowser = () => {
           });
       
           const sortedTasks = tasksResponse.data.sort((a, b) => {
-            const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
-            const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
+            const sharedA = a.intentionTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
+            const sharedB = b.intentionTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             return sharedB - sharedA;
           });
       
           const tasksWithSharedTags = sortedTasks.map(task => ({
             ...task,
-            sharedTags: Array.isArray(task.projectTags)
-              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim()))
+            sharedTags: Array.isArray(task.intentionTags)
+              ? task.intentionTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim()))
               : [],
-            sharedTagsCount: Array.isArray(task.projectTags)
-              ? task.projectTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length
+            sharedTagsCount: Array.isArray(task.intentionTags)
+              ? task.intentionTags.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length
               : 0,
           }));
       
@@ -136,7 +136,7 @@ const TaskBrowser = () => {
                           {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
                         </Typography>
                         <br />
-                        {task.project_id && <Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link>}
+                        {task.intention_id && <Link href={`/lotus-map/${task.intention_id}`} className="task-link">🚀 View Intention</Link>}
                       </>
                     }
                   />
@@ -166,7 +166,7 @@ const TaskBrowser = () => {
                            `⌛ In Progress`}
                         </Typography>
                         <br />
-                        <Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link>
+                        <Link href={`/lotus-map/${task.intention_id}`} className="task-link">🚀 View Intention</Link>
                       </>
                     }
                   />
@@ -193,8 +193,8 @@ const TaskBrowser = () => {
                         <Typography component="span" variant="body2" className="task-status">
                           {`📝 Needs Review (${task.approvals?.length || 0} approvals, ${task.rejections?.length || 0} rejections)`}
                         </Typography>
-                        {task.project_id && <><br /><Link href={`/lotus-map/${task.project_id}`} className="task-link">🚀 View Intention</Link></>}
-                        {task.project_id && task.id && <><br /><Link href={`/lotus-map/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
+                        {task.intention_id && <><br /><Link href={`/lotus-map/${task.intention_id}`} className="task-link">🚀 View Intention</Link></>}
+                        {task.intention_id && task.id && <><br /><Link href={`/lotus-map/${task.intention_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
                       </>
                     }
                   />

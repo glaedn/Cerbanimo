@@ -155,9 +155,9 @@ const AuthWrapper = ({ children }) => {
           );
           navigate("/onboarding");
         } else if (location.state?.fromOnboarding && !needsOnboarding) {
-          // If coming from onboarding and profile is complete, navigate to projects
-          console.log("Onboarding complete, navigating to projects");
-          navigate("/projects");
+          // If coming from onboarding and profile is complete, navigate to intentions
+          console.log("Onboarding complete, navigating to intentions");
+          navigate("/intentions");
         } else {
           console.log("User does not need onboarding. Profile:", profileData);
         }

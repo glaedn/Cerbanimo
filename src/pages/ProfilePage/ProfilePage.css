@@ -171,7 +171,7 @@
     color: #E0E0E0; /* Lighter gray, close to textPrimary but distinct */
   }
   
-  .view-project-link {
+  .view-intention-link {
     align-self: flex-start;
     background-color: rgba(0, 243, 255, 0.1); /* theme.colors.primary with alpha */
     color: #00F3FF; /* theme.colors.primary */
@@ -182,7 +182,7 @@
     transition: background-color 0.3s ease;
   }
   
-  .view-project-link:hover {
+  .view-intention-link:hover {
     background-color: rgba(0, 243, 255, 0.2); /* theme.colors.primary with alpha */
   }
 

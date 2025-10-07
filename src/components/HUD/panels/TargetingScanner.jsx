@@ -56,7 +56,7 @@ const TargetingScanner = () => {
                     <span
                     className="task-name"
                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.project_id}/${task.id}`, '_blank')}
+                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.intention_id}/${task.id}`, '_blank')}
                     title="View task in visualizer"
                     >
                     {task.name}

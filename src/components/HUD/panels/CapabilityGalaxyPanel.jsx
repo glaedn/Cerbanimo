@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import useSkillData from '../../../hooks/useSkillData';
+import useCapabilityData from '../../../hooks/useCapabilityData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import * as d3 from 'd3';
-import './SkillGalaxyPanel.css';
+import './CapabilityGalaxyPanel.css';
 import '../HUDPanel.css';
 import theme from '../../../styles/theme';
-import { processSkillDataForGalaxy } from '../../../utils/skillUtils';
-import SkillDetailPopup from './SkillDetailPopup';
+import { processCapabilityDataForGalaxy } from '../../../utils/capabilityUtils';
+import CapabilityDetailPopup from './CapabilityDetailPopup';
 
 // Helper function to generate pastel colors
 const hexToRgb = (hex) => {
@@ -32,11 +32,11 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const SkillGalaxyPanel = () => {
+const CapabilityGalaxyPanel = () => {
   const { user, isAuthenticated } = useAuth0();
-  const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
+  const { allCapabilities, loading: capabilitiesLoading, error: capabilitiesError } = useCapabilityData();
   const { profile } = useUserProfile();
-  const [processedSkills, setProcessedSkills] = useState([]);
+  const [processedCapabilities, setProcessedCapabilities] = useState([]);
   const [d3Nodes, setD3Nodes] = useState([]);
   const [d3Links, setD3Links] = useState([]);
   const svgRef = useRef(null);
@@ -44,7 +44,7 @@ const SkillGalaxyPanel = () => {
   const fixedStarPositionsRef = useRef(new Map()); // For persisting star fx/fy values
   const initialZoomAppliedRef = useRef(false); // To track if initial overview zoom is applied
   const [forceDataUpdate, setForceDataUpdate] = useState(false); // To trigger data reprocessing
-  const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
+  const [selectedCapabilityForPopup, setSelectedCapabilityForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const panelRef = useRef(null);
 
@@ -61,7 +61,7 @@ const SkillGalaxyPanel = () => {
     if (level >= 5) return theme.colors.accentGreen; // Green for 5-9
     // For levels 1-4, use primary. If level 0 should have a different default, adjust.
     // Assuming level 0 means "not achieved enough for distinct color" or "base color".
-    // If skills only show color from level 1:
+    // If capabilities only show color from level 1:
     if (level >= 1) return theme.colors.primary; // Blue for 1-4
     return theme.colors.primary; // Default for level 0 or uncolored
   }, [theme.colors]);
@@ -78,60 +78,60 @@ const SkillGalaxyPanel = () => {
 
   useEffect(() => {
 
-    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && user?.sub) {
+    if (!capabilitiesLoading && allCapabilities && allCapabilities.length > 0 && isAuthenticated && user?.sub) {
       const userId = profile?.id || user.sub; // Fallback to user.sub if profile.id not available
 
-      const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
-      // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
+      const capabilitiesForGalaxy = processCapabilityDataForGalaxy(allCapabilities, userId);
+      // setProcessedCapabilities(capabilitiesForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
 
-      // Filter out skills with null or undefined IDs before mapping
-      const validSkillsForGalaxy = skillsForGalaxy.filter(skill => {
-        if (skill && skill.id != null) { // Check for null or undefined ID
+      // Filter out capabilities with null or undefined IDs before mapping
+      const validCapabilitiesForGalaxy = capabilitiesForGalaxy.filter(capability => {
+        if (capability && capability.id != null) { // Check for null or undefined ID
           return true;
         }
-        console.warn('[D3 Data Prep] Filtered out skill due to missing/null ID:', skill);
+        console.warn('[D3 Data Prep] Filtered out capability due to missing/null ID:', capability);
         return false;
       });
       
-      if (validSkillsForGalaxy.length !== skillsForGalaxy.length) {
-        console.warn(`[D3 Data Prep] Original skillsForGalaxy count: ${skillsForGalaxy.length}, Valid count after ID filter: ${validSkillsForGalaxy.length}`);
+      if (validCapabilitiesForGalaxy.length !== capabilitiesForGalaxy.length) {
+        console.warn(`[D3 Data Prep] Original capabilitiesForGalaxy count: ${capabilitiesForGalaxy.length}, Valid count after ID filter: ${validCapabilitiesForGalaxy.length}`);
       }
 
       // When creating new nodes, apply fx/fy from fixedStarPositionsRef for stars
-      const newNodes = validSkillsForGalaxy.map(skill => {
+      const newNodes = validCapabilitiesForGalaxy.map(capability => {
         let fx = null, fy = null;
-        if (skill.category === 'star') {
-          const fixedPos = fixedStarPositionsRef.current.get(skill.id.toString()); // ID is now guaranteed non-null
+        if (capability.category === 'star') {
+          const fixedPos = fixedStarPositionsRef.current.get(capability.id.toString()); // ID is now guaranteed non-null
           if (fixedPos) {
             fx = fixedPos.fx;
             fy = fixedPos.fy;
           }
         }
         return {
-          id: skill.id.toString(), // skill.id is non-null here
-          name: skill.name || "Unnamed Skill", // Fallback for name
-          parent: skill.parent_skill_id ? skill.parent_skill_id.toString() : null,
-          level: skill.userLevel,
-          userLevel: skill.userLevel, // Ensure userLevel is present for level text display
-          experience: skill.userExperience,
-          experienceNeeded: skill.experienceNeededForNextLevel,
-          levelForColor: skill.levelForColor !== undefined ? skill.levelForColor : (skill.category === 'star' ? 0 : skill.userLevel),
-          category: skill.category || 'star', // Make sure category is set
-          originalData: skill,
+          id: capability.id.toString(), // capability.id is non-null here
+          name: capability.name || "Unnamed Capability", // Fallback for name
+          parent: capability.parent_capability_id ? capability.parent_capability_id.toString() : null,
+          level: capability.userLevel,
+          userLevel: capability.userLevel, // Ensure userLevel is present for level text display
+          experience: capability.userExperience,
+          experienceNeeded: capability.experienceNeededForNextLevel,
+          levelForColor: capability.levelForColor !== undefined ? capability.levelForColor : (capability.category === 'star' ? 0 : capability.userLevel),
+          category: capability.category || 'star', // Make sure category is set
+          originalData: capability,
           fx, // Apply stored fixed position
           fy, // Apply stored fixed position
         };
       });
 
       const newLinks = [];
-      skillsForGalaxy.forEach(skill => {
-        if (skill.parent_skill_id) {
-          const parentExists = skillsForGalaxy.find(s => s.id === skill.parent_skill_id); // Check against current skillsForGalaxy
+      capabilitiesForGalaxy.forEach(capability => {
+        if (capability.parent_capability_id) {
+          const parentExists = capabilitiesForGalaxy.find(s => s.id === capability.parent_capability_id); // Check against current capabilitiesForGalaxy
           if (parentExists) {
             newLinks.push({
-              source: skill.parent_skill_id.toString(),
-              target: skill.id.toString(),
-              id: `link-${skill.parent_skill_id}-${skill.id}`
+              source: capability.parent_capability_id.toString(),
+              target: capability.id.toString(),
+              id: `link-${capability.parent_capability_id}-${capability.id}`
             });
           }
         }
@@ -139,9 +139,9 @@ const SkillGalaxyPanel = () => {
 
       setD3Nodes(newNodes);
       setD3Links(newLinks);
-      // Update processedSkills state if other parts of the component rely on it directly
+      // Update processedCapabilities state if other parts of the component rely on it directly
       // For now, assuming d3Nodes is the primary derived state for rendering the galaxy
-      setProcessedSkills(skillsForGalaxy); 
+      setProcessedCapabilities(capabilitiesForGalaxy);
 
 
     } else {
@@ -149,9 +149,9 @@ const SkillGalaxyPanel = () => {
       // Clear nodes and links if they exist
       if (d3Nodes.length > 0) setD3Nodes([]);
       if (d3Links.length > 0) setD3Links([]);
-      if (processedSkills.length > 0) setProcessedSkills([]);
+      if (processedCapabilities.length > 0) setProcessedCapabilities([]);
     }
-  }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
+  }, [allCapabilities, capabilitiesLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
 
   useEffect(() => {
 
@@ -304,7 +304,7 @@ const SkillGalaxyPanel = () => {
             .on('click', (event, d_clicked) => {
               event.stopPropagation();
               // All nodes, including stars, will now open the popup
-              setSelectedSkillForPopup(d_clicked);
+              setSelectedCapabilityForPopup(d_clicked);
             });
 
           group.append('text')
@@ -340,7 +340,7 @@ const SkillGalaxyPanel = () => {
               if (d.category === 'moon') return 8 + 10;
               return 5 + 8; // Satellite radius (5) + padding for level label
             });
-            // Styling is handled by .level-label class in SkillGalaxyPanel.css
+            // Styling is handled by .level-label class in CapabilityGalaxyPanel.css
 
           group.on('mouseenter', function(event, d_hovered) {
             // 'this' refers to the G element hovered
@@ -358,7 +358,7 @@ const SkillGalaxyPanel = () => {
               if (currentNode.parent) { // Assuming parent stores ID string
                 getConstellationIds(currentNode.parent);
               }
-              // Add children (need to find them from d3Nodes based on parent_skill_id)
+              // Add children (need to find them from d3Nodes based on parent_capability_id)
               d3Nodes.forEach(n => {
                 if (n.parent === nodeId) {
                   getConstellationIds(n.id);
@@ -601,29 +601,29 @@ const SkillGalaxyPanel = () => {
     // Key dependencies are d3Nodes, d3Links, and simulation. activeStar removed.
   }, [d3Nodes, d3Links, simulation, theme.colors, getStarColor, getStarGradientUrl, memoizedGetPastelColor, fixedStarPositionsRef, setForceDataUpdate]);
 
-  if (skillsLoading) {
+  if (capabilitiesLoading) {
     return (
-      <div className="skill-galaxy-panel-loading" style={{color: theme.colors.textSecondary}}>
-        Loading Skill Data...
+      <div className="capability-galaxy-panel-loading" style={{color: theme.colors.textSecondary}}>
+        Loading Capability Data...
       </div>
     );
   }
   
-  if (skillsError) {
+  if (capabilitiesError) {
     return (
-      <div className="skill-galaxy-panel-error" style={{color: theme.colors.error}}>
-        Error loading skills: {skillsError.message || skillsError.toString()}
+      <div className="capability-galaxy-panel-error" style={{color: theme.colors.error}}>
+        Error loading capabilities: {capabilitiesError.message || capabilitiesError.toString()}
       </div>
     );
   }
 
-  if (processedSkills.length === 0 && d3Nodes.length === 0 && !skillsLoading && !skillsError) {
+  if (processedCapabilities.length === 0 && d3Nodes.length === 0 && !capabilitiesLoading && !capabilitiesError) {
     return (
-      <div className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-        <h2 style={{ color: theme.colors.textPrimary }}>Skill Constellations</h2>
-        <div className="skill-galaxy-empty" style={{color: theme.colors.textSecondary, textAlign: 'center', marginTop: '50px'}}>
-          <p>Your Skill Constellation is forming.</p>
-          <p>Unlock skills by completing missions or training!</p>
+      <div className={`hud-panel capability-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
+        <h2 style={{ color: theme.colors.textPrimary }}>Capability Constellations</h2>
+        <div className="capability-galaxy-empty" style={{color: theme.colors.textSecondary, textAlign: 'center', marginTop: '50px'}}>
+          <p>Your Capability Constellation is forming.</p>
+          <p>Unlock capabilities by completing missions or training!</p>
         </div>
       </div>
     );
@@ -632,17 +632,17 @@ const SkillGalaxyPanel = () => {
   return (
     <div 
     ref={panelRef}
-    className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
+    className={`hud-panel capability-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
        <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Skill Constellations</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}>
+        <h4>Capability Constellations</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Capability Constellations" : "Minimize Capability Constellations"}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
         <svg 
           ref={svgRef} 
-          className="skill-galaxy-svg" 
+          className="capability-galaxy-svg"
           style={{ 
             width: '100%', 
             height: '100%',
@@ -653,10 +653,10 @@ const SkillGalaxyPanel = () => {
           {/* Defs will be appended here by D3 */}
         </svg>
       </div>
-      {selectedSkillForPopup && (
-        <SkillDetailPopup 
-          skillData={selectedSkillForPopup} 
-          onClose={() => setSelectedSkillForPopup(null)}
+      {selectedCapabilityForPopup && (
+        <CapabilityDetailPopup
+          capabilityData={selectedCapabilityForPopup}
+          onClose={() => setSelectedCapabilityForPopup(null)}
           parentRef ={panelRef} 
         />
       )}
@@ -664,4 +664,4 @@ const SkillGalaxyPanel = () => {
   );
 };
 
-export default SkillGalaxyPanel;
+export default CapabilityGalaxyPanel;

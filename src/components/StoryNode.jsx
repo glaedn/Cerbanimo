@@ -24,7 +24,7 @@ const emojiOptions = ['👍', '💡', '🚀', '🌟'];
 
 const StoryNode = ({
   task_name,
-  project_name,
+  intention_name,
   reflection,
   tags,
   media_urls = [],
@@ -64,7 +64,7 @@ const StoryNode = ({
           {task_name}
         </Typography>
         <Typography variant="subtitle2" className="story-node-subheader">
-          from project: {project_name}
+          from intention: {intention_name}
         </Typography>
 
         <Divider className="neon-divider" />

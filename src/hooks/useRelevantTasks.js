@@ -100,8 +100,8 @@ const useRelevantTasks = (userId) => {
           requiredSkillLevel: task.skill_level === undefined ? 'Any' : task.skill_level,
           skillMatchPercent: (task.skill_id && userSkills.find(us => us.id === task.skill_id)) ? 100 : 'N/A',
           timeSensitivity: task.status && task.status.toLowerCase().includes('urgent') ? 'High' : 'Normal',
-          intention_id: task.project_id || null,
-          intention_name: task.project_name || 'Unknown Intention',
+          intention_id: task.intention_id || null,
+          intention_name: task.intention_name || 'Unknown Intention',
         }));
       console.log('Filtered Relevant Tasks:', filteredTasks);
       setRelevantTasks(filteredTasks);

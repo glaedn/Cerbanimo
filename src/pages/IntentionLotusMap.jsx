@@ -10,10 +10,11 @@ import { useMemo } from "react";
 import { Chip } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 
-const IntentionLotusMap = () => {
+const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
-  const { intentionId, taskId } = useParams();
+  const { intentionId: paramIntentionId, taskId } = useParams();
+  const intentionId = propIntentionId || paramIntentionId;
   const { getAccessTokenSilently } = useAuth0();
   const { user } = useAuth0();
   const [userId, setUserId] = useState(null);
@@ -45,6 +46,25 @@ const IntentionLotusMap = () => {
   const linksGroupRef = useRef(null);
   // Check if any task is active, completed, or urgent
   const [intentionIsActive, setIntentionIsActive] = useState(false);
+  const [resonanceCount, setResonanceCount] = useState(0);
+  const [userHasResonated, setUserHasResonated] = useState(false);
+
+  useEffect(() => {
+    const fetchResonanceData = async () => {
+      if (!intentionId || !userId) return;
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}/resonances`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setResonanceCount(response.data.count);
+        setUserHasResonated(response.data.userHasResonated);
+      } catch (error) {
+        console.error("Failed to fetch resonance data:", error);
+      }
+    };
+    fetchResonanceData();
+  }, [intentionId, userId, getAccessTokenSilently]);
 
   useEffect(() => {
     setIntentionIsActive(
@@ -208,6 +228,20 @@ const IntentionLotusMap = () => {
       // No need to call fetchIntention() since we've already updated the UI
     } catch (error) {
       console.error('Error updating tags:', error);
+    }
+  };
+
+  const handleResonate = async () => {
+    if (!intentionId || !userId || userHasResonated) return;
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/intentions/${intentionId}/resonate`, { userId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setResonanceCount(prev => prev + 1);
+      setUserHasResonated(true);
+    } catch (error) {
+      console.error("Failed to resonate with intention:", error);
     }
   };
 
@@ -1384,6 +1418,12 @@ links.forEach(link => {
         <br />
         <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">
+          <div className="resonance-section">
+            <button onClick={handleResonate} disabled={userHasResonated} className="resonate-button">
+              {userHasResonated ? 'Resonated' : 'Resonate'}
+            </button>
+            <span className="resonance-count">{resonanceCount}</span>
+          </div>
           <div className="token-metric">
             <span className="token-label">Allocated:</span>
             <span className="token-value">{intention?.reserved_tokens}</span>

@@ -29,11 +29,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
-import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
-import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
-import './CommunityHub.css';
+import RealmChronicle from '../components/RealmChronicle/index.jsx';
+import RealmResourceManagement from '../components/RealmResourceManagement/RealmResourceManagement.jsx';
+import './RealmHub.css';
 
-const CommunityHub = () => {
+const RealmHub = () => {
     const { realmId } = useParams();
     const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
@@ -494,12 +494,12 @@ const CommunityHub = () => {
     }
 
     return (
-        <div className="community-hub">
+        <div className="realm-hub">
             <Typography variant="h4" className="hub-title">{realm.name}</Typography>
             
             {/* Realm Info Section */}
-            <div className="community-info">
-                <Typography variant="body1" className="community-description">{realm.description}</Typography>
+            <div className="realm-info">
+                <Typography variant="body1" className="realm-description">{realm.description}</Typography>
                 <div className="tag-container">
                     {realm.interest_tags && realm.interest_tags.map((tag, index) => (
                         <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
@@ -819,16 +819,16 @@ const CommunityHub = () => {
                 )}
                 {/* Active Intentions Card - Visible to all */}
                 <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
-                    <Card className="hub-card projects-card">
+                    <Card className="hub-card intentions-card">
                         <CardContent>
                             <RocketLaunchIcon className="hub-icon" />
                             <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Intentions</Typography>
                             {approvedIntentions.length === 0 ? (
                                 <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active intentions</Typography>
                             ) : (
-                                <div className="projects-grid">
+                                <div className="intentions-grid">
                                     {approvedIntentions.map((intention) => (
-                                        <Card key={intention.id} className="project-card"> {/* CSS handles this card's theme */}
+                                        <Card key={intention.id} className="intention-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
                                                 <Link
                                                     component="button"
@@ -839,7 +839,7 @@ const CommunityHub = () => {
                                                 >
                                                     {intention.name}
                                                 </Link>
-                                                <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
+                                                <Typography variant="body2" className="intention-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                     {intention.description}
                                                 </Typography>
                                                 <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
@@ -850,7 +850,7 @@ const CommunityHub = () => {
                                                 <Button 
                                                     variant="outlined" 
                                                     onClick={() => navigate(`/lotus-map/${intention.id}`)}
-                                                    className="view-project-btn" // CSS handles margin-top: auto
+                                                    className="view-intention-btn" // CSS handles margin-top: auto
                                                     sx={{
                                                         color: 'var(--hud-primary-color)',
                                                         borderColor: 'var(--hud-primary-color)',
@@ -872,8 +872,8 @@ const CommunityHub = () => {
                     </Card>
                 </div>
             </div>
-            <CommunityResourceManagement communityId={realmId} />
-            <CommunityChronicle communityId={realmId} />
+            <RealmResourceManagement realmId={realmId} />
+            <RealmChronicle realmId={realmId} />
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 

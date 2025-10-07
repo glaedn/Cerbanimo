@@ -1,10 +1,10 @@
-/* Community Creation Page - Space Game Theme */
+/* Realm Creation Page - Space Game Theme */
 
 .html, body {
     overflow: hidden;
 }
 
-.community-creation-container {
+.realm-creation-container {
     padding: 20px;
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;

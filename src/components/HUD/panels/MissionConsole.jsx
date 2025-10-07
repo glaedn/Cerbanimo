@@ -44,7 +44,7 @@ const MissionConsole = () => {
   };
 
   const handleViewTask = (task) => {
-    navigate(`/visualizer/${task.projectId}/${task.id}`);
+    navigate(`/visualizer/${task.intentionId}/${task.id}`);
   };
 
   const handleDropTask = async (taskId) => {
@@ -82,7 +82,7 @@ const MissionConsole = () => {
               {assignedTasks.map(task => (
                 <li key={task.id} className="task-item">
                   <div className="task-info">
-                    <span className="task-name">{task.name}</span> <br/> ({task.projectName})
+                    <span className="task-name">{task.name}</span> <br/> ({task.intentionName})
                     <br />
                     Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
                     {task.timeRemaining !== 'N/A' && <span> - Time Left: {task.timeRemaining}</span>}

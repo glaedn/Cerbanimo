@@ -16,7 +16,7 @@ import BadgeCreation from "./pages/BadgeCreation.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import IntentionLotusMap from "./pages/IntentionLotusMap.jsx";
 import RealmCreation from "./pages/RealmCreation.jsx";
-import CommunityHub from "./pages/CommunityHub.jsx";
+import RealmHub from "./pages/RealmHub.jsx";
 import Realms from "./pages/Realms.jsx";
 import UserPortfolio from "./pages/UserPortfolio.jsx";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -114,7 +114,7 @@ const App = () => {
             path="/realm/:realmId"
             element={
               <PrivateRoute>
-                <CommunityHub />
+                <RealmHub />
               </PrivateRoute>
             }
           />

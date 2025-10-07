@@ -243,9 +243,9 @@ const SiteNav = () => {
                     >
                         {icon}
                         <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
-                            {notif.projectId && notif.taskId ? (
+                            {notif.intentionId && notif.taskId ? (
                                 <Link
-                                    to={`/lotus-map/${notif.projectId}/${notif.taskId}`}
+                                    to={`/lotus-map/${notif.intentionId}/${notif.taskId}`}
                                     style={{
                                         textDecoration: "underline",
                                         color: "#8db8ff",

@@ -5,9 +5,9 @@ import { CircularProgress, TextField, Chip, Grid, Typography } from '@mui/materi
 import FeaturedCarousel from './FeaturedCarousel.jsx';
 import ChronicleCard from './ChronicleCard.jsx';
 import { useAuth0 } from '@auth0/auth0-react';
-import './CommunityChronicle.css';
+import './RealmChronicle.css';
 
-const CommunityChronicle = ({ communityId }) => {
+const RealmChronicle = ({ realmId }) => {
   const [chronicles, setChronicles] = useState([]);
   const [featured, setFeatured] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,7 +21,7 @@ const CommunityChronicle = ({ communityId }) => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/storyChronicles/community/${communityId}/chronicle-feed`,
+        `${import.meta.env.VITE_BACKEND_URL}/storyChronicles/realm/${realmId}/chronicle-feed`,
         {
           headers: {
         Authorization: `Bearer ${token}`,
@@ -52,9 +52,9 @@ const CommunityChronicle = ({ communityId }) => {
       if (reset) setFeatured(data.slice(0, 5)); // simplistic featured logic
 
     } catch (err) {
-      console.error('Error fetching community chronicle feed:', err);
+      console.error('Error fetching realm chronicle feed:', err);
     }
-  }, [communityId, searchTerm, selectedTags, page]);
+  }, [realmId, searchTerm, selectedTags, page]);
 
   useEffect(() => {
     fetchChronicles(true);
@@ -109,4 +109,4 @@ const CommunityChronicle = ({ communityId }) => {
   );
 };
 
-export default CommunityChronicle;
+export default RealmChronicle;
