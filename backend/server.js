@@ -28,7 +28,6 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
-import resonanceRoutes from './routes/resonances.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
@@ -181,7 +180,6 @@ app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
-app.use('/resonances', jwtCheck, resonanceRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
