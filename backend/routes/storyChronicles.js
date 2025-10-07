@@ -7,14 +7,14 @@ const router = express.Router();
 
 // POST /story-node
 router.post('/story-node', async (req, res) => {
-  const { task_id, user_id, reflection, media_urls, tags } = req.body;
+  const { petal_id, user_id, reflection, media_urls, tags } = req.body;
   const id = uuidv4();
   console.log('Received data:', req.body);
   try {
     const result = await db.query(
-      `INSERT INTO story_nodes (id, task_id, user_id, reflection, media_urls, tags, created_at, updated_at)
+      `INSERT INTO story_nodes (id, petal_id, user_id, reflection, media_urls, tags, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`,
-      [id, task_id, user_id, reflection, media_urls, tags]
+      [id, petal_id, user_id, reflection, media_urls, tags]
     );
     res.status(201).json(result.rows[0]);
     console.log('Inserted story node:', result.rows[0]);

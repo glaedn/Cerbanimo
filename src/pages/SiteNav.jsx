@@ -66,13 +66,13 @@ const SiteNav = () => {
     switch (
       type.toLowerCase() // Use toLowerCase for case-insensitive matching
     ) {
-      case "task-approved":
+      case "petal-approved":
         return <TaskAltIcon style={{ marginRight: "8px" }} />;
-      case "task-rejected":
+      case "petal-rejected":
         return <CancelIcon style={{ marginRight: "8px" }} />;
-      case "task-submitted":
+      case "petal-submitted":
         return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
-      case "task":
+      case "petal":
         return <ListAltIcon style={{ marginRight: "8px" }} />;
       default:
         return <InfoIcon style={{ marginRight: "8px" }} />;
@@ -243,9 +243,9 @@ const SiteNav = () => {
                     >
                         {icon}
                         <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
-                            {notif.intentionId && notif.taskId ? (
+                            {notif.intentionId && notif.petalId ? (
                                 <Link
-                                    to={`/lotus-map/${notif.intentionId}/${notif.taskId}`}
+                                    to={`/lotus-map/${notif.intentionId}/${notif.petalId}`}
                                     style={{
                                         textDecoration: "underline",
                                         color: "#8db8ff",

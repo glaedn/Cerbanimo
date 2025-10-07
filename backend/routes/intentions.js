@@ -1,6 +1,6 @@
 import express from 'express';
 import pg from 'pg';
-import { autoGenerateTasks } from '../services/taskGenerator.js';
+import { autoGeneratePetals } from '../services/petalGenerator.js';
 
 const { Pool } = pg;
 
@@ -216,7 +216,7 @@ router.put('/:intentionId', async (req, res) => {
 });
 
 //import and export functions
-// Export intention + tasks as JSON
+// Export intention + petals as JSON
 router.get('/:intentionId/export', async (req, res) => {
   const { intentionId } = req.params;
   try {
@@ -230,9 +230,9 @@ router.get('/:intentionId/export', async (req, res) => {
 
     const intention = intentionResult.rows[0];
 
-    // Fetch tasks
-    const tasksQuery = 'SELECT * FROM tasks WHERE intention_id = $1';
-    const tasksResult = await pool.query(tasksQuery, [intentionId]);
+    // Fetch petals
+    const petalsQuery = 'SELECT * FROM petals WHERE intention_id = $1';
+    const petalsResult = await pool.query(petalsQuery, [intentionId]);
 
     const exportData = {
       intention: {
@@ -243,13 +243,13 @@ router.get('/:intentionId/export', async (req, res) => {
         used_tokens: intention.used_tokens,
         reserved_tokens: intention.reserved_tokens
       },
-      tasks: tasksResult.rows.map(task => ({
-        name: task.name,
-        description: task.description,
-        reward_tokens: task.reward_tokens,
-        status: task.status,
-        dependencies: task.dependencies,
-        skill_id: task.skill_id
+      petals: petalsResult.rows.map(petal => ({
+        name: petal.name,
+        description: petal.description,
+        reward_tokens: petal.reward_tokens,
+        status: petal.status,
+        dependencies: petal.dependencies,
+        skill_id: petal.skill_id
       }))
     };
 
@@ -261,12 +261,12 @@ router.get('/:intentionId/export', async (req, res) => {
 });
 
 
-// Import intention + tasks from JSON
+// Import intention + petals from JSON
 router.post('/import', async (req, res) => {
-  const { intention, tasks, auth0_id } = req.body; // JSON must include auth0_id to assign creator
+  const { intention, petals, auth0_id } = req.body; // JSON must include auth0_id to assign creator
 
-  if (!intention || !tasks || !auth0_id) {
-    return res.status(400).json({ message: 'Intention, tasks, and auth0_id are required' });
+  if (!intention || !petals || !auth0_id) {
+    return res.status(400).json({ message: 'Intention, petals, and auth0_id are required' });
   }
 
   const client = await pool.connect();
@@ -295,36 +295,36 @@ router.post('/import', async (req, res) => {
     ]);
     const newIntentionId = intentionResult.rows[0].id;
 
-    // Map template task "index" to new database task IDs
-    const taskIdMap = {}; // { templateIndex: newId }
+    // Map template petal "index" to new database petal IDs
+    const petalIdMap = {}; // { templateIndex: newId }
 
-    // First pass — create all tasks (without dependencies yet)
-    for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i];
-      const insertTaskQuery = `
-        INSERT INTO tasks (name, description, intention_id, creator_id, reward_tokens, status, skill_id)
+    // First pass — create all petals (without dependencies yet)
+    for (let i = 0; i < petals.length; i++) {
+      const petal = petals[i];
+      const insertPetalQuery = `
+        INSERT INTO petals (name, description, intention_id, creator_id, reward_tokens, status, skill_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id;
       `;
-      const taskResult = await client.query(insertTaskQuery, [
-        task.name, task.description, newIntentionId, creator_id,
-        task.reward_tokens, task.status, task.skill_id
+      const petalResult = await client.query(insertPetalQuery, [
+        petal.name, petal.description, newIntentionId, creator_id,
+        petal.reward_tokens, petal.status, petal.skill_id
       ]);
-      taskIdMap[i] = taskResult.rows[0].id;
+      petalIdMap[i] = petalResult.rows[0].id;
     }
 
     // Second pass — update dependencies with new IDs
-    for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i];
-      const newTaskId = taskIdMap[i];
+    for (let i = 0; i < petals.length; i++) {
+      const petal = petals[i];
+      const newPetalId = petalIdMap[i];
 
-      if (task.dependencies && task.dependencies.length > 0) {
-        const remappedDependencies = task.dependencies.map(depIndex => taskIdMap[depIndex]);
+      if (petal.dependencies && petal.dependencies.length > 0) {
+        const remappedDependencies = petal.dependencies.map(depIndex => petalIdMap[depIndex]);
 
         const updateDepsQuery = `
-          UPDATE tasks SET dependencies = $1 WHERE id = $2
+          UPDATE petals SET dependencies = $1 WHERE id = $2
         `;
-        await client.query(updateDepsQuery, [remappedDependencies, newTaskId]);
+        await client.query(updateDepsQuery, [remappedDependencies, newPetalId]);
       }
     }
 
@@ -355,45 +355,45 @@ router.post('/auto-generate', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Intention not found' });
     }
 
-    // 2. Generate tasks using LLM
-    const generatedData = await autoGenerateTasks(intention.name, intention.description);
+    // 2. Generate petals using LLM
+    const generatedData = await autoGeneratePetals(intention.name, intention.description);
     console.log('Generated data:', generatedData);
-    const tasks = generatedData.tasks
-    console.log('Generated tasks:', tasks);
+    const petals = generatedData.petals
+    console.log('Generated petals:', petals);
 
-    // 3. First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map
+    // 3. First pass: Insert petals WITHOUT dependencies, and build LLM ID → DB ID map
     const llmToDbIdMap = {};
 
-    for (const task of tasks) {
+    for (const petal of petals) {
       const result = await pool.query(
-        'INSERT INTO tasks (intention_id, name, description, skill_id, status, dependencies, reward_tokens) VALUES ($1, $2, $3, $4, $5, $6::int[], $7) RETURNING id',
-        [intentionId, task.name, task.description, task.skill_id, 'inactive-unassigned', [], task.reward_tokens]
+        'INSERT INTO petals (intention_id, name, description, skill_id, status, dependencies, reward_tokens) VALUES ($1, $2, $3, $4, $5, $6::int[], $7) RETURNING id',
+        [intentionId, petal.name, petal.description, petal.skill_id, 'Seeded', [], petal.reward_tokens]
       );
       const dbId = result.rows[0].id;
-      llmToDbIdMap[task.id] = dbId;
+      llmToDbIdMap[petal.id] = dbId;
     }
 
     // 4. Second pass: Update dependencies with resolved DB IDs
-    const updatePromises = tasks.map(task => {
-      const resolvedDeps = (Array.isArray(task.dependencies) ? task.dependencies : []).map(depId => llmToDbIdMap[depId]);
+    const updatePromises = petals.map(petal => {
+      const resolvedDeps = (Array.isArray(petal.dependencies) ? petal.dependencies : []).map(depId => llmToDbIdMap[depId]);
       return pool.query(
-        'UPDATE tasks SET dependencies = $1::int[] WHERE id = $2',
-        [resolvedDeps, llmToDbIdMap[task.id]]
+        'UPDATE petals SET dependencies = $1::int[] WHERE id = $2',
+        [resolvedDeps, llmToDbIdMap[petal.id]]
       );
     });
 
     await Promise.all(updatePromises);
 
-    // 5. Respond with success and DB task IDs
-    const insertedTasks = tasks.map(task => ({
-      ...task,
-      db_id: llmToDbIdMap[task.id], // Optional: return DB IDs alongside LLM task data
-      resolvedDependencies: (Array.isArray(task.dependencies) ? task.dependencies : []).map(depId => llmToDbIdMap[depId])
+    // 5. Respond with success and DB petal IDs
+    const insertedPetals = petals.map(petal => ({
+      ...petal,
+      db_id: llmToDbIdMap[petal.id], // Optional: return DB IDs alongside LLM petal data
+      resolvedDependencies: (Array.isArray(petal.dependencies) ? petal.dependencies : []).map(depId => llmToDbIdMap[depId])
     }));
 
-    res.json({ success: true, tasks: insertedTasks });
+    res.json({ success: true, petals: insertedPetals });
   } catch (error) {
-    console.error('Auto-generate tasks failed:', error);
+    console.error('Auto-generate petals failed:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

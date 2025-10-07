@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import pg from 'pg';
-import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
+import { generateProjectIdea, autoGeneratePetals } from '../services/petalGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 
 const router = express.Router();
@@ -162,53 +162,53 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
       );
       newProjectId = projectInsertResult.rows[0].id;
 
-      // 8. Generate and Save Tasks for the New Project
-      // The autoGenerateTasks function from taskGenerator.js expects project name, description, tags (can be empty), and creator_id.
-      // It returns an object like { projects: [...], tasks: [...] }
-      // We are interested in the tasks part.
-      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
-      const tasksToInsert = generatedTasksData.tasks; // Assuming this structure based on taskGenerator.js
+      // 8. Generate and Save Petals for the New Project
+      // The autoGeneratePetals function from petalGenerator.js expects project name, description, tags (can be empty), and creator_id.
+      // It returns an object like { projects: [...], petals: [...] }
+      // We are interested in the petals part.
+      const generatedPetalsData = await autoGeneratePetals(generatedProjectName, generatedProjectDescription, [], internalUserId);
+      const petalsToInsert = generatedPetalsData.petals; // Assuming this structure based on petalGenerator.js
 
-      if (tasksToInsert && tasksToInsert.length > 0) {
+      if (petalsToInsert && petalsToInsert.length > 0) {
         const llmToDbIdMap = {};
 
-        // First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map
-        for (const task of tasksToInsert) {
+        // First pass: Insert petals WITHOUT dependencies, and build LLM ID → DB ID map
+        for (const petal of petalsToInsert) {
           // Ensure default status and reward tokens if not provided by LLM
-          const status = task.status || 'inactive-unassigned';
-          const reward_tokens = task.reward_tokens || 50; // Default reward tokens
-          const dependencies = task.dependencies || []; // Default to empty array
+          const status = petal.status || 'Seeded';
+          const reward_tokens = petal.reward_tokens || 50; // Default reward tokens
+          const dependencies = petal.dependencies || []; // Default to empty array
 
-          const taskInsertResult = await client.query(
-            'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-            [newProjectId, task.name, task.description, task.skill_id, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
+          const petalInsertResult = await client.query(
+            'INSERT INTO petals (project_id, name, description, skill_id, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+            [newProjectId, petal.name, petal.description, petal.skill_id, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
           );
-          const dbId = taskInsertResult.rows[0].id;
-          llmToDbIdMap[task.id] = dbId; // task.id is the LLM-generated ID
+          const dbId = petalInsertResult.rows[0].id;
+          llmToDbIdMap[petal.id] = dbId; // petal.id is the LLM-generated ID
         }
 
         // Second pass: Update dependencies with resolved DB IDs
-        for (const task of tasksToInsert) {
-          const dbId = llmToDbIdMap[task.id];
-          const resolvedDeps = (Array.isArray(task.dependencies) ? task.dependencies : [])
+        for (const petal of petalsToInsert) {
+          const dbId = llmToDbIdMap[petal.id];
+          const resolvedDeps = (Array.isArray(petal.dependencies) ? petal.dependencies : [])
                                 .map(depLlmId => llmToDbIdMap[depLlmId])
                                 .filter(depDbId => depDbId != null); // Filter out any unresolved dependencies
 
           if (resolvedDeps.length > 0) {
             await client.query(
-              'UPDATE tasks SET dependencies = $1 WHERE id = $2',
+              'UPDATE petals SET dependencies = $1 WHERE id = $2',
               [resolvedDeps, dbId]
             );
           }
         }
       }
     } catch (genError) {
-      // If project/task generation fails, we still want to commit the user profile changes.
+      // If project/petal generation fails, we still want to commit the user profile changes.
       // So, we don't necessarily rollback the entire transaction here unless it's a DB constraint error.
-      // For now, log the error and proceed to commit user data. The project/tasks will be missing.
+      // For now, log the error and proceed to commit user data. The project/petals will be missing.
       // A more sophisticated approach might involve partial commits or user notification of partial success.
-      console.error('Error during project/task generation part of onboarding:', genError);
-      // Optionally, you could decide to rollback if project/task creation is critical for onboarding success
+      console.error('Error during project/petal generation part of onboarding:', genError);
+      // Optionally, you could decide to rollback if project/petal creation is critical for onboarding success
       // await client.query('ROLLBACK');
       // return res.status(500).json({ message: 'Error generating initial project.', error: genError.message });
     }

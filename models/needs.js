@@ -18,7 +18,7 @@ const createNeedsTable = async () => {
       location_text TEXT, -- Added, replacing/clarifying 'location_requirements'
       latitude NUMERIC, -- Added
       longitude NUMERIC, -- Added
-      fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      fulfilled_by_petal_id INTEGER REFERENCES petals(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT check_requestor CHECK (requestor_user_id IS NOT NULL OR requestor_community_id IS NOT NULL) -- Added

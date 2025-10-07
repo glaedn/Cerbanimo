@@ -5,7 +5,7 @@ const createStoryNodesTable = async () => {
     CREATE TABLE IF NOT EXISTS story_nodes (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Changed from SERIAL
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      petal_id INTEGER REFERENCES petals(id) ON DELETE SET NULL,
       project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
       community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
       title VARCHAR(255),
@@ -43,7 +43,7 @@ const createStoryNodesTable = async () => {
 
   const indexesQuery = `
     CREATE INDEX IF NOT EXISTS idx_story_nodes_user_id ON story_nodes(user_id);
-    CREATE INDEX IF NOT EXISTS idx_story_nodes_task_id ON story_nodes(task_id);
+    CREATE INDEX IF NOT EXISTS idx_story_nodes_petal_id ON story_nodes(petal_id);
     CREATE INDEX IF NOT EXISTS idx_story_nodes_project_id ON story_nodes(project_id);
     CREATE INDEX IF NOT EXISTS idx_story_nodes_community_id ON story_nodes(community_id);
     CREATE INDEX IF NOT EXISTS idx_story_nodes_tags ON story_nodes USING GIN(tags);

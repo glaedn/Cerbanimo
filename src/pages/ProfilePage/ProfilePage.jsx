@@ -10,7 +10,6 @@ import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
 import theme from '../../styles/theme'; // Import the theme
-//import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
@@ -174,9 +173,9 @@ const ProfilePage = () => {
             scope: 'openid profile email read:profile',
           });
 
-          // Use Promise.all to fetch details for all tasks concurrently
-          const taskDetailsPromises = profileData.experience.map(async (taskId) => {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, {
+          // Use Promise.all to fetch details for all petals concurrently
+          const petalDetailsPromises = profileData.experience.map(async (petalId) => {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/petals/${petalId}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -185,8 +184,8 @@ const ProfilePage = () => {
             return response.data;
           });
 
-          const taskDetails = await Promise.all(taskDetailsPromises);
-          setExperienceDetails(taskDetails);
+          const petalDetails = await Promise.all(petalDetailsPromises);
+          setExperienceDetails(petalDetails);
         }
       } catch (error) {
         console.error('Error fetching experience details:', error);
@@ -988,7 +987,7 @@ const ProfilePage = () => {
         {badgesError && <Typography color="error" sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error}}>{badgesError}</Typography>}
         {!badgesLoading && !badgesError && userBadges.length === 0 && (
           <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
-            No badges earned yet. Keep engaging and completing tasks to earn them!
+            No badges earned yet. Keep engaging and blossoming petals to earn them!
           </Typography>
         )}
         {!badgesLoading && !badgesError && userBadges.length > 0 && (

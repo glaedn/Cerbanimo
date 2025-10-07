@@ -14,7 +14,7 @@ const IntentionPages = () => {
   const [page, setPage] = useState(1);
   const [userProfile, setUserProfile] = useState(null);
   const [selectedIntention, setSelectedIntention] = useState(null);
-  const [tasks, setTasks] = useState([]);
+  const [petals, setPetals] = useState([]);
   const [hasMorePages, setHasMorePages] = useState(true);
   const [totalIntentions, setTotalIntentions] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,8 +76,8 @@ const IntentionPages = () => {
     }
   };
 
-  // Updated fetchTasks to include assigned_user_ids and debug logging
-  const fetchTasks = async (intentionId) => {
+  // Updated fetchPetals to include assigned_user_ids and debug logging
+  const fetchPetals = async (intentionId) => {
     try {
       const token = await getAccessTokenSilently();
       
@@ -85,7 +85,7 @@ const IntentionPages = () => {
         typeof skill === 'object' ? skill.name : skill
       );
   
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/prelevant`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/petals/prelevant`, {
         params: { 
           skills: skillNames,
           intentionId: intentionId,
@@ -99,12 +99,12 @@ const IntentionPages = () => {
         }
       });
     
-      console.log('Fetched Tasks:', response.data);
+      console.log('Fetched Petals:', response.data);
       console.log('Current User Profile ID:', userProfile.id);
     
-      setTasks(response.data);
+      setPetals(response.data);
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      console.error('Failed to fetch petals:', error);
       if (error.response) {
         console.error('Server response:', error.response.data);
         console.error('Server status:', error.response.status);
@@ -113,26 +113,26 @@ const IntentionPages = () => {
     }
   };
 
-  const handleTaskAction = async (taskId, action) => {
+  const handlePetalAction = async (petalId, action) => {
     try {
       const token = await getAccessTokenSilently();
       
       const endpoint = action === 'accept' 
-        ? `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`
-        : `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/petals/${petalId}/accept`
+        : `${import.meta.env.VITE_BACKEND_URL}/petals/${petalId}/drop`;
 
       const response = await axios.put(endpoint, 
         { userId: userProfile.id }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log(`${action} task response:`, response.data);
+      console.log(`${action} petal response:`, response.data);
 
       if (selectedIntention) {
-        fetchTasks(selectedIntention.id);
+        fetchPetals(selectedIntention.id);
       }
     } catch (error) {
-      console.error(`Failed to ${action} task:`, error);
+      console.error(`Failed to ${action} petal:`, error);
       if (error.response) {
         console.error('Server response:', error.response.data);
       }
@@ -254,47 +254,47 @@ const IntentionPages = () => {
       </div>
 
       {selectedIntention && (
-        <div className="task-popup-overlay">
-          <div className="task-popup">
-            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedIntention.name}</Typography>
-            <div className="ptask-list">
-              {tasks.length > 0 ? tasks.map((task) => {
-                const isAssigned = task.assigned_user_ids && 
-                  task.assigned_user_ids.some(
+        <div className="petal-popup-overlay">
+          <div className="petal-popup">
+            <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Petals for {selectedIntention.name}</Typography>
+            <div className="ppetal-list">
+              {petals.length > 0 ? petals.map((petal) => {
+                const isAssigned = petal.assigned_user_ids &&
+                  petal.assigned_user_ids.some(
                     (userId) => String(userId) === String(userProfile.id)
                   );
 
-                console.log(`Task ${task.id} assigned_user_ids:`, task.assigned_user_ids);
+                console.log(`Petal ${petal.id} assigned_user_ids:`, petal.assigned_user_ids);
                 console.log(`Current user ID:`, userProfile.id);
                 console.log(`Is Assigned:`, isAssigned);
 
-                const skillName = allSkills.find(skill => Number(skill.id) === Number(task.skill_id))?.name || 'Unknown Skill';
+                const skillName = allSkills.find(skill => Number(skill.id) === Number(petal.skill_id))?.name || 'Unknown Skill';
                 return (
-                  <div key={task.id} className="task-card">
-                    <Typography variant="subtitle1" sx={{ color: 'primary.main' }}>{task.name}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{task.description}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {task.status}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {task.skill_level})</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} tokens</Typography>
+                  <div key={petal.id} className="petal-card">
+                    <Typography variant="subtitle1" sx={{ color: 'primary.main' }}>{petal.name}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{petal.description}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {petal.status}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {petal.skill_level})</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {petal.reward_tokens} tokens</Typography>
                     <Button
                       variant="contained"
                       size="small"
                       sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black', mr: 1 }}
-                      onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
+                      onClick={() => handlePetalAction(petal.id, isAssigned ? 'drop' : 'accept')}
                     >
-                      {isAssigned ? 'Drop' : 'Accept'}
+                      {isAssigned ? 'Drop' : 'Nurture'}
                     </Button>
                     <Button
                       variant="outlined"
                       size="small"
                       sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-                      onClick={() => navigate(`/lotus-map/${selectedIntention.id}/${task.id}`)}
+                      onClick={() => navigate(`/lotus-map/${selectedIntention.id}/${petal.id}`)}
                     >
-                      View Task
+                      View Petal
                     </Button>
                   </div>
                 );
-              }) : <Typography sx={{ color: 'text.secondary' }}>No tasks available</Typography>}
+              }) : <Typography sx={{ color: 'text.secondary' }}>No petals available</Typography>}
             </div>
             <Button
               variant="contained"

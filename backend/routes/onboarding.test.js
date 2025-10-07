@@ -1,7 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const onboardingRoutes = require('./onboarding'); // Adjust path as necessary
-const { generateProjectIdea, autoGenerateTasks } = require('../services/taskGenerator.js');
+const { generateProjectIdea, autoGeneratePetals } = require('../services/petalGenerator.js');
 const pg = require('pg');
 
 // Mock pg
@@ -22,9 +22,9 @@ jest.mock('pg', () => {
 });
 
 // Mock services
-jest.mock('../services/taskGenerator.js', () => ({
+jest.mock('../services/petalGenerator.js', () => ({
   generateProjectIdea: jest.fn(),
-  autoGenerateTasks: jest.fn(),
+  autoGeneratePetals: jest.fn(),
 }));
 
 // Mock multer (to prevent actual file writes and inspect req.file)
@@ -80,13 +80,13 @@ describe('POST /api/onboarding/initiate', () => {
       .mockResolvedValue({ rows: [{id: 101}]}) // Default for new skill/interest insertion
       .mockResolvedValueOnce({ rows: [] }) // Update users table with skills/interests
       .mockResolvedValueOnce({ rows: [{ id: 201 }] }) // Create Project
-      // Task processing (can be multiple calls)
-      .mockResolvedValue({ rows: [{id: 301}]}); // Default for task insertion
+      // Petal processing (can be multiple calls)
+      .mockResolvedValue({ rows: [{id: 301}]}); // Default for petal insertion
 
     generateProjectIdea.mockResolvedValue({ Name: 'Test Project', Description: 'A cool generated project.' });
-    autoGenerateTasks.mockResolvedValue({
+    autoGeneratePetals.mockResolvedValue({
       projects: [{ id: 1, name: 'Test Project', description: 'A cool generated project.' }],
-      tasks: [{ id: 1, name: 'Task 1', description: 'First task', skill_id: 101, dependencies: [], reward_tokens: 50 }]
+      petals: [{ id: 1, name: 'Petal 1', description: 'First petal', skill_id: 101, dependencies: [], reward_tokens: 50 }]
     });
   });
 
@@ -102,13 +102,13 @@ describe('POST /api/onboarding/initiate', () => {
       .mockResolvedValueOnce({ rows: [{ id: 201, name: 'AI' }] }) // Insert Interest 'AI'
       .mockResolvedValueOnce({ rows: [] }) // Update user's skills/interests JSON
       .mockResolvedValueOnce({ rows: [{ id: 301 }] }) // Create Project
-      .mockResolvedValueOnce({ rows: [{ id: 401 }] }) // Insert Task 1
-      .mockResolvedValueOnce({ rows: [] }); // Update Task 1 dependencies (empty)
+      .mockResolvedValueOnce({ rows: [{ id: 401 }] }) // Insert Petal 1
+      .mockResolvedValueOnce({ rows: [] }); // Update Petal 1 dependencies (empty)
       
     generateProjectIdea.mockResolvedValue({ Name: 'AI Coder Project', Description: 'Project for AI and Coding.' });
-    autoGenerateTasks.mockResolvedValue({
+    autoGeneratePetals.mockResolvedValue({
       projects: [{id:1, name: 'AI Coder Project'}],
-      tasks: [{ id: 1, name: 'Setup AI model', description: '...', skill_id: 101, dependencies: [], reward_tokens: 100 }]
+      petals: [{ id: 1, name: 'Setup AI model', description: '...', skill_id: 101, dependencies: [], reward_tokens: 100 }]
     });
 
     const response = await request(app)
@@ -125,7 +125,7 @@ describe('POST /api/onboarding/initiate', () => {
     expect(mockQuery).toHaveBeenCalledWith('BEGIN');
     expect(mockQuery).toHaveBeenCalledWith('COMMIT');
     expect(generateProjectIdea).toHaveBeenCalledWith(expect.arrayContaining(['Coding']), expect.arrayContaining(['AI']));
-    expect(autoGenerateTasks).toHaveBeenCalledWith('AI Coder Project', 'Project for AI and Coding.', [], 1);
+    expect(autoGeneratePetals).toHaveBeenCalledWith('AI Coder Project', 'Project for AI and Coding.', [], 1);
 
     // Check user update query for profile_picture (example)
      const updateUserCall = mockQuery.mock.calls.find(call => call[0].startsWith('UPDATE users SET username = $1, profile_picture = $2'));
@@ -144,8 +144,8 @@ describe('POST /api/onboarding/initiate', () => {
       .mockResolvedValueOnce({ rows: [{id: 201, name: 'Existing Interest'}] }) 
       .mockResolvedValueOnce({ rows: [] }) // Update user's skills/interests JSON
       .mockResolvedValueOnce({ rows: [{ id: 302 }] }) // Create Project
-      .mockResolvedValueOnce({ rows: [{ id: 402 }] }) // Insert Task
-      .mockResolvedValueOnce({ rows: [] });         // Update Task deps
+      .mockResolvedValueOnce({ rows: [{ id: 402 }] }) // Insert Petal
+      .mockResolvedValueOnce({ rows: [] });         // Update Petal deps
 
     const response = await request(app)
       .post('/api/onboarding/initiate')

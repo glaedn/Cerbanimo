@@ -1,22 +1,22 @@
 import pool from "../db.js";
 import {
-  autoGenerateTasks,
-  autoGenerateSubtasks,
-} from "../services/taskGenerator.js";
+  autoGeneratePetals,
+  autoGenerateSubpetals,
+} from "../services/petalGenerator.js";
 
-const getAllTasks = async () => {
+const getAllPetals = async () => {
   const query = `
     SELECT 
-      tasks.*,
+      petals.*,
       skills.name as skill_name
-    FROM tasks
-    JOIN skills ON tasks.skill_id = skills.id;
+    FROM petals
+    JOIN skills ON petals.skill_id = skills.id;
   `;
   const result = await pool.query(query);
   return result.rows;
 };
 
-const getRelevantTasks = async (userSkills) => {
+const getRelevantPetals = async (userSkills) => {
   if (userSkills.length === 0) {
     throw new Error("No skills provided");
   }
@@ -33,40 +33,40 @@ const getRelevantTasks = async (userSkills) => {
     throw new Error("No matching skills found");
   }
 
-  const relevantTasksQuery = `
-    SELECT * FROM tasks WHERE skill_id = ANY($1)
+  const relevantPetalsQuery = `
+    SELECT * FROM petals WHERE skill_id = ANY($1)
   `;
-  const relevantTasks = await pool.query(relevantTasksQuery, [skillIds]);
+  const relevantPetals = await pool.query(relevantPetalsQuery, [skillIds]);
 
-  const taskIds = relevantTasks.rows.map((task) => task.project_id);
+  const petalIds = relevantPetals.rows.map((petal) => petal.project_id);
   const projectTagsQuery = `
     SELECT id, tags
     FROM projects
     WHERE id = ANY($1)
   `;
-  const projectTagsResult = await pool.query(projectTagsQuery, [taskIds]);
+  const projectTagsResult = await pool.query(projectTagsQuery, [petalIds]);
 
-  return relevantTasks.rows.map((task) => {
+  return relevantPetals.rows.map((petal) => {
     const projectTags =
-      projectTagsResult.rows.find((pt) => pt.id === task.project_id)?.tags ||
+      projectTagsResult.rows.find((pt) => pt.id === petal.project_id)?.tags ||
       [];
-    return { ...task, projectTags };
+    return { ...petal, projectTags };
   });
 };
 
-const getProjectRelevantTasks = async (userSkills, projectId) => {
+const getProjectRelevantPetals = async (userSkills, projectId) => {
   if (!projectId) {
     throw new Error("Project ID is required");
   }
 
-  const projectTasksQuery = `
-    SELECT * FROM tasks WHERE project_id = $1
+  const projectPetalsQuery = `
+    SELECT * FROM petals WHERE project_id = $1
   `;
-  const projectTasksResult = await pool.query(projectTasksQuery, [projectId]);
-  const allProjectTasks = projectTasksResult.rows;
+  const projectPetalsResult = await pool.query(projectPetalsQuery, [projectId]);
+  const allProjectPetals = projectPetalsResult.rows;
 
   if (userSkills.length === 0) {
-    return allProjectTasks.map((task) => ({ ...task, isRelevant: false }));
+    return allProjectPetals.map((petal) => ({ ...petal, isRelevant: false }));
   }
 
   const skillIdQuery = `
@@ -77,19 +77,19 @@ const getProjectRelevantTasks = async (userSkills, projectId) => {
   ]);
   const skillIds = skillIdResult.rows.map((row) => row.id);
 
-  const tasksWithRelevance = allProjectTasks.map((task) => ({
-    ...task,
-    isRelevant: skillIds.includes(task.skill_id),
+  const petalsWithRelevance = allProjectPetals.map((petal) => ({
+    ...petal,
+    isRelevant: skillIds.includes(petal.skill_id),
   }));
 
-  tasksWithRelevance.sort((a, b) => b.isRelevant - a.isRelevant);
-  return tasksWithRelevance;
+  petalsWithRelevance.sort((a, b) => b.isRelevant - a.isRelevant);
+  return petalsWithRelevance;
 };
 
-const getPlanetSpecificTasks = async (skillName) => {
+const getPlanetSpecificPetals = async (skillName) => {
   const query = `
-    SELECT t.id AS task_id, t.name AS task_name, t.project_id, p.name AS project_name
-    FROM tasks t
+    SELECT t.id AS petal_id, t.name AS petal_name, t.project_id, p.name AS project_name
+    FROM petals t
     JOIN skills s ON t.skill_id = s.id
     JOIN projects p ON t.project_id = p.id
     WHERE LOWER(s.name) = LOWER($1) AND t.active_ind = 1
@@ -98,17 +98,17 @@ const getPlanetSpecificTasks = async (skillName) => {
   return result.rows;
 };
 
-// Fetch tasks for a specific project
-const getTasksByProjectId = async (projectId) => {
+// Fetch petals for a specific project
+const getPetalsByProjectId = async (projectId) => {
   const parsedProjectId = parseInt(projectId, 10);
   console.log("Parsed projectId:", parsedProjectId);
   if (isNaN(parsedProjectId)) {
     throw new Error(`Invalid projectId: ${projectId}`);
   }
 
-  console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
+  console.log(`Fetching petals for project ID: ${parsedProjectId}`);
 
-  const query = `SELECT * FROM tasks WHERE project_id = $1`;
+  const query = `SELECT * FROM petals WHERE project_id = $1`;
   const { rows } = await pool.query(query, [parsedProjectId]);
   return rows;
 };
@@ -131,19 +131,19 @@ const getSkillIdByName = async (skillName) => {
   return result.rows[0] || null; // Returns { id: 1 } or null if not found
 };
 
-const acceptTask = async (taskId, userId) => {
+const acceptPetal = async (petalId, userId) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     // First get current status
     const statusResult = await client.query(
-      "SELECT status FROM tasks WHERE id = $1 FOR UPDATE",
-      [taskId]
+      "SELECT status FROM petals WHERE id = $1 FOR UPDATE",
+      [petalId]
     );
 
     if (statusResult.rows.length === 0) {
-      throw new Error("Task not found");
+      throw new Error("Petal not found");
     }
 
     const currentStatus = statusResult.rows[0].status;
@@ -154,9 +154,9 @@ const acceptTask = async (taskId, userId) => {
       newStatus = currentStatus.replace("unassigned", "assigned");
     }
 
-    // Update task
+    // Update petal
     const updateQuery = `
-      UPDATE tasks 
+      UPDATE petals
       SET 
         assigned_user_ids = array_append(assigned_user_ids, $1),
         status = $2
@@ -164,7 +164,7 @@ const acceptTask = async (taskId, userId) => {
       RETURNING *;
     `;
 
-    const result = await client.query(updateQuery, [userId, newStatus, taskId]);
+    const result = await client.query(updateQuery, [userId, newStatus, petalId]);
 
     await client.query("COMMIT");
     return result.rows[0];
@@ -176,7 +176,7 @@ const acceptTask = async (taskId, userId) => {
   }
 };
 
-const createNewTask = async (
+const createNewPetal = async (
   name,
   description,
   skill_id,
@@ -186,7 +186,7 @@ const createNewTask = async (
   dependencies = [],
   skill_level = 0
 ) => {
-  console.log("Creating task with:", {
+  console.log("Creating petal with:", {
     name,
     description,
     skill_id,
@@ -230,7 +230,7 @@ const createNewTask = async (
       status.startsWith("active") || status.startsWith("urgent");
     const rewardTokens = parseInt(reward_tokens, 10);
 
-    // If task is active, we need to reserve tokens
+    // If petal is active, we need to reserve tokens
     let tokenReservation = 0;
     if (activeBoolean) {
       tokenReservation = rewardTokens;
@@ -250,17 +250,17 @@ const createNewTask = async (
         "UPDATE projects SET reserved_tokens = reserved_tokens + $1 WHERE id = $2",
         [tokenReservation, projectId]
       );
-      console.log(`Reserved ${tokenReservation} tokens for new task`);
+      console.log(`Reserved ${tokenReservation} tokens for new petal`);
     }
 
-    // Create the task
+    // Create the petal
     const createQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level)
+      INSERT INTO petals (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *;
     `;
 
-    const taskResult = await client.query(createQuery, [
+    const petalResult = await client.query(createQuery, [
       name,
       description,
       skill_id,
@@ -272,24 +272,24 @@ const createNewTask = async (
     ]);
 
     await client.query("COMMIT");
-    console.log("Task created successfully:", taskResult.rows[0]);
-    return taskResult.rows[0];
+    console.log("Petal created successfully:", petalResult.rows[0]);
+    return petalResult.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Failed to create task:", error);
-    return { error: `Failed to create task: ${error.message}`, status: 500 };
+    console.error("Failed to create petal:", error);
+    return { error: `Failed to create petal: ${error.message}`, status: 500 };
   } finally {
     client.release();
   }
 };
 
-const updateTask = async (
+const updatePetal = async (
   name,
   description,
   skill_id,
   status,
   projectId,
-  taskId,
+  petalId,
   reward_tokens = 10,
   dependencies = [],
   assigned_user_ids,
@@ -301,7 +301,7 @@ const updateTask = async (
     skill_id,
     status,
     projectId,
-    taskId,
+    petalId,
     reward_tokens,
     dependencies,
     status,
@@ -313,43 +313,43 @@ const updateTask = async (
   try {
     await client.query("BEGIN");
 
-    // Fetch task & project info with reserved_tokens field
+    // Fetch petal & project info with reserved_tokens field
     const dataQuery = `
-      SELECT t.reward_tokens AS task_reward, 
-             t.status AS task_status, 
+      SELECT t.reward_tokens AS petal_reward,
+             t.status AS petal_status,
              p.token_pool, 
              p.used_tokens,
              p.reserved_tokens
-      FROM tasks t
+      FROM petals t
       JOIN projects p ON p.id = $1
       WHERE t.id = $2 FOR UPDATE;
     `;
 
-    const dataResult = await client.query(dataQuery, [projectId, taskId]);
+    const dataResult = await client.query(dataQuery, [projectId, petalId]);
 
     if (dataResult.rows.length === 0) {
       await client.query("ROLLBACK");
-      return { error: "Task or project not found", status: 404 };
+      return { error: "Petal or project not found", status: 404 };
     }
 
     const {
-      task_reward,
-      task_status,
+      petal_reward,
+      petal_status,
       token_pool = 250,
       used_tokens = 0,
       reserved_tokens = 0,
     } = dataResult.rows[0];
 
-    // Check if the task is already completed
-    if (task_status === "completed") {
+    // Check if the petal is already completed
+    if (petal_status === "completed") {
       await client.query("ROLLBACK");
       // client.release() will be called in the finally block
-      return { error: "Completed tasks cannot be modified.", status: 403 };
+      return { error: "Completed petals cannot be modified.", status: 403 };
     }
 
     console.log("Current values:", {
-      task_reward,
-      task_status,
+      petal_reward,
+      petal_status,
       token_pool,
       used_tokens,
       reserved_tokens,
@@ -360,30 +360,30 @@ const updateTask = async (
     let reservationAdjustment = 0;
     // Calculate token reservation adjustment
     const wasActive =
-      task_status.startsWith("active") || task_status.startsWith("urgent");
+      petal_status.startsWith("active") || petal_status.startsWith("urgent");
     const isActive = status.startsWith("active") || status.startsWith("urgent");
 
     console.log(`Status change: wasActive=${wasActive}, isActive=${isActive}`);
 
     if (isActive && !wasActive) {
-      // Activating task - reserve tokens
+      // Activating petal - reserve tokens
       reservationAdjustment = rewardTokens;
       console.log(
-        "Activating task, reservation adjustment:",
+        "Activating petal, reservation adjustment:",
         reservationAdjustment
       );
     } else if (!isActive && wasActive) {
-      // Deactivating task - release reserved tokens
-      reservationAdjustment = -task_reward;
+      // Deactivating petal - release reserved tokens
+      reservationAdjustment = -petal_reward;
       console.log(
-        "Deactivating task, reservation adjustment:",
+        "Deactivating petal, reservation adjustment:",
         reservationAdjustment
       );
-    } else if (isActive && wasActive && rewardTokens !== task_reward) {
-      // Task remains active but reward amount changed
-      reservationAdjustment = rewardTokens - task_reward;
+    } else if (isActive && wasActive && rewardTokens !== petal_reward) {
+      // Petal remains active but reward amount changed
+      reservationAdjustment = rewardTokens - petal_reward;
       console.log(
-        "Changing active task reward, reservation adjustment:",
+        "Changing active petal reward, reservation adjustment:",
         reservationAdjustment
       );
     }
@@ -398,9 +398,9 @@ const updateTask = async (
       };
     }
 
-    // Update task
+    // Update petal
     const updateQuery = `
-      UPDATE tasks 
+      UPDATE petals
       SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8
       WHERE id = $9 RETURNING *;
     `;
@@ -414,10 +414,10 @@ const updateTask = async (
       dependencies,
       assigned_user_ids,
       skill_level,
-      taskId,
+      petalId,
     ]);
 
-    const taskResult = await client.query(updateQuery, [
+    const petalResult = await client.query(updateQuery, [
       name,
       description,
       skill_id,
@@ -426,7 +426,7 @@ const updateTask = async (
       dependencies,
       assigned_user_ids,
       skill_level,
-      taskId,
+      petalId,
     ]);
 
     // Only update project reserved tokens if there's an adjustment needed
@@ -442,19 +442,19 @@ const updateTask = async (
     }
 
     await client.query("COMMIT");
-    console.log("Update successful:", taskResult.rows[0]);
-    return taskResult.rows[0];
+    console.log("Update successful:", petalResult.rows[0]);
+    return petalResult.rows[0];
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Failed to update task:", error);
-    return { error: `Failed to update task: ${error.message}`, status: 500 };
+    console.error("Failed to update petal:", error);
+    return { error: `Failed to update petal: ${error.message}`, status: 500 };
   } finally {
     client.release();
   }
 };
 
-// Create task route - optimized
-const createTaskRoute = async (req, res) => {
+// Create petal route - optimized
+const createPetalRoute = async (req, res) => {
   const {
     name,
     description,
@@ -476,7 +476,7 @@ const createTaskRoute = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Check token availability in a single query if task is active
+    // Check token availability in a single query if petal is active
     if (active) {
       const projectQuery = await client.query(
         "SELECT token_pool, used_tokens FROM projects WHERE id = $1 FOR UPDATE",
@@ -498,14 +498,14 @@ const createTaskRoute = async (req, res) => {
       }
     }
 
-    // Insert task and update project in a single transaction
-    const insertTaskQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids, skill_level)
+    // Insert petal and update project in a single transaction
+    const insertPetalQuery = `
+      INSERT INTO petals (name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids, skill_level)
       VALUES ($1, $2, $3, $4, $5, $6, COALESCE(used_tokens, 0) + $6, $7, $8)
       RETURNING *;
     `;
 
-    const taskResult = await client.query(insertTaskQuery, [
+    const petalResult = await client.query(insertPetalQuery, [
       name,
       description,
       skill_id,
@@ -516,7 +516,7 @@ const createTaskRoute = async (req, res) => {
       skill_level,
     ]);
 
-    // Update project tokens if task is active
+    // Update project tokens if petal is active
     if (status.startsWith("active") || status.startsWith("urgent")) {
       await client.query(
         "UPDATE projects SET used_tokens = used_tokens + $1 WHERE id = $2",
@@ -525,83 +525,83 @@ const createTaskRoute = async (req, res) => {
     }
 
     await client.query("COMMIT");
-    res.status(201).json(taskResult.rows[0]);
+    res.status(201).json(petalResult.rows[0]);
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Failed to create task:", error);
-    res.status(500).json({ error: "Failed to create task" });
+    console.error("Failed to create petal:", error);
+    res.status(500).json({ error: "Failed to create petal" });
   } finally {
     client.release();
   }
 };
 
-const approveTask = async (taskId, io, client) => {
+const approvePetal = async (petalId, io, client) => {
   const localClient = client || (await pool.connect());
   let clientCreated = !client;
   try {
     // Start transaction
     await localClient.query("BEGIN");
 
-    // Fetch task details first (remove FOR UPDATE to avoid deadlock)
-    const initialTaskDetails = await localClient.query(
+    // Fetch petal details first (remove FOR UPDATE to avoid deadlock)
+    const initialPetalDetails = await localClient.query(
       `
       SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens, submitted_by
-      FROM tasks WHERE id = $1
+      FROM petals WHERE id = $1
     `,
-      [taskId]
+      [petalId]
     );
 
-    const initialTask = initialTaskDetails.rows[0];
-    if (!initialTask) {
+    const initialPetal = initialPetalDetails.rows[0];
+    if (!initialPetal) {
       await localClient.query("ROLLBACK");
-      return { error: "Task not found.", status: 404 };
+      return { error: "Petal not found.", status: 404 };
     }
 
-    if (initialTask.status === "completed") {
-      console.warn("Task already completed. Skipping redundant approve call.");
-      return { success: true, message: "Task already completed" };
+    if (initialPetal.status === "completed") {
+      console.warn("Petal already completed. Skipping redundant approve call.");
+      return { success: true, message: "Petal already completed" };
     }
 
-    // Get task tags
+    // Get petal tags
     const tagsQuery = await localClient.query(
       `SELECT name FROM skills WHERE id = $1`,
-      [initialTask.skill_id]
+      [initialPetal.skill_id]
     );
     const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
 
     // Story node data will be prepared and used conditionally later, after COMMIT.
-    // We need 'tags' and 'initialTask' (which includes submitted_by, reflection, proof_of_work_links)
-    // 'tags' is already fetched from initialTask.skill_id.
+    // We need 'tags' and 'initialPetal' (which includes submitted_by, reflection, proof_of_work_links)
+    // 'tags' is already fetched from initialPetal.skill_id.
 
-    console.log("task ID:", taskId);
+    console.log("petal ID:", petalId);
     // No need to rollback and begin a new transaction here; just continue in the same transaction
-    console.log("Initial task details:", initialTaskDetails.rows[0]);
+    console.log("Initial petal details:", initialPetalDetails.rows[0]);
     console.log(
       "Status value and type:",
-      initialTaskDetails.rows[0].status,
-      typeof initialTaskDetails.rows[0].status
+      initialPetalDetails.rows[0].status,
+      typeof initialPetalDetails.rows[0].status
     );
 
-    // Check if task is in 'submitted' status before updating
-    if (initialTaskDetails.rows[0].status !== "submitted") {
+    // Check if petal is in 'submitted' status before updating
+    if (initialPetalDetails.rows[0].status !== "submitted") {
       await localClient.query("ROLLBACK");
-      return { error: "Cannot complete an unsubmitted task", status: 400 };
+      return { error: "Cannot complete an unsubmitted petal", status: 400 };
     }
 
-    let updateTask;
+    let updatePetal;
     try {
-      updateTask = await localClient.query(
-        `UPDATE tasks SET status = 'completed' WHERE id = $1 RETURNING id, project_id, assigned_user_ids, status`,
-        [taskId]
+      updatePetal = await localClient.query(
+        `UPDATE petals SET status = 'completed' WHERE id = $1 RETURNING id, project_id, assigned_user_ids, status`,
+        [petalId]
       );
-      if (!updateTask || !updateTask.rows || updateTask.rows.length === 0) {
-        console.error("No rows returned from updateTask query");
+      if (!updatePetal || !updatePetal.rows || updatePetal.rows.length === 0) {
+        console.error("No rows returned from updatePetal query");
         await localClient.query("ROLLBACK");
-        return { error: "Task not found during update", status: 404 };
+        return { error: "Petal not found during update", status: 404 };
       }
-      console.log("After update query:", updateTask.rows[0]);
+      console.log("After update query:", updatePetal.rows[0]);
     } catch (err) {
-      console.error("Error during updateTask query:", err);
+      console.error("Error during updatePetal query:", err);
       await localClient.query("ROLLBACK");
       return { error: "Update failed", status: 500 };
     }
@@ -613,14 +613,14 @@ const approveTask = async (taskId, io, client) => {
       console.error("Error flushing client after update:", flushErr);
     }
 
-    const task = updateTask.rows[0];
-    if (!task) {
+    const petal = updatePetal.rows[0];
+    if (!petal) {
       await localClient.query("ROLLBACK");
-      return { error: "Task not found.", status: 404 };
+      return { error: "Petal not found.", status: 404 };
     }
 
-    // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
-    const taskQuery = `
+    // 🧠 Fetch extended petal info for XP, notifications, skill leveling, etc.
+    const petalQuery = `
       SELECT t.reward_tokens, 
              t.assigned_user_ids,
              t.submitted_by,
@@ -629,15 +629,15 @@ const approveTask = async (taskId, io, client) => {
              t.project_id,
              p.community_id,
              p.creator_id
-      FROM tasks t
+      FROM petals t
       JOIN projects p ON t.project_id = p.id
       WHERE t.id = $1;
     `;
-    const taskResult = await localClient.query(taskQuery, [taskId]);
+    const petalResult = await localClient.query(petalQuery, [petalId]);
 
-    if (taskResult.rows.length === 0) {
+    if (petalResult.rows.length === 0) {
       await localClient.query("ROLLBACK");
-      return { error: "Task not found", status: 404 };
+      return { error: "Petal not found", status: 404 };
     }
 
     const {
@@ -649,7 +649,7 @@ const approveTask = async (taskId, io, client) => {
       project_id,
       community_id,
       creator_id,
-    } = taskResult.rows[0];
+    } = petalResult.rows[0];
 
     // Fetch skill name
     const skillNameQuery = await localClient.query(
@@ -667,12 +667,12 @@ const approveTask = async (taskId, io, client) => {
     );
 
     // Add notifications in the database
-    const notificationMessage = `Your submitted task was approved!`;
+    const notificationMessage = `Your unfurled petal was approved!`;
     if (assigned_user_ids && assigned_user_ids.length > 0) {
       const notificationDetails = JSON.stringify({
         text: notificationMessage,
         projectId: project_id,
-        taskId: taskId,
+        petalId: petalId,
       });
       const notificationQuery = `
           INSERT INTO notifications (user_id, message, type, created_at, read) 
@@ -681,7 +681,7 @@ const approveTask = async (taskId, io, client) => {
       await localClient.query(notificationQuery, [
         assigned_user_ids,
         notificationDetails,
-        "task",
+        "petal",
       ]);
     }
 
@@ -697,7 +697,7 @@ const approveTask = async (taskId, io, client) => {
     const skillsResult = await localClient.query(skillsQuery, [skill_id]);
     if (skillsResult.rows.length === 0) {
       await localClient.query("ROLLBACK");
-      return { error: "Skill not found for this task", status: 404 };
+      return { error: "Skill not found for this petal", status: 404 };
     }
 
     let rawUnlockedUsers = skillsResult.rows[0].unlocked_users || [];
@@ -791,7 +791,7 @@ const approveTask = async (taskId, io, client) => {
       await localClient.query(
         `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
          WHERE id = ANY($2)`,
-        [taskId.toString(), assigned_user_ids]
+        [petalId.toString(), assigned_user_ids]
       );
     }
 
@@ -806,10 +806,10 @@ const approveTask = async (taskId, io, client) => {
         [main_reward, submitted_by]
       );
       const submitterLedgerEntries = [
-        { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+        { type: "petal_completion_reward", petalId: petalId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
       ];
       if (community_id) {
-        submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+        submitterLedgerEntries.push({ type: "community_petal_reward", communityId: community_id, petalId: petalId, tokens: main_reward, creationDate: new Date() });
       }
       await localClient.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -827,10 +827,10 @@ const approveTask = async (taskId, io, client) => {
           [bonus_reward, userId]
         );
         const bonusLedgerEntries = [
-          { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
+          { type: "petal_completion_bonus", petalId: petalId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
         ];
         if (community_id) {
-          bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+          bonusLedgerEntries.push({ type: "community_petal_bonus", communityId: community_id, petalId: petalId, tokens: bonus_reward, creationDate: new Date() });
         }
         await localClient.query(
           `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -888,11 +888,11 @@ const approveTask = async (taskId, io, client) => {
     // However, if it's intended for a different purpose or audience, it should also be updated.
     // For now, assuming the earlier notification is the primary one.
     // If this is a separate notification, it needs similar JSON stringify treatment.
-    // const approveText = `Your submitted task was approved!`;
+    // const approveText = `Your unfurled petal was approved!`;
     // await localClient.query(
     //   `
     //   INSERT INTO notifications (user_id, message, type, created_at, read)
-    //   SELECT unnest($1::int[]), $2, 'task', NOW(), false
+    //   SELECT unnest($1::int[]), $2, 'petal', NOW(), false
     // `,
     //   [assigned_user_ids, approveText]
     // );
@@ -901,16 +901,16 @@ const approveTask = async (taskId, io, client) => {
     await localClient.query("COMMIT");
 
     // After transaction is committed, conditionally create story node
-    if (initialTask && initialTask.submitted_by) {
+    if (initialPetal && initialPetal.submitted_by) {
       const storyNodeData = {
-        task_id: initialTask.id,
-        user_id: initialTask.submitted_by, // Strictly use submitted_by
-        reflection: initialTask.reflection || "",
-        media_urls: initialTask.proof_of_work_links || [],
-        tags: tags, // 'tags' was fetched earlier based on initialTask.skill_id
+        petal_id: initialPetal.id,
+        user_id: initialPetal.submitted_by, // Strictly use submitted_by
+        reflection: initialPetal.reflection || "",
+        media_urls: initialPetal.proof_of_work_links || [],
+        tags: tags, // 'tags' was fetched earlier based on initialPetal.skill_id
       };
       try {
-        console.log("Posting story node for submitted_by user:", initialTask.submitted_by, "with data:", storyNodeData);
+        console.log("Posting story node for submitted_by user:", initialPetal.submitted_by, "with data:", storyNodeData);
         const response = await fetch(
           `${process.env.BACKEND_URL}/storyChronicles/story-node`,
           {
@@ -923,13 +923,13 @@ const approveTask = async (taskId, io, client) => {
             const errorText = await response.text();
             console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
         } else {
-            console.log("Story node creation request successful for user:", initialTask.submitted_by, "status:", response.status);
+            console.log("Story node creation request successful for user:", initialPetal.submitted_by, "status:", response.status);
         }
       } catch (fetchError) {
         console.error("Fetch error creating story node:", fetchError);
       }
     } else {
-      console.warn(`Skipping story node creation for task ${taskId} as submitted_by user is not defined or initialTask is missing.`);
+      console.warn(`Skipping story node creation for petal ${petalId} as submitted_by user is not defined or initialPetal is missing.`);
     }
 
     // Send socket notifications after transaction is complete
@@ -940,21 +940,21 @@ const approveTask = async (taskId, io, client) => {
         console.log(`Emitting to ${room}`);
         io.to(room).emit("notification", {
           id: Date.now(),
-          type: "task-approved",
-          message: "Your task was approved!",
+          type: "petal-approved",
+          message: "Your petal was approved!",
           projectId: project_id,
-          taskId: taskId,
+          petalId: petalId,
           read: false,
           timestamp: new Date().toISOString(),
         });
       }
     }
 
-    return { message: "Task approved and reward issued.", status: 200 };
+    return { message: "Petal approved and reward issued.", status: 200 };
   } catch (error) {
     await localClient.query("ROLLBACK");
-    console.error("Error approving task:", error);
-    return { error: "Failed to approve task.", status: 500 };
+    console.error("Error approving petal:", error);
+    return { error: "Failed to approve petal.", status: 500 };
   } finally {
     if (clientCreated) localClient.release();
   }
@@ -986,8 +986,8 @@ const resetAllSpentPoints = async () => {
   }
 };
 
-const submitTask = async (req, res, io) => {
-  const { taskId } = req.params;
+const submitPetal = async (req, res, io) => {
+  const { petalId } = req.params;
   // Accept both camelCase and snake_case from frontend
   const proofOfWorkLinks =
     req.body.proofOfWorkLinks || req.body.proof_of_work_links;
@@ -1038,9 +1038,9 @@ const submitTask = async (req, res, io) => {
         .filter(Boolean);
     };
 
-    // Step 1: Update the task and get project/community info in a single query
+    // Step 1: Update the petal and get project/community info in a single query
     const result = await client.query(
-      `UPDATE tasks t
+      `UPDATE petals t
        SET submitted = TRUE,
        submitted_at = NOW(),
        status = 'submitted',
@@ -1052,16 +1052,16 @@ const submitTask = async (req, res, io) => {
        WHERE t.id = $1 AND p.id = t.project_id
        RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id,
                  p.community_id, t.assigned_user_ids, t.skill_id, t.submitted_by`,
-      [taskId, proofOfWorkLinks || [], reflection || null, platformUserId]
+      [petalId, proofOfWorkLinks || [], reflection || null, platformUserId]
     );
 
     if (result.rowCount === 0) {
       await client.query("ROLLBACK");
       // Return error object for the route handler
-      return { error: "Task not found or project mismatch.", status: 404 };
+      return { error: "Petal not found or project mismatch.", status: 404 };
     }
 
-    const task = result.rows[0];
+    const petal = result.rows[0];
 
     // Get skill info including unlocked users
     const skillsQuery = `
@@ -1069,11 +1069,11 @@ const submitTask = async (req, res, io) => {
       FROM skills 
       WHERE id = $1;
     `;
-    const skillsResult = await client.query(skillsQuery, [task.skill_id]);
+    const skillsResult = await client.query(skillsQuery, [petal.skill_id]);
 
     if (skillsResult.rows.length === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Skill not found for this task" });
+      return res.status(404).json({ error: "Skill not found for this petal" });
     }
 
     const unlockedUsers = parseUnlockedUsers(
@@ -1081,11 +1081,11 @@ const submitTask = async (req, res, io) => {
     );
 
     // Filter out submitting users and find eligible reviewers
-    const submittingUserIds = task.assigned_user_ids || [];
+    const submittingUserIds = petal.assigned_user_ids || [];
     const eligibleReviewers = unlockedUsers.filter(
       (user) =>
         !submittingUserIds.includes(user.user_id) &&
-        user.user_id !== task.project_owner_id
+        user.user_id !== petal.project_owner_id
     );
 
     // Find level 2+ reviewers
@@ -1118,53 +1118,53 @@ const submitTask = async (req, res, io) => {
       `;
       const randomUsersResult = await client.query(randomUsersQuery, [
         submittingUserIds,
-        task.project_owner_id,
+        petal.project_owner_id,
       ]);
       reviewerIds = randomUsersResult.rows.map((row) => row.id);
     }
 
-    // Update task with reviewer IDs
-    await client.query(`UPDATE tasks SET reviewer_ids = $1 WHERE id = $2`, [
+    // Update petal with reviewer IDs
+    await client.query(`UPDATE petals SET reviewer_ids = $1 WHERE id = $2`, [
       reviewerIds,
-      taskId,
+      petalId,
     ]);
 
     // Step 2: Notify the project creator if we have an owner
-    if (task.project_owner_id) {
-      const notificationMessage = `A task has been submitted for peer review in your project "${
-        task.project_name || "Untitled"
+    if (petal.project_owner_id) {
+      const notificationMessage = `A petal has been submitted for peer review in your project "${
+        petal.project_name || "Untitled"
       }".`;
       const notificationDetails = JSON.stringify({
         text: notificationMessage,
-        projectId: task.project_id,
-        taskId: taskId,
+        projectId: petal.project_id,
+        petalId: petalId,
       });
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          VALUES ($1, $2, $3, NOW(), false)`,
-        [task.project_owner_id, notificationDetails, "task"]
+        [petal.project_owner_id, notificationDetails, "petal"]
       );
 
       if (io && typeof io.to === "function") {
-        io.to(`user_${task.project_owner_id}`).emit("notification", {
+        io.to(`user_${petal.project_owner_id}`).emit("notification", {
           message: notificationMessage,
-          type: "task",
-          projectId: task.project_id,
-          taskId: task.id,
+          type: "petal",
+          projectId: petal.project_id,
+          petalId: petal.id,
         });
       }
     }
 
     // Notify reviewers if we found any
     if (reviewerIds.length > 0) {
-      const notificationMessage = `You've been assigned to review a task in project "${
-        task.project_name || "Untitled"
+      const notificationMessage = `You've been assigned to review a petal in project "${
+        petal.project_name || "Untitled"
       }"`;
       const notificationDetails = JSON.stringify({
         text: notificationMessage,
-        projectId: task.project_id,
-        taskId: task.id,
+        projectId: petal.project_id,
+        petalId: petal.id,
       });
       console.log(
         "Inserting notifications for reviewers:",
@@ -1175,16 +1175,16 @@ const submitTask = async (req, res, io) => {
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
-        [reviewerIds, notificationDetails, "task"]
+        [reviewerIds, notificationDetails, "petal"]
       );
 
       if (io && typeof io.to === "function") {
         reviewerIds.forEach((reviewerId) => {
           io.to(`user_${reviewerId}`).emit("notification", {
             message: notificationMessage,
-            type: "task",
-            projectId: task.project_id,
-            taskId: taskId,
+            type: "petal",
+            projectId: petal.project_id,
+            petalId: petalId,
           });
         });
       }
@@ -1193,58 +1193,58 @@ const submitTask = async (req, res, io) => {
     await client.query("COMMIT");
     // Return the same shape as router expects
     return {
-      message: "Task submitted for approval",
-      task,
+      message: "Petal submitted for approval",
+      petal,
       reviewerIds: reviewerIds.length > 0 ? reviewerIds : null,
     };
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error submitting task:", error);
+    console.error("Error submitting petal:", error);
     // Return error object for the route handler
-    return { error: "Failed to submit task: " + error.message, status: 500 };
+    return { error: "Failed to submit petal: " + error.message, status: 500 };
   } finally {
     client.release();
   }
 };
 
-const rejectTask = async (req, res) => {
-  const { taskId } = req.params;
+const rejectPetal = async (req, res) => {
+  const { petalId } = req.params;
   try {
     const result = await pool.query(
-      `UPDATE tasks 
+      `UPDATE petals
            SET submitted = FALSE, status = 'active-assigned'
            WHERE id = $1 RETURNING *`,
-      [taskId]
+      [petalId]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Task not found" });
+      return res.status(404).json({ error: "Petal not found" });
     }
 
-    res.json({ message: "Task rejected", task: result.rows[0] });
+    res.json({ message: "Petal rejected", petal: result.rows[0] });
   } catch (error) {
-    console.error("Error rejecting task:", error);
-    res.status(500).json({ error: "Failed to reject task" });
+    console.error("Error rejecting petal:", error);
+    res.status(500).json({ error: "Failed to reject petal" });
   }
 };
 
-const dropTask = async (taskId, userId) => {
+const dropPetal = async (petalId, userId) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     // First get current status and assignments
-    const taskResult = await client.query(
-      "SELECT status, assigned_user_ids FROM tasks WHERE id = $1 FOR UPDATE",
-      [taskId]
+    const petalResult = await client.query(
+      "SELECT status, assigned_user_ids FROM petals WHERE id = $1 FOR UPDATE",
+      [petalId]
     );
 
-    if (taskResult.rows.length === 0) {
-      throw new Error("Task not found");
+    if (petalResult.rows.length === 0) {
+      throw new Error("Petal not found");
     }
 
-    const currentStatus = taskResult.rows[0].status;
-    const assignedUsers = taskResult.rows[0].assigned_user_ids || [];
+    const currentStatus = petalResult.rows[0].status;
+    const assignedUsers = petalResult.rows[0].assigned_user_ids || [];
     let newStatus = currentStatus;
     console.log(
       "Current status:",
@@ -1257,18 +1257,18 @@ const dropTask = async (taskId, userId) => {
     const userIdNumber = Number(userId);
     if (assignedUsers.includes(userIdNumber)) {
       console.log(
-        "User is assigned to this task, checking for last assignment..."
+        "User is assigned to this petal, checking for last assignment..."
       );
       const remainingUsers = assignedUsers.filter(
         (id) => Number(id) !== Number(userIdNumber)
       );
       if (remainingUsers.length === 0) {
         console.log(
-          "Last assigned user dropping task, updating status to unassigned"
+          "Last assigned user dropping petal, updating status to unassigned"
         );
         if (currentStatus === "submitted") {
           await client.query("ROLLBACK");
-          throw new Error("User is the last assigned user on a submitted task and cannot be removed");
+          throw new Error("User is the last assigned user on a submitted petal and cannot be removed");
         }
 
         newStatus = currentStatus === "completed" 
@@ -1281,9 +1281,9 @@ const dropTask = async (taskId, userId) => {
       }
     }
     console.log("New status:", newStatus);
-    // Update task
+    // Update petal
     const updateQuery = `
-      UPDATE tasks 
+      UPDATE petals
       SET 
         assigned_user_ids = array_remove(assigned_user_ids, $1),
         status = $2
@@ -1291,7 +1291,7 @@ const dropTask = async (taskId, userId) => {
       RETURNING *;
     `;
 
-    const result = await client.query(updateQuery, [userId, newStatus, taskId]);
+    const result = await client.query(updateQuery, [userId, newStatus, petalId]);
 
     await client.query("COMMIT");
     return result.rows[0];
@@ -1303,40 +1303,40 @@ const dropTask = async (taskId, userId) => {
   }
 };
 
-const findById = async (taskId) => {
+const findById = async (petalId) => {
   const client = await pool.connect();
 
   try {
-    const parsedTaskId = parseInt(taskId, 10);
-    if (isNaN(parsedTaskId)) {
-      return { error: "Invalid task ID", status: 400 };
+    const parsedPetalId = parseInt(petalId, 10);
+    if (isNaN(parsedPetalId)) {
+      return { error: "Invalid petal ID", status: 400 };
     }
 
     const query = `
       SELECT 
         t.*,
         p.name as project_name
-      FROM tasks t
+      FROM petals t
       LEFT JOIN projects p ON t.project_id = p.id
       WHERE t.id = $1
     `;
 
-    const result = await client.query(query, [parsedTaskId]);
+    const result = await client.query(query, [parsedPetalId]);
 
     if (result.rows.length === 0) {
-      return { error: "Task not found", status: 404 };
+      return { error: "Petal not found", status: 404 };
     }
 
     return result.rows[0];
   } catch (error) {
-    console.error("Error fetching task details:", error);
-    return { error: "Failed to fetch task details", status: 500 };
+    console.error("Error fetching petal details:", error);
+    return { error: "Failed to fetch petal details", status: 500 };
   } finally {
     client.release();
   }
 };
 
-const generateTasks = async (req, res) => {
+const generatePetals = async (req, res) => {
   const { projectName, projectDescription, interest_tags, creator_id } =
     req.body;
 
@@ -1345,7 +1345,7 @@ const generateTasks = async (req, res) => {
   }
 
   try {
-    const generatedData = await autoGenerateTasks(
+    const generatedData = await autoGeneratePetals(
       projectName,
       projectDescription,
       interest_tags,
@@ -1353,42 +1353,42 @@ const generateTasks = async (req, res) => {
     );
     res.status(200).json(generatedData);
   } catch (error) {
-    console.error("Task generation error:", error);
-    res.status(500).json({ error: "Failed to generate tasks" });
+    console.error("Petal generation error:", error);
+    res.status(500).json({ error: "Failed to generate petals" });
   }
 };
 
-const granularizeTasks = async (req, res) => {
+const granularizePetals = async (req, res) => {
   const { projectId } = req.body;
 
-  // Define sanitizeSubtasks first
-  const sanitizeSubtasks = (tasks, projectId) => {
+  // Define sanitizeSubpetals first
+  const sanitizeSubpetals = (petals, projectId) => {
     let nextId = 1;
-    const taskIdToName = {};
-    const taskNameToTempId = {};
+    const petalIdToName = {};
+    const petalNameToTempId = {};
 
-    tasks.forEach((task) => {
-      if (!task.id) {
-        task.tempId = nextId++; // Store temp ID separately
+    petals.forEach((petal) => {
+      if (!petal.id) {
+        petal.tempId = nextId++; // Store temp ID separately
       } else {
-        task.tempId = task.id;
-        nextId = Math.max(nextId, task.id + 1);
+        petal.tempId = petal.id;
+        nextId = Math.max(nextId, petal.id + 1);
       }
-      task.project_id = projectId;
-      task.reward_tokens = task.reward_tokens ?? 100;
-      task.skill_id = task.skill_id ?? null;
+      petal.project_id = projectId;
+      petal.reward_tokens = petal.reward_tokens ?? 100;
+      petal.skill_id = petal.skill_id ?? null;
 
-      taskIdToName[task.tempId] = task.name;
-      taskNameToTempId[task.name] = task.tempId;
+      petalIdToName[petal.tempId] = petal.name;
+      petalNameToTempId[petal.name] = petal.tempId;
     });
 
-    tasks.forEach((task) => {
-      if (!Array.isArray(task.dependencies)) {
-        task.dependencies = [];
+    petals.forEach((petal) => {
+      if (!Array.isArray(petal.dependencies)) {
+        petal.dependencies = [];
       } else {
-        task.dependencies = task.dependencies
+        petal.dependencies = petal.dependencies
           .map((dep) => {
-            if (typeof dep === "string") return taskNameToTempId[dep] || null;
+            if (typeof dep === "string") return petalNameToTempId[dep] || null;
             return typeof dep === "number" ? dep : null;
           })
           .filter((dep) => dep !== null);
@@ -1396,8 +1396,8 @@ const granularizeTasks = async (req, res) => {
     });
 
     return {
-      tasks,
-      taskIdToName,
+      petals,
+      petalIdToName,
     };
   };
 
@@ -1409,19 +1409,19 @@ const granularizeTasks = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Fetch all tasks in the project
-    const taskResult = await client.query(
+    // Fetch all petals in the project
+    const petalResult = await client.query(
       `SELECT id, project_id, name, description, skill_id, dependencies 
-       FROM tasks WHERE project_id = $1`,
+       FROM petals WHERE project_id = $1`,
       [projectId]
     );
-    const tasks = taskResult.rows;
+    const petals = petalResult.rows;
 
-    if (tasks.length === 0) {
+    if (petals.length === 0) {
       await client.query("ROLLBACK");
       return res
         .status(404)
-        .json({ success: false, error: "No tasks found for this project" });
+        .json({ success: false, error: "No petals found for this project" });
     }
 
     // Optionally fetch project metadata (optional but helpful for LLM context)
@@ -1431,14 +1431,14 @@ const granularizeTasks = async (req, res) => {
     );
     const project = projectResult.rows[0];
 
-    // Generate new granular subtasks for ALL tasks at once (batch)
-    const inputs = tasks.map((task) => ({
-      name: task.name,
-      description: task.description,
-      skill_id: task.skill_id,
+    // Generate new granular subpetals for ALL petals at once (batch)
+    const inputs = petals.map((petal) => ({
+      name: petal.name,
+      description: petal.description,
+      skill_id: petal.skill_id,
     }));
 
-    const subtasks = await autoGenerateSubtasks(
+    const subpetals = await autoGenerateSubpetals(
       inputs,
       project.name,
       project.description,
@@ -1446,37 +1446,37 @@ const granularizeTasks = async (req, res) => {
       project.creator_id
     );
 
-    // Now we can call sanitizeSubtasks since it's defined and we have subtasks
-    const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(
-      subtasks,
+    // Now we can call sanitizeSubpetals since it's defined and we have subpetals
+    const { petals: sanitizedSubpetals, petalIdToName } = sanitizeSubpetals(
+      subpetals,
       projectId
     );
 
-    // Delete all original tasks
-    await client.query("DELETE FROM tasks WHERE project_id = $1", [projectId]);
+    // Delete all original petals
+    await client.query("DELETE FROM petals WHERE project_id = $1", [projectId]);
 
-    // Step 1: Insert all subtasks without dependencies
-    const subtaskMetadata = []; // store name + original dependencies + other info
+    // Step 1: Insert all subpetals without dependencies
+    const subpetalMetadata = []; // store name + original dependencies + other info
 
-    sanitizedSubtasks.forEach((subtask) => {
-      subtaskMetadata.push({
-        projectId: subtask.project_id,
-        name: subtask.name,
-        description: subtask.description,
-        skill_id: subtask.skill_id || null,
-        reward_tokens: subtask.reward_tokens ?? 100,
+    sanitizedSubpetals.forEach((subpetal) => {
+      subpetalMetadata.push({
+        projectId: subpetal.project_id,
+        name: subpetal.name,
+        description: subpetal.description,
+        skill_id: subpetal.skill_id || null,
+        reward_tokens: subpetal.reward_tokens ?? 100,
         status: "inactive-unassigned",
-        originalDependencies: subtask.dependencies || [],
-        dependencyNames: subtask.dependencies
-          .map((id) => taskIdToName[id])
+        originalDependencies: subpetal.dependencies || [],
+        dependencyNames: subpetal.dependencies
+          .map((id) => petalIdToName[id])
           .filter(Boolean),
       });
     });
 
-    // Insert subtasks (no dependencies yet)
-    const insertPromises = subtaskMetadata.map((meta) =>
+    // Insert subpetals (no dependencies yet)
+    const insertPromises = subpetalMetadata.map((meta) =>
       client.query(
-        `INSERT INTO tasks (project_id, name, description, skill_id, status, reward_tokens, dependencies)
+        `INSERT INTO petals (project_id, name, description, skill_id, status, reward_tokens, dependencies)
          VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id, name`,
         [
           meta.projectId,
@@ -1502,55 +1502,55 @@ const granularizeTasks = async (req, res) => {
     console.log("Name to Real ID mapping:", nameToRealId);
 
     const updatePromises = [];
-    subtaskMetadata.forEach((meta, index) => {
-      const realTaskId = insertedResults[index].rows[0].id;
+    subpetalMetadata.forEach((meta, index) => {
+      const realPetalId = insertedResults[index].rows[0].id;
 
       // Convert temp IDs to names, then names to real IDs
       const resolvedDeps = meta.originalDependencies
         .map((tempId) => {
-          const depName = taskIdToName[tempId];
+          const depName = petalIdToName[tempId];
           return nameToRealId[depName];
         })
         .filter((depId) => depId !== undefined);
 
       console.log(
-        `Resolved dependencies for task "${meta.name}" (ID: ${realTaskId}):`,
+        `Resolved dependencies for petal "${meta.name}" (ID: ${realPetalId}):`,
         resolvedDeps
       );
 
       updatePromises.push(
         client.query(
-          `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
-          [resolvedDeps, realTaskId]
+          `UPDATE petals SET dependencies = $1::int[] WHERE id = $2`,
+          [resolvedDeps, realPetalId]
         )
       );
     });
 
     await Promise.all(updatePromises);
 
-    // Log the results of the subtasks inserted
-    const insertedSubtasks = insertedResults.map((result) => result.rows[0]);
+    // Log the results of the subpetals inserted
+    const insertedSubpetals = insertedResults.map((result) => result.rows[0]);
 
     await client.query("COMMIT");
 
     res.json({
       success: true,
       project: project || { id: projectId },
-      deletedTasks: tasks,
-      newTasks: insertedSubtasks,
+      deletedPetals: petals,
+      newPetals: insertedSubpetals,
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Granularize project tasks failed:", error);
+    console.error("Granularize project petals failed:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   } finally {
     client.release();
   }
 };
 
-const payoutPeerReviewRewards = async (taskId, client, io) => {
-  // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
-  const taskQuery = `
+const payoutPeerReviewRewards = async (petalId, client, io) => {
+  // 🧠 Fetch extended petal info for XP, notifications, skill leveling, etc.
+  const petalQuery = `
     SELECT t.reward_tokens,
            t.assigned_user_ids,
            t.submitted_by,
@@ -1558,14 +1558,14 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
            t.status,
            t.project_id,
            p.community_id
-    FROM tasks t
+    FROM petals t
     JOIN projects p ON t.project_id = p.id
     WHERE t.id = $1;
   `;
-  const taskResult = await client.query(taskQuery, [taskId]);
+  const petalResult = await client.query(petalQuery, [petalId]);
 
-  if (taskResult.rows.length === 0) {
-    return { error: "Task not found", status: 404 };
+  if (petalResult.rows.length === 0) {
+    return { error: "Petal not found", status: 404 };
   }
 
   const {
@@ -1575,7 +1575,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
     skill_id,
     project_id,
     community_id,
-  } = taskResult.rows[0];
+  } = petalResult.rows[0];
 
   // Fetch skill name
   const skillNameQuery = await client.query(
@@ -1595,7 +1595,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
   `;
   const skillsResult = await client.query(skillsQuery, [skill_id]);
   if (skillsResult.rows.length === 0) {
-    return { error: "Skill not found for this task", status: 404 };
+    return { error: "Skill not found for this petal", status: 404 };
   }
 
   let rawUnlockedUsers = skillsResult.rows[0].unlocked_users || [];
@@ -1666,7 +1666,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
     await client.query(
       `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
        WHERE id = ANY($2)`,
-      [taskId.toString(), assigned_user_ids]
+      [petalId.toString(), assigned_user_ids]
     );
   }
 
@@ -1681,10 +1681,10 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
       [main_reward, submitted_by]
     );
     const submitterLedgerEntries = [
-      { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+      { type: "petal_completion_reward", petalId: petalId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
     ];
     if (community_id) {
-      submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+      submitterLedgerEntries.push({ type: "community_petal_reward", communityId: community_id, petalId: petalId, tokens: main_reward, creationDate: new Date() });
     }
     await client.query(
       `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -1702,10 +1702,10 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
         [bonus_reward, userId]
       );
       const bonusLedgerEntries = [
-        { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
+        { type: "petal_completion_bonus", petalId: petalId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
       ];
       if (community_id) {
-        bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+        bonusLedgerEntries.push({ type: "community_petal_bonus", communityId: community_id, petalId: petalId, tokens: bonus_reward, creationDate: new Date() });
       }
       await client.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -1717,23 +1717,23 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
 }
 
 // Process review function
-const processReview = async (taskId, userId, action, io) => {
+const processReview = async (petalId, userId, action, io) => {
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Get task details including current approvals/rejections
-    const taskQuery = `
+    // Get petal details including current approvals/rejections
+    const petalQuery = `
       SELECT reviewer_ids, approvals, rejections, status, reward_tokens, project_id
-      FROM tasks
+      FROM petals
       WHERE id = $1 FOR UPDATE;
     `;
-    const taskResult = await client.query(taskQuery, [taskId]);
+    const petalResult = await client.query(petalQuery, [petalId]);
 
-    if (taskResult.rows.length === 0) {
+    if (petalResult.rows.length === 0) {
       await client.query("ROLLBACK");
-      return { error: "Task not found", status: 404 };
+      return { error: "Petal not found", status: 404 };
     }
 
     const {
@@ -1743,23 +1743,23 @@ const processReview = async (taskId, userId, action, io) => {
       status,
       reward_tokens,
       project_id,
-    } = taskResult.rows[0];
+    } = petalResult.rows[0];
 
     // Check if user is a reviewer
     if (!reviewer_ids.includes(userId)) {
       await client.query("ROLLBACK");
-      return { error: "User not authorized to review this task", status: 403 };
+      return { error: "User not authorized to review this petal", status: 403 };
     }
 
-    // Check if task is still in submitted status
+    // Check if petal is still in submitted status
     if (status !== "submitted") {
       await client.query("ROLLBACK");
-      return { error: "Task is not in review status", status: 400 };
+      return { error: "Petal is not in review status", status: 400 };
     }
 
     // Update reviewer arrays based on action
     const updateQuery = `
-      UPDATE tasks
+      UPDATE petals
       SET ${
         action === "approve"
           ? "approvals = array_append(approvals, $2)"
@@ -1769,7 +1769,7 @@ const processReview = async (taskId, userId, action, io) => {
       RETURNING approvals, rejections;
     `;
     // Pass userId as $2 so the user's id is appended
-    const updateResult = await client.query(updateQuery, [taskId, userId]);
+    const updateResult = await client.query(updateQuery, [petalId, userId]);
     const newApprovals = updateResult.rows[0].approvals;
     const newRejections = updateResult.rows[0].rejections;
     console.log("New approvals:", newApprovals);
@@ -1784,11 +1784,11 @@ const processReview = async (taskId, userId, action, io) => {
 
     // Add to reviewer's token ledger
     const reviewLedgerUpdate = {
-      type: "task_review_reward",
-      taskId: taskId,
+      type: "petal_review_reward",
+      petalId: petalId,
       tokens: reviewerReward,
       creationDate: new Date(),
-      projectId: project_id // project_id is available from taskResult
+      projectId: project_id // project_id is available from petalResult
     };
     await client.query(
       `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2`,
@@ -1801,7 +1801,7 @@ const processReview = async (taskId, userId, action, io) => {
 
       if (finalAction === "approve") {
         // Payout peer review rewards
-        const payoutResult = await payoutPeerReviewRewards(taskId, client, io);
+        const payoutResult = await payoutPeerReviewRewards(petalId, client, io);
         if (payoutResult.error) {
           await client.query("ROLLBACK");
           return payoutResult;
@@ -1809,10 +1809,10 @@ const processReview = async (taskId, userId, action, io) => {
 
         // Set PM approval deadline
         await client.query(
-          `UPDATE tasks
+          `UPDATE petals
            SET pm_approval_deadline = NOW() + INTERVAL '18 hours'
            WHERE id = $1`,
-          [taskId]
+          [petalId]
         );
 
         // Notify project manager
@@ -1823,30 +1823,30 @@ const processReview = async (taskId, userId, action, io) => {
         const projectOwnerId = projectOwnerQuery.rows[0].creator_id;
 
         if (projectOwnerId) {
-            const notificationMessage = `A task in your project has passed peer review and is awaiting your approval.`;
+            const notificationMessage = `A petal in your project has passed peer review and is awaiting your approval.`;
             const notificationDetails = JSON.stringify({
                 text: notificationMessage,
                 projectId: project_id,
-                taskId: taskId,
+                petalId: petalId,
             });
             await client.query(
                 `INSERT INTO notifications (user_id, message, type, created_at, read)
                  VALUES ($1, $2, $3, NOW(), false)`,
-                [projectOwnerId, notificationDetails, "task"]
+                [projectOwnerId, notificationDetails, "petal"]
             );
             if (io) {
                 io.to(`user_${projectOwnerId}`).emit("notification", {
                     message: notificationMessage,
-                    type: "task",
+                    type: "petal",
                     projectId: project_id,
-                    taskId: taskId,
+                    petalId: petalId,
                 });
             }
         }
       } else {
-        // Reject the task - return to assigned users
+        // Reject the petal - return to assigned users
         const rejectQuery = `
-          UPDATE tasks
+          UPDATE petals
           SET status = 'active-assigned',
               submitted = false,
               reviewer_ids = ARRAY[]::integer[],
@@ -1855,23 +1855,23 @@ const processReview = async (taskId, userId, action, io) => {
           WHERE id = $1
           RETURNING assigned_user_ids;
         `;
-        const rejectResult = await client.query(rejectQuery, [taskId]);
+        const rejectResult = await client.query(rejectQuery, [petalId]);
         const assignedUserIds = rejectResult.rows[0].assigned_user_ids;
 
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
-          const notificationMessage = `Your submitted task was rejected and needs revisions.`;
+          const notificationMessage = `Your unfurled petal was rejected and needs revisions.`;
           const notificationDetails = JSON.stringify({
             text: notificationMessage,
             projectId: project_id,
-            taskId: taskId,
+            petalId: petalId,
           });
           await client.query(
             `
             INSERT INTO notifications (user_id, message, type, created_at, read)
             SELECT unnest($1::int[]), $2, $3, NOW(), false
           `,
-            [assignedUserIds, notificationDetails, "task"]
+            [assignedUserIds, notificationDetails, "petal"]
           );
 
           // Socket notifications
@@ -1879,10 +1879,10 @@ const processReview = async (taskId, userId, action, io) => {
             assignedUserIds.forEach((uId) => {
               io.to(`user_${uId}`).emit("notification", {
                 id: Date.now(),
-                type: "task",
-                message: "Your task was rejected and needs revisions",
+                type: "petal",
+                message: "Your petal was rejected and needs revisions",
                 projectId: project_id,
-                taskId: taskId,
+                petalId: petalId,
                 read: false,
                 timestamp: new Date().toISOString(),
               });
@@ -1908,11 +1908,11 @@ const processReview = async (taskId, userId, action, io) => {
   }
 };
 
-const finalizeTask = async (taskId, client, io) => {
+const finalizePetal = async (petalId, client, io) => {
     // This function will handle the final steps after PM approval.
-    // It's a subset of the original approveTask logic.
+    // It's a subset of the original approvePetal logic.
 
-    const taskQuery = `
+    const petalQuery = `
       SELECT t.reward_tokens,
              t.assigned_user_ids,
              t.project_id,
@@ -1922,31 +1922,31 @@ const finalizeTask = async (taskId, client, io) => {
              t.proof_of_work_links,
              t.skill_id,
              t.submitted_by
-      FROM tasks t
+      FROM petals t
       JOIN projects p ON t.project_id = p.id
       WHERE t.id = $1;
     `;
-    const taskResult = await client.query(taskQuery, [taskId]);
-    if (taskResult.rows.length === 0) {
-        return { error: "Task not found for finalization", status: 404 };
+    const petalResult = await client.query(petalQuery, [petalId]);
+    if (petalResult.rows.length === 0) {
+        return { error: "Petal not found for finalization", status: 404 };
     }
-    const task = taskResult.rows[0];
+    const petal = petalResult.rows[0];
 
     // Step 1: Reward project creator
-    if (task.creator_id) {
+    if (petal.creator_id) {
       await client.query(
         `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
-        [task.creator_id]
+        [petal.creator_id]
       );
       const creatorLedgerUpdates = [
-        { type: "project", id: task.project_id, tokens: 10, creationDate: new Date() },
+        { type: "project", id: petal.project_id, tokens: 10, creationDate: new Date() },
       ];
-      if (task.community_id) {
-        creatorLedgerUpdates.push({ type: "community", id: task.community_id, tokens: 10, creationDate: new Date() });
+      if (petal.community_id) {
+        creatorLedgerUpdates.push({ type: "community", id: petal.community_id, tokens: 10, creationDate: new Date() });
       }
       await client.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
-        [creatorLedgerUpdates.map(JSON.stringify), task.creator_id]
+        [creatorLedgerUpdates.map(JSON.stringify), petal.creator_id]
       );
     }
 
@@ -1957,30 +1957,30 @@ const finalizeTask = async (taskId, client, io) => {
         reserved_tokens = GREATEST(0, reserved_tokens - $1)
       WHERE id = $2
     `,
-      [task.reward_tokens, task.project_id]
+      [petal.reward_tokens, petal.project_id]
     );
 
     // Step 3: Notify users
-    const notificationMessage = `Your submitted task was approved by the project manager!`;
-    if (task.assigned_user_ids && task.assigned_user_ids.length > 0) {
+    const notificationMessage = `Your unfurled petal was approved by the project manager!`;
+    if (petal.assigned_user_ids && petal.assigned_user_ids.length > 0) {
       const notificationDetails = JSON.stringify({
         text: notificationMessage,
-        projectId: task.project_id,
-        taskId: taskId,
+        projectId: petal.project_id,
+        petalId: petalId,
       });
       await client.query(
           `INSERT INTO notifications (user_id, message, type, created_at, read)
           SELECT unnest($1::int[]), $2, $3, NOW(), false`,
-          [task.assigned_user_ids, notificationDetails, "task"]
+          [petal.assigned_user_ids, notificationDetails, "petal"]
       );
       if (io) {
-        for (const userId of task.assigned_user_ids) {
+        for (const userId of petal.assigned_user_ids) {
             io.to(`user_${userId}`).emit("notification", {
                 id: Date.now(),
-                type: 'task-approved',
+                type: 'petal-approved',
                 message: notificationMessage,
-                projectId: task.project_id,
-                taskId: taskId,
+                projectId: petal.project_id,
+                petalId: petalId,
                 read: false,
                 timestamp: new Date().toISOString(),
             });
@@ -1990,39 +1990,39 @@ const finalizeTask = async (taskId, client, io) => {
 
     // Step 4: Create story node (this should happen outside the transaction)
     // We'll return the necessary data for the caller to handle it.
-    const tagsQuery = await client.query(`SELECT name FROM skills WHERE id = $1`, [task.skill_id]);
+    const tagsQuery = await client.query(`SELECT name FROM skills WHERE id = $1`, [petal.skill_id]);
     const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
 
     const storyNodeData = {
-        task_id: taskId,
-        user_id: task.submitted_by,
-        reflection: task.reflection || "",
-        media_urls: task.proof_of_work_links || [],
+        petal_id: petalId,
+        user_id: petal.submitted_by,
+        reflection: petal.reflection || "",
+        media_urls: petal.proof_of_work_links || [],
         tags: tags,
     };
 
-    return { success: true, task, storyNodeData };
+    return { success: true, petal, storyNodeData };
 }
 
 const approveByPM = async (req, res, io) => {
-  const { taskId } = req.params;
+  const { petalId } = req.params;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const taskResult = await client.query(`SELECT status, project_id, approvals FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
-    if (taskResult.rows.length === 0) {
+    const petalResult = await client.query(`SELECT status, project_id, approvals FROM petals WHERE id = $1 FOR UPDATE`, [petalId]);
+    if (petalResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({ error: 'Petal not found' });
     }
-    const task = taskResult.rows[0];
-    if (task.status !== 'submitted') {
+    const petal = petalResult.rows[0];
+    if (petal.status !== 'submitted') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
+      return res.status(400).json({ error: 'Petal is not awaiting Project Manager approval' });
     }
 
-    await client.query(`UPDATE tasks SET status = 'completed' WHERE id = $1`, [taskId]);
+    await client.query(`UPDATE petals SET status = 'completed' WHERE id = $1`, [petalId]);
 
-    const finalizeResult = await finalizeTask(taskId, client, io);
+    const finalizeResult = await finalizePetal(petalId, client, io);
     if (finalizeResult.error) {
         await client.query('ROLLBACK');
         return res.status(finalizeResult.status || 500).json({ error: finalizeResult.error });
@@ -2047,7 +2047,7 @@ const approveByPM = async (req, res, io) => {
         }
     }
 
-    res.json({ message: 'Task approved by Project Manager and completed.', task: finalizeResult.task });
+    res.json({ message: 'Petal approved by Project Manager and completed.', petal: finalizeResult.petal });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error in approveByPM:', error);
@@ -2058,23 +2058,23 @@ const approveByPM = async (req, res, io) => {
 };
 
 const rejectByPM = async (req, res, io) => {
-    const { taskId } = req.params;
+    const { petalId } = req.params;
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const taskResult = await client.query(`SELECT status, project_id, assigned_user_ids, approvals FROM tasks WHERE id = $1 FOR UPDATE`, [taskId]);
-        if (taskResult.rows.length === 0) {
+        const petalResult = await client.query(`SELECT status, project_id, assigned_user_ids, approvals FROM petals WHERE id = $1 FOR UPDATE`, [petalId]);
+        if (petalResult.rows.length === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'Task not found' });
+            return res.status(404).json({ error: 'Petal not found' });
         }
-        const task = taskResult.rows[0];
-        if (task.status !== 'submitted' || task.approvals?.length < 2) {
+        const petal = petalResult.rows[0];
+        if (petal.status !== 'submitted' || petal.approvals?.length < 2) {
             await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
+            return res.status(400).json({ error: 'Petal is not awaiting Project Manager approval' });
         }
 
         const rejectQuery = `
-          UPDATE tasks
+          UPDATE petals
           SET status = 'active-assigned',
               submitted = false,
               reviewer_ids = ARRAY[]::integer[],
@@ -2083,32 +2083,32 @@ const rejectByPM = async (req, res, io) => {
           WHERE id = $1
           RETURNING assigned_user_ids;
         `;
-        const rejectResult = await client.query(rejectQuery, [taskId]);
+        const rejectResult = await client.query(rejectQuery, [petalId]);
         const assignedUserIds = rejectResult.rows[0].assigned_user_ids;
 
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
-          const notificationMessage = `Your submitted task was rejected by the Project Manager and needs revisions.`;
+          const notificationMessage = `Your unfurled petal was rejected by the Project Manager and needs revisions.`;
           const notificationDetails = JSON.stringify({
             text: notificationMessage,
-            projectId: task.project_id,
-            taskId: taskId,
+            projectId: petal.project_id,
+            petalId: petalId,
           });
           await client.query(
             `
             INSERT INTO notifications (user_id, message, type, created_at, read)
             SELECT unnest($1::int[]), $2, $3, NOW(), false
           `,
-            [assignedUserIds, notificationDetails, "task"]
+            [assignedUserIds, notificationDetails, "petal"]
           );
           if (io) {
             assignedUserIds.forEach((userId) => {
               io.to(`user_${userId}`).emit("notification", {
                 id: Date.now(),
-                type: "task",
+                type: "petal",
                 message: notificationMessage,
-                projectId: task.project_id,
-                taskId: taskId,
+                projectId: petal.project_id,
+                petalId: petalId,
                 read: false,
                 timestamp: new Date().toISOString(),
               });
@@ -2116,7 +2116,7 @@ const rejectByPM = async (req, res, io) => {
           }
         }
         await client.query('COMMIT');
-        res.json({ message: 'Task rejected by Project Manager.' });
+        res.json({ message: 'Petal rejected by Project Manager.' });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error in rejectByPM:', error);
@@ -2126,33 +2126,33 @@ const rejectByPM = async (req, res, io) => {
     }
 };
 
-const getPmApprovalTasks = async (userId) => {
+const getPmApprovalPetals = async (userId) => {
     const client = await pool.connect();
     try {
         const query = `
             SELECT t.*, p.name as project_name
-            FROM tasks t
+            FROM petals t
             JOIN projects p ON t.project_id = p.id
             WHERE p.creator_id = $1 AND t.status = 'submitted' AND array_length(t.approvals, 1) >= 2
         `;
         const result = await client.query(query, [userId]);
         return result.rows;
     } catch (error) {
-        console.error('Error fetching PM approval tasks:', error);
-        throw new Error('Failed to fetch PM approval tasks');
+        console.error('Error fetching PM approval petals:', error);
+        throw new Error('Failed to fetch PM approval petals');
     } finally {
         client.release();
     }
 };
 
-// Function to get tasks the user is a reviewer for
-const getReviewerTasks = async (userId) => {
+// Function to get petals the user is a reviewer for
+const getReviewerPetals = async (userId) => {
   const client = await pool.connect();
   const userIdNumber = Number(userId);
   try {
     const query = `
       SELECT t.*, p.name as project_name
-      FROM tasks t
+      FROM petals t
       JOIN projects p ON t.project_id = p.id
       WHERE $1::int = ANY(t.reviewer_ids)
     `;
@@ -2160,44 +2160,44 @@ const getReviewerTasks = async (userId) => {
     const result = await client.query(query, [userIdNumber]);
 
     if (result.rows.length === 0) {
-      console.log("No tasks found for this reviewer");
+      console.log("No petals found for this reviewer");
       return [];
     }
 
     return result.rows;
   } catch (error) {
-    console.error("Error fetching reviewer tasks:", error);
-    return { error: "Failed to fetch reviewer tasks", status: 500 };
+    console.error("Error fetching reviewer petals:", error);
+    return { error: "Failed to fetch reviewer petals", status: 500 };
   } finally {
     client.release();
   }
 };
 
 export default {
-  getReviewerTasks,
+  getReviewerPetals,
   processReview,
-  granularizeTasks,
-  generateTasks,
-  getAllTasks,
-  getRelevantTasks,
-  getProjectRelevantTasks,
-  getPlanetSpecificTasks,
-  acceptTask,
-  getTasksByProjectId,
+  granularizePetals,
+  generatePetals,
+  getAllPetals,
+  getRelevantPetals,
+  getProjectRelevantPetals,
+  getPlanetSpecificPetals,
+  acceptPetal,
+  getPetalsByProjectId,
   getSkillNamesByIds,
   getSkillIdByName,
-  createNewTask,
-  updateTask,
-  submitTask,
-  approveTask,
-  rejectTask,
-  dropTask,
-  createTaskRoute,
+  createNewPetal,
+  updatePetal,
+  submitPetal,
+  approvePetal,
+  rejectPetal,
+  dropPetal,
+  createPetalRoute,
   resetAllSpentPoints,
   findById,
   payoutPeerReviewRewards,
   approveByPM,
   rejectByPM,
-  finalizeTask,
-  getPmApprovalTasks,
+  finalizePetal,
+  getPmApprovalPetals,
 };

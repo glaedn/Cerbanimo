@@ -128,8 +128,8 @@
     box-shadow: 0 0 20px rgba(0, 243, 255, 1); /* theme.colors.primary */
 }
 
-/* Task Browser Wrapper - This seems specific to a TaskBrowser component, not directly ProfilePage panels */
-  .task-browser-wrapper {
+/* Petal Browser Wrapper - This seems specific to a PetalBrowser component, not directly ProfilePage panels */
+  .petal-browser-wrapper {
     flex-grow: 1;
     width: 100%;
     max-width: 1200px;
@@ -162,12 +162,12 @@
     gap: 10px;
   }
   
-  .task-name {
+  .petal-name {
     color: #00F3FF; /* theme.colors.primary */
     font-weight: bold;
   }
   
-  .task-description {
+  .petal-description {
     color: #E0E0E0; /* Lighter gray, close to textPrimary but distinct */
   }
   

@@ -31,7 +31,7 @@ const NotificationProvider = ({ children }) => {
         ...notif,
         messageText: parsedJson.text,
         intentionId: parsedJson.intentionId,
-        taskId: parsedJson.taskId,
+        petalId: parsedJson.petalId,
         originalMessage: originalMsg,
       };
     } else {
@@ -39,7 +39,7 @@ const NotificationProvider = ({ children }) => {
         ...notif,
         messageText: originalMsg,
         intentionId: null,
-        taskId: null,
+        petalId: null,
         originalMessage: originalMsg,
       };
     }

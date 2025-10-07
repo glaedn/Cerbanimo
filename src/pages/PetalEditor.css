@@ -195,8 +195,8 @@
 /* Primary Action Button (e.g., SAVE, ACCEPT, SUBMIT, APPROVE) - Cyan */
 .cyber-button.primary, 
 .cyber-button.approve,
-.cyber-button.accept-task,
-.cyber-button.submit-task {
+.cyber-button.accept-petal,
+.cyber-button.submit-petal {
     color: #00F3FF !important;
     border: 1px solid #00F3FF !important;
     box-shadow: 0 0 8px rgba(0, 243, 255, 0.7) !important;
@@ -204,8 +204,8 @@
 
 .cyber-button.primary:hover,
 .cyber-button.approve:hover,
-.cyber-button.accept-task:hover,
-.cyber-button.submit-task:hover {
+.cyber-button.accept-petal:hover,
+.cyber-button.submit-petal:hover {
     background-color: rgba(0, 243, 255, 0.2) !important;
     box-shadow: 0 0 12px rgba(0, 243, 255, 1) !important;
 }
@@ -213,7 +213,7 @@
 /* Destructive/Cancel Action Button (e.g., TERMINATE, DROP, REJECT) - Pink/Magenta */
 .cyber-button.cancel,
 .cyber-button.reject,
-.cyber-button.drop-task {
+.cyber-button.drop-petal {
     color: #FF5CA2 !important;
     border: 1px solid #FF5CA2 !important;
     box-shadow: 0 0 8px rgba(255, 92, 162, 0.7) !important;
@@ -221,7 +221,7 @@
 
 .cyber-button.cancel:hover,
 .cyber-button.reject:hover,
-.cyber-button.drop-task:hover {
+.cyber-button.drop-petal:hover {
     background-color: rgba(255, 92, 162, 0.2) !important;
     box-shadow: 0 0 12px rgba(255, 92, 162, 1) !important;
 }

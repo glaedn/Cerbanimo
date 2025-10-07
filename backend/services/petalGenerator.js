@@ -1,4 +1,4 @@
-// services/taskGenerator.js
+// services/petalGenerator.js
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -40,12 +40,12 @@ export const parseLLMJsonResponse = (text) => {
   return JSON.parse(cleanJsonString);
 };
 
-const parseLLMTasksResponse = (text) => {
+const parseLLMPetalsResponse = (text) => {
   const data = parseLLMJsonResponse(text);
-  if (!data.tasks || !Array.isArray(data.tasks)) {
-    throw new Error('Tasks array missing or invalid in LLM response');
+  if (!data.petals || !Array.isArray(data.petals)) {
+    throw new Error('Petals array missing or invalid in LLM response');
   }
-  return data.tasks;
+  return data.petals;
 };
 
 export const generateProjectIdea = async (skills, interests) => {
@@ -89,39 +89,39 @@ Format your response as JSON with keys Name and Description.
   }
 };
 
-export const autoGenerateSubtasks = async (tasks,projectName, projectDescription, tags, creator_id) => {
-  const formattedTasks = tasks.map((task, index) => {
-    return `Task ${index + 1}:
-Name: ${task.name}
-Description: ${task.description}
-Related Skill ID: ${task.skill_id || 'None'}`
+export const autoGenerateSubpetals = async (petals,projectName, projectDescription, tags, creator_id) => {
+  const formattedPetals = petals.map((petal, index) => {
+    return `Petal ${index + 1}:
+Name: ${petal.name}
+Description: ${petal.description}
+Related Skill ID: ${petal.skill_id || 'None'}`
   }).join('\n\n');
 
   const prompt = `
-You are an expert project manager and task engineer. Your job is to break complex tasks into smaller, manageable subtasks that can be independently assigned.
+You are an expert project manager and petal engineer. Your job is to break complex petals into smaller, manageable subpetals that can be independently assigned.
 
-For each task below, return a **JSON array** of objects like this format:
+For each petal below, return a **JSON array** of objects like this format:
 [
   {
-    "name": "Subtask name",
+    "name": "Subpetal name",
     "description": "Brief description",
     "skill_id": "Optional related skill ID or null",
-    "dependencies": [Optional array of subtask names this subtask depends on]
+    "dependencies": [Optional array of subpetal names this subpetal depends on]
   },
   ...
 ]
 
-Tasks to granularize:
+Petals to granularize:
 
-${formattedTasks}
+${formattedPetals}
 
 Here are the rules:
-- All IDs (project IDs, task IDs) must be **unique, sequential integers starting at 1**.
+- All IDs (project IDs, petal IDs) must be **unique, sequential integers starting at 1**.
 - Maintain **relationships**: 
-  - "project_id" in tasks must match the corresponding project's new ID.
-  - "skill_id" in tasks must match the correct skill's existing ID.
-  - "dependencies" in tasks must reference the correct **new task IDs**.
-- Output data in **JSON format**, with **one array per table** (projects, tasks).
+  - "project_id" in petals must match the corresponding project's new ID.
+  - "skill_id" in petals must match the correct skill's existing ID.
+  - "dependencies" in petals must reference the correct **new petal IDs**.
+- Output data in **JSON format**, with **one array per table** (projects, petals).
 
 Here is the **Skills List** with assigned IDs:
 json
@@ -594,10 +594,10 @@ Expected Output Format:
   "projects": [
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id} } 
   ],
-  "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 1, "dependencies": [], "reward_tokens": 80 },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 2, "dependencies": [1], "reward_tokens": 120 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 2, "dependencies": [1,2], "reward_tokens": 60 }
+  "petals": [
+    { "id": 1, "name": "Petal Name", "description": "Petal Desc", "project_id": 1, "skill_id": 1, "dependencies": [], "reward_tokens": 80 },
+    { "id": 2, "name": "Petal Name", "description": "Petal Desc", "project_id": 1, "skill_id": 2, "dependencies": [1], "reward_tokens": 120 },
+    { "id": 3, "name": "Petal Name", "description": "Petal Desc", "project_id": 1, "skill_id": 2, "dependencies": [1,2], "reward_tokens": 60 }
   ]
 }
 
@@ -605,13 +605,13 @@ Expected Output Format:
 Notes:
 
 ONLY return the JSON object described.
-Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
+Dependencies are the IDs of the petals that must be completed before this petal can be started. THere can be multiple.
 `;
 
   const completion = await openai.chat.completions.create({
     model: "google/gemma-3-12b-it",
     messages: [
-      { role: "system", content: "You are an expert project manager and task engineer." },
+      { role: "system", content: "You are an expert project manager and petal engineer." },
       { role: "user", content: prompt },
     ],
   });
@@ -619,30 +619,30 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   console.log('LLM response:', text);
   // Attempt to safely parse JSON from LLM output
   try {
-    const tasks = parseLLMJsonResponse(text);
-    if (!Array.isArray(tasks)) {
+    const petals = parseLLMJsonResponse(text);
+    if (!Array.isArray(petals)) {
       throw new Error('LLM response is not a JSON array.');
     }
-    return tasks;
+    return petals;
   } catch (err) {
-    console.error('Failed to parse LLM response for subtasks:', text);
-    throw new Error('Failed to parse tasks from LLM output for subtasks');
+    console.error('Failed to parse LLM response for subpetals:', text);
+    throw new Error('Failed to parse petals from LLM output for subpetals');
   }
 };
 
 
-export const autoGenerateTasks = async (projectName, projectDescription, tags, creator_id) => {
+export const autoGeneratePetals = async (projectName, projectDescription, tags, creator_id) => {
 
   const prompt = `
-You are an expert Project Manager AI. Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+You are an expert Project Manager AI. Your objective is to take the given project name and description and output the petals and dependencies necessary to complete the project. You will generate output for the following database tables: projects and petals.
 
 Here are the rules:
-- All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
+- All IDs (project IDs, petal IDs) must be **unique integers starting at 1**.
 - Maintain **relationships**: 
-  - "project_id" in tasks must match the corresponding project's new ID.
-  - "skill_id" in tasks must match the correct skill's existing ID.
-  - "dependencies" in tasks must reference the correct **new task IDs**.
-- Output data in **JSON format**, with **one array per table** (projects, tasks).
+  - "project_id" in petals must match the corresponding project's new ID.
+  - "skill_id" in petals must match the correct skill's existing ID.
+  - "dependencies" in petals must reference the correct **new petal IDs**.
+- Output data in **JSON format**, with **one array per table** (projects, petals).
 
 Here is the **Skills List** with assigned IDs:
 json

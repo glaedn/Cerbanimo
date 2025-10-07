@@ -7,8 +7,8 @@ import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/mater
 import { Chip, Autocomplete, TextField, Button } from '@mui/material';
 import { useNotifications } from "./NotificationProvider.jsx"; 
 import './Intention.css';
-import { useIntentionTasks } from "../hooks/useIntentionTasks";
-import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
+import { useIntentionPetals } from "../hooks/useIntentionPetals";
+import PetalEditor from './PetalEditor.jsx'; // Assuming you have a PetalEditor component
 
 // Updated axios interceptor to handle errors more comprehensively
 axios.interceptors.response.use(
@@ -35,18 +35,18 @@ const Intention = () => {
   
   // Get all state and methods from the hook
   const { 
-    tasks, 
+    petals,
     skills, 
     intention,
-    handleTaskAction, 
-    fetchTasks,
+    handlePetalAction,
+    fetchPetals,
     fetchIntention,
     updateIntention
-  } = useIntentionTasks(intentionId, user);
+  } = useIntentionPetals(intentionId, user);
 
   // Keep other state that's not managed by the hook
   const [interestsPool, setInterestsPool] = useState([]);
-  const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [showPetalPopup, setShowPetalPopup] = useState(false);
   const [isIntentionCreator, setIsIntentionCreator] = useState(false);
   const [resonanceCount, setResonanceCount] = useState(0);
   const [hasResonated, setHasResonated] = useState(false);
@@ -56,7 +56,7 @@ const Intention = () => {
     id: "",
   });
 
-  const [taskForm, setTaskForm] = useState({
+  const [petalForm, setPetalForm] = useState({
     id: null,
     name: '',
     description: '',
@@ -141,7 +141,7 @@ const Intention = () => {
   useEffect(() => {
     if (skills.length > 0 && intentionId) {
       fetchIntention();
-      fetchTasks();
+      fetchPetals();
     }
   }, [skills.length, intentionId]);
 
@@ -193,57 +193,57 @@ const Intention = () => {
     }
   }, [intention, profileData]);
 
-  const handleTaskFormChange = (e) => {
+  const handlePetalFormChange = (e) => {
     const { name, value, type, checked } = e.target;
   
     if (name === "skill") {
       const selectedSkill = skills.find(skill => String(skill.id) === String(value));
-      setTaskForm(prev => ({
+      setPetalForm(prev => ({
         ...prev,
         skill_id: selectedSkill ? selectedSkill.id : ''
       }));
     } else if (name === "reward_tokens") {
       // Ensure reward tokens is at least 5
       const tokens = Math.max(5, parseInt(value) || 5);
-      setTaskForm(prev => ({
+      setPetalForm(prev => ({
         ...prev,
         [name]: tokens
       }));
     } else {
-      setTaskForm(prev => ({
+      setPetalForm(prev => ({
         ...prev,
         [name]: type === "checkbox" ? checked : value
       }));
     }
   };
 
-  // ✅ Submit Task (Create or Update)
-  const handleSubmitTask = async () => {
-    if (!taskForm.name || !taskForm.description || !taskForm.skill_id) {
+  // ✅ Submit Petal (Create or Update)
+  const handleSubmitPetal = async () => {
+    if (!petalForm.name || !petalForm.description || !petalForm.skill_id) {
       alert('All fields are required');
       return;
     }
   
-    const rewardTokens = Math.max(5, parseInt(taskForm.reward_tokens) || 10);
+    const rewardTokens = Math.max(5, parseInt(petalForm.reward_tokens) || 10);
     
-    // Prepare the task data with proper type conversion
-    const taskData = {
-      ...taskForm,
+    // Prepare the petal data with proper type conversion
+    const petalData = {
+      ...petalForm,
       reward_tokens: rewardTokens,
       intentionId: Number(intentionId), // Ensure number
       user: Number(profileData.id), // Convert to number
-      skill_id: Number(taskForm.skill_id) // Convert to number if needed
+      skill_id: Number(petalForm.skill_id) // Convert to number if needed
     };
   
     try {
-      const action = taskForm.id ? 'update' : 'create';
-      await handleTaskAction(taskData, action);
+      const action = petalForm.id ? 'update' : 'create';
+      await handlePetalAction(petalData, action);
   
       await fetchIntention();
-      await fetchTasks();
+      await fetchPetals();
       
-      setShowTaskPopup(false);
-      setTaskForm({ 
+      setShowPetalPopup(false);
+      setPetalForm({
         id: null, 
         name: '', 
         description: '', 
@@ -253,26 +253,26 @@ const Intention = () => {
         reward_tokens: 10
       });
     } catch (error) {
-      console.error('Failed to save task:', error);
-      alert(`Failed to save task: ${error.response?.data?.message || error.message}`);
+      console.error('Failed to save petal:', error);
+      alert(`Failed to save petal: ${error.response?.data?.message || error.message}`);
     }
   };
   
-  // Reset the form fields when switching from editing to creating a task
-  const handleTaskPopupOpen = (task = null) => {
-    if (task) {
-      // Editing a task, populate the form with existing data
-      setTaskForm(task);
+  // Reset the form fields when switching from editing to creating a petal
+  const handlePetalPopupOpen = (petal = null) => {
+    if (petal) {
+      // Editing a petal, populate the form with existing data
+      setPetalForm(petal);
     } else {
-      // Creating a new task, clear the form
-      setTaskForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [], reward_tokens: 10 });
+      // Creating a new petal, clear the form
+      setPetalForm({ id: null, name: '', description: '', skill_id: '', active_ind: true, assigned_user_ids: [], reward_tokens: 10 });
     }
-    setShowTaskPopup(true);
+    setShowPetalPopup(true);
   };
 
   useEffect(() => {
-    console.log("task form: ", taskForm);
-  }, [taskForm]); 
+    console.log("petal form: ", petalForm);
+  }, [petalForm]);
 
 
   return (
@@ -346,50 +346,50 @@ const Intention = () => {
         )}
       </div>
       )}
-      <div className="tasks-section">
-      <h2 className="tasks-title">Tasks</h2>
-      {isIntentionCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleTaskPopupOpen()}>+</Button>}
-      <div className="tasks-list">
-        {tasks.map((task) => (
-        <div key={task.id} className="task-card">
-          <h3>{task.name || 'Untitled Task'}</h3>
-          <span className={`status-indicator ${task.active_ind ? 'active' : 'inactive'}`}>
-          {task.active_ind ? 'Active' : 'Inactive'}
+      <div className="petals-section">
+      <h2 className="petals-title">Petals</h2>
+      {isIntentionCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handlePetalPopupOpen()}>+</Button>}
+      <div className="petals-list">
+        {petals.map((petal) => (
+        <div key={petal.id} className="petal-card">
+          <h3>{petal.name || 'Untitled Petal'}</h3>
+          <span className={`status-indicator ${petal.active_ind ? 'active' : 'inactive'}`}>
+          {petal.active_ind ? 'Active' : 'Inactive'}
           </span>
-          <p>{task.description || 'No description provided.'}</p>
-          <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
-          <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
-          {task.submitted && isIntentionCreator && task.active_ind && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'approve')}>
+          <p>{petal.description || 'No description provided.'}</p>
+          <p><strong>Skill:</strong> {petal.skill_name || 'Not specified'}</p>
+          <p><strong>Reward Tokens:</strong> {petal.reward_tokens || 'None'}</p>
+          {petal.submitted && isIntentionCreator && petal.active_ind && (
+          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handlePetalAction(petal.id, 'approve')}>
             Approve Work
           </Button>
           )}
           {isIntentionCreator && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentBlue.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskPopupOpen(task)}>
+          <Button variant="contained" sx={{ backgroundColor: 'accentBlue.main', color: 'text.primary', margin: '4px' }} onClick={() => handlePetalPopupOpen(petal)}>
             Edit
           </Button>
           )}
-          {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'submit')}>
+          {petal.assigned_user_ids?.includes(parseInt(profileData.id)) && !petal.submitted && petal.active_ind && (
+          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handlePetalAction(petal.id, 'submit')}>
             Submit for Approval
           </Button>
           )}
           <Button 
             variant="contained" 
             sx={{ 
-              backgroundColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'error.main' : 'primary.main', 
-              color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'common.white' : 'common.black', 
+              backgroundColor: petal.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'error.main' : 'primary.main',
+              color: petal.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'common.white' : 'common.black',
               margin: '4px' 
             }}
-            onClick={() => handleTaskAction(
-              task.id, 
-              task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+            onClick={() => handlePetalAction(
+              petal.id,
+              petal.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
             )}
           >
-            {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
+            {petal.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
           </Button>
-          {isIntentionCreator && task.submitted && (
-          <Button variant="contained" sx={{ backgroundColor: 'secondary.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'reject')}>
+          {isIntentionCreator && petal.submitted && (
+          <Button variant="contained" sx={{ backgroundColor: 'secondary.main', color: 'text.primary', margin: '4px' }} onClick={() => handlePetalAction(petal.id, 'reject')}>
             Reject Work
           </Button>
           )}
@@ -406,14 +406,14 @@ const Intention = () => {
       </Button>
       </div>
 
-      <TaskEditor
-  open={showTaskPopup}
-  onClose={() => setShowTaskPopup(false)}
-  taskForm={taskForm}
-  setTaskForm={setTaskForm}
-  onSubmit={handleSubmitTask}
+      <PetalEditor
+  open={showPetalPopup}
+  onClose={() => setShowPetalPopup(false)}
+  petalForm={petalForm}
+  setPetalForm={setPetalForm}
+  onSubmit={handleSubmitPetal}
   skills={skills}
-  isEdit={!!taskForm.id} // This should check if we're editing an existing task
+  isEdit={!!petalForm.id} // This should check if we're editing an existing petal
   intentionId={Number(intentionId)} // Convert to number
   currentUser={user}
   intentionCreatorId={Number(intention?.creator_id)} // Convert to number
