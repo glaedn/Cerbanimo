@@ -9,41 +9,41 @@ const openai = new OpenAI({
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
   // Look for the start of the JSON object or array
-  let jsonStart = text.indexOf('{');
-  const arrayStart = text.indexOf('[');
+  let jsonStart = text.indexOf("{");
+  const arrayStart = text.indexOf("[");
 
   if (jsonStart === -1 || (arrayStart !== -1 && arrayStart < jsonStart)) {
     jsonStart = arrayStart;
   }
 
   if (jsonStart === -1) {
-    throw new Error('No JSON object/array found in response');
+    throw new Error("No JSON object/array found in response");
   }
 
   // Look for the end of the JSON object or array
   let jsonEnd = -1;
-  if (text.charAt(jsonStart) === '{') {
-    jsonEnd = text.lastIndexOf('}');
-  } else if (text.charAt(jsonStart) === '[') {
-    jsonEnd = text.lastIndexOf(']');
+  if (text.charAt(jsonStart) === "{") {
+    jsonEnd = text.lastIndexOf("}");
+  } else if (text.charAt(jsonStart) === "[") {
+    jsonEnd = text.lastIndexOf("]");
   }
-  
+
   if (jsonEnd === -1 || jsonEnd < jsonStart) {
-    throw new Error('Valid JSON object/array end not found in response');
+    throw new Error("Valid JSON object/array end not found in response");
   }
 
   const jsonString = text.slice(jsonStart, jsonEnd + 1);
-  
+
   // Clean the string of any control characters before parsing
-  const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-  
+  const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+
   return JSON.parse(cleanJsonString);
 };
 
 const parseLLMTasksResponse = (text) => {
   const data = parseLLMJsonResponse(text);
   if (!data.tasks || !Array.isArray(data.tasks)) {
-    throw new Error('Tasks array missing or invalid in LLM response');
+    throw new Error("Tasks array missing or invalid in LLM response");
   }
   return data.tasks;
 };
@@ -68,9 +68,12 @@ Format your response as JSON with keys Name and Description.
     console.log("Generating project idea with prompt:", prompt);
 
     const completion = await openai.chat.completions.create({
-      model: "google/gemma-3-12b-it",
+      model: "deepseek/deepseek-r1",
       messages: [
-        { role: "system", content: "You are a helpful assistant that generates project ideas." },
+        {
+          role: "system",
+          content: "You are a helpful assistant that generates project ideas.",
+        },
         { role: "user", content: prompt },
       ],
     });
@@ -79,7 +82,9 @@ Format your response as JSON with keys Name and Description.
     const projectIdea = parseLLMJsonResponse(responseText);
 
     if (!projectIdea.Name || !projectIdea.Description) {
-      throw new Error("LLM response missing Name or Description for project idea.");
+      throw new Error(
+        "LLM response missing Name or Description for project idea."
+      );
     }
 
     return projectIdea;
@@ -89,13 +94,21 @@ Format your response as JSON with keys Name and Description.
   }
 };
 
-export const autoGenerateSubtasks = async (tasks,projectName, projectDescription, tags, creator_id) => {
-  const formattedTasks = tasks.map((task, index) => {
-    return `Task ${index + 1}:
+export const autoGenerateSubtasks = async (
+  tasks,
+  projectName,
+  projectDescription,
+  tags,
+  creator_id
+) => {
+  const formattedTasks = tasks
+    .map((task, index) => {
+      return `Task ${index + 1}:
 Name: ${task.name}
 Description: ${task.description}
-Related Skill ID: ${task.skill_id || 'None'}`
-  }).join('\n\n');
+Related Skill ID: ${task.skill_id || "None"}`;
+    })
+    .join("\n\n");
 
   const prompt = `
 You are an expert project manager and task engineer. Your job is to break complex tasks into smaller, manageable subtasks that can be independently assigned.
@@ -609,30 +622,36 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
 
   const completion = await openai.chat.completions.create({
-    model: "google/gemma-3-12b-it",
+    model: "deepseek/deepseek-r1",
     messages: [
-      { role: "system", content: "You are an expert project manager and task engineer." },
+      {
+        role: "system",
+        content: "You are an expert project manager and task engineer.",
+      },
       { role: "user", content: prompt },
     ],
   });
   const text = completion.choices[0].message.content;
-  console.log('LLM response:', text);
+  console.log("LLM response:", text);
   // Attempt to safely parse JSON from LLM output
   try {
     const tasks = parseLLMJsonResponse(text);
     if (!Array.isArray(tasks)) {
-      throw new Error('LLM response is not a JSON array.');
+      throw new Error("LLM response is not a JSON array.");
     }
     return tasks;
   } catch (err) {
-    console.error('Failed to parse LLM response for subtasks:', text);
-    throw new Error('Failed to parse tasks from LLM output for subtasks');
+    console.error("Failed to parse LLM response for subtasks:", text);
+    throw new Error("Failed to parse tasks from LLM output for subtasks");
   }
 };
 
-
-export const autoGenerateTasks = async (projectName, projectDescription, tags, creator_id) => {
-
+export const autoGenerateTasks = async (
+  projectName,
+  projectDescription,
+  tags,
+  creator_id
+) => {
   const prompt = `
 You are an expert Project Manager AI. Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
 
@@ -1129,24 +1148,31 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
 
-const completion = await openai.chat.completions.create({
-    model: "google/gemma-3-12b-it",
+  const completion = await openai.chat.completions.create({
+    model: "deepseek/deepseek-r1",
     messages: [
-        { role: "system", content: "You are an expert Project Manager AI." },
-        { role: "user", content: prompt },
+      { role: "system", content: "You are an expert Project Manager AI." },
+      { role: "user", content: prompt },
     ],
-});
-const text = completion.choices[0].message.content;
-console.log('LLM response (generateSubtasks):', text);
+  });
+  const text = completion.choices[0].message.content;
+  console.log("LLM response (generateSubtasks):", text);
 
-try {
-  const parsedData = parseLLMJsonResponse(text);
-  if (!parsedData.projects || !parsedData.tasks || !Array.isArray(parsedData.projects) || !Array.isArray(parsedData.tasks)) {
-    throw new Error('LLM response is not in the expected format.');
+  try {
+    const parsedData = parseLLMJsonResponse(text);
+    if (
+      !parsedData.projects ||
+      !parsedData.tasks ||
+      !Array.isArray(parsedData.projects) ||
+      !Array.isArray(parsedData.tasks)
+    ) {
+      throw new Error("LLM response is not in the expected format.");
+    }
+    return parsedData;
+  } catch (err) {
+    console.error("Failed to parse LLM response for autoGenerateTasks:", text);
+    throw new Error(
+      "Failed to parse subtasks from LLM output for autoGenerateTasks"
+    );
   }
-  return parsedData;
-} catch (err) {
-  console.error('Failed to parse LLM response for autoGenerateTasks:', text);
-  throw new Error('Failed to parse subtasks from LLM output for autoGenerateTasks');
-}
 };
