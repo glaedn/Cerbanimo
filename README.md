@@ -1,8 +1,8 @@
-# Cerbanimo Platform 🚀
+# Resonera Platform 🚀
 
 ## 🌟 Overview / Concept
 
-Cerbanimo is a decentralized collaboration and project management platform designed with a captivating space-game aesthetic. Our core mission is to empower individuals and communities by providing tools that facilitate transparent, equitable, and engaging project execution.
+Resonera is a decentralized collaboration and project management platform designed with a captivating space-game aesthetic. Our core mission is to empower individuals and communities by providing tools that facilitate transparent, equitable, and engaging project execution.
 
 The platform aims to redefine project management by:
 *   **Decentralization:** Shifting away from central points of control to distribute authority and ownership.
@@ -12,7 +12,7 @@ The platform aims to redefine project management by:
 
 ## ✨ Key Features
 
-Cerbanimo offers a suite of powerful features to enhance collaboration and project management:
+Resonera offers a suite of powerful features to enhance collaboration and project management:
 
 *   **Project Graph Visualization:** Interactive, D3.js-based dependency maps that allow users to visualize project structures, petal relationships, and progress in an intuitive graph format. (Derived from `ProjectVisualizer.jsx` and D3.js in tech stack)
 *   **Petal Lifecycle Management:** A clear and structured flow for petals:
@@ -26,7 +26,7 @@ Cerbanimo offers a suite of powerful features to enhance collaboration and proje
 
 ## 🛠️ Tech Stack
 
-Cerbanimo leverages a modern and robust technology stack:
+Resonera leverages a modern and robust technology stack:
 
 *   **Frontend:**
     *   React (v18+) with JSX
@@ -61,7 +61,7 @@ Cerbanimo leverages a modern and robust technology stack:
 
 ## 💾 Database Schema (Current State)
 
-The Cerbanimo platform uses a PostgreSQL database. Below is a summary of the key tables and their structures.
+The Resonera platform uses a PostgreSQL database. Below is a summary of the key tables and their structures.
 
 **Key Tables:**
 
@@ -159,7 +159,7 @@ level = Math.floor(Math.sqrt(exp / 40)) + 1;
 
 ## 📡 API Overview
 
-Cerbanimo exposes a RESTful API for frontend communication and potentially for third-party integrations in the future.
+Resonera exposes a RESTful API for frontend communication and potentially for third-party integrations in the future.
 
 **API Structure:**
 
@@ -168,7 +168,7 @@ The API is organized around major resources like projects, petals, users (profil
 **Authentication:**
 
 *   API endpoints are secured using **token-based authentication (JWT)**.
-*   Cerbanimo integrates with **Auth0** for identity management. Clients must obtain a JWT from Auth0 and send it as a Bearer token in the `Authorization` header of their requests to secured endpoints.
+*   Resonera integrates with **Auth0** for identity management. Clients must obtain a JWT from Auth0 and send it as a Bearer token in the `Authorization` header of their requests to secured endpoints.
 *   The backend verifies these tokens using the `express-oauth2-jwt-bearer` middleware, configured with the appropriate Auth0 audience and issuer URL.
 
 **Sample Endpoints:**
@@ -210,7 +210,7 @@ Error responses generally follow standard HTTP status codes (e.g., 400 for bad r
 
 ## 👨‍💻 Dev Environment Setup
 
-Follow these steps to set up and run the Cerbanimo platform locally for development.
+Follow these steps to set up and run the Resonera platform locally for development.
 
 **Prerequisites:**
 
@@ -255,7 +255,7 @@ You'll need to configure environment variables for both the frontend and backend
 1.  **Clone the Repository:**
     ```bash
     git clone <repository_url>
-    cd cerbanimo
+    cd resonera
     ```
 
 2.  **Install Frontend Dependencies:**
@@ -273,7 +273,7 @@ You'll need to configure environment variables for both the frontend and backend
 
 4.  **Set up PostgreSQL Database:**
     *   Ensure your PostgreSQL server is running.
-    *   Create a database (e.g., `cerbanimo_dev`).
+    *   Create a database (e.g., `resonera_dev`).
     *   Update the `POSTGRES_URL` in `backend/.env` with your database connection details.
 
 5.  **Initialize Database Schema:**
@@ -299,11 +299,11 @@ You'll need to configure environment variables for both the frontend and backend
     ```
     The frontend is typically served on `http://localhost:3000` or another port specified by Vite.
 
-Once both servers are running, you should be able to access the Cerbanimo platform in your browser.
+Once both servers are running, you should be able to access the Resonera platform in your browser.
 
 ## 🤝 Contribution Guidelines
 
-We welcome contributions to Cerbanimo! Here's how you can help:
+We welcome contributions to Resonera! Here's how you can help:
 
 **Code Formatting:**
 
@@ -316,7 +316,7 @@ We welcome contributions to Cerbanimo! Here's how you can help:
 
 **Finding Petals & Suggesting Features:**
 
-*   **Petal Management:** We aim to manage petals directly within the Cerbanimo platform itself once it reaches a stable operational state. Keep an eye on the project boards there!
+*   **Petal Management:** We aim to manage petals directly within the Resonera platform itself once it reaches a stable operational state. Keep an eye on the project boards there!
 *   **Feature Suggestions:** Ideas for new features or enhancements can also be proposed through the platform's designated channels (e.g., a specific project or forum for platform development).
 *   **Bug Reports:** Please report bugs by creating an issue in the GitHub repository, providing as much detail as possible (steps to reproduce, environment, expected vs. actual behavior).
 
@@ -334,7 +334,7 @@ For more detailed contribution processes, coding standards, and community guidel
 
 ## 🗺️ Vision Roadmap
 
-Cerbanimo is an evolving platform with a long-term vision to revolutionize decentralized collaboration.
+Resonera is an evolving platform with a long-term vision to revolutionize decentralized collaboration.
 
 **Currently Implemented:**
 
@@ -356,11 +356,10 @@ Cerbanimo is an evolving platform with a long-term vision to revolutionize decen
 
 **Future Modules & Long-Term Vision:**
 
-*   **Civic Mode:** A dedicated mode or set of features enabling communities to use Cerbanimo for tackling real-world local or global challenges, potentially integrating with resource and needs matching.
+*   **Civic Mode:** A dedicated mode or set of features enabling communities to use Resonera for tackling real-world local or global challenges, potentially integrating with resource and needs matching.
 *   **Advanced Resource & Needs Management:** Comprehensive modules for listing, discovering, and matching resources and needs within and between communities.
-*   **Federation Layer:** Enabling interoperability and collaboration between independent Cerbanimo communities or instances.
+*   **Federation Layer:** Enabling interoperability and collaboration between independent Resonera communities or instances.
 *   **Cross-Community Coalitions:** Tools to form alliances and joint ventures between different communities for larger scale projects.
 *   **Blockchain Integration:** Exploring the integration of blockchain technologies for enhanced transparency, decentralized identity, and value exchange (e.g., tokenomics, smart contracts for petal agreements).
 *   **Recursive Proof-of-Work (PoW):** Investigating novel PoW mechanisms that could apply to the validation and value assessment of complex, multi-stage petals.
 *   **AI-Assisted Project Management:** Leveraging AI for features like automated petal generation, risk assessment, and intelligent resource allocation.
-

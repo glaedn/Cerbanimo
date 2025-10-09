@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: cerbanimo-api # Backend service
+    name: resonera-api # Backend service
     env: node
     plan: free
     region: oregon # User can change this
@@ -12,11 +12,11 @@ services:
       - key: DATABASE_URL
         generateValue: true # For Render PostgreSQL or external
       - key: FRONTEND_URL
-        value: https://cerbanimo.onrender.com # Frontend's public URL
+        value: https://resonera.onrender.com # Frontend's public URL
       # PORT is usually set by Render automatically, no need to set it here unless overriding
 
   - type: static # Changed from web to static as it's a Vite SPA
-    name: cerbanimo # Frontend service
+    name: resonera # Frontend service
     env: static
     plan: free
     region: oregon # User can change this
@@ -26,7 +26,7 @@ services:
     staticPublishPath: "./dist" # Vite's default output directory
     envVars: # For build-time environment variables
       - key: VITE_BACKEND_URL
-        value: https://cerbanimo-api.onrender.com # Backend's public URL
+        value: https://resonera-api.onrender.com # Backend's public URL
     routes:
       - type: rewrite
         source: /*
