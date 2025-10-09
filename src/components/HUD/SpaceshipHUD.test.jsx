@@ -15,7 +15,7 @@ jest.mock('./panels/StatusBar', () => () => <div data-testid="status-bar">Status
 // No need to mock if we are testing it's NOT there. If it was conditionally rendered, we might.
 
 // Mock hooks used by SpaceshipHUD or its direct children if necessary
-jest.mock('../../../hooks/useWindowSize', () => ({
+jest.mock('../../hooks/useWindowSize', () => ({
   useWindowSize: () => ({
     width: 1920, // Default to desktop size
     height: 1080,

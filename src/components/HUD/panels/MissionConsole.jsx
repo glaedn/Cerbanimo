@@ -6,6 +6,7 @@ import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import useAssignedTasks from '../../../hooks/useAssignedTasks'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import './MissionConsole.css'; // Optional: For specific MissionConsole styles
+import { VITE_BACKEND_URL } from '../../../utils/env';
 
 const MissionConsole = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
@@ -55,7 +56,7 @@ const MissionConsole = () => {
     try {
       const token = await getAccessTokenSilently();
       await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`,
+        `${VITE_BACKEND_URL}/tasks/${taskId}/drop`,
         { userId: profile.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );

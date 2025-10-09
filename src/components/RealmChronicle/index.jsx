@@ -6,6 +6,7 @@ import FeaturedCarousel from './FeaturedCarousel.jsx';
 import ChronicleCard from './ChronicleCard.jsx';
 import { useAuth0 } from '@auth0/auth0-react';
 import './RealmChronicle.css';
+import { VITE_BACKEND_URL } from '../../utils/env';
 
 const RealmChronicle = ({ realmId }) => {
   const [chronicles, setChronicles] = useState([]);
@@ -21,7 +22,7 @@ const RealmChronicle = ({ realmId }) => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/storyChronicles/realm/${realmId}/chronicle-feed`,
+        `${VITE_BACKEND_URL}/storyChronicles/realm/${realmId}/chronicle-feed`,
         {
           headers: {
         Authorization: `Bearer ${token}`,

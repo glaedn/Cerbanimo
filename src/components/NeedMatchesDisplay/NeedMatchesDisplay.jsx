@@ -5,6 +5,7 @@ import {
   Box, Typography, Button, List, ListItem, ListItemText,
   CircularProgress, Paper, Divider, Chip, Snackbar, Alert
 } from '@mui/material';
+import { VITE_BACKEND_URL } from '../../utils/env';
 // import './NeedMatchesDisplay.css'; // Optional CSS file
 
 const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) => {
@@ -24,7 +25,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
     setError(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/matching/need/${needId}`, {
+      const response = await axios.get(`${VITE_BACKEND_URL}/matching/need/${needId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMatchedResources(response.data);
@@ -61,7 +62,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/exchange/initiate`, payload, {
+      const response = await axios.post(`${VITE_BACKEND_URL}/exchange/initiate`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

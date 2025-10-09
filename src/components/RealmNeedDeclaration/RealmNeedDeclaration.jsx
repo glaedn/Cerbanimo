@@ -8,6 +8,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NeedDeclarationForm from '../NeedDeclarationForm/NeedDeclarationForm'; // Adjust path if needed
+import { VITE_BACKEND_URL } from '../../utils/env';
 
 const RealmNeedDeclaration = ({ realmId, loggedInUserId, getAccessTokenSilently }) => {
   const [isNeedModalOpen, setIsNeedModalOpen] = useState(false);
@@ -37,7 +38,7 @@ const RealmNeedDeclaration = ({ realmId, loggedInUserId, getAccessTokenSilently 
     setErrorNeeds(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/realm/${realmId}`, {
+      const response = await axios.get(`${VITE_BACKEND_URL}/needs/realm/${realmId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRealmNeeds(response.data);
@@ -80,12 +81,12 @@ const RealmNeedDeclaration = ({ realmId, loggedInUserId, getAccessTokenSilently 
       const payload = { ...needData }; 
       
       if (editingNeed) {
-        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/needs/${editingNeed.id}`, payload, {
+        response = await axios.put(`${VITE_BACKEND_URL}/needs/${editingNeed.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Realm need updated successfully!', 'success');
       } else {
-        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, payload, {
+        response = await axios.post(`${VITE_BACKEND_URL}/needs`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Realm need declared successfully!', 'success');
@@ -116,7 +117,7 @@ const RealmNeedDeclaration = ({ realmId, loggedInUserId, getAccessTokenSilently 
       setLoadingNeeds(true); // Indicate loading state during deletion
       try {
         const token = await getAccessTokenSilently();
-        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/needs/${needId}`, {
+        await axios.delete(`${VITE_BACKEND_URL}/needs/${needId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Realm need deleted successfully!', 'success');

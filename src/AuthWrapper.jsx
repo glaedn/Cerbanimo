@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+import { VITE_BACKEND_URL } from "../utils/env";
 
 const AuthWrapper = ({ children }) => {
   const {
@@ -18,7 +19,7 @@ const AuthWrapper = ({ children }) => {
   const [initialSaveDone, setInitialSaveDone] = useState(false);
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const backendUrl = VITE_BACKEND_URL;
     if (!backendUrl || backendUrl === 'undefined') {
       console.error('CRITICAL ERROR: VITE_BACKEND_URL is not defined or is invalid. API calls will fail. Current value:', backendUrl);
       setProfileLoading(false); // Stop loading indicators
@@ -44,7 +45,7 @@ const AuthWrapper = ({ children }) => {
           try {
             console.log("Attempting to save user to database:", user.sub);
             await axios.post(
-              `${import.meta.env.VITE_BACKEND_URL}/auth/save-user`,
+              `${VITE_BACKEND_URL}/auth/save-user`,
               {
                 sub: user.sub,
                 email: user.email,
@@ -65,7 +66,7 @@ const AuthWrapper = ({ children }) => {
         try {
           console.log("Fetching profile for onboarding check:", user.sub);
           const profileResponse = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/profile`,
+            `${VITE_BACKEND_URL}/profile`,
             {
               params: {
                 sub: user.sub,
