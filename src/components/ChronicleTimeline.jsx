@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 import StoryNode from './StoryNode';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import { VITE_BACKEND_URL } from '../utils/env';
 
 const ChronicleTimeline = ({ stories }) => {
   const safeStories = Array.isArray(stories) ? stories : [];
@@ -12,12 +13,12 @@ const ChronicleTimeline = ({ stories }) => {
   
     try {
       const token = await getAccessTokenSilently({
-        audience: import.meta.env.VITE_BACKEND_URL, // Match the exact value from Auth0
+        audience: VITE_BACKEND_URL, // Match the exact value from Auth0
         scope: 'openid profile email read:profile write:profile',
       });
 
       // Use the token for authorized requests
-      const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+      const profileResponse = await axios.get(`${VITE_BACKEND_URL}/profile`, {
         params: { 
           sub: user.sub,
           email: user.email,
@@ -30,7 +31,7 @@ const ChronicleTimeline = ({ stories }) => {
       });
 
       const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/endorsements/`,
+        `${VITE_BACKEND_URL}/endorsements/`,
         {
           story_node_id,
           user_id: profileResponse.data.id, // Pass the Auth0 user id

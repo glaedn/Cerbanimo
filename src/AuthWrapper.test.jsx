@@ -21,9 +21,11 @@ jest.mock('react-router-dom', () => ({
   useLocation: () => mockUseLocation(), // Return the mock function itself
 }));
 
-// Mock environment variable
-const mockApiUrl = 'import.meta.env.VITE_BACKEND_URL';
-process.env.REACT_APP_API_URL = mockApiUrl;
+// Mock the env utility
+const MOCK_BACKEND_URL = 'http://mock-backend.test';
+jest.mock('../utils/env', () => ({
+  VITE_BACKEND_URL: MOCK_BACKEND_URL,
+}));
 
 const TestComponent = () => <div>Test Content</div>;
 
@@ -94,10 +96,10 @@ describe('AuthWrapper', () => {
     renderAuthWrapper();
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith(`${mockApiUrl}/auth/save-user`, expect.any(Object), expect.any(Object));
+      expect(axios.post).toHaveBeenCalledWith(`${MOCK_BACKEND_URL}/auth/save-user`, expect.any(Object), expect.any(Object));
     });
     await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith(`${mockApiUrl}/profile`, expect.any(Object));
+      expect(axios.get).toHaveBeenCalledWith(`${MOCK_BACKEND_URL}/profile`, expect.any(Object));
     });
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/onboarding');
@@ -144,7 +146,7 @@ describe('AuthWrapper', () => {
     // Default axios.get mock already provides a complete profile
     renderAuthWrapper();
     // Wait for API calls to complete
-    await waitFor(() => expect(axios.get).toHaveBeenCalledWith(`${mockApiUrl}/profile`, expect.any(Object)));
+    await waitFor(() => expect(axios.get).toHaveBeenCalledWith(`${MOCK_BACKEND_URL}/profile`, expect.any(Object)));
     expect(mockNavigate).not.toHaveBeenCalledWith('/onboarding');
     expect(mockNavigate).not.toHaveBeenCalled(); // General check
   });
@@ -156,7 +158,7 @@ describe('AuthWrapper', () => {
     
     renderAuthWrapper('/onboarding');
     
-    await waitFor(() => expect(axios.get).toHaveBeenCalledWith(`${mockApiUrl}/profile`, expect.any(Object)));
+    await waitFor(() => expect(axios.get).toHaveBeenCalledWith(`${MOCK_BACKEND_URL}/profile`, expect.any(Object)));
     expect(mockNavigate).not.toHaveBeenCalled();
   });
   
@@ -166,14 +168,14 @@ describe('AuthWrapper', () => {
 
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
-        `${mockApiUrl}/auth/save-user`,
+        `${MOCK_BACKEND_URL}/auth/save-user`,
         expect.objectContaining({ sub: 'test-user-sub' }),
         expect.any(Object)
       );
     });
     await waitFor(() => {
       expect(axios.get).toHaveBeenCalledWith(
-        `${mockApiUrl}/profile`,
+        `${MOCK_BACKEND_URL}/profile`,
         expect.objectContaining({ params: { sub: 'test-user-sub' } })
       );
     });

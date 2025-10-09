@@ -4,6 +4,7 @@ import "./GalacticActivityMap.css";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import { VITE_BACKEND_URL } from "../../utils/env";
 
 // Performance Note:
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
@@ -58,16 +59,16 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       try {
         const token = await getAccessTokenSilently({
           authorizationParams: {
-            audience: `${import.meta.env.VITE_BACKEND_URL}`,
+            audience: `${VITE_BACKEND_URL}`,
             scope: "openid profile email",
           },
           cacheMode: "off",
         });
         const config = { headers: { Authorization: `Bearer ${token}` } };
         const [tasksRes, intentionsRes, communitiesRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks`, config),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions`, config),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, config),
+          axios.get(`${VITE_BACKEND_URL}/tasks`, config),
+          axios.get(`${VITE_BACKEND_URL}/intentions`, config),
+          axios.get(`${VITE_BACKEND_URL}/communities`, config),
         ]);
         const processedData = [];
         console.log("Tasks:", tasksRes.data);

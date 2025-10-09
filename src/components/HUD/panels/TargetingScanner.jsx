@@ -4,6 +4,7 @@ import useRelevantTasks from '../../../hooks/useRelevantTasks'; // Adjust path
 import '../HUDPanel.css'; // Shared panel styles
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
+import { VITE_BACKEND_URL, VITE_FRONTEND_URL } from '../../../utils/env';
 // import './TargetingScanner.css'; // Optional: For specific TargetingScanner styles
 
 const TargetingScanner = () => {
@@ -56,7 +57,7 @@ const TargetingScanner = () => {
                     <span
                     className="task-name"
                     style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.intention_id}/${task.id}`, '_blank')}
+                    onClick={() => window.open(`${VITE_FRONTEND_URL}/visualizer/${task.intention_id}/${task.id}`, '_blank')}
                     title="View task in visualizer"
                     >
                     {task.name}
@@ -75,7 +76,7 @@ const TargetingScanner = () => {
                       try {
                         const token = await getAccessTokenSilently();
                         await axios.put(
-                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/drop`,
+                        `${VITE_BACKEND_URL}/tasks/${task.id}/drop`,
                         { userId: profile.id },
                         {
                           headers: {
@@ -101,7 +102,7 @@ const TargetingScanner = () => {
                       try {
                         const token = await getAccessTokenSilently();
                         const response = await axios.put(
-                        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}/accept`,
+                        `${VITE_BACKEND_URL}/tasks/${task.id}/accept`,
                         { userId: profile.id },
                         {
                           headers: {

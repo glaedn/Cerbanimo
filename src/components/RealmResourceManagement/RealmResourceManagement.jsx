@@ -9,6 +9,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ResourceListingForm from '../ResourceListingForm/ResourceListingForm'; // Adjust path if needed
+import { VITE_BACKEND_URL } from '../../utils/env';
 
 const RealmResourceManagement = ({ realmId }) => {
   const [realmResources, setRealmResources] = useState([]);
