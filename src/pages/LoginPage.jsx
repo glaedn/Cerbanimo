@@ -36,7 +36,7 @@ const LoginPage = () => {
               fontWeight: 'bold',
               textShadow: '0 0 10px rgba(0,0,0,0.5)'
             }}>
-              Welcome to Cerbanimo
+              Welcome to Resonera
             </Typography>
           </motion.div>
           
@@ -89,7 +89,7 @@ const LoginPage = () => {
               </Box>
               
               <Typography variant="body2" align="center" sx={{ mt: 3, opacity: 0.7 }}>
-                New to Cerbanimo? Your journey begins with a single login.
+                New to Resonera? Your journey begins with a single login.
               </Typography>
             </Paper>
           </motion.div>
@@ -100,7 +100,7 @@ const LoginPage = () => {
             transition={{ delay: 0.6, duration: 0.8 }}
           >
             <Typography variant="body2" color="white" align="center" sx={{ mt: 4 }}>
-              © 2025 Cerbanimo. Built for contributors, by contributors.
+              © 2025 Resonera. Built for contributors, by contributors.
             </Typography>
           </motion.div>
         </Box>

@@ -30,7 +30,7 @@ export default function Homepage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          ✧ CERBANIMO PORTAL ✧
+          ✧ RESONERA PORTAL ✧
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -58,7 +58,7 @@ export default function Homepage() {
       </section>
 
       <footer className="footer">
-        <p>© 2025 Cerbanimo. Manifest with intention.</p>
+        <p>© 2025 Resonera. Manifest with intention.</p>
       </footer>
     </div>
   );

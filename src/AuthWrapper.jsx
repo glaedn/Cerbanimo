@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import { VITE_BACKEND_URL } from "../utils/env";
+import { VITE_BACKEND_URL } from "./utils/env";
 
 const AuthWrapper = ({ children }) => {
   const {

@@ -25,7 +25,7 @@ const WaitingListPage = () => {
               fontWeight: 'bold',
               textShadow: '0 0 10px rgba(0,0,0,0.5)'
             }}>
-              Cerbanimo Galaxy
+              Resonera Galaxy
             </Typography>
           </motion.div>
 
@@ -50,7 +50,7 @@ const WaitingListPage = () => {
               </Typography>
 
               <Typography variant="body1" component="p" align="center" sx={{ mb: 3, color: 'white' }}>
-                Thank you for your interest in joining the Cerbanimo Galaxy! We'll email you as soon as you are granted access.
+                Thank you for your interest in joining the Resonera Galaxy! We'll email you as soon as you are granted access.
               </Typography>
             </Paper>
           </motion.div>
@@ -61,7 +61,7 @@ const WaitingListPage = () => {
             transition={{ delay: 0.6, duration: 0.8 }}
           >
             <Typography variant="body2" color="white" align="center" sx={{ mt: 4 }}>
-              © 2025 Cerbanimo. Built for contributors, by contributors.
+              © 2025 Resonera. Built for contributors, by contributors.
             </Typography>
           </motion.div>
         </Box>

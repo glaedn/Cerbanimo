@@ -183,7 +183,7 @@ const OnboardingPage = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/onboarding/initiate`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/onboarding/initiate`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -238,7 +238,7 @@ const OnboardingPage = () => {
           </Avatar>
           <Button component="label" variant="contained" sx={{ bgcolor: theme.colors.primary, '&:hover': { bgcolor: theme.colors.primaryDark } }}>
             Upload Profile Picture
-            <VisuallyHiddenInput type="file" accept="image/*" onChange={handleProfilePictureChange} />
+            <VisuallyHiddenInput data-testid="profile-picture-input" type="file" accept="image/*" onChange={handleProfilePictureChange} />
           </Button>
         </Box>
 
@@ -248,7 +248,6 @@ const OnboardingPage = () => {
           fullWidth
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          required
           InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
           inputProps={{ style: { color: theme.colors.textPrimary } }}
           sx={{ mb: 2 }}

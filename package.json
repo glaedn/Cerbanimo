@@ -1,5 +1,5 @@
 {
-  "name": "cerbanimo",
+  "name": "resonera",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -65,6 +65,7 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@google/genai": "^1.22.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
