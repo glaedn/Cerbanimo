@@ -1,10 +1,7 @@
 // services/taskGenerator.js
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AIMLAPI_KEY,
-  baseURL: process.env.AIMLAPI_BASE_URL,
-});
+const genAI = new GoogleGenAI();
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -52,7 +49,7 @@ export const generateProjectIdea = async (skills, interests) => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
 
-  const prompt = `
+  const userPrompt = `
 Context Parameters Provided:
 Skills: ${skillsString}
 Interests: ${interestsString}
@@ -63,22 +60,20 @@ Then create a descriptive project plan whose scope utilizes those skills towards
 Try to limit the scope to mostly needing only the skills the user has listed.
 Format your response as JSON with keys Name and Description.
 `;
+  const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
-    console.log("Generating project idea with prompt:", prompt);
+    console.log("Generating project idea with prompt:", userPrompt);
 
-    const completion = await openai.chat.completions.create({
-      model: "deepseek/deepseek-r1",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that generates project ideas.",
-        },
-        { role: "user", content: prompt },
-      ],
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: systemPrompt,
     });
 
-    const responseText = completion.choices[0].message.content;
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const responseText = response.text();
+
     const projectIdea = parseLLMJsonResponse(responseText);
 
     if (!projectIdea.Name || !projectIdea.Description) {
@@ -110,9 +105,7 @@ Related Skill ID: ${task.skill_id || "None"}`;
     })
     .join("\n\n");
 
-  const prompt = `
-You are an expert project manager and task engineer. Your job is to break complex tasks into smaller, manageable subtasks that can be independently assigned.
-
+  const userPrompt = `
 For each task below, return a **JSON array** of objects like this format:
 [
   {
@@ -568,7 +561,7 @@ json
   { "id": 432, "name": "Water Quality Testing" },
   { "id": 433, "name": "Lab Techniques" },
   { "id": 434, "name": "Microscopy" },
-  { "id": 435, "name": "PCR Testing" },
+  { "id": 535, "name": "PCR Testing" },
   { "id": 436, "name": "Fieldwork" },
   { "id": 437, "name": "Archaeological Excavation" },
   { "id": 438, "name": "Ethnography" },
@@ -620,18 +613,15 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
+  const systemPrompt = "You are an expert project manager and task engineer.";
 
-  const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-r1",
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert project manager and task engineer.",
-      },
-      { role: "user", content: prompt },
-    ],
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    systemInstruction: systemPrompt,
   });
-  const text = completion.choices[0].message.content;
+  const result = await model.generateContent(userPrompt);
+  const response = await result.response;
+  const text = response.text();
   console.log("LLM response:", text);
   // Attempt to safely parse JSON from LLM output
   try {
@@ -652,8 +642,8 @@ export const autoGenerateTasks = async (
   tags,
   creator_id
 ) => {
-  const prompt = `
-You are an expert Project Manager AI. Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+  const userPrompt = `
+Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
 
 Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
@@ -1095,7 +1085,7 @@ json
   { "id": 432, "name": "Water Quality Testing" },
   { "id": 433, "name": "Lab Techniques" },
   { "id": 434, "name": "Microscopy" },
-  { "id": 435, "name": "PCR Testing" },
+  { "id": 535, "name": "PCR Testing" },
   { "id": 436, "name": "Fieldwork" },
   { "id": 437, "name": "Archaeological Excavation" },
   { "id": 438, "name": "Ethnography" },
@@ -1147,15 +1137,15 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
+  const systemPrompt = "You are an expert Project Manager AI.";
 
-  const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-r1",
-    messages: [
-      { role: "system", content: "You are an expert Project Manager AI." },
-      { role: "user", content: prompt },
-    ],
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    systemInstruction: systemPrompt,
   });
-  const text = completion.choices[0].message.content;
+  const result = await model.generateContent(userPrompt);
+  const response = await result.response;
+  const text = response.text();
   console.log("LLM response (generateSubtasks):", text);
 
   try {
