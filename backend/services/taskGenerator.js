@@ -1,7 +1,7 @@
 // services/taskGenerator.js
 import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -50,42 +50,35 @@ export const generateProjectIdea = async (skills, interests) => {
   const interestsString = JSON.stringify(interests);
 
   const userPrompt = `
-Context Parameters Provided:
-Skills: ${skillsString}
-Interests: ${interestsString}
+    Context Parameters Provided:
+    Skills: ${skillsString}
+    Interests: ${interestsString}
 
-Instructions for AI Generation:
-Using the provided skills and interests, generate a unique project name that reflects this synergy.
-Then create a descriptive project plan whose scope utilizes those skills towards advancing those interests as much as possible.
-Try to limit the scope to mostly needing only the skills the user has listed.
-Format your response as JSON with keys Name and Description.
-`;
+    Instructions for AI Generation:
+    Using the provided skills and interests, generate a unique project name that reflects this synergy.
+    Then create a descriptive project plan whose scope utilizes those skills towards advancing those interests as much as possible.
+    Try to limit the scope to mostly needing only the skills the user has listed.
+    Format your response as JSON with keys Name and Description.
+  `;
+
   const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
-    console.log("Generating project idea with prompt:", userPrompt);
-
-    const model = genAI.getGenerativeModel({
+    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
+    const result = await genAI.models.generateContent({
       model: "gemini-2.5-flash",
-      systemInstruction: systemPrompt,
+      // Pass the system instruction in the 'config' object
+      config: { systemInstruction: systemPrompt }, 
+      contents: userPrompt, // Pass the prompt content here
     });
 
-    const result = await model.generateContent(userPrompt);
-    const response = await result.response;
-    const responseText = response.text();
+    // The text property is directly on the result object now
+    const responseText = result.text;
 
-    const projectIdea = parseLLMJsonResponse(responseText);
-
-    if (!projectIdea.Name || !projectIdea.Description) {
-      throw new Error(
-        "LLM response missing Name or Description for project idea."
-      );
-    }
-
-    return projectIdea;
+    return parseLLMJsonResponse(responseText);
   } catch (error) {
-    console.error("Error generating project idea:", error);
-    throw new Error(`Failed to generate project idea: ${error.message}`);
+    console.error("Error generating subtasks:", error);
+    throw new Error(`Failed to generate subtasks: ${error.message}`);
   }
 };
 
@@ -613,27 +606,31 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
-  const systemPrompt = "You are an expert project manager and task engineer.";
+ const systemPrompt = "You are an expert project manager and task engineer.";
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: systemPrompt,
+ try {
+    // 🎯 NEW, CORRECT PATTERN: Use genAI.models.generateContent directly.
+    // System instructions are passed inside the 'config' object.
+ const result = await genAI.models.generateContent({
+     model: "gemini-2.5-flash",
+   config: { systemInstruction: systemPrompt }, // Pass system prompt here
+   contents: userPrompt, // Pass the user prompt as contents
   });
-  const result = await model.generateContent(userPrompt);
-  const response = await result.response;
-  const text = response.text();
+
+    // The text is now retrieved directly from the 'result' object.
+  const text = result.text;
   console.log("LLM response:", text);
+
   // Attempt to safely parse JSON from LLM output
-  try {
-    const tasks = parseLLMJsonResponse(text);
-    if (!Array.isArray(tasks)) {
-      throw new Error("LLM response is not a JSON array.");
-    }
-    return tasks;
-  } catch (err) {
-    console.error("Failed to parse LLM response for subtasks:", text);
-    throw new Error("Failed to parse tasks from LLM output for subtasks");
+  const tasks = parseLLMJsonResponse(text);
+  if (!Array.isArray(tasks)) {
+   throw new Error("LLM response is not a JSON array.");
   }
+  return tasks;
+ } catch (err) {
+  console.error("Failed to parse LLM response for subtasks:", text);
+  throw new Error("Failed to parse tasks from LLM output for subtasks");
+ }
 };
 
 export const autoGenerateTasks = async (
@@ -1139,30 +1136,21 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 `;
   const systemPrompt = "You are an expert Project Manager AI.";
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: systemPrompt,
-  });
-  const result = await model.generateContent(userPrompt);
-  const response = await result.response;
-  const text = response.text();
-  console.log("LLM response (generateSubtasks):", text);
-
   try {
-    const parsedData = parseLLMJsonResponse(text);
-    if (
-      !parsedData.projects ||
-      !parsedData.tasks ||
-      !Array.isArray(parsedData.projects) ||
-      !Array.isArray(parsedData.tasks)
-    ) {
-      throw new Error("LLM response is not in the expected format.");
-    }
-    return parsedData;
-  } catch (err) {
-    console.error("Failed to parse LLM response for autoGenerateTasks:", text);
-    throw new Error(
-      "Failed to parse subtasks from LLM output for autoGenerateTasks"
-    );
+    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      // Pass the system instruction in the 'config' object
+      config: { systemInstruction: systemPrompt }, 
+      contents: userPrompt, // Pass the prompt content here
+    });
+
+    // The text property is directly on the result object now
+    const responseText = result.text;
+
+    return parseLLMJsonResponse(responseText);
+  } catch (error) {
+    console.error("Error generating subtasks:", error);
+    throw new Error(`Failed to generate subtasks: ${error.message}`);
   }
 };
