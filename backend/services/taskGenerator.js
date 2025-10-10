@@ -1,10 +1,7 @@
 // services/taskGenerator.js
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AIMLAPI_KEY,
-  baseURL: process.env.AIMLAPI_BASE_URL,
-});
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -34,8 +31,8 @@ export const parseLLMJsonResponse = (text) => {
 
   const jsonString = text.slice(jsonStart, jsonEnd + 1);
 
-  // Clean the string of any control characters before parsing
-  const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+  // Clean the string of any non-printable characters, but preserve whitespace
+  const cleanJsonString = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
 
   return JSON.parse(cleanJsonString);
 };
@@ -52,45 +49,36 @@ export const generateProjectIdea = async (skills, interests) => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
 
-  const prompt = `
-Context Parameters Provided:
-Skills: ${skillsString}
-Interests: ${interestsString}
+  const userPrompt = `
+    Context Parameters Provided:
+    Skills: ${skillsString}
+    Interests: ${interestsString}
 
-Instructions for AI Generation:
-Using the provided skills and interests, generate a unique project name that reflects this synergy.
-Then create a descriptive project plan whose scope utilizes those skills towards advancing those interests as much as possible.
-Try to limit the scope to mostly needing only the skills the user has listed.
-Format your response as JSON with keys Name and Description.
-`;
+    Instructions for AI Generation:
+    Using the provided skills and interests, generate a unique project name that reflects this synergy.
+    Then create a descriptive project plan whose scope utilizes those skills towards advancing those interests as much as possible.
+    Try to limit the scope to mostly needing only the skills the user has listed.
+    Format your response as JSON with keys Name and Description.
+  `;
+
+  const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
-    console.log("Generating project idea with prompt:", prompt);
-
-    const completion = await openai.chat.completions.create({
-      model: "deepseek/deepseek-r1",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that generates project ideas.",
-        },
-        { role: "user", content: prompt },
-      ],
+    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      // Pass the system instruction in the 'config' object
+      config: { systemInstruction: systemPrompt }, 
+      contents: userPrompt, // Pass the prompt content here
     });
 
-    const responseText = completion.choices[0].message.content;
-    const projectIdea = parseLLMJsonResponse(responseText);
+    // The text property is directly on the result object now
+    const responseText = result.text;
 
-    if (!projectIdea.Name || !projectIdea.Description) {
-      throw new Error(
-        "LLM response missing Name or Description for project idea."
-      );
-    }
-
-    return projectIdea;
+    return parseLLMJsonResponse(responseText);
   } catch (error) {
-    console.error("Error generating project idea:", error);
-    throw new Error(`Failed to generate project idea: ${error.message}`);
+    console.error("Error generating subtasks:", error);
+    throw new Error(`Failed to generate subtasks: ${error.message}`);
   }
 };
 
@@ -110,9 +98,7 @@ Related Skill ID: ${task.skill_id || "None"}`;
     })
     .join("\n\n");
 
-  const prompt = `
-You are an expert project manager and task engineer. Your job is to break complex tasks into smaller, manageable subtasks that can be independently assigned.
-
+  const userPrompt = `
 For each task below, return a **JSON array** of objects like this format:
 [
   {
@@ -620,30 +606,31 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
+ const systemPrompt = "You are an expert project manager and task engineer.";
 
-  const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-r1",
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert project manager and task engineer.",
-      },
-      { role: "user", content: prompt },
-    ],
+ try {
+    // 🎯 NEW, CORRECT PATTERN: Use genAI.models.generateContent directly.
+    // System instructions are passed inside the 'config' object.
+ const result = await genAI.models.generateContent({
+     model: "gemini-2.5-flash",
+   config: { systemInstruction: systemPrompt }, // Pass system prompt here
+   contents: userPrompt, // Pass the user prompt as contents
   });
-  const text = completion.choices[0].message.content;
+
+    // The text is now retrieved directly from the 'result' object.
+  const text = result.text;
   console.log("LLM response:", text);
+
   // Attempt to safely parse JSON from LLM output
-  try {
-    const tasks = parseLLMJsonResponse(text);
-    if (!Array.isArray(tasks)) {
-      throw new Error("LLM response is not a JSON array.");
-    }
-    return tasks;
-  } catch (err) {
-    console.error("Failed to parse LLM response for subtasks:", text);
-    throw new Error("Failed to parse tasks from LLM output for subtasks");
+  const tasks = parseLLMJsonResponse(text);
+  if (!Array.isArray(tasks)) {
+   throw new Error("LLM response is not a JSON array.");
   }
+  return tasks;
+ } catch (err) {
+  console.error("Failed to parse LLM response for subtasks:", text);
+  throw new Error("Failed to parse tasks from LLM output for subtasks");
+ }
 };
 
 export const autoGenerateTasks = async (
@@ -652,8 +639,8 @@ export const autoGenerateTasks = async (
   tags,
   creator_id
 ) => {
-  const prompt = `
-You are an expert Project Manager AI. Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+  const userPrompt = `
+Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
 
 Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
@@ -1147,32 +1134,23 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
 `;
-
-  const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-r1",
-    messages: [
-      { role: "system", content: "You are an expert Project Manager AI." },
-      { role: "user", content: prompt },
-    ],
-  });
-  const text = completion.choices[0].message.content;
-  console.log("LLM response (generateSubtasks):", text);
+  const systemPrompt = "You are an expert Project Manager AI.";
 
   try {
-    const parsedData = parseLLMJsonResponse(text);
-    if (
-      !parsedData.projects ||
-      !parsedData.tasks ||
-      !Array.isArray(parsedData.projects) ||
-      !Array.isArray(parsedData.tasks)
-    ) {
-      throw new Error("LLM response is not in the expected format.");
-    }
-    return parsedData;
-  } catch (err) {
-    console.error("Failed to parse LLM response for autoGenerateTasks:", text);
-    throw new Error(
-      "Failed to parse subtasks from LLM output for autoGenerateTasks"
-    );
+    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      // Pass the system instruction in the 'config' object
+      config: { systemInstruction: systemPrompt }, 
+      contents: userPrompt, // Pass the prompt content here
+    });
+
+    // The text property is directly on the result object now
+    const responseText = result.text;
+
+    return parseLLMJsonResponse(responseText);
+  } catch (error) {
+    console.error("Error generating subtasks:", error);
+    throw new Error(`Failed to generate subtasks: ${error.message}`);
   }
 };

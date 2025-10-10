@@ -111,13 +111,13 @@ router.get('/userId', async (req, res) => {
 // Endpoint to fetch user profile
 router.get('/', async (req, res) => {
   try {
-    const userId = req.auth.payload.sub; // Access user ID from the decoded token
+    const userId = req.auth?.payload?.sub || req.query.sub;
     if (!userId) {
-      return res.status(400).json({ message: 'User ID missing in token' });
+      return res.status(400).json({ message: 'User ID missing in token or query' });
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, alpha, contact_links
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -128,7 +128,7 @@ router.get('/', async (req, res) => {
     }
 
     const profile = result.rows[0];
-    
+
     profile.skills = typeof profile.skills === 'string' && profile.skills.trim() !== '' 
       ? JSON.parse(profile.skills) 
       : profile.skills || [];
@@ -137,29 +137,23 @@ router.get('/', async (req, res) => {
       : profile.interests || [];
     profile.contact_links = profile.contact_links || [];
 
-    const skillsResult = await pool.query('SELECT name FROM skills');
-    const interestsResult = await pool.query('SELECT name FROM interests');
-
-    const skillsPool = skillsResult.rows.map((row) => row.name);
-    const interestsPool = interestsResult.rows.map((row) => row.name);
-
     if (profile.profile_picture) {
       try {
         const signedUrl = await generatePrivateDownloadUrl(profile.profile_picture);
         profile.profile_picture = signedUrl;
       } catch (err) {
         console.error('Error generating signed URL for profile picture:', err);
-        // Decide how to handle: send profile with null/original filename, or error out?
-        // For now, let's send null to prevent broken image links if URL generation fails.
-        profile.profile_picture = null; 
+        profile.profile_picture = null;
       }
     }
+
     res.status(200).json(profile);
   } catch (err) {
     console.error('Error fetching profile:', err);
     res.status(500).json({ message: 'Failed to fetch profile' });
   }
 });
+
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
