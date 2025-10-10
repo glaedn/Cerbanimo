@@ -31,8 +31,8 @@ export const parseLLMJsonResponse = (text) => {
 
   const jsonString = text.slice(jsonStart, jsonEnd + 1);
 
-  // Clean the string of any control characters before parsing
-  const cleanJsonString = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+  // Clean the string of any non-printable characters, but preserve whitespace
+  const cleanJsonString = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
 
   return JSON.parse(cleanJsonString);
 };
@@ -561,7 +561,7 @@ json
   { "id": 432, "name": "Water Quality Testing" },
   { "id": 433, "name": "Lab Techniques" },
   { "id": 434, "name": "Microscopy" },
-  { "id": 535, "name": "PCR Testing" },
+  { "id": 435, "name": "PCR Testing" },
   { "id": 436, "name": "Fieldwork" },
   { "id": 437, "name": "Archaeological Excavation" },
   { "id": 438, "name": "Ethnography" },
@@ -1085,7 +1085,7 @@ json
   { "id": 432, "name": "Water Quality Testing" },
   { "id": 433, "name": "Lab Techniques" },
   { "id": 434, "name": "Microscopy" },
-  { "id": 535, "name": "PCR Testing" },
+  { "id": 435, "name": "PCR Testing" },
   { "id": 436, "name": "Fieldwork" },
   { "id": 437, "name": "Archaeological Excavation" },
   { "id": 438, "name": "Ethnography" },
