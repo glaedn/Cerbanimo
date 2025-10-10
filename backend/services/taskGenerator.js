@@ -1,7 +1,7 @@
 // services/taskGenerator.js
 import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenAI();
+const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
