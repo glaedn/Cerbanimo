@@ -13,13 +13,13 @@ const getNotificationIcon = (type) => {
   if (!type) type = 'default'; // Handle undefined type
 
   switch (type.toLowerCase()) { // Use toLowerCase for case-insensitive matching
-    case 'task-approved':
+    case 'petal-approved':
       return <TaskAltIcon style={{ marginRight: '8px' }} />;
-    case 'task-rejected':
+    case 'petal-rejected':
       return <CancelIcon style={{ marginRight: '8px' }} />;
-    case 'task-submitted': // If you anticipate this type
+    case 'petal-submitted': // If you anticipate this type
       return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
-    case 'task': // For generic tasks
+    case 'petal': // For generic petals
       return <ListAltIcon style={{ marginRight: '8px' }} />;
     default:
       return <InfoIcon style={{ marginRight: '8px' }} />;
@@ -66,9 +66,9 @@ const CommsLog = () => {
                 return (
                   <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
                     {icon} {/* Render the icon */}
-                    {notification.intentionId && notification.taskId ? (
+                    {notification.intentionId && notification.petalId ? (
                       <Link 
-                        to={`/visualizer/${notification.intentionId}/${notification.taskId}`}
+                        to={`/visualizer/${notification.intentionId}/${notification.petalId}`}
                         style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
                       >
                         {notification.messageText}

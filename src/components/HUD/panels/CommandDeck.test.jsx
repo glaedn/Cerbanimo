@@ -62,14 +62,14 @@ describe('CommandDeck', () => {
   test('renders intention list when intentions are available', () => {
     useUserIntentions.mockReturnValue({
       intentions: [
-        { id: 'i1', name: 'Intention 1', taskCount: 5, activeTasks: 2, completedTasks: 3, progress: 60, token_pool: 100, used_tokens: 20, reserved_tokens: 30 },
+        { id: 'i1', name: 'Intention 1', petalCount: 5, activePetals: 2, completedPetals: 3, progress: 60, token_pool: 100, used_tokens: 20, reserved_tokens: 30 },
       ],
       loading: false, 
       error: null 
     });
     renderWithRouter(<CommandDeck />);
     expect(screen.getByText('Intention 1')).toBeInTheDocument();
-    expect(screen.getByText(/Tasks: 5/)).toBeInTheDocument();
+    expect(screen.getByText(/Petals: 5/)).toBeInTheDocument();
   });
 
   test('renders "No intentions currently managed." when no intentions are available', () => {

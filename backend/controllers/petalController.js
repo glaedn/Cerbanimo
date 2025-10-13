@@ -16,6 +16,102 @@ const getAllPetals = async () => {
   return result.rows;
 };
 
+const finalizePetal = async (petalId, client, io) => {
+    // This function will handle the final steps after PM approval.
+    // It's a subset of the original approvePetal logic.
+
+    const petalQuery = `
+      SELECT t.reward_tokens,
+             t.assigned_user_ids,
+             t.project_id,
+             p.community_id,
+             p.creator_id,
+             t.reflection,
+             t.proof_of_work_links,
+             t.skill_id,
+             t.submitted_by
+      FROM petals t
+      JOIN projects p ON t.project_id = p.id
+      WHERE t.id = $1;
+    `;
+    const petalResult = await client.query(petalQuery, [petalId]);
+    if (petalResult.rows.length === 0) {
+        return { error: "Petal not found for finalization", status: 404 };
+    }
+    const petal = petalResult.rows[0];
+
+    // Step 1: Reward project creator
+    if (petal.creator_id) {
+      await client.query(
+        `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
+        [petal.creator_id]
+      );
+      const creatorLedgerUpdates = [
+        { type: "project", id: petal.project_id, tokens: 10, creationDate: new Date() },
+      ];
+      if (petal.community_id) {
+        creatorLedgerUpdates.push({ type: "community", id: petal.community_id, tokens: 10, creationDate: new Date() });
+      }
+      await client.query(
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        [creatorLedgerUpdates.map(JSON.stringify), petal.creator_id]
+      );
+    }
+
+    // Step 2: Update project token stats
+    await client.query(
+      `
+      UPDATE projects SET used_tokens = used_tokens + $1,
+        reserved_tokens = GREATEST(0, reserved_tokens - $1)
+      WHERE id = $2
+    `,
+      [petal.reward_tokens, petal.project_id]
+    );
+
+    // Step 3: Notify users
+    const notificationMessage = `Your unfurled petal was approved by the project manager!`;
+    if (petal.assigned_user_ids && petal.assigned_user_ids.length > 0) {
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: petal.project_id,
+        petalId: petalId,
+      });
+      await client.query(
+          `INSERT INTO notifications (user_id, message, type, created_at, read)
+          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
+          [petal.assigned_user_ids, notificationDetails, "petal"]
+      );
+      if (io) {
+        for (const userId of petal.assigned_user_ids) {
+            io.to(`user_${userId}`).emit("notification", {
+                id: Date.now(),
+                type: 'petal-approved',
+                message: notificationMessage,
+                projectId: petal.project_id,
+                petalId: petalId,
+                read: false,
+                timestamp: new Date().toISOString(),
+            });
+        }
+      }
+    }
+
+    // Step 4: Create story node (this should happen outside the transaction)
+    // We'll return the necessary data for the caller to handle it.
+    const tagsQuery = await client.query(`SELECT name FROM skills WHERE id = $1`, [petal.skill_id]);
+    const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
+
+    const storyNodeData = {
+        petal_id: petalId,
+        user_id: petal.submitted_by,
+        reflection: petal.reflection || "",
+        media_urls: petal.proof_of_work_links || [],
+        tags: tags,
+    };
+
+    return { success: true, petal, storyNodeData };
+}
+
 const getRelevantPetals = async (userSkills) => {
   if (userSkills.length === 0) {
     throw new Error("No skills provided");

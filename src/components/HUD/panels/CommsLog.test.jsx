@@ -35,8 +35,8 @@ describe('CommsLog', () => {
 
   test('renders a list of notifications', () => {
     const mockNotifications = [
-      { id: 1, type: 'task-approved', messageText: 'Petal "Design UI" was approved.' },
-      { id: 2, type: 'task-rejected', messageText: 'Petal "Backend Logic" was rejected.' },
+      { id: 1, type: 'petal-approved', messageText: 'Petal "Design UI" was approved.' },
+      { id: 2, type: 'petal-rejected', messageText: 'Petal "Backend Logic" was rejected.' },
     ];
     useNotifications.mockReturnValue({ notifications: mockNotifications });
     renderWithRouter(<CommsLog />);
@@ -44,17 +44,17 @@ describe('CommsLog', () => {
     expect(screen.getByText('Petal "Backend Logic" was rejected.')).toBeInTheDocument();
   });
 
-  test('renders notifications as links if they have intentionId and taskId', () => {
+  test('renders notifications as links if they have intentionId and petalId', () => {
     const mockNotifications = [
-      { id: 1, type: 'task-approved', messageText: 'Clickable Notification', intentionId: 'intention-123', taskId: 'task-456' },
-      { id: 2, type: 'info', messageText: 'Non-clickable Notification', intentionId: null, taskId: null },
+      { id: 1, type: 'petal-approved', messageText: 'Clickable Notification', intentionId: 'intention-123', petalId: 'petal-456' },
+      { id: 2, type: 'info', messageText: 'Non-clickable Notification', intentionId: null, petalId: null },
     ];
     useNotifications.mockReturnValue({ notifications: mockNotifications });
     renderWithRouter(<CommsLog />);
     
     const clickableElement = screen.getByText('Clickable Notification');
     expect(clickableElement.closest('a')).toBeInTheDocument();
-    expect(clickableElement.closest('a')).toHaveAttribute('href', '/visualizer/intention-123/task-456');
+    expect(clickableElement.closest('a')).toHaveAttribute('href', '/visualizer/intention-123/petal-456');
 
     const nonClickableElement = screen.getByText('Non-clickable Notification');
     expect(nonClickableElement.closest('a')).toBeNull();

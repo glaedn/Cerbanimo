@@ -217,8 +217,8 @@
     background-color: #4DABF7;
 }
 
-/* Task Popup Overlay */
-.task-popup-overlay { /* Added for clarity */
+/* Petal Popup Overlay */
+.petal-popup-overlay { /* Added for clarity */
     position: fixed;
     top: 0;
     left: 0;
@@ -231,9 +231,9 @@
     z-index: 1000; /* Ensure it's high enough */
 }
 
-/* Task Popup */
-.task-popup {
-    position: fixed; /* This might be redundant if task-popup-overlay handles positioning */
+/* Petal Popup */
+.petal-popup {
+    position: fixed; /* This might be redundant if petal-popup-overlay handles positioning */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -255,7 +255,7 @@
     margin-bottom: 20px;
 }
 
-.ptask-list {
+.petal-list {
     flex-wrap: wrap;
     justify-content: center;
     overflow-y: auto;
@@ -264,27 +264,27 @@
     padding: 10px;
 }
 
-.ptask-list::-webkit-scrollbar {
+.petal-list::-webkit-scrollbar {
     width: 4px;
 }
 
-.ptask-list::-webkit-scrollbar-track {
+.petal-list::-webkit-scrollbar-track {
     background: rgba(0, 243, 255, 0.2); /* Updated */
     border-radius: 5px;
 }
 
-.ptask-list::-webkit-scrollbar-thumb {
+.petal-list::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #00F3FF, #4DABF7); /* Updated */
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* Updated */
 }
 
-.ptask-list::-webkit-scrollbar-thumb:hover {
+.petal-list::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
 }
 
-/* Task Card (inside popup) - this selector is identical to the main task card, be careful */
-.task-popup .task-card { /* Made selector more specific */
+/* Petal Card (inside popup) - this selector is identical to the main petal card, be careful */
+.petal-popup .petal-card { /* Made selector more specific */
     margin: 10px 0;
     padding: 10px;
     border-radius: 8px;
@@ -294,30 +294,30 @@
     box-shadow: 0 0 8px rgba(0, 243, 255, 0.4); /* Updated */
 }
 
-/* Styling for the new Typography elements within the task card */
-.task-popup .task-card .MuiTypography-body2 { /* Targets MUI Typography with body2 variant */
+/* Styling for the new Typography elements within the petal card */
+.petal-popup .petal-card .MuiTypography-body2 { /* Targets MUI Typography with body2 variant */
     margin-bottom: 8px; /* Add some space below each info item */
     font-size: 0.9rem; /* Slightly smaller font for details */
 }
 
-/* Ensure the task description also has a consistent bottom margin if not already handled by sx prop */
-.task-popup .task-card .MuiTypography-body2:last-of-type {
+/* Ensure the petal description also has a consistent bottom margin if not already handled by sx prop */
+.petal-popup .petal-card .MuiTypography-body2:last-of-type {
     margin-bottom: 12px; /* More space before the buttons */
 }
 
-/* Container for task card buttons */
-.task-popup .task-card > .MuiButton-root { /* Direct MUI Button children */
+/* Container for petal card buttons */
+.petal-popup .petal-card > .MuiButton-root { /* Direct MUI Button children */
     margin-top: 8px; /* Add some space above the buttons if they wrap or are stacked */
 }
 
-/* Styling for the "View Task" button (MUI outlined) */
-.task-popup .task-card .MuiButton-outlined {
+/* Styling for the "View Petal" button (MUI outlined) */
+.petal-popup .petal-card .MuiButton-outlined {
     background-color: transparent;
     border-color: #00F3FF; /* Neon blue border */
     color: #00F3FF; /* Neon blue text */
 }
 
-.task-popup .task-card .MuiButton-outlined:hover {
+.petal-popup .petal-card .MuiButton-outlined:hover {
     background-color: rgba(0, 243, 255, 0.1); /* Slight neon blue background on hover */
     border-color: #4DABF7;
     color: #4DABF7;

@@ -59,7 +59,7 @@ const CommandDeck = () => {
                 <br />
                 <span className="intention-details">
 
-                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
+                  Petals: {p.petalCount} | Active: {p.activePetals} | Completed: {p.completedPetals} <br/> credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
 
                 </span>
 
@@ -81,7 +81,7 @@ const CommandDeck = () => {
 
               </div>
 
-              {p.errorFetchingTasks && <span className="error-text"> (Error loading intention tasks)</span>}
+              {p.errorFetchingPetals && <span className="error-text"> (Error loading intention petals)</span>}
 
             </li>
 

@@ -74,15 +74,15 @@
     font-size: 1rem;
 }
 
-/* Tasks Section */
-.tasks-section {
+/* Petals Section */
+.petals-section {
     width: 100%;
     margin-top: 20px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-.tasks-title {
+.petals-title {
     font-size: 1.8rem;
     font-weight: bold;
     color: #00F3FF;
@@ -90,8 +90,8 @@
     text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
 }
 
-/* Add Task Button */
-.add-task-button {
+/* Add Petal Button */
+.add-petal-button {
     background-color: #00F3FF;
     color: #000000;
     font-size: 2rem;
@@ -107,13 +107,13 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
 }
 
-.add-task-button:hover {
+.add-petal-button:hover {
     background-color: #4DABF7;
     text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text, consider removing or adjusting */
 }
 
-/* Task List */
-.tasks-list {
+/* Petal List */
+.petals-list {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
@@ -123,26 +123,26 @@
 }
 
 /* Custom Scrollbar */
-.tasks-section::-webkit-scrollbar {
+.petals-section::-webkit-scrollbar {
     width: 10px;
 }
 
-.tasks-section::-webkit-scrollbar-track {
+.petals-section::-webkit-scrollbar-track {
     background: rgba(0, 243, 255, 0.2);
     border-radius: 5px;
 }
 
-.tasks-section::-webkit-scrollbar-thumb {
+.petals-section::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #00F3FF, #4DABF7);
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
 }
 
-.tasks-section::-webkit-scrollbar-thumb:hover {
+.petals-section::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency with other scrollbars */
 }
 
-.task-card {
+.petal-card {
     background-color: rgba(28, 28, 30, 0.7);
     border-radius: 10px;
     padding: 15px;
@@ -152,12 +152,12 @@
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
-.task-card:hover {
+.petal-card:hover {
     transform: scale(1.02);
     background: rgba(0, 243, 255, 0.1); /* Updated hover background */
 }
 
-.task-card h3 {
+.petal-card h3 {
     font-size: 1.2rem;
     font-weight: bold;
     color: #00F3FF;
@@ -192,18 +192,18 @@
   box-shadow: 0 0 10px rgba(0, 243, 255, 0.3); /* Updated shadow color */
 }
 
-/* Task Card Description */
-.task-card p {
+/* Petal Card Description */
+.petal-card p {
     font-size: 1rem;
     color: #CCCCCC;
 }
 
-/* Task Card Skill */
-.task-card p strong {
+/* Petal Card Skill */
+.petal-card p strong {
     color: #00F3FF;
 }
 
-.accept-task-button {
+.accept-petal-button {
     background-color: rgba(0, 243, 255, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -213,20 +213,20 @@
     transition: background-color 0.3s ease;
   }
   
-  .accept-task-button:disabled {
+  .accept-petal-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .accept-task-button.drop-task-button {
+  .accept-petal-button.drop-petal-button {
     background-color: rgba(255, 65, 54, 0.8);
     color: #FFFFFF;
   }
-  .accept-task-button.drop-task-button:hover {
+  .accept-petal-button.drop-petal-button:hover {
     background-color: rgba(255, 100, 80, 0.9);
   }
   
-  .edit-task-button {
+  .edit-petal-button {
     background-color: rgba(77, 171, 247, 0.8);
     color: #FFFFFF;
     padding: 5px 10px;
@@ -235,16 +235,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .edit-task-button:hover {
+  .edit-petal-button:hover {
     background-color: rgba(100, 190, 255, 0.9);
   }
   
-  .edit-task-button:disabled {
+  .edit-petal-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
   
-  .submit-task-button {
+  .submit-petal-button {
     background-color: rgba(0, 215, 135, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -253,16 +253,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .submit-task-button:hover {
+  .submit-petal-button:hover {
     background-color: rgba(50, 235, 155, 0.9);
   }
   
-  .submit-task-button:disabled {
+  .submit-petal-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .reject-task-button {
+  .reject-petal-button {
     background-color: rgba(255, 92, 162, 0.8);
     color: #FFFFFF;
     padding: 5px 10px;
@@ -271,16 +271,16 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .reject-task-button:hover {
+  .reject-petal-button:hover {
     background-color: rgba(255, 120, 180, 0.9);
   }
   
-  .reject-task-button:disabled {
+  .reject-petal-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
 
-  .approve-task-button {
+  .approve-petal-button {
     background-color: rgba(0, 215, 135, 0.8);
     color: #000000;
     padding: 5px 10px;
@@ -289,18 +289,18 @@
     cursor: pointer;
     transition: background-color 0.3s ease;
   }
-  .approve-task-button:hover {
+  .approve-petal-button:hover {
     background-color: rgba(50, 235, 155, 0.9);
   }
   
-  .approve-task-button:disabled {
+  .approve-petal-button:disabled {
     background-color: gray;
     cursor: not-allowed;
   }
   
 
-/* Task Popup */
-.task-popup-overlay {
+/* Petal Popup */
+.petal-popup-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -313,7 +313,7 @@
     z-index: 100;
 }
 
-.task-popup {
+.petal-popup {
     background: rgba(28, 28, 30, 0.95);
     padding: 20px;
     border-radius: 10px;
@@ -322,14 +322,14 @@
     color: white;
 }
 
-.task-popup h2 {
+.petal-popup h2 {
     font-size: 1.5rem;
     font-weight: bold;
     color: #00F3FF;
     margin-bottom: 15px;
 }
 
-.task-popup input, .task-popup select, .task-popup textarea {
+.petal-popup input, .petal-popup select, .petal-popup textarea {
     width: 90%;
     padding: 10px;
     margin-bottom: 10px;
@@ -340,7 +340,7 @@
     font-size: 1rem;
 }
 
-.task-popup input[type="checkbox"] {
+.petal-popup input[type="checkbox"] {
     margin-right: 5px;
 }
 
@@ -355,7 +355,7 @@
   }
   
 /* Buttons in Popup */
-.task-popup button {
+.petal-popup button {
     background-color: #00F3FF;
     color: #000000;
     font-size: 1rem;
@@ -367,7 +367,7 @@
     transition: 0.3s;
 }
 
-.task-popup button:hover {
+.petal-popup button:hover {
     background-color: #4DABF7;
     text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text */
 }
@@ -474,19 +474,19 @@
     width: 60px;
   }
 
-  .task-status {
+  .petal-status {
     padding: 4px 8px;
     border-radius: 4px;
     display: inline-block;
     font-weight: bold;
   }
   
-  .task-status.active {
+  .petal-status.active {
     background-color: #4caf50;
     color: white;
   }
 
-  .task-status.inactive {
+  .petal-status.inactive {
     background-color: #f44336;
     color: white;
   }

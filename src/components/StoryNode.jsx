@@ -23,7 +23,7 @@ const badges = ['Mentor', 'Innovator', 'Team Hero', 'Quantum Thinker'];
 const emojiOptions = ['👍', '💡', '🚀', '🌟'];
 
 const StoryNode = ({
-  task_name,
+  petal_name,
   intention_name,
   reflection,
   tags,
@@ -61,7 +61,7 @@ const StoryNode = ({
     <Card className="story-node-card" variant="outlined">
       <CardContent>
         <Typography variant="h6" className="story-node-header-label glow-text">
-          {task_name}
+          {petal_name}
         </Typography>
         <Typography variant="subtitle2" className="story-node-subheader">
           from intention: {intention_name}

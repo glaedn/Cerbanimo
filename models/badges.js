@@ -7,7 +7,7 @@ const createBadgesTable = async () => {
       name VARCHAR(255) UNIQUE NOT NULL,
       description TEXT NOT NULL,
       icon TEXT NOT NULL, -- Path to the badge image
-      criteria_details JSONB NULL, -- Optional: For structured criteria like { type: 'task_completion', count: 5, project_id: 1 }
+      criteria_details JSONB NULL, -- Optional: For structured criteria like { type: 'petal_completion', count: 5, project_id: 1 }
       category VARCHAR(100) NULL, -- Optional: e.g., 'Completion', 'Skill', 'Event', 'Community'
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

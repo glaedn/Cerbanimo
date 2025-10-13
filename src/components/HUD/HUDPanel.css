@@ -84,19 +84,19 @@
   background-color: rgba(0, 243, 255, 0.1); /* Faint primary color highlight */
 }
 
-.task-actions {
+.petal-actions {
   margin-top: 8px;
   display: flex;
   gap: 8px;
 }
 
-.task-actions button {
+.petal-actions button {
   margin-right: 0;
   font-size: 0.8em;
   padding: 3px 7px;
 }
 
-.task-item.urgent-task {
+.petal-item.urgent-petal {
   animation: pulseHighlight 1.5s infinite;
   border-radius: 4px;
 }
@@ -259,7 +259,7 @@
   }
 
   .hud-panel button, 
-  .task-actions button {
+  .petal-actions button {
     padding: 8px 10px;
     font-size: 0.95em;
   }

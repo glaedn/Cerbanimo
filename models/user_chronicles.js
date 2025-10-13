@@ -61,7 +61,6 @@ const createUserChroniclesTable = async () => {
     console.error('PostgreSQL: Error creating user_chronicles table, trigger, or indexes:', err);
     // If the error is due to referencing non-existent tables (users, story_nodes, projects, communities)
     // this will need to be addressed by ensuring those tables are created first.
-    // For this task, we assume they exist based on other model files.
   }
 };
 

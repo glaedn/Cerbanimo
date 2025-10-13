@@ -21,7 +21,7 @@ const useUserIntentions = (userId) => {
   };
 
   useEffect(() => {
-    const fetchIntentionsAndTasks = async () => {
+    const fetchIntentionsAndPetals = async () => {
       if (!userId || !isAuthenticated) {
         setLoading(false);
         // Set intentions to empty array if userId is not available yet, or not authenticated
@@ -53,42 +53,42 @@ const useUserIntentions = (userId) => {
         }
 
 
-        const intentionsWithTaskData = await Promise.all(
+        const intentionsWithPetalData = await Promise.all(
           fetchedIntentions.map(async (proj) => {
             try {
-              const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${proj.id}`, {
+              const petalsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/petals/p/${proj.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
-              const tasks = tasksResponse.data;
-              const taskCount = tasks.length;
-              const completedTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'completed' || t.status.toLowerCase() === 'archived')).length;
-                const inactiveTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'inactive-assigned' || t.status.toLowerCase() === 'inactive-unassigned')).length;
-                const activeTasks = taskCount - completedTasks - inactiveTasks;
-              const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
+              const petals = petalsResponse.data;
+              const petalCount = petals.length;
+              const completedPetals = petals.filter(t => t.status && (t.status.toLowerCase() === 'completed' || t.status.toLowerCase() === 'archived')).length;
+                const inactivePetals = petals.filter(t => t.status && (t.status.toLowerCase() === 'inactive-assigned' || t.status.toLowerCase() === 'inactive-unassigned')).length;
+                const activePetals = petalCount - completedPetals - inactivePetals;
+              const progress = petalCount > 0 ? Math.round((completedPetals / petalCount) * 100) : 0;
 
               return {
                 id: proj.id,
                 name: proj.name,
                 description: proj.description || '',
-                taskCount,
-                activeTasks,
-                completedTasks,
+                petalCount,
+                activePetals,
+                completedPetals,
                 progress,
                 token_pool: proj.token_pool || 0,
               };
-            } catch (taskError) {
-              console.error(`Error fetching tasks for intention ${proj.id}:`, taskError);
+            } catch (petalError) {
+              console.error(`Error fetching petals for intention ${proj.id}:`, petalError);
               // Return intention with partial data or mark as error for this intention
               return {
                 id: proj.id,
                 name: proj.name,
                 description: proj.description || '',
-                taskCount: 0, activeTasks: 0, completedTasks: 0, progress: 0, xpGained: 'N/A', errorFetchingTasks: true
+                petalCount: 0, activePetals: 0, completedPetals: 0, progress: 0, xpGained: 'N/A', errorFetchingPetals: true
               };
             }
           })
         );
-        setIntentions(intentionsWithTaskData);
+        setIntentions(intentionsWithPetalData);
       } catch (err) {
         console.error('Error fetching user intentions:', err.response?.data || err.message);
         setError(err.response?.data?.error || err.message || 'Failed to fetch intentions');
@@ -98,7 +98,7 @@ const useUserIntentions = (userId) => {
       }
     };
 
-    fetchIntentionsAndTasks();
+    fetchIntentionsAndPetals();
   }, [userId, isAuthenticated, getAccessTokenSilently]);
 
   return { intentions, loading, error };

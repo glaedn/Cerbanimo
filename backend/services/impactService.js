@@ -49,11 +49,11 @@ const getOverallPlatformImpact = async (dbPool) => {
     const resourcesExchangedData = await getResourcesExchangedCount(dbPool);
     
     // Add more stats here in the future
-    // Example: Fetch count of unique users involved in 'completed' or 'verified' exchange tasks
+    // Example: Fetch count of unique users involved in 'completed' or 'verified' exchange petals
     // const activeUsersResult = await dbPool.query(
     //   `SELECT COUNT(DISTINCT creator_id) AS count 
-    //    FROM tasks 
-    //    WHERE task_type = 'resource_exchange_coordination' AND status = 'completed'` 
+    //    FROM petals
+    //    WHERE petal_type = 'resource_exchange_coordination' AND status = 'completed'`
     //    // Assuming 'completed' status means successful exchange
     // );
     // const activeUsersInExchanges = activeUsersResult.rows.length > 0 ? parseInt(activeUsersResult.rows[0].count, 10) : 0;
@@ -78,7 +78,7 @@ const getOverallPlatformImpact = async (dbPool) => {
 // - community_interdependence_networks: Analyzing the flow of resources/services between
 //   different users and communities to map dependencies and mutual support. This might involve
 //   graph database techniques or complex SQL queries on transaction/exchange logs.
-// - total_tokens_exchanged_in_system: Summing `reward_tokens` from completed exchange-related tasks
+// - total_tokens_exchanged_in_system: Summing `reward_tokens` from completed exchange-related petals
 //   or from a dedicated exchange log table could provide insights into economic activity.
 
 export {

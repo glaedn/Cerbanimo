@@ -101,7 +101,7 @@ const IntentionCreation = () => {
         setLoadingPopupMessages(prev => [...prev, "Intention declared successfully!"]);
         setLoadingPopupMessages(prev => [...prev, "Auto-generating petals..."]);
 
-        // Auto-generate tasks is now default
+        // Auto-generate petals is now default
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/intentions/auto-generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
