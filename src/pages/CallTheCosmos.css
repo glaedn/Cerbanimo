@@ -1,0 +1,93 @@
+.call-cosmos-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(circle, #0a0a2e, #000000);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    padding: 20px;
+}
+
+.cosmos-title {
+    margin-bottom: 2rem;
+    text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+}
+
+.cosmos-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    padding: 2rem;
+    background: rgba(28, 28, 30, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+}
+
+.cosmos-input .MuiOutlinedInput-root {
+    color: #fff;
+    border-color: #00f3ff;
+}
+
+.cosmos-select .MuiOutlinedInput-root {
+    color: #fff;
+    border-color: #00f3ff;
+}
+
+.submit-call-btn {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: linear-gradient(45deg, #00f3ff, #4dabf7);
+    color: #000;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-call-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
+}
+
+.cosmos-submitted {
+    text-align: center;
+}
+
+.ripple-animation {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: #00f3ff;
+    animation: ripple 1.5s infinite ease-in-out;
+    margin: 2rem auto;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+.suggested-responses {
+    margin-top: 2rem;
+}
+
+.suggested-responses ul {
+    list-style: none;
+    padding: 0;
+}
+
+.suggested-responses li {
+    margin: 0.5rem 0;
+    font-size: 1.2rem;
+}

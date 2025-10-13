@@ -5,9 +5,9 @@ const createNotificationsTable = async () => {
     CREATE TABLE IF NOT EXISTS notifications (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      type VARCHAR(50) NOT NULL, -- e.g., 'task_assigned', 'task_approved', 'mention', 'badge_awarded'
+      type VARCHAR(50) NOT NULL, -- e.g., 'petal_assigned', 'petal_approved', 'mention', 'badge_awarded'
       message_details JSONB NOT NULL, -- Changed from 'message TEXT'
-      link_entity_type VARCHAR(50), -- e.g., 'task', 'project', 'user_profile', 'community'
+      link_entity_type VARCHAR(50), -- e.g., 'petal', 'project', 'user_profile', 'community'
       link_entity_id INTEGER,
       is_read BOOLEAN NOT NULL DEFAULT FALSE, -- Replaces/clarifies 'read_at' for primary read status
       read_at TIMESTAMP WITH TIME ZONE, -- Optional, for when it was read

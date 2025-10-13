@@ -39,7 +39,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     const now = new Date();
     const ageDays = (now - new Date(item.lastActivity)) / (1000 * 60 * 60 * 24);
     let baseRadius =
-      item.type === "task" ? 0.5 : item.type === "intention" ? 1 : 1.75; // downscaled
+      item.type === "petal" ? 0.5 : item.type === "intention" ? 1 : 1.75; // downscaled
     if (item.status.toLowerCase().includes("urgent")) baseRadius *= 1.3;
     const ageScale = Math.max(0.4, 1 - ageDays / 60);
     return baseRadius * ageScale + Math.min(item.contributors / 8, 1); // also scaled
@@ -65,44 +65,44 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           cacheMode: "off",
         });
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        const [tasksRes, intentionsRes, communitiesRes] = await Promise.all([
-          axios.get(`${VITE_BACKEND_URL}/tasks`, config),
+        const [petalsRes, intentionsRes, communitiesRes] = await Promise.all([
+          axios.get(`${VITE_BACKEND_URL}/petals`, config),
           axios.get(`${VITE_BACKEND_URL}/intentions`, config),
           axios.get(`${VITE_BACKEND_URL}/communities`, config),
         ]);
         const processedData = [];
-        console.log("Tasks:", tasksRes.data);
+        console.log("Petals:", petalsRes.data);
         console.log("Intentions:", intentionsRes.data);
         console.log("Communities:", communitiesRes.data);
-        tasksRes.data.forEach((task) => {
+        petalsRes.data.forEach((petal) => {
           processedData.push({
-            id: `task-${task.id}`,
-            type: "task",
-            name: task.name,
-            status: task.status || "inactive",
-            lastActivity: new Date(task.updated_at || task.created_at),
-            contributors: task.assigned_user_ids
-              ? task.assigned_user_ids.length
+            id: `petal-${petal.id}`,
+            type: "petal",
+            name: petal.name,
+            status: petal.status || "inactive",
+            lastActivity: new Date(petal.updated_at || petal.created_at),
+            contributors: petal.assigned_user_ids
+              ? petal.assigned_user_ids.length
               : 0,
-            raw_data: task,
+            raw_data: petal,
           });
         });
 
         intentionsRes.data.forEach((intention) => {
           let intentionStatus = "active";
-          const urgentTasksInIntention = tasksRes.data.filter(
+          const urgentPetalsInIntention = petalsRes.data.filter(
             (t) =>
               t.intention_id === intention.id &&
               (t.status || "").toLowerCase().includes("urgent")
           );
-          const activeTasksInIntention = tasksRes.data.filter(
+          const activePetalsInIntention = petalsRes.data.filter(
             (t) =>
               t.intention_id === intention.id &&
               (t.status || "").toLowerCase().startsWith("active")
           );
 
-          if (urgentTasksInIntention.length > 0) intentionStatus = "urgent";
-          else if (activeTasksInIntention.length < 1) intentionStatus = "inactive";
+          if (urgentPetalsInIntention.length > 0) intentionStatus = "urgent";
+          else if (activePetalsInIntention.length < 1) intentionStatus = "inactive";
 
           processedData.push({
             id: `intention-${intention.id}`,
@@ -319,12 +319,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         eventCircles.on("click", (event, d) => {
           const [type, idOnly] = d.id.split('-'); 
 
-          if (type === "task") {
+          if (type === "petal") {
             const intentionId = d.raw_data.intention_id;
             if (intentionId) {
               navigate(`/lotus-map/${intentionId}/${idOnly}`);
             } else {
-              console.error("Intention ID not found for task:", d);
+              console.error("Intention ID not found for petal:", d);
             }
           } else if (type === "intention") {
             navigate(`/lotus-map/${idOnly}/`);
@@ -333,7 +333,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           }
         });
 
-      // Create sonar ping effect for urgent tasks
+      // Create sonar ping effect for urgent petals
       const urgentStarsData = randomizedStarData.filter(d => d.status.toLowerCase().includes("urgent"));
 
       svg.selectAll(".sonar-ping-effect")

@@ -22,7 +22,7 @@ const createIntentionsTable = async () => {
     );
   `;
 
-  // Removed task_group_ids and user_ids as these are better handled via tasks and their assignments.
+  // Removed petal_group_ids and user_ids as these are better handled via petals and their assignments.
   // realm_votes might be a separate table or handled by a different mechanism if complex.
 
   const triggerQuery = `

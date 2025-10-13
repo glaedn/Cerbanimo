@@ -32,8 +32,8 @@ const initiateExchange = async ({ needId, resourceId, loggedInUserId, notes }, d
     await client.query("UPDATE needs SET status = $1 WHERE id = $2", [newNeedStatus, needId]);
     await client.query("UPDATE resources SET status = $1 WHERE id = $2", [newResourceStatus, resourceId]);
 
-    // 4. Generate Coordination Task
-    const taskName = `Coordinate Exchange: ${resource.name} for ${need.name}`;
+    // 4. Generate Coordination Petal
+    const petalName = `Coordinate Exchange: ${resource.name} for ${need.name}`;
     
     let needOwnerInfo = need.requestor_user_id ? `user ID ${need.requestor_user_id}` : `community ID ${need.requestor_community_id}`;
     if (!need.requestor_user_id && !need.requestor_community_id) {
@@ -45,23 +45,23 @@ const initiateExchange = async ({ needId, resourceId, loggedInUserId, notes }, d
         resourceOwnerInfo = "an unspecified owner";
     }
     
-    const taskDescription = `Initiate and coordinate the exchange of resource '${resource.name}' (Resource ID: ${resourceId}, listed by ${resourceOwnerInfo}) for the need '${need.name}' (Need ID: ${needId}, requested by ${needOwnerInfo}). Initiated by user ID: ${loggedInUserId}. Exchange Notes: ${notes || 'N/A'}`;
+    const petalDescription = `Initiate and coordinate the exchange of resource '${resource.name}' (Resource ID: ${resourceId}, listed by ${resourceOwnerInfo}) for the need '${need.name}' (Need ID: ${needId}, requested by ${needOwnerInfo}). Initiated by user ID: ${loggedInUserId}. Exchange Notes: ${notes || 'N/A'}`;
     
-    const taskInsertQuery = `
-      INSERT INTO tasks (
-        name, description, task_type, 
+    const petalInsertQuery = `
+      INSERT INTO petals (
+        name, description, petal_type,
         related_need_id, related_resource_id, 
         creator_id, assigned_to, status, 
         reward_tokens, project_id 
-        -- ensure other NOT NULL fields or fields with no DEFAULT in 'tasks' table are handled if any
+        -- ensure other NOT NULL fields or fields with no DEFAULT in 'petals' table are handled if any
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id;
     `;
-    const taskValues = [
-      taskName,                               // name
-      taskDescription,                        // description
-      'resource_exchange_coordination',       // task_type
+    const petalValues = [
+      petalName,                               // name
+      petalDescription,                        // description
+      'resource_exchange_coordination',       // petal_type
       needId,                                 // related_need_id
       resourceId,                             // related_resource_id
       loggedInUserId,                         // creator_id
@@ -70,18 +70,18 @@ const initiateExchange = async ({ needId, resourceId, loggedInUserId, notes }, d
       10,                                     // reward_tokens (default, can be configured)
       null                                    // project_id (not tied to a specific project)
     ];
-    const taskResult = await client.query(taskInsertQuery, taskValues);
-    const coordinationTaskId = taskResult.rows[0].id;
+    const petalResult = await client.query(petalInsertQuery, petalValues);
+    const coordinationPetalId = petalResult.rows[0].id;
 
-    // Comment: Future tasks (e.g., pickup confirmation, delivery confirmation, final verification)
+    // Comment: Future petals (e.g., pickup confirmation, delivery confirmation, final verification)
     // could be generated here based on resource/need type, or triggered by the completion 
-    // of this coordination task via another service or event listener.
+    // of this coordination petal via another service or event listener.
 
     await client.query('COMMIT');
     return { 
       success: true, 
-      coordinationTaskId, 
-      message: 'Exchange initiated successfully. A coordination task has been created.' 
+      coordinationPetalId,
+      message: 'Exchange initiated successfully. A coordination petal has been created.'
     };
 
   } catch (error) {

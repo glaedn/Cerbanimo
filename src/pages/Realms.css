@@ -106,14 +106,53 @@
 }
 
 /* Community Card */
-.community-card {
-    background-color: rgba(10, 10, 46, 0.7);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 20px;
-    transition: transform 0.2s ease-in-out;
-    border: 1px solid #444444; /* Added border */
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+.realm-mesh-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.realm-node rect {
+    fill: rgba(28, 28, 30, 0.9);
+    stroke: #00F3FF;
+    stroke-width: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.realm-node text {
+    fill: #fff;
+    text-anchor: middle;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.realm-node:hover rect {
+    fill: rgba(0, 243, 255, 0.2);
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
+}
+
+.realm-link {
+    stroke: #fff;
+    stroke-opacity: 0.6;
+    stroke-width: 1.5px;
+}
+
+@keyframes shimmer {
+    0% {
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.7), 0 0 30px rgba(255, 0, 255, 0.7);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.5);
+    }
+}
+
+.realm-node rect {
+    animation: shimmer 5s infinite;
 }
 
 .community-card:hover {

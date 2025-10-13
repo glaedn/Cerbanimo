@@ -24,6 +24,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import GalacticActivityMap from "./components/GalacticActivityMap/GalacticActivityMap.jsx";
 import OnboardingPage from "./pages/OnboardingPage/OnboardingPage";
 import WaitingListPage from "./pages/WaitingListPage.jsx"; // Added import
+import CallTheCosmos from "./pages/CallTheCosmos.jsx";
 import AuthWrapper from "./AuthWrapper.jsx";
 
 const App = () => {
@@ -143,7 +144,7 @@ const App = () => {
             }
           />
           <Route
-            path="/lotus-map/:intentionId/:taskId"
+            path="/lotus-map/:intentionId/:petalId"
             element={
               <PrivateRoute>
                 <IntentionLotusMap />
@@ -166,6 +167,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <GalacticActivityMap />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/call-the-cosmos"
+            element={
+              <PrivateRoute>
+                <CallTheCosmos />
               </PrivateRoute>
             }
           />

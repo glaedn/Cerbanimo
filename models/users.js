@@ -1,6 +1,6 @@
 const pool = require('../backend/db.js'); // Adjusted path
 
-// User schema with tasks relationship
+// User schema with petals relationship
 const createUserTable = async () => {
   const userTableQuery = `
     CREATE TABLE IF NOT EXISTS users (

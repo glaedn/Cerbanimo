@@ -5,8 +5,8 @@ const createImpactContributionsTable = async () => {
     CREATE TABLE IF NOT EXISTS impact_contributions (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      contribution_type VARCHAR(100) NOT NULL, -- e.g., 'task_completion', 'project_creation', 'resource_donation', 'mentorship'
-      related_entity_type VARCHAR(50), -- e.g., 'task', 'project', 'user' (for mentorship target)
+      contribution_type VARCHAR(100) NOT NULL, -- e.g., 'petal_completion', 'project_creation', 'resource_donation', 'mentorship'
+      related_entity_type VARCHAR(50), -- e.g., 'petal', 'project', 'user' (for mentorship target)
       related_entity_id INTEGER,
       community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL, -- Optional: link impact to a community
       description TEXT,

@@ -166,7 +166,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
   let { username, skills, interests, user_id, contact_links } = req.body;
   const auth0Id = req.auth.payload.sub;
   // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
-  let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
+  let valueForProfilePictureColumn = null;
   if (req.file) {
     try {
       await uploadFile(req.file.path, req.file.filename, req.file.mimetype); // Ensure B2 upload is successful

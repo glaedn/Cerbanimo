@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as d3 from 'd3';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +10,8 @@ const Realms = () => {
   const [realms, setRealms] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [links, setLinks] = useState([]);
+  const svgRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -65,12 +68,94 @@ const Realms = () => {
   }, [user, page, search]);
 
 useEffect(() => {
-    console.log('Current realms state:', realms);
-}, [realms]);
+    if (realms.length > 0 && svgRef.current) {
+        const svg = d3.select(svgRef.current);
+        svg.selectAll("*").remove();
+
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+
+        const simulation = d3.forceSimulation(realms)
+            .force("link", d3.forceLink().id(d => d.id).distance(150))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        const fetchResonance = async () => {
+            try {
+                const token = await getAccessTokenSilently();
+                const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/realms/resonance`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setLinks(response.data);
+            } catch (error) {
+                console.error("Failed to fetch resonance data:", error);
+            }
+        };
+
+        fetchResonance();
+
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", "realm-link")
+            .style("stroke-width", 2)
+            .style("stroke-opacity", d => 0.4 + d.alignment * 0.6)
+            .style("stroke", "#fff")
+            .style("filter", "url(#glow)");
+
+        const node = svg.append("g")
+            .selectAll("g")
+            .data(realms)
+            .join("g")
+            .attr("class", "realm-node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        node.append("rect")
+            .attr("width", 120)
+            .attr("height", 60)
+            .attr("rx", 10)
+            .attr("ry", 10)
+            .on("click", (event, d) => navigate(`/realm/${d.id}`));
+
+        node.append("text")
+            .attr("x", 60)
+            .attr("y", 35)
+            .text(d => d.name);
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+            node
+                .attr("transform", d => `translate(${d.x - 60}, ${d.y - 30})`);
+        });
+
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
+}, [realms, navigate]);
 
 return (
     <div className="realms-container">
-        <h1 className="realm-page-title">Discover Realms</h1>
+        <h1 className="realm-page-title">✦ REALMS MESH ✦</h1>
 
         <div className="search-bar-container">
             <input
@@ -85,63 +170,40 @@ return (
                 onClick={() => navigate('/form-new-realm')}
                 title="Form New Realm"
             >
-                +
+                ✦
             </button>
         </div>
 
-        <div className="realm-list-wrapper">
-            {realms.length > 0 ? (
-                realms.map((realm) => (
-                    <div key={realm.id} className="realm-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '15px' }}>
-                        <h2 className="realm-title">{realm.name}</h2>
-                        <p className="realm-description">{realm.description}</p>
-                        <div className="realm-tags">
-                            {realm.interest_tags && realm.interest_tags.length > 0 ? (
-                                realm.interest_tags.map((tag, index) => (
-                                    <span key={index} className="tag-chip">{tag}</span>
-                                ))
-                            ) : (
-                                <span className="no-tags">No tags</span>
-                            )}
-                        </div>
-                        <div className="realm-stats">
-                            <span className="member-count">
-                                <i className="fas fa-users"></i> {Array.isArray(realm.members) ? realm.members.length : 0} members
-                            </span>
-                        </div>
-                        <div className="realm-actions">
-                                <button
-                                  className="join-button"
-                                  onClick={() => navigate(`/realm/${realm.id}`)}
-                                >
-                                  View Realm
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="no-realms-message" style={{ padding: '20px', textAlign: 'center' }}>
-                            <p>No realms found. Try adjusting your search or form a new realm.</p>
-                          </div>
-                        )}
-                      </div>
+        <div className="realm-mesh-wrapper">
+            <svg ref={svgRef} width="1000" height="700">
+                <defs>
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+            </svg>
+        </div>
 
-                      <div className="pagination-container">
-                        <button
-                          className="pagination-button"
-                          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                          disabled={page === 1}
-                        >
-                          Previous
-                        </button>
-                        <span className="page-text">Page {page}</span>
-                        <button
-                          className="pagination-button"
-                          onClick={() => setPage((prev) => prev + 1)}
-                        >
-                          Next
-                        </button>
-                      </div>
+        <div className="pagination-container">
+            <button
+                className="pagination-button"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+            >
+                Previous
+            </button>
+            <span className="page-text">Page {page}</span>
+            <button
+                className="pagination-button"
+                onClick={() => setPage((prev) => prev + 1)}
+            >
+                Next
+            </button>
+        </div>
     </div>
 );
 };

@@ -635,4 +635,23 @@ router.post("/:realmId/request", async (req, res) => {
   }
 });
 
+// Get resonance data for all realms
+router.get("/resonance", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT r1.id as source, r2.id as target, random() as alignment
+      FROM realms r1, realms r2
+      WHERE r1.id < r2.id
+    `;
+    const result = await client.query(query);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching realm resonance:", err);
+    res.status(500).json({ error: "Failed to fetch realm resonance" });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
