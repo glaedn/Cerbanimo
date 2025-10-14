@@ -1,6 +1,6 @@
-const pool = require('../backend/db.js'); // Assuming db.js contains the PostgreSQL pool configuration
+import pool from '../backend/db.js'; // Assuming db.js contains the PostgreSQL pool configuration
 
-const createTokenTransactionsTable = async () => {
+export const createTokenTransactionsTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS token_transactions (
       id SERIAL PRIMARY KEY,
@@ -86,7 +86,3 @@ const createTokenTransactionsUpdatedAtTrigger = async () => {
 };
 
 
-module.exports = {
-  createTokenTransactionsTable,
-  // createTokenTransactionsUpdatedAtTrigger // Only export if you implement and want it
-};

@@ -20,6 +20,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isManifestView, setIsManifestView] = useState(false);
+  const [session, setSession] = useState(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
   
@@ -69,6 +70,48 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const handleEditPetal = (petal) => {
     setPetalForm(petal);
     setShowPetalPopup(true);
+  };
+
+  const handleStartSession = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions`,
+        {
+          intentionId: intentionId,
+          realmId: intention.realm_id,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setSession(response.data);
+      setIsManifestView(true); // Automatically switch to manifest view
+    } catch (error) {
+      console.error('Error starting manifestation session:', error);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!session) return;
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${session.id}/end`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setSession(null);
+      setIsManifestView(false); // Switch back to normal view
+    } catch (error) {
+      console.error('Error ending manifestation session:', error);
+    }
   };
 
   const getPetalColor = (status) => {
@@ -192,12 +235,11 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
     }));
 
     const linkElements = linksGroup.selectAll(".link").data(links).enter()
-      .append("path").attr("class", "link")
+      .append("path").attr("class", d => `link ${isManifestView ? 'manifest-link' : ''}`)
       .attr("d", d => `M${d.source.x},${d.source.y} C${d.source.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${d.target.y}`);
 
     if (isManifestView) {
-      linkElements.classed("manifest-link", true)
-        .style("stroke-opacity", d => 0.3 + (d.source.resonance_score || Math.random()) * 0.7);
+      linkElements.style("stroke-opacity", d => 0.3 + (d.source.resonance_score || Math.random()) * 0.7);
     }
     
     const nodeGroups = nodesGroup.selectAll(".node").data(petals).enter()
@@ -258,6 +300,15 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
           <button className="control-button" onClick={() => setIsManifestView(!isManifestView)}>
             [ Manifest View {isManifestView ? 'ON' : 'OFF'} 🌠 ]
           </button>
+          {session ? (
+            <button className="control-button" onClick={handleEndSession}>
+              [ End Manifestation Session ]
+            </button>
+          ) : (
+            <button className="control-button" onClick={handleStartSession}>
+              [ Start Manifestation Session ]
+            </button>
+          )}
         </div>
       </div>
 

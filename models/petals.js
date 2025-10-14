@@ -1,6 +1,6 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
-const createPetalTable = async () => {
+export const createPetalTable = async () => {
   const petalTableQuery = `
     CREATE TABLE IF NOT EXISTS petals (
       id SERIAL PRIMARY KEY,
@@ -102,6 +102,3 @@ const createPetalTable = async () => {
   }
 };
 
-module.exports = {
-  createPetalTable,
-};

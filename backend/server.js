@@ -28,15 +28,17 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
+import manifestationSessionRoutes from './routes/manifestationSessions.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
-import { createResonancesTable } from './models/resonances.js';
-import { createChroniclesTable } from './models/chronicles.js';
-//import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
-//import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
-//import { createPetalTable, createPetalUpdatedAtTrigger } from './models/petals.js';
-//import { createTokenTransactionsTable } from './models/tokenTransactions.js';
+import { createResonancesTable } from '../models/resonances.js';
+import { createChroniclesTable } from '../models/chronicles.js';
+import { createResourcesTable } from '../models/resources.js';
+import { createNeedsTable } from '../models/needs.js';
+import { createPetalTable } from '../models/petals.js';
+import { createTokenTransactionsTable } from '../models/tokenTransactions.js';
+import { createManifestationSessionsTable } from '../models/manifestationSessions.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
 // If they had similar exported creation functions, they would be imported here too.
 
@@ -180,6 +182,7 @@ app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
+app.use('/manifestation-sessions', manifestationSessionRoutes);
 
 // Nightly petal reset
 cron.schedule('0 0 * * *', async () => {
@@ -212,10 +215,11 @@ async function initializeDatabase() {
     // Create tables first
     await createResonancesTable();
     await createChroniclesTable();
-    //await createResourcesTable();
-    //await createNeedsTable();
-    //await createPetalTable(); // Includes new schema with petal_type, related_resource_id, related_need_id
-    //await createTokenTransactionsTable();
+    await createResourcesTable();
+    await createNeedsTable();
+    await createPetalTable(); // Includes new schema with petal_type, related_resource_id, related_need_id
+    await createTokenTransactionsTable();
+    await createManifestationSessionsTable();
     
     // Then create triggers that depend on these tables
     // Ensure the trigger function (update_updated_at_column) is created once,
