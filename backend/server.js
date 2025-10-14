@@ -31,6 +31,7 @@ import onboardingRoutes from './routes/onboarding.js';
 import manifestationSessionRoutes from './routes/manifestationSessions.js';
 import liveActivityRoutes from './routes/liveActivity.js';
 import analyticsRoutes from './routes/analytics.js';
+import manifestationEventsRoutes from './routes/manifestationEvents.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
@@ -189,6 +190,7 @@ app.use('/onboarding', jwtCheck, onboardingRoutes);
 app.use('/manifestation-sessions', manifestationSessionRoutes);
 app.use('/live-activity', liveActivityRoutes);
 app.use('/analytics', jwtCheck, analyticsRoutes);
+app.use('/manifestation-events', jwtCheck, manifestationEventsRoutes);
 
 // Nightly petal reset
 cron.schedule('0 0 * * *', async () => {

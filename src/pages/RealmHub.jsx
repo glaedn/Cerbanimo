@@ -22,11 +22,14 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
+  Tabs,
+  Tab
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import SpaIcon from '@mui/icons-material/Spa';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -38,6 +41,7 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import RealmChronicle from '../components/RealmChronicle/index.jsx';
 import RealmResourceManagement from '../components/RealmResourceManagement/RealmResourceManagement.jsx';
+import ScheduleManifestation from '../components/ScheduleManifestation/ScheduleManifestation.jsx';
 import './RealmHub.css';
 
 const RealmHub = () => {
@@ -61,6 +65,61 @@ const RealmHub = () => {
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
     const [memberScores, setMemberScores] = useState([]);
+    const [manifestations, setManifestations] = useState([]);
+    const [currentTab, setCurrentTab] = useState(0);
+    const [openSchedule, setOpenSchedule] = useState(false);
+
+    const handleOpenSchedule = () => {
+        setOpenSchedule(true);
+    };
+
+    const handleCloseSchedule = () => {
+        setOpenSchedule(false);
+    };
+
+    const fetchManifestations = async () => {
+        if (!realmId || !isAuthenticated) return;
+        try {
+            const token = await getAccessTokenSilently({
+                audience: import.meta.env.VITE_BACKEND_URL,
+                scope: 'openid profile email',
+            });
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/manifestation-events/realm/${realmId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setManifestations(response.data);
+        } catch (error) {
+            console.error('Failed to fetch manifestations:', error);
+        }
+    };
+
+    const handleSchedule = async (manifestationData) => {
+        try {
+            const token = await getAccessTokenSilently({
+                audience: import.meta.env.VITE_BACKEND_URL,
+                scope: 'openid profile email',
+            });
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/manifestation-events`, { ...manifestationData, realm_id: realmId }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchManifestations(); // Refresh the list
+            showNotification('Group Manifestation scheduled successfully!');
+            handleCloseSchedule();
+        } catch (error) {
+            console.error('Failed to schedule manifestation:', error);
+            showNotification('Failed to schedule manifestation. Please try again.', 'error');
+        }
+    };
+
+    useEffect(() => {
+        if(isAuthenticated) {
+            fetchManifestations();
+        }
+    }, [realmId, isAuthenticated, getAccessTokenSilently]);
+
+    const handleTabChange = (event, newValue) => {
+        setCurrentTab(newValue);
+    };
 
     const showNotification = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -222,7 +281,7 @@ const RealmHub = () => {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
-                    
+.
                     const intentionResults = await Promise.all(intentionPromises);
                     setApprovedIntentions(intentionResults.map(result => result.data));
                 }
@@ -263,7 +322,7 @@ const RealmHub = () => {
                 setDelegatedTo(null);
             }
         }
-    }, [realm, userId, members]); // Dependencies ensure it runs when any of these change
+    }, [realm, userId, members]);
 
     useEffect(() => {
         if (realm && userId) {
@@ -302,7 +361,7 @@ const RealmHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
     
@@ -459,7 +518,7 @@ const RealmHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
 
@@ -604,14 +663,21 @@ const RealmHub = () => {
                 )}
             </div>
             
-            {/* Main Content Grid */}
-            <div className="hub-grid">
-                {/* Members Card */}
-                <div className="hub-grid-item">
-                    <Card className="hub-card members-card">
-                        <CardContent>
-                            <GroupIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Members</Typography>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }}>
+                <Tabs value={currentTab} onChange={handleTabChange} centered>
+                    <Tab label="Governance" icon={<HowToVoteIcon />} />
+                    <Tab label="Rituals" icon={<SpaIcon />} />
+                </Tabs>
+            </Box>
+
+            {currentTab === 0 && (
+                <div className="hub-grid">
+                    {/* Members Card */}
+                    <div className="hub-grid-item">
+                        <Card className="hub-card members-card">
+                            <CardContent>
+                                <GroupIcon className="hub-icon" />
+                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Members</Typography>
                             
                             {isMember && isDelegating && (
                                 <div className="delegation-info">
@@ -862,7 +928,7 @@ const RealmHub = () => {
                                                             sx={{ 
                                                                 color: 'var(--hud-error-color)', 
                                                                 '&:hover': { 
-                                                                    backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)',
+                                                                    backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, _4), 0.1)',
                                                                     boxShadow: '0 0 8px var(--hud-error-color)',
                                                                 }
                                                             }}
@@ -934,14 +1000,40 @@ const RealmHub = () => {
                     </Card>
                 </div>
             </div>
+            {currentTab === 1 && (
+                <Box sx={{ padding: 2 }}>
+                    <Button variant="contained" onClick={handleOpenSchedule}>Schedule New Manifestation</Button>
+                    <List>
+                        {manifestations.map((manifestation) => (
+                            <ListItem key={manifestation.id}>
+                                <ListItemText
+                                    primary={manifestation.title}
+                                    secondary={`${new Date(manifestation.start_time).toLocaleString()} - ${manifestation.description}`}
+                                />
+                                {new Date(manifestation.start_time) < new Date() && new Date(manifestation.end_time) > new Date() && (
+                                    <Button variant="contained" color="secondary" onClick={() => navigate(`/manifestation-session/${manifestation.id}`)}>
+                                        Join Session
+                                    </Button>
+                                )}
+                            </ListItem>
+                        ))}
+                    </List>
+                </Box>
+            )}
+            <ScheduleManifestation
+                open={openSchedule}
+                handleClose={handleCloseSchedule}
+                realmId={realmId}
+                onSchedule={handleSchedule}
+            />
             <RealmResourceManagement realmId={realmId} />
             <RealmChronicle realmId={realmId} />
             <Snackbar 
-  open={snackbarOpen} 
-  autoHideDuration={6000} 
-  onClose={handleCloseSnackbar}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
+              open={snackbarOpen}
+              autoHideDuration={6000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
                 <MuiAlert 
                     elevation={6} 
                     variant="filled" 
@@ -955,9 +1047,9 @@ const RealmHub = () => {
                 >
                     {snackbarMessage}
                 </MuiAlert>
-</Snackbar>
+            </Snackbar>
         </div>
     );
 };
 
-export default CommunityHub;
+export default RealmHub;

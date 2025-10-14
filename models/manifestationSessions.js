@@ -4,8 +4,10 @@ export const createManifestationSessionsTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS manifestation_sessions (
       id SERIAL PRIMARY KEY,
-      intention_id INTEGER NOT NULL REFERENCES intentions(id) ON DELETE CASCADE,
+      intention_id INTEGER REFERENCES intentions(id) ON DELETE CASCADE,
       realm_id INTEGER REFERENCES realms(id) ON DELETE SET NULL,
+      title VARCHAR(255),
+      description TEXT,
       start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       end_time TIMESTAMP WITH TIME ZONE,
       status VARCHAR(50) DEFAULT 'active', -- 'active', 'completed', 'aborted'
