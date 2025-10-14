@@ -36,7 +36,7 @@ import { createResonancesTable } from '../models/resonances.js';
 import { createChroniclesTable } from '../models/chronicles.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createNeedsTable } from '../models/needs.js';
-import { createPetalTable } from '../models/petals.js';
+import { createPetalTable, addResonanceScoreToPetals } from '../models/petals.js';
 import { createTokenTransactionsTable } from '../models/tokenTransactions.js';
 import { createManifestationSessionsTable } from '../models/manifestationSessions.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
@@ -218,6 +218,7 @@ async function initializeDatabase() {
     await createResourcesTable();
     await createNeedsTable();
     await createPetalTable(); // Includes new schema with petal_type, related_resource_id, related_need_id
+    await addResonanceScoreToPetals();
     await createTokenTransactionsTable();
     await createManifestationSessionsTable();
     

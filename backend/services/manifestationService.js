@@ -1,13 +1,11 @@
 import pool from '../db.js';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function getPetalsForIntention(intentionId) {
     const query = `
-        SELECT p.name, p.description, p.status
+        SELECT p.name, p.description, p.status, p.resonance_score
         FROM petals p
         WHERE p.project_id = (SELECT project_id FROM intentions WHERE id = $1)
     `;
@@ -37,24 +35,21 @@ export const generateManifestationSummary = async (sessionId) => {
     const petals = await getPetalsForIntention(intention.id);
 
     const prompt = `
-      Based on the following intention and its associated petals, generate a short, inspiring summary (1-2 sentences) of the emergent theme.
-      The summary should capture the essence of the collective goal.
+      Based on the following intention and its associated petals (with resonance scores), generate a short, inspiring summary (1-2 sentences) of the emergent theme.
+      The summary should capture the essence of the collective goal, giving more weight to petals with higher resonance.
 
       Intention: "${intention.name}"
       Description: "${intention.description}"
 
       Associated Petals:
-      ${petals.map(p => `- ${p.name} (${p.status}): ${p.description}`).join("\n")}
+      ${petals.map(p => `- ${p.name} (Resonance: ${p.resonance_score}): ${p.description}`).join("\n")}
 
       Emergent Theme Summary:`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 100,
-    });
-
-    const summary = response.choices[0].message.content.trim();
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const summary = await response.text();
 
     await pool.query("UPDATE manifestation_sessions SET manifestation_summary = $1 WHERE id = $2", [summary, sessionId]);
 

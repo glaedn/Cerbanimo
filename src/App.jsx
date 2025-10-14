@@ -26,6 +26,7 @@ import OnboardingPage from "./pages/OnboardingPage/OnboardingPage";
 import WaitingListPage from "./pages/WaitingListPage.jsx"; // Added import
 import CallTheCosmos from "./pages/CallTheCosmos.jsx";
 import AuthWrapper from "./AuthWrapper.jsx";
+import RealmsMesh from "./pages/RealmsMesh.jsx";
 
 const App = () => {
   return (
@@ -175,6 +176,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <CallTheCosmos />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/realms-mesh"
+            element={
+              <PrivateRoute>
+                <RealmsMesh />
               </PrivateRoute>
             }
           />

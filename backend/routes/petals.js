@@ -419,4 +419,22 @@ router.get('/pm-approval/:userId', async (req, res) => {
     }
 });
 
+// Resonate with a petal
+router.post('/:petalId/resonate', checkAuth, async (req, res) => {
+    const { petalId } = req.params;
+    try {
+        const result = await pool.query(
+            'UPDATE petals SET resonance_score = resonance_score + 1 WHERE id = $1 RETURNING *',
+            [petalId]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Petal not found' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error resonating with petal:', error);
+        res.status(500).json({ message: 'Error resonating with petal', error: error.message });
+    }
+});
+
 export default router;

@@ -9,6 +9,7 @@ export const createPetalTable = async () => {
       project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       skill_id INTEGER REFERENCES skills(id) ON DELETE SET NULL,
+      parent_id INTEGER REFERENCES petals(id) ON DELETE CASCADE,
       skill_level INTEGER DEFAULT 0,
       status VARCHAR(50) NOT NULL DEFAULT 'Seeded',
       assigned_user_ids INTEGER[] DEFAULT '{}',
@@ -102,3 +103,15 @@ export const createPetalTable = async () => {
   }
 };
 
+export const addResonanceScoreToPetals = async () => {
+    const addColumnQuery = `
+        ALTER TABLE petals
+        ADD COLUMN IF NOT EXISTS resonance_score INTEGER DEFAULT 0;
+    `;
+    try {
+        await pool.query(addColumnQuery);
+        console.log('PostgreSQL: resonance_score column added to petals table or already exists.');
+    } catch (err) {
+        console.error('PostgreSQL: Error adding resonance_score column to petals table:', err);
+    }
+};

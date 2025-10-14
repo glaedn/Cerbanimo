@@ -637,21 +637,54 @@ router.post("/:realmId/request", async (req, res) => {
 
 // Get resonance data for all realms
 router.get("/resonance", async (req, res) => {
-  const client = await pool.connect();
   try {
-    const query = `
-      SELECT r1.id as source, r2.id as target, random() as alignment
-      FROM realms r1, realms r2
-      WHERE r1.id < r2.id
-    `;
-    const result = await client.query(query);
-    res.status(200).json(result.rows);
+    const alignmentScores = await calculateRealmAlignment();
+    res.status(200).json(alignmentScores);
   } catch (err) {
     console.error("Error fetching realm resonance:", err);
     res.status(500).json({ error: "Failed to fetch realm resonance" });
-  } finally {
-    client.release();
   }
 });
+
+const calculateRealmAlignment = async () => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const realmsResult = await client.query('SELECT id, approved_intentions FROM realms');
+        const realms = realmsResult.rows;
+
+        const alignmentScores = [];
+
+        for (let i = 0; i < realms.length; i++) {
+            for (let j = i + 1; j < realms.length; j++) {
+                const realm1 = realms[i];
+                const realm2 = realms[j];
+
+                const intentions1 = new Set(realm1.approved_intentions);
+                const intentions2 = new Set(realm2.approved_intentions);
+
+                const intersection = new Set([...intentions1].filter(x => intentions2.has(x)));
+                const union = new Set([...intentions1, ...intentions2]);
+
+                const alignment = union.size > 0 ? intersection.size / union.size : 0;
+
+                alignmentScores.push({
+                    source: realm1.id,
+                    target: realm2.id,
+                    alignment: alignment
+                });
+            }
+        }
+
+        await client.query('COMMIT');
+        return alignmentScores;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};
 
 export default router;

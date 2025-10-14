@@ -197,16 +197,31 @@ const getPlanetSpecificPetals = async (skillName) => {
 // Fetch petals for a specific project
 const getPetalsByProjectId = async (projectId) => {
   const parsedProjectId = parseInt(projectId, 10);
-  console.log("Parsed projectId:", parsedProjectId);
   if (isNaN(parsedProjectId)) {
     throw new Error(`Invalid projectId: ${projectId}`);
   }
 
-  console.log(`Fetching petals for project ID: ${parsedProjectId}`);
+  const query = `
+    WITH RECURSIVE petal_hierarchy AS (
+      SELECT *, 1 as level FROM petals WHERE project_id = $1 AND parent_id IS NULL
+      UNION ALL
+      SELECT p.*, ph.level + 1 FROM petals p JOIN petal_hierarchy ph ON p.parent_id = ph.id
+    )
+    SELECT * FROM petal_hierarchy ORDER BY level, id;
+  `;
 
-  const query = `SELECT * FROM petals WHERE project_id = $1`;
   const { rows } = await pool.query(query, [parsedProjectId]);
-  return rows;
+
+  const buildHierarchy = (petals, parentId = null) => {
+    return petals
+      .filter(petal => petal.parent_id === parentId)
+      .map(petal => ({
+        ...petal,
+        children: buildHierarchy(petals, petal.id)
+      }));
+  };
+
+  return buildHierarchy(rows);
 };
 
 // Fetch skill names by an array of skill IDs
