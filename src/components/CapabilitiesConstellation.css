@@ -1,24 +1,18 @@
 .capabilities-constellation-container {
   width: 100%;
-  height: 200px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  height: 100%;
 }
 
 .constellation-link {
   stroke: rgba(255, 255, 255, 0.3);
-  stroke-width: 1px;
 }
 
 .constellation-node circle {
-  fill: #fff;
-  stroke: #fff;
-  stroke-width: 1.5px;
+  fill: #f7b733;
 }
 
 .constellation-node text {
-  fill: #fff;
+  fill: white;
   font-size: 10px;
-  text-shadow: 0 0 5px #fff;
+  font-family: 'monospace';
 }

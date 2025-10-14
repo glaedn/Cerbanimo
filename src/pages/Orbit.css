@@ -170,3 +170,15 @@
     cursor: pointer;
     font-family: 'Orbitron', sans-serif;
 }
+
+.capabilities-overlay {
+  position: absolute;
+  top: 150px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid #c471ed;
+  border-radius: 8px;
+  padding: 1rem;
+  z-index: 1000;
+  width: 320px;
+}

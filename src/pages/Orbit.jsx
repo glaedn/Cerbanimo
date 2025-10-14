@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Orbit.css';
 import IntentionLotusMap from './IntentionLotusMap';
+import CapabilitiesConstellation from '../components/CapabilitiesConstellation';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useCapabilityData } from '../hooks/useCapabilityData';
 
@@ -30,6 +31,8 @@ const Orbit = () => {
   const [tooltip, setTooltip] = useState({ visible: false, content: '', x: 0, y: 0 });
   const [userLevel, setUserLevel] = useState(1);
   const [userTitle, setUserTitle] = useState("Dream Spark");
+  const [showCapabilities, setShowCapabilities] = useState(false);
+  const [userCapabilities, setUserCapabilities] = useState([]);
 
   useEffect(() => {
     if (profile && allCapabilities) {
@@ -49,32 +52,58 @@ const Orbit = () => {
       const level = Math.floor(Math.sqrt(totalGlobalExp / 40)) + 1;
       setUserLevel(level);
       setUserTitle(getTitleForLevel(level));
+
+      const unlockedCaps = allCapabilities
+        .map(cap => {
+          const userHasUnlocked = cap.unlocked_users?.some(u => u.user_id === profile.id);
+          if (userHasUnlocked) {
+            const userRecord = cap.unlocked_users.find(u => u.user_id === profile.id);
+            return {
+              name: cap.name,
+              level: userRecord.level || 1,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      setUserCapabilities(unlockedCaps);
     }
   }, [profile, allCapabilities]);
 
+  const toggleCapabilities = () => {
+    setShowCapabilities(!showCapabilities);
+  };
+
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      const token = await getAccessTokenSilently();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      const personalRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/personal`, { ...config, params: { auth0Id: user.sub } });
+      setPersonalIntentions(personalRes.data);
+
+      const nearRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/near`, { ...config, params: { auth0Id: user.sub } });
+      setNearIntentions(nearRes.data.slice(0, 16));
+
+      const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chronicles/resonance`, config);
+      setChronicleResonance(chronicleRes.data.slice(0, 24));
+
+    } catch (error) {
+      console.error("Failed to fetch Orbit data:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      try {
-        const token = await getAccessTokenSilently();
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-
-        const personalRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/personal`, { ...config, params: { auth0Id: user.sub } });
-        setPersonalIntentions(personalRes.data);
-
-        const nearRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/intentions/near`, { ...config, params: { auth0Id: user.sub } });
-        setNearIntentions(nearRes.data.slice(0, 16));
-
-        const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chronicles/resonance`, config);
-        setChronicleResonance(chronicleRes.data.slice(0, 24));
-
-      } catch (error) {
-        console.error("Failed to fetch Orbit data:", error);
-      }
-    };
-
     fetchData();
   }, [user, getAccessTokenSilently]);
+
+  const handleAlign = () => {
+    // Here you could add more complex alignment logic,
+    // for now, we just refetch to simulate recalculation.
+    console.log("Recalculating resonance priorities...");
+    fetchData();
+  };
 
   useEffect(() => {
     if (svgRef.current) {
@@ -234,9 +263,14 @@ const Orbit = () => {
         <div className="user-level">
           [ Level {userLevel} — {userTitle} ]
         </div>
-        <button className="toggle-capabilities-btn">
+        <button className="toggle-capabilities-btn" onClick={toggleCapabilities}>
           [ Toggle Capabilities ⊕ ]
         </button>
+        {showCapabilities && (
+          <div className="capabilities-overlay">
+            <CapabilitiesConstellation capabilities={userCapabilities} />
+          </div>
+        )}
         <div className="dashboard-nav">
           <button onClick={() => navigate('/analytics-dashboard')}>[ Analytics ]</button>
           <button onClick={() => navigate('/reward-dashboard')}>[ Rewards ]</button>
@@ -251,7 +285,7 @@ const Orbit = () => {
       </div>
       {tooltip.visible && <div className="tooltip" style={{ left: tooltip.x + 15, top: tooltip.y + 15 }}>{tooltip.content}</div>}
       <svg ref={svgRef} width="800" height="800"></svg>
-      <button className="align-button">[ ALIGN ]</button>
+      <button className="align-button" onClick={handleAlign}>[ ALIGN ]</button>
     </div>
   );
 };

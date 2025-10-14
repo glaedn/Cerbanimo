@@ -1,0 +1,42 @@
+.realm-nexus-container {
+  padding: 2rem;
+  background-color: #0f0f3a;
+  border: 1px solid #c471ed;
+  border-radius: 8px;
+  color: white;
+}
+
+.realm-nexus-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.realm-nexus-tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  background: none;
+  border: 1px solid #c471ed;
+  color: #c471ed;
+  padding: 0.5rem 1rem;
+  margin: 0 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-btn.active,
+.tab-btn:hover {
+  background-color: #c471ed;
+  color: white;
+}
+
+.realm-nexus-content .coming-soon {
+  text-align: center;
+  padding: 2rem;
+  border: 1px dashed #a9a9a9;
+  border-radius: 4px;
+  color: #a9a9a9;
+}

@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
+import RealmNexus from './RealmNexus';
 import './RealmsMesh.css';
 
 const RealmsMesh = () => {
@@ -12,6 +13,7 @@ const RealmsMesh = () => {
   const { getAccessTokenSilently } = useAuth0();
   const [realms, setRealms] = useState([]);
   const [links, setLinks] = useState([]);
+  const [selectedRealm, setSelectedRealm] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,6 +77,10 @@ const RealmsMesh = () => {
       .selectAll('g')
       .data(realms)
       .enter().append('g')
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => {
+        setSelectedRealm(d);
+      })
       .on('mouseover', (event, d) => {
         tooltip.transition().duration(200).style('opacity', .9);
         tooltip.html(`
@@ -115,6 +121,15 @@ const RealmsMesh = () => {
     });
 
   }, [realms, links]);
+
+  if (selectedRealm) {
+    return (
+      <div className="realm-nexus-view">
+        <button onClick={() => setSelectedRealm(null)} className="back-to-mesh-btn">← Back to Mesh</button>
+        <RealmNexus realm={selectedRealm} />
+      </div>
+    );
+  }
 
   return (
     <div className="realms-mesh-container" ref={containerRef}>

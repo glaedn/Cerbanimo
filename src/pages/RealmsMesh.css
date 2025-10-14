@@ -95,3 +95,25 @@
 .shimmering-border {
   animation: shimmer 2s infinite;
 }
+
+.realm-nexus-view {
+  padding: 2rem;
+  background-color: #1a1a2e;
+  min-height: 100vh;
+}
+
+.back-to-mesh-btn {
+  background: none;
+  border: 1px solid white;
+  color: white;
+  padding: 10px 15px;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'monospace';
+}
+
+.back-to-mesh-btn:hover {
+  background-color: white;
+  color: #0A0A2E;
+}
