@@ -52,8 +52,16 @@ const Realms = () => {
 
       console.log('Filtered Realms:', filteredRealms);
 
+      // Add mock data for now
+      const realmsWithMockData = filteredRealms.map(realm => ({
+        ...realm,
+        activity: Math.random(),
+        alignment: Math.random(),
+        anchors: ["Growth", "Mutual Aid", "Innovation"].slice(0, Math.floor(Math.random() * 3) + 1)
+      }));
+
       // Set the realms state
-      setRealms(filteredRealms);
+      setRealms(realmsWithMockData);
     } catch (error) {
       console.error('Failed to fetch realms:', error);
       // Initialize with empty array on error
@@ -104,11 +112,27 @@ useEffect(() => {
             .style("stroke", "#fff")
             .style("filter", "url(#glow)");
 
+        const tooltip = d3.select("#realm-tooltip");
+
         const node = svg.append("g")
             .selectAll("g")
             .data(realms)
             .join("g")
             .attr("class", "realm-node")
+            .on("mouseover", (event, d) => {
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(`
+                    <strong>${d.name}</strong><br/>
+                    Activity: ${"█".repeat(Math.floor(d.activity * 10))}${"░".repeat(10 - Math.floor(d.activity * 10))} (${(d.activity * 100).toFixed(0)}%)<br/>
+                    Alignment: ${d.alignment.toFixed(2)}<br/>
+                    Anchors: ${d.anchors.join(", ")}
+                `)
+                    .style("left", (event.pageX + 5) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", (event, d) => {
+                tooltip.transition().duration(500).style("opacity", 0);
+            })
             .call(d3.drag()
                 .on("start", dragstarted)
                 .on("drag", dragged)
@@ -119,6 +143,10 @@ useEffect(() => {
             .attr("height", 60)
             .attr("rx", 10)
             .attr("ry", 10)
+            .style("fill", "#1a1a4a")
+            .style("stroke", d => d3.interpolateViridis(d.alignment || 0))
+            .style("stroke-width", d => 2 + (d.alignment || 0) * 4)
+            .style("filter", "url(#glow)")
             .on("click", (event, d) => navigate(`/realm/${d.id}`));
 
         node.append("text")
@@ -155,6 +183,7 @@ useEffect(() => {
 
 return (
     <div className="realms-container">
+        <div id="realm-tooltip" className="realm-tooltip" style={{ opacity: 0 }}></div>
         <h1 className="realm-page-title">✦ REALMS MESH ✦</h1>
 
         <div className="search-bar-container">

@@ -1,6 +1,6 @@
-const pool = require('../backend/db.js'); // Standardized path
+import pool from '../backend/db.js'; // Standardized path
 
-const createResourcesTable = async () => {
+export const createResourcesTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS resources (
       id SERIAL PRIMARY KEY,
@@ -71,6 +71,3 @@ const createResourcesTable = async () => {
   }
 };
 
-module.exports = {
-  createResourcesTable,
-};
