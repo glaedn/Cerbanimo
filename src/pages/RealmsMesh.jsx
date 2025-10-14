@@ -31,6 +31,10 @@ const RealmsMesh = () => {
     };
 
     fetchData();
+
+    const interval = setInterval(fetchData, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
   }, [getAccessTokenSilently]);
 
   useEffect(() => {
@@ -57,13 +61,32 @@ const RealmsMesh = () => {
       .enter().append('line')
       .attr('class', 'link')
       .style('stroke-opacity', d => 0.6 + d.alignment * 0.4)
-      .style('stroke-width', d => 1 + d.alignment * 4);
+      .style('stroke-width', d => 1 + d.alignment * 4)
+      .classed('shimmering', d => d.alignment > 0.7);
+
+    const tooltip = d3.select('body').append('div')
+      .attr('class', 'realm-tooltip')
+      .style('opacity', 0);
 
     const node = svg.append('g')
       .attr('class', 'nodes')
       .selectAll('g')
       .data(realms)
-      .enter().append('g');
+      .enter().append('g')
+      .on('mouseover', (event, d) => {
+        tooltip.transition().duration(200).style('opacity', .9);
+        tooltip.html(`
+          <strong>${d.name}</strong><br/>
+          Activity: ${'█'.repeat(Math.floor(d.activity * 10))}${'░'.repeat(10 - Math.floor(d.activity * 10))}<br/>
+          Alignment: ${d.alignment_score_with_user?.toFixed(2) || 'N/A'}<br/>
+          Anchors: ${d.anchors?.join(', ') || 'None'}
+        `)
+          .style('left', (event.pageX + 5) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', () => {
+        tooltip.transition().duration(500).style('opacity', 0);
+      });
 
     node.append('circle')
       .attr('r', 20)

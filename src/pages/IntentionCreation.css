@@ -36,6 +36,23 @@
 .seed.sprout-1 { transform: scale(1.2) rotate(-5deg); color: #9B59B6; }
 .seed.sprout-2 { transform: scale(1.4) rotate(5deg); color: #2ECC71; }
 .seed.sprout-3 { transform: scale(1.6) rotate(0deg); color: #FF5CA2; }
+.seed.blooming {
+  animation: bloom 2s ease-in-out;
+}
+
+@keyframes bloom {
+  0% { transform: scale(1); }
+  50% { transform: scale(2.5) rotate(360deg); color: #fff; }
+  100% { transform: scale(1.6); color: #FF5CA2; }
+}
+
+.preview-bloom-button {
+  margin: 1rem 0 !important;
+  background: transparent !important;
+  border: 1px solid #00f3ff !important;
+  color: #00f3ff !important;
+  font-family: 'monospace' !important;
+}
 
 .input-label {
   color: #ccc;

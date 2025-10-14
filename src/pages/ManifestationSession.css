@@ -1,0 +1,54 @@
+.manifestation-session-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #0c0c1e;
+  color: #fff;
+  height: 100vh;
+}
+
+.session-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.session-header h1 {
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.session-stats {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 1.2em;
+}
+
+.constellation-view {
+  width: 800px;
+  height: 600px;
+  border: 1px solid #555;
+  margin-bottom: 20px;
+  background-color: #1a1a2e;
+}
+
+.session-controls {
+  display: flex;
+  gap: 20px;
+}
+
+.session-controls button {
+  padding: 10px 20px;
+  font-size: 1em;
+  color: #fff;
+  background-color: #8e44ad;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.session-controls button:hover {
+  background-color: #9b59b6;
+}

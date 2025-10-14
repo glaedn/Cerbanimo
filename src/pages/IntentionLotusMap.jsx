@@ -256,7 +256,8 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
       .attr("d", d => `M${d.source.x},${d.source.y} C${d.source.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${d.target.y}`);
 
     if (isManifestView) {
-      linkElements.style("stroke-opacity", d => 0.3 + (d.source.resonance_score || Math.random()) * 0.7);
+      linkElements.style("stroke-opacity", d => 0.3 + (d.source.resonance_score || Math.random()) * 0.7)
+        .classed('shimmering', true);
     }
     
     const renderPetals = (nodes, parentGroup) => {
@@ -265,8 +266,12 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         .attr("transform", d => `translate(${d.x || 0}, ${d.y || 0})`)
         .on("click", (event, d) => handleEditPetal(d));
 
-      nodeGroups.append("circle").attr("r", 15).attr("fill", d => getPetalColor(d.status))
+      const circles = nodeGroups.append("circle").attr("r", 15).attr("fill", d => getPetalColor(d.status))
         .style("opacity", d => isManifestView ? 0.3 + (d.resonance_score || Math.random()) * 0.7 : 1);
+
+      if (isManifestView) {
+        circles.classed('pulsing', true);
+      }
 
       nodeGroups.append("text").attr("dy", 25).attr("text-anchor", "middle").text(d => d.name.substring(0,10) + (d.name.length > 10 ? '...' : '')).attr("class", "petal-label");
 
@@ -410,7 +415,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         </div>
       </div>
 
-      {manifestationSummary && (
+      {isManifestView && manifestationSummary && (
           <div className="narration-overlay">
               <p>{manifestationSummary}</p>
           </div>

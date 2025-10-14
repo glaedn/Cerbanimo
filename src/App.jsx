@@ -27,6 +27,7 @@ import WaitingListPage from "./pages/WaitingListPage.jsx"; // Added import
 import CallTheCosmos from "./pages/CallTheCosmos.jsx";
 import AuthWrapper from "./AuthWrapper.jsx";
 import RealmsMesh from "./pages/RealmsMesh.jsx";
+import ManifestationSession from "./pages/ManifestationSession.jsx";
 
 const App = () => {
   return (
@@ -184,6 +185,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <RealmsMesh />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/manifestation-session"
+            element={
+              <PrivateRoute>
+                <ManifestationSession />
               </PrivateRoute>
             }
           />

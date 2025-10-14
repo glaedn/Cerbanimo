@@ -124,7 +124,7 @@
 }
 
 /* Manifest View */
-.manifest-node circle {
+.manifest-node circle.pulsing {
   animation: pulse-glow 2s infinite ease-in-out;
 }
 
@@ -137,7 +137,7 @@
   }
 }
 
-.manifest-link {
+.manifest-link.shimmering {
   stroke: #00f3ff;
   stroke-dasharray: 4, 4;
   animation: dash-flow 1s linear infinite;

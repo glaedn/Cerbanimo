@@ -1,70 +1,46 @@
-/* General Page Styling */
+/* PublicProfile.css - Rebranded for The Chronicle */
+
 .public-profile-container {
+    padding: 40px 20px;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    background: #0A0A2E;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 60px;
-    background-color: #121212;
-    color: #ffffff;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
+    gap: 30px;
 }
 
-/* Profile Avatar */
+.public-profile-container .profile-title {
+    font-family: 'Orbitron', sans-serif !important;
+    color: #FF5CA2 !important;
+    text-shadow: 0 0 10px #FF5CA2;
+}
+
 .public-profile-avatar {
-    width: 120px !important;
-    height: 120px !important;
-    border: 3px solid rgba(0, 255, 255, 0.8);
-    margin-bottom: 10px;
+    width: 100px !important;
+    height: 100px !important;
+    border: 3px solid #00f3ff;
 }
 
-/* Username */
-.public-profile-username {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #00ffff;
-    text-shadow: 0px 0px 10px rgba(0, 255, 255, 0.8);
-}
-
-/* Skills Section */
-.skills-container {
-    margin-top: 20px;
-    text-align: center;
-    padding: 10px;
-    background: rgba(0, 255, 255, 0.637);
-    border-radius: 8px;
-    width: 100%;
-    max-width: 400px;
-}
-
-.profile-skill-chip {
-    background: rgba(7, 65, 65, 0.551)!important;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: #ffffff!important;
-    text-shadow: 0px 0px 10px rgba(8, 130, 124, 0.8);
-    transition: background 0.3s ease-in-out;
-}
-
-.profile-skill-chip:hover {
-    background: rgba(0, 255, 255, 0.805)!important;
-}
-
-/* Badges Section */
+.skills-container,
 .badges-container {
-    margin-top: 20px;
-    text-align: center;
-    padding: 10px;
-    background: rgba(255, 204, 0, 0.1);
-    border-radius: 8px;
+    background: rgba(10, 10, 46, 0.7);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #3498DB;
     width: 100%;
-    max-width: 400px;
+    max-width: 800px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+}
+
+.profile-skill-chip {
+    background-color: #3498DB !important;
+    color: white !important;
 }
 
 .badge-item {
@@ -75,26 +51,7 @@
 }
 
 .badge-avatar {
-    width: 50px;
-    height: 50px;
+    width: 50px !important;
+    height: 50px !important;
     margin-bottom: 5px;
-    border-radius: 50%;
-    box-shadow: 0px 0px 10px rgba(255, 204, 0, 0.5);
-}
-
-/* Responsive Design */
-@media (max-width: 480px) {
-    .public-profile-avatar {
-        width: 100px !important;
-        height: 100px !important;
-    }
-
-    .public-profile-username {
-        font-size: 1.5rem;
-    }
-
-    .skills-container,
-    .badges-container {
-        width: 90%;
-    }
 }

@@ -29,6 +29,18 @@
   stroke: #c471ed;
 }
 
+.link.shimmering {
+  stroke: #00f3ff;
+  stroke-dasharray: 4, 4;
+  animation: dash-flow 1s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
 .node text {
   fill: #e0e0e0;
   font-family: 'Orbitron', sans-serif;
@@ -53,4 +65,17 @@
 .control-button:hover {
   background-color: #c471ed;
   color: #1a1a2e;
+}
+
+.realm-tooltip {
+  position: absolute;
+  text-align: left;
+  width: auto;
+  height: auto;
+  padding: 8px;
+  font: 12px sans-serif;
+  background: lightsteelblue;
+  border: 0px;
+  border-radius: 8px;
+  pointer-events: none;
 }

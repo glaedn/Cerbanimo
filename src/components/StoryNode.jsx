@@ -31,7 +31,22 @@ const StoryNode = ({
   endorsements = [],
   feedback = [],
   onAddEndorsement,
+  story_type,
+  created_at,
 }) => {
+  const getIconForStoryType = (type) => {
+    switch (type) {
+      case 'intention_declared':
+        return '🌱';
+      case 'realm_joined':
+        return '🌐';
+      case 'petal_resonated':
+        return '✨';
+      default:
+        return '📖';
+    }
+  };
+
   const [showFeedback, setShowFeedback] = useState(false);
   const [comment, setComment] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -60,11 +75,14 @@ const StoryNode = ({
   return (
     <Card className="story-node-card" variant="outlined">
       <CardContent>
-        <Typography variant="h6" className="story-node-header-label glow-text">
-          {petal_name}
-        </Typography>
+        <div className="story-node-title">
+          <span className="story-node-icon">{getIconForStoryType(story_type)}</span>
+          <Typography variant="h6" className="story-node-header-label glow-text">
+            {petal_name || intention_name}
+          </Typography>
+        </div>
         <Typography variant="subtitle2" className="story-node-subheader">
-          from intention: {intention_name}
+          {new Date(created_at).toLocaleDateString()} - {intention_name}
         </Typography>
 
         <Divider className="neon-divider" />

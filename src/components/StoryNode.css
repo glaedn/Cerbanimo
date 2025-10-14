@@ -38,6 +38,17 @@
   opacity: 1; /* Fade in the line */
 }
 
+.story-node-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.story-node-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
 /* Header Label Styling */
 .story-node-header-label {
   display: inline-block;

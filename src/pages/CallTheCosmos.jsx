@@ -11,6 +11,7 @@ const CallTheCosmos = () => {
   const [urgency, setUrgency] = useState('Medium');
   const [type, setType] = useState('Material Goods');
   const [submitted, setSubmitted] = useState(false);
+  const [suggestedResponses, setSuggestedResponses] = useState([]);
 
   const handleSubmit = async () => {
     try {
@@ -26,6 +27,13 @@ const CallTheCosmos = () => {
         },
       });
       setSubmitted(true);
+      // Mock fetching suggested responses
+      setTimeout(() => {
+        setSuggestedResponses([
+          { text: '“LunaGrow Collective” offers 10 packets 🌱' },
+          { text: '“Green Thread” resonates +5 visibility ✧' },
+        ]);
+      }, 2000);
     } catch (error) {
       console.error("Failed to submit call:", error);
     }
@@ -81,13 +89,17 @@ const CallTheCosmos = () => {
         </Box>
       ) : (
         <Box className="cosmos-submitted">
-          <div className="ripple-animation"></div>
+          <div className="ripple-container">
+            <div className="ripple-animation"></div>
+            <div className="ripple-animation"></div>
+          </div>
           <Typography variant="h5">Your call has been sent to the cosmos...</Typography>
           <Box className="suggested-responses">
             <Typography>Suggested responses appear as constellations approaching:</Typography>
             <ul>
-              <li>→ “LunaGrow Collective” offers 10 packets 🌱</li>
-              <li>→ “Green Thread” resonates +5 visibility ✧</li>
+              {suggestedResponses.map((response, index) => (
+                <li key={index}>→ {response.text}</li>
+              ))}
             </ul>
           </Box>
         </Box>

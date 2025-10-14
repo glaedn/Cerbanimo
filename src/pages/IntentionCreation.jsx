@@ -18,20 +18,25 @@ import { useNavigate } from "react-router-dom";
 import "./IntentionCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
 
-const Seed = ({ growth }) => {
+const Seed = ({ growth, isBlooming }) => {
   let seedSymbol = '✦';
   let className = 'seed';
-  if (growth > 5) {
-    seedSymbol = '🌱';
-    className += ' sprout-1';
-  }
-  if (growth > 20) {
-    seedSymbol = '🌿';
-    className += ' sprout-2';
-  }
-  if (growth > 40) {
+  if (isBlooming) {
+    className += ' blooming';
     seedSymbol = '🌸';
-    className += ' sprout-3';
+  } else {
+    if (growth > 5) {
+      seedSymbol = '🌱';
+      className += ' sprout-1';
+    }
+    if (growth > 20) {
+      seedSymbol = '🌿';
+      className += ' sprout-2';
+    }
+    if (growth > 40) {
+      seedSymbol = '🌸';
+      className += ' sprout-3';
+    }
   }
   return <div className={className}>{seedSymbol}</div>;
 };
@@ -47,6 +52,7 @@ const IntentionCreation = () => {
   const [availableCapabilities, setAvailableCapabilities] = useState([]);
   const [availableTags, setAvailableTags] = useState(['Growth', 'Food', 'Education', 'Art', 'Technology']);
   const [matchingRealms, setMatchingRealms] = useState([]);
+  const [isBlooming, setIsBlooming] = useState(false);
 
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
@@ -125,7 +131,14 @@ const IntentionCreation = () => {
           🌱 DECLARE AN INTENTION 🌱
         </Typography>
 
-        <Seed growth={name.length} />
+        <Seed growth={name.length} isBlooming={isBlooming} />
+
+        <Button onClick={() => {
+          setIsBlooming(true);
+          setTimeout(() => setIsBlooming(false), 2000); // Reset after animation
+        }} className="preview-bloom-button">
+          Preview Bloom
+        </Button>
 
         <Typography variant="body1" className="input-label">
           Describe your intention in one line:
