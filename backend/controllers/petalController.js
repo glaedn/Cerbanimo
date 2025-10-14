@@ -899,11 +899,40 @@ const approvePetal = async (petalId, io, client) => {
 
     // Step 5: Update user experience
     if (assigned_user_ids && assigned_user_ids.length > 0) {
-      await localClient.query(
-        `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
-         WHERE id = ANY($2)`,
-        [petalId.toString(), assigned_user_ids]
-      );
+        for (const userId of assigned_user_ids) {
+            const experienceQuery = `
+                UPDATE capabilities
+                SET unlocked_users = jsonb_set(
+                    unlocked_users,
+                    (
+                    SELECT CONCAT('{', index-1, ',exp}')::text[]
+                    FROM jsonb_array_elements(unlocked_users) WITH ORDINALITY arr(elem, index)
+                    WHERE (elem->>'user_id')::int = $1
+                    ),
+                    to_jsonb((
+                    SELECT (elem->>'exp')::int + 25
+                    FROM jsonb_array_elements(unlocked_users) AS elem
+                    WHERE (elem->>'user_id')::int = $1
+                    ))
+                )
+                WHERE id = $2 AND EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements(unlocked_users) AS elem
+                    WHERE (elem->>'user_id')::int = $1
+                );
+            `;
+            const updateResult = await localClient.query(experienceQuery, [userId, skill_id]);
+
+            if (updateResult.rowCount === 0) {
+                // If the user is not in the array, add them
+                const addUserQuery = `
+                    UPDATE capabilities
+                    SET unlocked_users = unlocked_users || '[{"user_id": $1, "exp": 25, "level": 1, "unlocked_at": "now()"}]'::jsonb
+                    WHERE id = $2;
+                `;
+                await localClient.query(addUserQuery, [userId, skill_id]);
+            }
+        }
     }
 
     // Step 6: Differential cotoken and token_ledger updates

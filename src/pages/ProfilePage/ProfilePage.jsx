@@ -8,6 +8,7 @@ import UserPortfolio from '../UserPortfolio.jsx';
 import CapabilitiesConstellation from '../../components/CapabilitiesConstellation';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useCapabilityData } from '../../hooks/useCapabilityData';
+import LevelNotification from '../../components/LevelNotification/LevelNotification';
 
 const getTitleForLevel = (level) => {
   if (level >= 50) return "Cosmic Weaver";
@@ -28,10 +29,14 @@ const ProfilePage = () => {
   const [userTitle, setUserTitle] = useState("Dream Spark");
   const [xpPercentage, setXpPercentage] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [notificationProps, setNotificationProps] = useState(null);
 
   useEffect(() => {
     if (profile && allCapabilities) {
       let totalGlobalExp = 0;
+      let lastGainedSkill = null;
+      let xpGained = 0;
+
       allCapabilities.forEach(capability => {
         if (capability.unlocked_users && Array.isArray(capability.unlocked_users)) {
           capability.unlocked_users.forEach(userEntry => {
@@ -51,11 +56,21 @@ const ProfilePage = () => {
       const expIntoCurrentLevel = totalGlobalExp - currentLevelExp;
       const expForNextLevel = nextLevelExp - currentLevelExp;
 
+      if (userLevel !== 1 && level > userLevel) {
+        setNotificationProps({
+          previousXP: totalGlobalExp - 10, // This is an assumption
+          newXP: totalGlobalExp,
+          previousLevel: userLevel,
+          newLevel: level,
+          skillName: "General" // This is a placeholder
+        });
+      }
+
       setUserLevel(level);
       setUserTitle(getTitleForLevel(level));
       setXpPercentage(expForNextLevel > 0 ? (expIntoCurrentLevel / expForNextLevel) * 100 : 0);
     }
-  }, [profile, allCapabilities]);
+  }, [profile, allCapabilities, userLevel]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -63,6 +78,7 @@ const ProfilePage = () => {
 
   return (
     <Box className="profile-container">
+      {notificationProps && <LevelNotification {...notificationProps} />}
       <Typography className="profile-title" variant="h4" gutterBottom>
         ✧ YOUR CHRONICLE ✧
       </Typography>

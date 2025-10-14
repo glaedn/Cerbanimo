@@ -30,6 +30,7 @@ import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
 import manifestationSessionRoutes from './routes/manifestationSessions.js';
 import liveActivityRoutes from './routes/liveActivity.js';
+import analyticsRoutes from './routes/analytics.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
@@ -41,6 +42,7 @@ import { createPetalTable, addResonanceScoreToPetals } from '../models/petals.js
 import { createTokenTransactionsTable } from '../models/tokenTransactions.js';
 import { createManifestationSessionsTable } from '../models/manifestationSessions.js';
 import { createRealmsTable } from '../models/realms.js';
+import pool from './db.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
 // If they had similar exported creation functions, they would be imported here too.
 
@@ -186,6 +188,7 @@ app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
 app.use('/manifestation-sessions', manifestationSessionRoutes);
 app.use('/live-activity', liveActivityRoutes);
+app.use('/analytics', jwtCheck, analyticsRoutes);
 
 // Nightly petal reset
 cron.schedule('0 0 * * *', async () => {
@@ -226,6 +229,13 @@ async function initializeDatabase() {
     await createTokenTransactionsTable();
     await createManifestationSessionsTable();
     
+    // Insert "General Contribution" capability if it doesn't exist
+    await pool.query(`
+      INSERT INTO capabilities (name, category, description)
+      SELECT 'General Contribution', 'General', 'Experience gained from general contributions to the ecosystem.'
+      WHERE NOT EXISTS (SELECT 1 FROM capabilities WHERE name = 'General Contribution');
+    `);
+
     // Then create triggers that depend on these tables
     // Ensure the trigger function (update_updated_at_column) is created once,
     // which is handled within each of these trigger creation functions by using CREATE OR REPLACE.

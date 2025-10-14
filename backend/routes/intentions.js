@@ -402,16 +402,65 @@ router.post('/auto-generate', async (req, res) => {
 router.post('/:intentionId/resonate', async (req, res) => {
   const { intentionId } = req.params;
   const { userId } = req.body;
+  const client = await pool.connect();
   try {
-    const query = 'INSERT INTO resonances (user_id, intention_id) VALUES ($1, $2) ON CONFLICT (user_id, intention_id) DO NOTHING RETURNING *';
-    const result = await pool.query(query, [userId, intentionId]);
-    if (result.rows.length === 0) {
+    await client.query('BEGIN');
+
+    const resonanceQuery = 'INSERT INTO resonances (user_id, intention_id) VALUES ($1, $2) ON CONFLICT (user_id, intention_id) DO NOTHING RETURNING *';
+    const resonanceResult = await client.query(resonanceQuery, [userId, intentionId]);
+
+    if (resonanceResult.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(200).json({ message: 'User has already resonated with this intention.' });
     }
-    res.status(201).json(result.rows[0]);
+
+    // Get the ID of the "General Contribution" capability
+    const capabilityQuery = "SELECT id FROM capabilities WHERE name = 'General Contribution'";
+    const capabilityResult = await client.query(capabilityQuery);
+    const capabilityId = capabilityResult.rows[0].id;
+
+    // Award 10 XP for resonating
+    const experienceQuery = `
+      UPDATE capabilities
+      SET unlocked_users = jsonb_set(
+        unlocked_users,
+        (
+          SELECT CONCAT('{', index-1, ',exp}')::text[]
+          FROM jsonb_array_elements(unlocked_users) WITH ORDINALITY arr(elem, index)
+          WHERE (elem->>'user_id')::int = $1
+        ),
+        to_jsonb((
+          SELECT (elem->>'exp')::int + 10
+          FROM jsonb_array_elements(unlocked_users) AS elem
+          WHERE (elem->>'user_id')::int = $1
+        ))
+      )
+      WHERE id = $2 AND EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(unlocked_users) AS elem
+        WHERE (elem->>'user_id')::int = $1
+      );
+    `;
+    const updateResult = await client.query(experienceQuery, [userId, capabilityId]);
+
+    if (updateResult.rowCount === 0) {
+      // If the user is not in the array, add them
+      const addUserQuery = `
+        UPDATE capabilities
+        SET unlocked_users = unlocked_users || '[{"user_id": $1, "exp": 10, "level": 1, "unlocked_at": "now()"}]'::jsonb
+        WHERE id = $2;
+      `;
+      await client.query(addUserQuery, [userId, capabilityId]);
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json(resonanceResult.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating resonance:', error);
     res.status(500).json({ message: 'Failed to create resonance' });
+  } finally {
+    client.release();
   }
 });
 

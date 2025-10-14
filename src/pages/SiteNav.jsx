@@ -340,6 +340,17 @@ const SiteNav = () => {
               >
                 Form a New Realm
               </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname.startsWith("/analytics-dashboard")
+                    ? "active"
+                    : ""
+                }`}
+                to="/analytics-dashboard"
+                onClick={closeSidebar}
+              >
+                Analytics
+              </Link>
               {/* Declare a Need Button */}
               <Button
                 variant="text"
