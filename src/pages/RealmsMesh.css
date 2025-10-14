@@ -79,3 +79,19 @@
   border-radius: 8px;
   pointer-events: none;
 }
+
+@keyframes shimmer {
+  0% {
+    box-shadow: 0 0 5px #c471ed, 0 0 10px #c471ed;
+  }
+  50% {
+    box-shadow: 0 0 20px #f7b733, 0 0 30px #f7b733;
+  }
+  100% {
+    box-shadow: 0 0 5px #c471ed, 0 0 10px #c471ed;
+  }
+}
+
+.shimmering-border {
+  animation: shimmer 2s infinite;
+}

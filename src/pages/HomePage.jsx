@@ -10,6 +10,41 @@ const RotatingLotus = () => (
   </div>
 );
 
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+const LiveManifestations = () => {
+  const [liveData, setLiveData] = useState(null);
+
+  useEffect(() => {
+    const fetchLiveData = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/live-activity`);
+        setLiveData(response.data);
+      } catch (error) {
+        console.error("Error fetching live activity:", error);
+      }
+    };
+
+    fetchLiveData();
+    const interval = setInterval(fetchLiveData, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!liveData) {
+    return <div>Loading live manifestations...</div>;
+  }
+
+  return (
+    <ul className="live-manifestations-list">
+      <li>● Realm “{liveData.topRealm.name}” is resonating at {liveData.topRealm.alignment}% alignment</li>
+      <li>● New Intention: “{liveData.latestIntention.name}”</li>
+      <li>● {liveData.activeResonances} active resonances pulsing</li>
+    </ul>
+  );
+};
+
 export default function Homepage() {
   // Get the navigate function from React Router
   const navigate = useNavigate();
@@ -50,11 +85,7 @@ export default function Homepage() {
 
       <section className="live-manifestations">
         <h2 className="live-manifestations-title">✦ Live Manifestations ✦</h2>
-        <ul className="live-manifestations-list">
-          <li>● Realm “Soluna” is resonating at 89% alignment</li>
-          <li>● New Intention: “Grow the Shared Garden”</li>
-          <li>● 23 active resonances pulsing</li>
-        </ul>
+        <LiveManifestations />
       </section>
 
       <footer className="footer">

@@ -149,6 +149,23 @@ export const useIntentionPetals = (intentionId, user, setUnreadCount) => {
     }
   }, [skills.length, intentionId]);
 
+  const generateManifestationSummary = async (sessionId) => {
+    try {
+      const token = await getToken();
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${sessionId}/generate-summary`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data.summary;
+    } catch (error) {
+      console.error("Error generating manifestation summary:", error);
+      return null;
+    }
+  };
+
   return {
     skills,
     petals,
@@ -158,6 +175,7 @@ export const useIntentionPetals = (intentionId, user, setUnreadCount) => {
     fetchPetals,
     fetchIntention,
     handlePetalAction,
-    updateIntention, // Export the new function
+    updateIntention,
+    generateManifestationSummary,
   };
 };

@@ -77,8 +77,8 @@ const RealmsMesh = () => {
         tooltip.transition().duration(200).style('opacity', .9);
         tooltip.html(`
           <strong>${d.name}</strong><br/>
-          Activity: ${'█'.repeat(Math.floor(d.activity * 10))}${'░'.repeat(10 - Math.floor(d.activity * 10))}<br/>
-          Alignment: ${d.alignment_score_with_user?.toFixed(2) || 'N/A'}<br/>
+          Activity: ${'█'.repeat(Math.floor((d.activity || 0) * 10))}${'░'.repeat(10 - Math.floor((d.activity || 0) * 10))}<br/>
+          Alignment with yours: ${d.alignment_score_with_user?.toFixed(2) || 'N/A'}<br/>
           Anchors: ${d.anchors?.join(', ') || 'None'}
         `)
           .style('left', (event.pageX + 5) + 'px')
@@ -90,7 +90,10 @@ const RealmsMesh = () => {
 
     node.append('circle')
       .attr('r', 20)
-      .attr('fill', '#c471ed');
+      .attr('fill', '#c471ed')
+      .style('stroke', d => d.alignment_score_with_user > 0.7 ? '#f7b733' : '#c471ed')
+      .style('stroke-width', d => d.alignment_score_with_user > 0.7 ? '3px' : '1px')
+      .classed('shimmering-border', d => d.alignment_score_with_user > 0.7);
 
     node.append('text')
       .text(d => d.name)

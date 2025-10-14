@@ -4,7 +4,7 @@ import axios from "axios";
 import PetalEditor from "./PetalEditor";
 import { useIntentionPetals } from "../hooks/useIntentionPetals";
 import "./IntentionLotusMap.css";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 
@@ -13,6 +13,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { intentionId: paramIntentionId } = useParams();
+  const navigate = useNavigate();
   const intentionId = propIntentionId || paramIntentionId;
   const { getAccessTokenSilently, user } = useAuth0();
 
@@ -114,16 +115,10 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         );
         setResonanceEvents([]);
       }
-      const response = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${session.id}/end`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setManifestationSummary(response.data.manifestation_summary);
+      const summary = await generateManifestationSummary(session.id);
+      if (summary) {
+        setManifestationSummary(summary);
+      }
       setSession(null);
       setIsManifestView(false); // Switch back to normal view
     } catch (error) {
@@ -229,13 +224,17 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
     const centerY = height / 2;
     const radiusStep = 120;
 
-    Object.values(levels).forEach((levelNodes, levelIndex) => {
-      const radius = levelIndex * radiusStep + (levelIndex === 0 ? 0 : 80);
+    const sortedLevels = Object.keys(levels).sort((a, b) => a - b);
+    sortedLevels.forEach((level, levelIndex) => {
+      const levelNodes = levels[level];
+      const radius = (levelIndex + 1) * 110; // Adjusted radius step
       const angleStep = (2 * Math.PI) / levelNodes.length;
       levelNodes.forEach((node, nodeIndex) => {
-        const angle = nodeIndex * angleStep;
+        const angle = nodeIndex * angleStep - Math.PI / 2; // Start from top
         node.x = centerX + radius * Math.cos(angle);
         node.y = centerY + radius * Math.sin(angle);
+        node.radius = radius;
+        node.angle = angle;
       });
     });
 
@@ -247,13 +246,21 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
     centerNode.append("text").text("⊙").attr("text-anchor", "middle").attr("dy", 8).attr("fill", "white").style("font-size", "30px");
 
     const links = [];
-    petals.forEach(p => p.dependencies.forEach(depId => {
-      if (graph[p.id] && graph[depId]) links.push({ source: graph[p.id], target: graph[depId] });
-    }));
+    petals.forEach(p => {
+      p.dependencies.forEach(depId => {
+        if (graph[p.id] && graph[depId]) {
+          links.push({ source: graph[depId], target: graph[p.id] });
+        }
+      });
+    });
 
     const linkElements = linksGroup.selectAll(".link").data(links).enter()
-      .append("path").attr("class", d => `link ${isManifestView ? 'manifest-link' : ''}`)
-      .attr("d", d => `M${d.source.x},${d.source.y} C${d.source.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${d.target.y}`);
+      .append("line")
+      .attr("class", "link")
+      .attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y);
 
     if (isManifestView) {
       linkElements.style("stroke-opacity", d => 0.3 + (d.source.resonance_score || Math.random()) * 0.7)
@@ -267,11 +274,9 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         .on("click", (event, d) => handleEditPetal(d));
 
       const circles = nodeGroups.append("circle").attr("r", 15).attr("fill", d => getPetalColor(d.status))
-        .style("opacity", d => isManifestView ? 0.3 + (d.resonance_score || Math.random()) * 0.7 : 1);
-
-      if (isManifestView) {
-        circles.classed('pulsing', true);
-      }
+        .style("opacity", d => isManifestView ? 0.3 + (d.resonance_score || 0) * 0.7 : 1)
+        .style("box-shadow", d => `0 0 ${d.resonance_score * 20}px ${getPetalColor(d.status)}`)
+        .classed('pulsing', d => isManifestView && d.resonance_score > 0.5);
 
       nodeGroups.append("text").attr("dy", 25).attr("text-anchor", "middle").text(d => d.name.substring(0,10) + (d.name.length > 10 ? '...' : '')).attr("class", "petal-label");
 
@@ -319,7 +324,8 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
                 headers: { Authorization: `Bearer ${token}` }
               });
               fetchPetals();
-            } catch (error) {
+            } catch (error)
+{
               console.error('Error resonating with petal:', error);
             }
           }
@@ -333,41 +339,9 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
       }).on("mouseout", function() {
         d3.select(this).select(".resonate-button").style("display", "none");
       });
-
-      nodes.forEach(node => {
-        if (node.children && node.children.length > 0) {
-          const childrenGroup = parentGroup.append("g").attr("class", "children-group");
-          renderPetals(node.children, childrenGroup);
-        }
-      });
     };
-
     renderPetals(petals, nodesGroup);
-
-    resonateButton.append("circle").attr("r", 10).attr("fill", "gold");
-    resonateButton.append("text").text("✨").attr("text-anchor", "middle").attr("dy", 4);
-
-    nodeGroups.on("mouseover", function() {
-      d3.select(this).select(".resonate-button").style("display", "block");
-    }).on("mouseout", function() {
-      d3.select(this).select(".resonate-button").style("display", "none");
-    });
-
-    nodeGroups.append("text").attr("dy", 25).attr("text-anchor", "middle").text(d => d.name.substring(0,10) + (d.name.length > 10 ? '...' : '')).attr("class", "petal-label");
-
-    if (isEditMode) {
-        nodeGroups.append("circle")
-          .attr("class", "add-subpetal-handle")
-          .attr("r", 8)
-          .attr("cx", 15)
-          .attr("cy", -15)
-          .on("click", (e, d) => {
-              e.stopPropagation();
-              handleAddPetal(d.data.id);
-          });
-    }
-
-  }, [petals, skills, svgDimensions, isEditMode, isManifestView, zoomTransform]);
+  }, [petals, skills, svgDimensions, isEditMode, isManifestView, zoomTransform, userId, session, resonanceEvents, intentionId, intention, getAccessTokenSilently, fetchPetals, handlePetalAction, handleAddPetal, handleEditPetal]);
 
   return (
     <div className="lotus-map-container" ref={containerRef}>
@@ -404,8 +378,8 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
             [ Manifest View {isManifestView ? 'ON' : 'OFF'} 🌠 ]
           </button>
           {session ? (
-            <button className="control-button" onClick={handleEndSession}>
-              [ End Manifestation Session ]
+            <button className="control-button" onClick={() => navigate('/manifestation-session', { state: { sessionId: session.id } })}>
+              [ Go to Session ]
             </button>
           ) : (
             <button className="control-button" onClick={handleStartSession}>

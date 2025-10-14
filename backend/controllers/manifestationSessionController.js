@@ -73,13 +73,24 @@ export const endSession = async (req, res) => {
   const { sessionId } = req.params;
 
   try {
-    const updatedSession = await pool.query(
-      "UPDATE manifestation_sessions SET end_time = NOW(), status = 'completed' WHERE id = $1 RETURNING *",
-      [sessionId]
-    );
+    const sessionRes = await pool.query("SELECT intention_id FROM manifestation_sessions WHERE id = $1", [sessionId]);
+    if (sessionRes.rows.length === 0) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    const intentionId = sessionRes.rows[0].intention_id;
 
-    // Generate summary after ending the session
-    await generateManifestationSummary(sessionId);
+    const intentionRes = await pool.query("SELECT * FROM intentions WHERE id = $1", [intentionId]);
+    const petalsRes = await pool.query("SELECT * FROM petals WHERE intention_id = $1", [intentionId]);
+
+    const intention = intentionRes.rows[0];
+    const petals = petalsRes.rows;
+
+    const summary = await generateManifestationSummary(intention, petals);
+
+    const updatedSession = await pool.query(
+      "UPDATE manifestation_sessions SET end_time = NOW(), status = 'completed', manifestation_summary = $1 WHERE id = $2 RETURNING *",
+      [summary, sessionId]
+    );
 
     res.json(updatedSession.rows[0]);
   } catch (error) {
