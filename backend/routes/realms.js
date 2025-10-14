@@ -87,7 +87,7 @@ router.get("/", async (req, res) => {
     const query = `
       WITH realm_data AS (
         SELECT id, name, description, members, interest_tags, proposals,
-             approved_intentions, vote_delegations
+             approved_intentions, vote_delegations, phase
         FROM realms
         WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
         ORDER BY name

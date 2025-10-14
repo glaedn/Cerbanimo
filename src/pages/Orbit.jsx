@@ -237,6 +237,11 @@ const Orbit = () => {
         <button className="toggle-capabilities-btn">
           [ Toggle Capabilities ⊕ ]
         </button>
+        <div className="dashboard-nav">
+          <button onClick={() => navigate('/analytics-dashboard')}>[ Analytics ]</button>
+          <button onClick={() => navigate('/reward-dashboard')}>[ Rewards ]</button>
+          <button onClick={() => navigate('/realms-mesh')}>[ Realms ]</button>
+        </div>
       </div>
       <div className="orbit-legend">
         <span>○ = Petal / Intention</span>

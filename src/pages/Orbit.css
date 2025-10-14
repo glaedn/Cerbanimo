@@ -156,3 +156,17 @@
   z-index: 1002;
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
+
+.dashboard-nav {
+    margin-top: 10px;
+}
+
+.dashboard-nav button {
+    background: none;
+    border: 1px solid #00f3ff;
+    color: #00f3ff;
+    margin: 0 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+}

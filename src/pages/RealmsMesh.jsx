@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 import './RealmsMesh.css';
 
 const RealmsMesh = () => {
+  const navigate = useNavigate();
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { getAccessTokenSilently } = useAuth0();
@@ -77,6 +79,7 @@ const RealmsMesh = () => {
         tooltip.transition().duration(200).style('opacity', .9);
         tooltip.html(`
           <strong>${d.name}</strong><br/>
+          Phase: ${d.phase || 'N/A'}<br/>
           Activity: ${'█'.repeat(Math.floor((d.activity || 0) * 10))}${'░'.repeat(10 - Math.floor((d.activity || 0) * 10))}<br/>
           Alignment with yours: ${d.alignment_score_with_user?.toFixed(2) || 'N/A'}<br/>
           Anchors: ${d.anchors?.join(', ') || 'None'}
@@ -120,7 +123,7 @@ const RealmsMesh = () => {
         <svg ref={svgRef}></svg>
       </div>
       <div className="realm-controls">
-        <button className="control-button">[ FORM A NEW REALM ✦ ]</button>
+        <button className="control-button" onClick={() => navigate('/form-new-realm')}>[ FORM A NEW REALM ✦ ]</button>
       </div>
     </div>
   );
