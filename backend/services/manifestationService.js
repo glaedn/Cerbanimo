@@ -3,19 +3,34 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-async function getPetalsForIntention(intentionId) {
-    const query = `
-        SELECT p.name, p.description, p.status, p.resonance_score
-        FROM petals p
-        WHERE p.project_id = (SELECT project_id FROM intentions WHERE id = $1)
-    `;
-    try {
-        const { rows } = await pool.query(query, [intentionId]);
-        return rows;
-    } catch (error) {
-        console.error(`Error fetching petals for intention ${intentionId}:`, error);
-        throw error;
-    }
+async function getPetalsForIntention(intentionId, sessionId) {
+  const petalsQuery = `
+      SELECT p.id, p.name, p.description, p.status, p.resonance_score
+      FROM petals p
+      WHERE p.project_id = (SELECT project_id FROM intentions WHERE id = $1)
+  `;
+  const sessionQuery = `
+      SELECT resonance_events
+      FROM manifestation_sessions
+      WHERE id = $1
+  `;
+  try {
+    const { rows: petals } = await pool.query(petalsQuery, [intentionId]);
+    const { rows: sessionRows } = await pool.query(sessionQuery, [sessionId]);
+    const resonanceEvents = sessionRows[0]?.resonance_events || [];
+    const resonanceCounts = resonanceEvents.reduce((acc, event) => {
+      acc[event.petal_id] = (acc[event.petal_id] || 0) + 1;
+      return acc;
+    }, {});
+    const petalsWithResonance = petals.map(p => ({
+      ...p,
+      resonance_score: (p.resonance_score || 0) + (resonanceCounts[p.id] || 0)
+    }));
+    return petalsWithResonance;
+  } catch (error) {
+    console.error(`Error fetching petals for intention ${intentionId}:`, error);
+    throw error;
+  }
 }
 
 export const generateManifestationSummary = async (sessionId) => {
@@ -32,7 +47,7 @@ export const generateManifestationSummary = async (sessionId) => {
     }
     const intention = intentionRes.rows[0];
 
-    const petals = await getPetalsForIntention(intention.id);
+    const petals = await getPetalsForIntention(intention.id, sessionId);
 
     const prompt = `
       Based on the following intention and its associated petals (with resonance scores), generate a short, inspiring summary (1-2 sentences) of the emergent theme.

@@ -11,6 +11,7 @@ export const createManifestationSessionsTable = async () => {
       status VARCHAR(50) DEFAULT 'active', -- 'active', 'completed', 'aborted'
       participants INTEGER[] DEFAULT '{}',
       resonance_events JSONB[] DEFAULT '[]',
+      events JSONB[] DEFAULT '[]',
       manifestation_summary TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

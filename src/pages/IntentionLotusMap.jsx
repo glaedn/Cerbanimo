@@ -9,6 +9,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 
 const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
+  console.log("Rendering IntentionLotusMap");
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { intentionId: paramIntentionId } = useParams();
@@ -21,6 +22,7 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isManifestView, setIsManifestView] = useState(false);
   const [session, setSession] = useState(null);
+  const [resonanceEvents, setResonanceEvents] = useState([]);
   const [manifestationSummary, setManifestationSummary] = useState("");
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
@@ -100,6 +102,18 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
     if (!session) return;
     try {
       const token = await getAccessTokenSilently();
+      if (resonanceEvents.length > 0) {
+        await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${session.id}/batch-resonance`,
+          { resonanceEvents },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setResonanceEvents([]);
+      }
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${session.id}/end`,
         {},
@@ -273,14 +287,36 @@ const IntentionLotusMap = ({ intentionId: propIntentionId }) => {
         .style("display", "none")
         .on("click", async (event, d) => {
           event.stopPropagation();
-          try {
-            const token = await getAccessTokenSilently();
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/petals/${d.id}/resonate`, {}, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            fetchPetals();
-          } catch (error) {
-            console.error('Error resonating with petal:', error);
+          const resonanceEvent = {
+            petal_id: d.id,
+            user_id: userId,
+            timestamp: new Date().toISOString(),
+          };
+          if (session) {
+            setResonanceEvents([...resonanceEvents, resonanceEvent]);
+            try {
+              const token = await getAccessTokenSilently();
+              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/manifestation-sessions/${session.id}/events`, {
+                event: {
+                  type: 'resonance',
+                  ...resonanceEvent
+                }
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+            } catch (error) {
+              console.error('Error recording resonance event:', error);
+            }
+          } else {
+            try {
+              const token = await getAccessTokenSilently();
+              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/petals/${d.id}/resonate`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              fetchPetals();
+            } catch (error) {
+              console.error('Error resonating with petal:', error);
+            }
           }
         });
 

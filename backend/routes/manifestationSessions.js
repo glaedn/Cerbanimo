@@ -4,7 +4,9 @@ import {
   startSession,
   endSession,
   addParticipant,
-  recordResonance
+  recordResonance,
+  recordEvent,
+  recordBatchResonance
 } from '../controllers/manifestationSessionController.js';
 import { auth } from 'express-oauth2-jwt-bearer';
 
@@ -24,5 +26,7 @@ router.put('/:sessionId/start', startSession);
 router.put('/:sessionId/end', endSession);
 router.post('/:sessionId/participants', addParticipant);
 router.post('/:sessionId/resonance', recordResonance);
+router.post('/:sessionId/batch-resonance', recordBatchResonance);
+router.post('/:sessionId/events', recordEvent);
 
 export default router;

@@ -18,6 +18,40 @@ export const createSession = async (req, res) => {
   }
 };
 
+// Record a batch of resonance events
+export const recordBatchResonance = async (req, res) => {
+  const { sessionId } = req.params;
+  const { resonanceEvents } = req.body;
+
+  try {
+    const updatedSession = await pool.query(
+      "UPDATE manifestation_sessions SET resonance_events = resonance_events || $1 WHERE id = $2 RETURNING *",
+      [resonanceEvents, sessionId]
+    );
+    res.json(updatedSession.rows[0]);
+  } catch (error) {
+    console.error('Error recording batch resonance events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Record a generic event
+export const recordEvent = async (req, res) => {
+  const { sessionId } = req.params;
+  const { event } = req.body;
+
+  try {
+    const updatedSession = await pool.query(
+      "UPDATE manifestation_sessions SET events = array_append(events, $1) WHERE id = $2 RETURNING *",
+      [event, sessionId]
+    );
+    res.json(updatedSession.rows[0]);
+  } catch (error) {
+    console.error('Error recording event:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Start a manifestation session
 export const startSession = async (req, res) => {
   const { sessionId } = req.params;
