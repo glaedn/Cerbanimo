@@ -21,7 +21,7 @@ root.render(
       domain="dev-i5331ndl5kxve1hd.us.auth0.com"
       clientId="vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"
       authorizationParams={{
-        redirect_uri: `${window.location.origin}/dashboard`,
+        redirect_uri: `${window.location.origin}/orbit`,
         audience: import.meta.env.VITE_BACKEND_URL,
         scope: "openid profile email read:profile write:profile",
       }}

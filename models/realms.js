@@ -11,9 +11,20 @@ const createRealmsTable = async () => {
         proposals INTEGER[] DEFAULT '{}', -- Array of intention IDs, FK to intentions.id
         approved_intentions INTEGER[] DEFAULT '{}', -- Array of intention IDs, FK to intentions.id
         vote_delegations JSONB DEFAULT '{}'::jsonb,
+        phase TEXT DEFAULT 'Dreaming',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+    `;
+
+    const addPhaseColumnQuery = `
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='realms' AND column_name='phase') THEN
+          ALTER TABLE realms ADD COLUMN phase TEXT DEFAULT 'Dreaming';
+        END IF;
+      END
+      $$;
     `;
 
     const triggerQuery = `
@@ -40,6 +51,8 @@ const createRealmsTable = async () => {
     try {
       await pool.query(realmTableQuery);
       console.log('PostgreSQL: Realms table created or already exists.');
+      await pool.query(addPhaseColumnQuery);
+      console.log('PostgreSQL: "phase" column in realms table checked/added.');
       await pool.query(triggerQuery);
       console.log('PostgreSQL: Realms updated_at trigger created or already exists.');
     } catch (err) {

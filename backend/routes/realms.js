@@ -261,7 +261,7 @@ router.get("/:realmId", async (req, res) => {
               SELECT id, name, description,
                      COALESCE(members, ARRAY[]::integer[]) as members,
                      interest_tags, proposals,
-                     approved_intentions, vote_delegations
+                     approved_intentions, vote_delegations, phase
               FROM realms
               WHERE id = $1
           )
@@ -294,6 +294,44 @@ router.get("/:realmId", async (req, res) => {
   } catch (err) {
     console.error("Error fetching realm:", err);
     res.status(500).json({ error: "Failed to fetch realm" });
+  } finally {
+    client.release();
+  }
+});
+
+// Update a realm's phase
+router.put("/:realmId/phase", async (req, res) => {
+  const { realmId } = req.params;
+  const { phase, userId } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Check if user is a member of the realm
+    const memberCheck = await client.query(
+      `SELECT 1 FROM realms WHERE id = $1 AND $2 = ANY(members)`,
+      [realmId, userId]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      return res
+        .status(403)
+        .json({ error: "User is not a member of this realm" });
+    }
+
+    const query = `
+      UPDATE realms
+      SET phase = $1
+      WHERE id = $2
+      RETURNING *;
+    `;
+    const result = await client.query(query, [phase, realmId]);
+    await client.query("COMMIT");
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error updating realm phase:", err);
+    res.status(500).json({ error: "Failed to update realm phase" });
   } finally {
     client.release();
   }

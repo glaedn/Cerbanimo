@@ -40,6 +40,7 @@ import { createNeedsTable } from '../models/needs.js';
 import { createPetalTable, addResonanceScoreToPetals } from '../models/petals.js';
 import { createTokenTransactionsTable } from '../models/tokenTransactions.js';
 import { createManifestationSessionsTable } from '../models/manifestationSessions.js';
+import { createRealmsTable } from '../models/realms.js';
 // Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
 // If they had similar exported creation functions, they would be imported here too.
 
@@ -215,6 +216,7 @@ const PORT = process.env.PORT || 4000;
 async function initializeDatabase() {
   try {
     // Create tables first
+    await createRealmsTable();
     await createResonancesTable();
     await createChroniclesTable();
     await createResourcesTable();

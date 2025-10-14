@@ -15,7 +15,14 @@ import {
   Tooltip,
   Box,
   Paper,
-  Link
+  Link,
+  Stepper,
+  Step,
+  StepLabel,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -481,6 +488,29 @@ const RealmHub = () => {
         }
     };
 
+    const handlePhaseChange = async (event) => {
+        const newPhase = event.target.value;
+        if (!isMember) return;
+
+        try {
+            const token = await getAccessTokenSilently({
+                audience: import.meta.env.VITE_BACKEND_URL,
+                scope: 'openid profile email',
+            });
+
+            await axios.put(`${import.meta.env.VITE_BACKEND_URL}/realms/${realmId}/phase`,
+                { phase: newPhase, userId },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setRealm({ ...realm, phase: newPhase });
+            showNotification(`Realm phase updated to ${newPhase}!`);
+        } catch (error) {
+            console.error('Failed to update realm phase:', error);
+            alert('Failed to update realm phase. Please try again.');
+        }
+    };
+
     if (isLoading) {
         return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading realm data...</Typography>;
     }
@@ -492,6 +522,9 @@ const RealmHub = () => {
     if (!realm) {
         return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Realm not found</Typography>;
     }
+
+    const phases = ['Dreaming', 'Building', 'Reflecting', 'Rebirth'];
+    const activeStep = phases.indexOf(realm.phase);
 
     return (
         <div className="realm-hub">
@@ -505,6 +538,35 @@ const RealmHub = () => {
                         <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
                     ))}
                 </div>
+
+                <Box sx={{ width: '100%', my: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Stepper activeStep={activeStep} alternativeLabel>
+                            {phases.map((label) => (
+                            <Step key={label}>
+                                <StepLabel>{label}</StepLabel>
+                            </Step>
+                            ))}
+                        </Stepper>
+                    </Box>
+                    {isMember && (
+                        <FormControl sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="phase-select-label">Phase</InputLabel>
+                            <Select
+                                labelId="phase-select-label"
+                                id="phase-select"
+                                value={realm.phase}
+                                label="Phase"
+                                onChange={handlePhaseChange}
+                                disabled={!isMember}
+                            >
+                                {phases.map((phase) => (
+                                    <MenuItem key={phase} value={phase}>{phase}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    )}
+                </Box>
                 
                 {/* Join Request Button for non-members */}
                 {!isMember && (
