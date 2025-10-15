@@ -41,7 +41,7 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import RealmChronicle from '../components/RealmChronicle/index.jsx';
 import RealmResourceManagement from '../components/RealmResourceManagement/RealmResourceManagement.jsx';
-import ScheduleManifestation from '../components/ScheduleManifestation/ScheduleManifestation.jsx';
+import Rituals from '../components/Rituals.jsx';
 import './RealmHub.css';
 
 const RealmHub = () => {
@@ -65,57 +65,7 @@ const RealmHub = () => {
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
     const [memberScores, setMemberScores] = useState([]);
-    const [manifestations, setManifestations] = useState([]);
     const [currentTab, setCurrentTab] = useState(0);
-    const [openSchedule, setOpenSchedule] = useState(false);
-
-    const handleOpenSchedule = () => {
-        setOpenSchedule(true);
-    };
-
-    const handleCloseSchedule = () => {
-        setOpenSchedule(false);
-    };
-
-    const fetchManifestations = async () => {
-        if (!realmId || !isAuthenticated) return;
-        try {
-            const token = await getAccessTokenSilently({
-                audience: import.meta.env.VITE_BACKEND_URL,
-                scope: 'openid profile email',
-            });
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/manifestation-events/realm/${realmId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setManifestations(response.data);
-        } catch (error) {
-            console.error('Failed to fetch manifestations:', error);
-        }
-    };
-
-    const handleSchedule = async (manifestationData) => {
-        try {
-            const token = await getAccessTokenSilently({
-                audience: import.meta.env.VITE_BACKEND_URL,
-                scope: 'openid profile email',
-            });
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/manifestation-events`, { ...manifestationData, realm_id: realmId }, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            fetchManifestations(); // Refresh the list
-            showNotification('Group Manifestation scheduled successfully!');
-            handleCloseSchedule();
-        } catch (error) {
-            console.error('Failed to schedule manifestation:', error);
-            showNotification('Failed to schedule manifestation. Please try again.', 'error');
-        }
-    };
-
-    useEffect(() => {
-        if(isAuthenticated) {
-            fetchManifestations();
-        }
-    }, [realmId, isAuthenticated, getAccessTokenSilently]);
 
     const handleTabChange = (event, newValue) => {
         setCurrentTab(newValue);
@@ -281,7 +231,6 @@ const RealmHub = () => {
                             headers: { Authorization: `Bearer ${token}` },
                         })
                     );
-.
                     const intentionResults = await Promise.all(intentionPromises);
                     setApprovedIntentions(intentionResults.map(result => result.data));
                 }
@@ -1000,32 +949,7 @@ const RealmHub = () => {
                     </Card>
                 </div>
             </div>
-            {currentTab === 1 && (
-                <Box sx={{ padding: 2 }}>
-                    <Button variant="contained" onClick={handleOpenSchedule}>Schedule New Manifestation</Button>
-                    <List>
-                        {manifestations.map((manifestation) => (
-                            <ListItem key={manifestation.id}>
-                                <ListItemText
-                                    primary={manifestation.title}
-                                    secondary={`${new Date(manifestation.start_time).toLocaleString()} - ${manifestation.description}`}
-                                />
-                                {new Date(manifestation.start_time) < new Date() && new Date(manifestation.end_time) > new Date() && (
-                                    <Button variant="contained" color="secondary" onClick={() => navigate(`/manifestation-session/${manifestation.id}`)}>
-                                        Join Session
-                                    </Button>
-                                )}
-                            </ListItem>
-                        ))}
-                    </List>
-                </Box>
-            )}
-            <ScheduleManifestation
-                open={openSchedule}
-                handleClose={handleCloseSchedule}
-                realmId={realmId}
-                onSchedule={handleSchedule}
-            />
+            {currentTab === 1 ? <Rituals realmId={realmId} /> : null}
             <RealmResourceManagement realmId={realmId} />
             <RealmChronicle realmId={realmId} />
             <Snackbar 
