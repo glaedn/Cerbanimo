@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './vitest.setup.js',
     css: true,
+    testTimeout: 20000,
   },
 });

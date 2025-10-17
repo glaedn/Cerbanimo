@@ -7,7 +7,7 @@ import './Orbit.css';
 import IntentionLotusMap from './IntentionLotusMap';
 import CapabilitiesConstellation from '../components/CapabilitiesConstellation';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { useCapabilityData } from '../hooks/useCapabilityData';
+import useCapabilityData from '../hooks/useCapabilityData';
 
 const getTitleForLevel = (level) => {
   if (level >= 50) return "Cosmic Weaver";

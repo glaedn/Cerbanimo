@@ -7,7 +7,7 @@ import './ProfilePage.css';
 import UserPortfolio from '../UserPortfolio.jsx';
 import CapabilitiesConstellation from '../../components/CapabilitiesConstellation';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { useCapabilityData } from '../../hooks/useCapabilityData';
+import useCapabilityData from '../../hooks/useCapabilityData';
 import LevelNotification from '../../components/LevelNotification/LevelNotification';
 
 const getTitleForLevel = (level) => {

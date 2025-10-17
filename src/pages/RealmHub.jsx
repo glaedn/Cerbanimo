@@ -949,10 +949,12 @@ const RealmHub = () => {
                     </Card>
                 </div>
             </div>
-            {currentTab === 1 ? <Rituals realmId={realmId} /> : null}
-            <RealmResourceManagement realmId={realmId} />
-            <RealmChronicle realmId={realmId} />
-            <Snackbar 
+            )}
+            {currentTab === 1 && <Rituals realmId={realmId} />}
+            {/* The following components are currently un-used but can be integrated as new tabs */}
+            {/* <RealmResourceManagement realmId={realmId} /> */}
+            {/* <RealmChronicle realmId={realmId} /> */}
+            <Snackbar
               open={snackbarOpen}
               autoHideDuration={6000}
               onClose={handleCloseSnackbar}
