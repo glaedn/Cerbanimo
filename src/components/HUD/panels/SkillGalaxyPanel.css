@@ -98,3 +98,22 @@
   stroke-linejoin: miter;
   transition: font-size var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out); /* Smooth font size changes on zoom */
 }
+
+@media (max-width: 768px) {
+  .skill-galaxy-panel {
+    height: 400px !important; /* Fixed height on mobile */
+    min-height: 400px;
+  }
+  
+  .skill-galaxy-svg {
+    height: 350px !important;
+  }
+  
+  .node-label {
+    font-size: 12px !important; /* Smaller labels on mobile */
+  }
+  
+  .level-label {
+    font-size: 8px !important;
+  }
+}
