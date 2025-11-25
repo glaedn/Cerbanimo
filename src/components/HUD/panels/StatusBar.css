@@ -77,27 +77,29 @@
 /* --- Mobile Responsiveness for StatusBar --- */
 @media (max-width: 768px) {
   .status-bar {
-    flex-direction: column; /* Stack items vertically */
-    height: auto; /* Auto height to fit content */
-    padding: 8px;
-    align-items: flex-start; /* Align items to the start */
-  }
-
-  .status-bar .status-item {
-    margin-bottom: 5px; /* Add some space between stacked items */
-    width: 100%; /* Make items take full width for clarity */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    min-height: 70px;
+    flex-direction: column;
+    padding: 10px;
+    z-index: 1000;
   }
   
-  .status-bar .user-info, 
-  .status-bar .tokens-info,
-  .status-bar .notifications-info {
-    display: flex;
-    justify-content: space-between; /* Space out label and value */
+  .status-bar .status-item {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+  
+  .status-bar .xp-bar-container {
     width: 100%;
   }
-
+  
   .status-bar .xp-bar-container .progress-bar-container {
-    width: 100%; /* Full width XP bar */
+    width: 100% !important;
   }
 
   .status-bar .user-info .username {

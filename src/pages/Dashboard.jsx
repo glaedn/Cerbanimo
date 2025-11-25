@@ -11,7 +11,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently, logout } = useAuth0();
-  
+
   const navigate = useNavigate(); // Properly declare navigate using useNavigate
 
   const goToProfile = () => {
@@ -29,7 +29,7 @@ const Dashboard = () => {
           // Get JWT token from Auth0
           const token = await getAccessTokenSilently({
             // audience: import.meta.env.VITE_AUTH0_AUDIENCE, // Example audience
-        });
+          });
           console.log('JWT Token:', token);
           console.log('User is authenticated, caching session...');
           // Save token in localStorage
@@ -56,6 +56,23 @@ const Dashboard = () => {
 
     saveUserToken();
   }, [isAuthenticated, user, getAccessTokenSilently]);
+
+  // Fix for mobile viewport height
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+
+    return () => {
+      window.removeEventListener('resize', setVH);
+      window.removeEventListener('orientationchange', setVH);
+    };
+  }, []);
 
   return (
     <SpaceshipHUD>
