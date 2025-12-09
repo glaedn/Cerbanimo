@@ -1,0 +1,23 @@
+.rezzler-container {
+  width: 100vw;
+  height: 100vh;
+  background-color: #111; /* ultra-dark desaturated gradient (charcoal drifting into deep blue-violet) */
+  background-image: radial-gradient(circle at top, #2c2c3e, #1a1a2a);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align to the top */
+  align-items: center;
+  overflow: hidden;
+}
+
+.lotus-blossom-wrapper {
+  width: 100%;
+  height: 50vh; /* Take up the top half of the screen */
+  max-width: 390px; /* Mobile-first canvas width */
+}
+
+.double-helix-wrapper {
+  width: 100%;
+  height: 50vh; /* Take up the bottom half of the screen */
+  max-width: 390px; /* Mobile-first canvas width */
+}
