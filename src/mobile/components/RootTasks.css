@@ -1,0 +1,40 @@
+.root-tasks-container {
+  position: relative;
+  margin-top: -20px; /* Overlap slightly with the Double Helix */
+}
+
+.branch-line {
+  stroke: #FFC4D6; /* A soft pink to match the nodes */
+  stroke-width: 2;
+}
+
+.task-node {
+  cursor: pointer;
+  transition: filter 0.2s ease-in-out;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7)); /* White glow for nodes */
+}
+
+.task-node:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1)); /* Brighter glow on hover */
+}
+
+.label-background {
+  fill: rgba(255, 143, 171, 0.9); /* Semi-transparent pink */
+  stroke: #FF8FAB;
+  stroke-width: 1;
+}
+
+.label-text {
+  font-family: sans-serif;
+  text-anchor: middle;
+  fill: #ffffff;
+}
+
+.label-text.title {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.label-text.skill {
+  font-size: 10px;
+}
