@@ -29,6 +29,7 @@ import AuthWrapper from "./AuthWrapper.jsx";
 import RealmsMesh from "./pages/RealmsMesh.jsx";
 import ManifestationSession from "./pages/ManifestationSession.jsx";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
+import Rezzler from "./mobile/Rezzler.jsx";
 
 const App = () => {
   return (
@@ -205,6 +206,7 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route path="/rezzler" element={<Rezzler />} />
           {/* Default Route */}
           <Route path="*" element={<HomePage />} />
         </Routes>
