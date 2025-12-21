@@ -1,59 +1,58 @@
 :root {
-  --glow-color-realm: #e0cffc; /* pale violet */
-  --glow-color-manifestation: #cffcff; /* icy cyan */
-  --glow-color-completed: #fffccf; /* soft gold */
-  --glow-color-blocked: #ffcfcf; /* dim red ember */
+  --glow-color-assigned: #bb91ff; /* pale violet */
+  --glow-color-unassigned: #cffcff; /* icy cyan */
+  --glow-color-completed: #fd73fd; /* soft pink */
+  --glow-color-beacon: #ff8e8e; /* dim red ember */
+  --glow-color-submitted: #ffae6c; /* warm orange */
   --glow-color-default: #ffffff;
 }
 
 .lotus-blossom-container {
   position: relative;
-  width: 100%;
-  height: 300px;
+  height: 520px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  perspective: 1000px;
+  align-items: flex-end;
   overflow: hidden;
 }
 
 .lotus-blossom {
-  position: absolute;
-  width: 100%;
-  height: 100%;
+  position: relative;
+  padding-left: 105px;
+  width: 300px;
+  height: 300px;
   transform-style: preserve-3d;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: grab;
-  touch-action: pan-y;
 }
+
 
 .petal {
   position: absolute;
   width: 90px;
-  height: 150px;
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.1) 100%
+  height: 160px;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgba(197, 51, 202, 0.836),
+    rgba(247, 189, 239, 0.432) 70%
   );
-  border-radius: 50% 50% 0 0;
-  transform-origin: bottom center;
-  will-change: transform, z-index, filter, display;
+
+  border-radius: 50% 50% 60% 60%;
+  transform-origin: 50% 100%;
+
   display: flex;
-  justify-content: center;
   align-items: center;
-  text-align: center;
-  padding: 10px;
-  box-sizing: border-box;
-  color: #fff;
-  font-family: 'Arial', sans-serif;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  justify-content: center;
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
   user-select: none;
+
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: 0.02em;
 }
+
 
 .petal::before {
   content: '';
@@ -77,14 +76,19 @@
 
 .petal-content h3 {
   font-size: 14px;
+  font-weight: 600;
   margin: 0;
-  font-weight: 500;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.08em;
+  opacity: 0.95;
   text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .petal-content p {
   font-size: 12px;
+  font-weight: 400;
   margin: 0;
-  opacity: 0.8;
-  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  opacity: 0.75;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }

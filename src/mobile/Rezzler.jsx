@@ -11,7 +11,6 @@ const Rezzler = () => {
 
   return (
     <div className="rezzler-container">
-      <Label text={dummyData.title} position="top" />
       <LotusBlossom />
       <DoubleHelix />
       <RootTasks />
