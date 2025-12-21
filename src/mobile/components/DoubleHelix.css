@@ -3,9 +3,5 @@
   justify-content: center;
   align-items: center;
   padding: 40px 0;
-}
-
-.helix-image {
-  width: 350px; /* Scaled to fit the 390px mobile canvas with margins */
   filter: drop-shadow(0 0 10px rgba(223, 168, 223, 0.7)); /* Subtle violet glow */
 }

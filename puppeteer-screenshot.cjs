@@ -15,11 +15,10 @@ const path = require('path');
   }
 
   try {
-    // Navigate to the root, as the rezzler page is the only one now
     await page.goto('http://localhost:3000/rezzler', { waitUntil: 'networkidle0' });
     await page.setViewport({ width: 390, height: 844 }); // iPhone 13/14 viewport
-    await page.screenshot({ path: 'verification/rezzler_view_2d.png' });
-    console.log('Screenshot saved to verification/rezzler_view_2d.png');
+    await page.screenshot({ path: 'verification/rezzler_final.png' });
+    console.log('Screenshot saved to verification/rezzler_final.png');
   } catch (error) {
     console.error('Error taking screenshot:', error);
   } finally {
