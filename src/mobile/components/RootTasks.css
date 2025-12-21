@@ -1,40 +1,52 @@
 .root-tasks-container {
   position: relative;
-  margin-top: -20px; /* Overlap slightly with the Double Helix */
+  width: 100%;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: -20px;
+  filter: drop-shadow(0 0 20px rgba(224, 207, 252, 0.2));
 }
 
 .branch-line {
-  stroke: #FFC4D6; /* A soft pink to match the nodes */
-  stroke-width: 2;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
 }
 
 .task-node {
   cursor: pointer;
-  transition: filter 0.2s ease-in-out;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7)); /* White glow for nodes */
+  transition: all 0.2s ease-in-out;
+  filter: drop-shadow(0 0 8px currentColor);
 }
 
 .task-node:hover {
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1)); /* Brighter glow on hover */
+  transform: scale(1.2);
 }
 
 .label-background {
-  fill: rgba(255, 143, 171, 0.9); /* Semi-transparent pink */
-  stroke: #FF8FAB;
+  fill: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 1;
 }
 
 .label-text {
-  font-family: sans-serif;
+  font-family: 'Arial', sans-serif;
   text-anchor: middle;
   fill: #ffffff;
+  pointer-events: none;
 }
 
 .label-text.title {
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 500;
+  text-shadow: 0 0 3px #000;
 }
 
 .label-text.skill {
-  font-size: 10px;
+  font-size: 12px;
+  opacity: 0.8;
+  text-shadow: 0 0 3px #000;
 }
