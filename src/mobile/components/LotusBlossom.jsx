@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSprings, animated } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import { dummyData } from '../dummyData';
@@ -10,6 +10,23 @@ const CONTAINER_WIDTH = 390; // width of the mobile canvas
 
 const LotusBlossom = () => {
   const [index, setIndex] = useState(Math.floor(petals.length / 2)); // Start in the middle
+  const clickTimer = useRef(null);
+
+  const handlePetalClick = (i) => {
+    if (clickTimer.current) {
+      // Double click
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      console.log(`Double tapped on petal: ${petals[i].title}. Transition to Focused Lotus View.`);
+    } else {
+      // Single click
+      clickTimer.current = setTimeout(() => {
+        console.log(`Single tapped on petal: ${petals[i].title}. Reveal description bubble.`);
+        clickTimer.current = null;
+      }, 250); // 250ms delay to wait for a potential second click
+    }
+  };
+
 
   // Function to set the springs based on the current index
   const getSprings = (currentIndex) => (i) => {
@@ -34,6 +51,12 @@ const LotusBlossom = () => {
   const [springs, api] = useSprings(petals.length, getSprings(index));
 
   const bind = useDrag(({ down, movement: [mx], direction: [xDir], distance, cancel, active }) => {
+    if (distance > 10) { // If drag distance is significant, cancel any pending click
+        if (clickTimer.current) {
+            clearTimeout(clickTimer.current);
+            clickTimer.current = null;
+        }
+    }
     if (!active && distance > PETAL_WIDTH / 4) {
         const newIndex = Math.min(Math.max(0, index + (mx > 0 ? -1 : 1)), petals.length - 1);
         setIndex(newIndex);
@@ -55,6 +78,7 @@ const LotusBlossom = () => {
             key={petals[i].id}
             className={`petal petal-type-${petals[i].type}`}
             style={styles}
+            onClick={() => handlePetalClick(i)}
           >
             <div className="petal-content">
               <h3>{petals[i].title}</h3>
