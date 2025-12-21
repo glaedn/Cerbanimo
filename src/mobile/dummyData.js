@@ -31,5 +31,25 @@ export const dummyData = {
       { id: 'n8', cx: 195, cy: 110, r: 8, color: '#70D6FF', title: 'Task 8', skillType: 'Design' },
       { id: 'n9', cx: 155, cy: 150, r: 8, color: '#FF8FAB', title: 'Fix the gutters', skillType: 'Construction' },
     ]
+  },
+  lotusBlossom: {
+    petals: [
+      { id: 'p1', title: 'Cosmic Gardeners', capability: 'Permaculture', type: 'realm' },
+      { id: 'p2', title: 'AI-Art Synthesis', capability: 'Creative AI', type: 'manifestation' },
+      { id: 'p3', title: 'Community Greenhouse', capability: 'Construction', type: 'manifestation' },
+      { id: 'p4', title: 'Solstice Festival', capability: 'Event Planning', type: 'completed' },
+      { id: 'p5', title: 'Myco-Filtration Unit', capability: 'Bio-hacking', type: 'manifestation' },
+      { id: 'p6', title: 'DAO Governance', capability: 'System Design', type: 'realm' },
+      { id: 'p7', title: '[BLOCKED] Water Pump', capability: 'Mechanical', type: 'blocked' },
+    ]
+  },
+  doubleHelix: {
+    orbs: [
+      { id: 'o1', title: 'My First Intention', description: 'A small test manifestation.', status: 'healthy' },
+      { id: 'o2', title: 'The Big One', description: 'A much larger project.', status: 'progressing' },
+      { id: 'o3', title: 'Stalled Project', description: 'This one needs attention.', status: 'stalled' },
+      { id: 'o4', title: 'Future Goal', description: 'Planning stages.', status: 'healthy' },
+      { id: 'o5', title: 'Group Effort', description: 'Manifestation with friends.', status: 'progressing' },
+    ]
   }
 };
