@@ -1,64 +1,108 @@
-import React, { useState } from 'react';
-import { useSprings, animated } from '@react-spring/web';
+import React, { useRef } from 'react';
+import { useSpring, animated } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import { dummyData } from '../dummyData';
 import './LotusBlossom.css';
 
 const { petals } = dummyData.lotusBlossom;
-const PETAL_WIDTH = 90; // width of a petal
-const CONTAINER_WIDTH = 390; // width of the mobile canvas
+
+const PETAL_WIDTH = 90;
+const FAN_ANGLE = 50;
+const LIFT = 120;
+const VISIBLE_COUNT = 7;
+const HALF = Math.floor(VISIBLE_COUNT / 2);
+
+const getWrappedIndex = (i, length) =>
+  ((i % length) + length) % length;
+
+const wrap = (v, range) => {
+  const r = range * 2 + 1;
+  return ((v % r) + r) % r - range;
+};
 
 const LotusBlossom = () => {
-  const [index, setIndex] = useState(Math.floor(petals.length / 2)); // Start in the middle
+  const dragging = useRef(false);
 
-  // Function to set the springs based on the current index
-  const getSprings = (currentIndex) => (i) => {
-    const isActive = i === currentIndex;
-    // Corrected calculation for 'x' to center the petals properly
-    const x = (i - currentIndex) * (PETAL_WIDTH / 2) + (CONTAINER_WIDTH / 2) - (PETAL_WIDTH / 2);
-    const rot = (i - currentIndex) * 15;
-    const scale = isActive ? 1.2 : 1;
-    const zIndex = petals.length - Math.abs(i - currentIndex);
+  const [{ pos }, api] = useSpring(() => ({
+    pos: 0,
+    config: { mass: 1, tension: 280, friction: 36 }
+  }));
 
-    // Simplified display logic: always render, let transform and zIndex handle visibility
-    return {
-      to: {
-        transform: `translateX(${x}px) rotateY(${rot}deg) scale(${scale})`,
-        zIndex,
-        filter: `drop-shadow(0 0 ${isActive ? '25px' : '10px'} var(--glow-color-${petals[i].type || 'default'}))`,
-      },
-      config: { mass: 1, tension: 280, friction: 60 },
-    };
-  };
+  const bind = useDrag(
+    ({ down, movement: [mx], velocity: [vx], direction: [dx], last }) => {
+      if (down) dragging.current = true;
 
-  const [springs, api] = useSprings(petals.length, getSprings(index));
+      const delta = mx / PETAL_WIDTH;
 
-  const bind = useDrag(({ down, movement: [mx], direction: [xDir], distance, cancel, active }) => {
-    if (!active && distance > PETAL_WIDTH / 4) {
-        const newIndex = Math.min(Math.max(0, index + (mx > 0 ? -1 : 1)), petals.length - 1);
-        setIndex(newIndex);
-    }
-    api.start(getSprings(index));
-  });
-
-  // Center on the initial render
-  React.useEffect(() => {
-    api.start(getSprings(index));
-  }, []);
-
+      if (down) {
+        api.start({ pos: pos.get() - delta, immediate: true });
+      } else if (last) {
+        const momentum = vx * dx * 3;
+        api.start({
+          pos: Math.round(pos.get() + momentum),
+          immediate: false
+        });
+        dragging.current = false;
+      }
+    },
+    { filterTaps: true, rubberband: true }
+  );
 
   return (
     <div className="lotus-blossom-container">
       <div className="lotus-blossom" {...bind()}>
-        {springs.map((styles, i) => (
+        {Array.from({ length: VISIBLE_COUNT }).map((_, slot) => (
           <animated.div
-            key={petals[i].id}
-            className={`petal petal-type-${petals[i].type}`}
-            style={styles}
+            key={slot}
+            className="petal"
+            onClick={() => {
+              if (dragging.current) return;
+
+              api.start({
+                pos: Math.round(pos.get()) + (slot - HALF),
+                immediate: false
+              });
+            }}
+            style={{
+              transform: pos.to(p => {
+                const offset = wrap(slot - HALF - p, HALF);
+                const angle = offset * (FAN_ANGLE / VISIBLE_COUNT);
+
+                return `
+                  rotateZ(${angle}deg)
+                  translateY(${-LIFT}px)
+                  scale(${Math.abs(offset) < 0.01 ? 1.15 : 1})
+                `;
+              }),
+              opacity: pos.to(p => {
+                const o = Math.abs(wrap(slot - HALF - p, HALF));
+                return o > HALF ? 0 : 1;
+              }),
+              zIndex: pos.to(p =>
+                Math.round(100 - Math.abs(wrap(slot - HALF - p, HALF)) * 10)
+              )
+            }}
           >
             <div className="petal-content">
-              <h3>{petals[i].title}</h3>
-              <p>{petals[i].capability}</p>
+              <animated.h3>
+                {pos.to(p => {
+                  const idx = getWrappedIndex(
+                    Math.round(p) + slot - HALF,
+                    petals.length
+                  );
+                  return petals[idx].title;
+                })}
+              </animated.h3>
+
+              <animated.p>
+                {pos.to(p => {
+                  const idx = getWrappedIndex(
+                    Math.round(p) + slot - HALF,
+                    petals.length
+                  );
+                  return petals[idx].capability;
+                })}
+              </animated.p>
             </div>
           </animated.div>
         ))}
