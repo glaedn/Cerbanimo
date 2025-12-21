@@ -1,0 +1,12 @@
+.rezzler-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: #111; /* ultra-dark desaturated gradient (charcoal drifting into deep blue-violet) */
+  background-image: radial-gradient(circle at top, #2c2c3e, #1a1a2a);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align to the top */
+  align-items: center;
+  overflow: hidden;
+}
