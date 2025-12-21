@@ -1,63 +1,58 @@
 :root {
-  --orb-color-healthy: #70D6FF;
-  --orb-color-progressing: #FFD670;
-  --orb-color-stalled: #FF8FAB;
+  --helix-orb-radius: 6px;
+  --helix-orb-glow-color: #ff66ff;
+  --helix-orb-glow-radius: 10px;
+  --helix-path-color: rgba(255, 255, 255, 0.2);
+  --helix-path-glow-color: rgba(255, 255, 255, 0.5);
+  --helix-path-width: 1px;
 }
 
 .double-helix-container {
   width: 100%;
   height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: grab;
-  touch-action: pan-x; /* Allow horizontal scrolling on touch devices */
+  touch-action: pan-y; /* Allow vertical scroll but capture horizontal drag */
 }
 
 .double-helix-svg {
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
-.helix-strand {
+.helix-path {
+  stroke: var(--helix-path-color);
+  stroke-width: var(--helix-path-width);
   fill: none;
-  stroke: url(#helixGradient);
-  stroke-width: 2;
-  filter: url(#glow);
+  filter: drop-shadow(0 0 3px var(--helix-path-glow-color));
 }
 
 .helix-orb {
-  stroke: white;
-  stroke-width: 1;
-  filter: url(#glow);
-  transition: r 0.2s ease-in-out;
+  r: var(--helix-orb-radius);
+  fill: var(--glow-color, var(--helix-orb-glow-color));
+  filter: drop-shadow(0 0 var(--helix-orb-glow-radius) var(--glow-color, var(--helix-orb-glow-color)));
+  transition: r 0.3s ease, filter 0.3s ease;
+  cursor: pointer;
 }
 
-.orb-status-healthy {
-  fill: var(--orb-color-healthy);
-}
-
-.orb-status-progressing {
-  fill: var(--orb-color-progressing);
-}
-
-.orb-status-stalled {
-  fill: var(--orb-color-stalled);
-}
-
-/* Tooltip Styles */
-.tooltip-bg {
-  fill: rgba(0, 0, 0, 0.7);
-  stroke: rgba(255, 255, 255, 0.5);
-  stroke-width: 1;
-}
-
-.tooltip-title {
-  fill: #ffffff;
+.tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
   font-size: 12px;
-  font-weight: bold;
-  text-anchor: middle;
+  pointer-events: none; /* Allows clicks to pass through to the orb */
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  transform: translate(-50%, -150%);
+  white-space: nowrap;
 }
 
-.tooltip-desc {
-  fill: #dddddd;
-  font-size: 10px;
-  text-anchor: middle;
+.tooltip.visible {
+  opacity: 1;
+  transform: translate(-50%, -170%);
 }

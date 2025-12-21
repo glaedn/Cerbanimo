@@ -1,73 +1,95 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useSpring, animated } from '@react-spring/web';
-import { useDrag } from '@use-gesture/react';
+import { useGesture } from '@use-gesture/react';
 import { dummyData } from '../dummyData';
 import './DoubleHelix.css';
 
-const { orbs } = dummyData.doubleHelix;
-
-const DoubleHelix = () => {
-  const [activeOrb, setActiveOrb] = useState(null);
-  const [{ xOffset }, api] = useSpring(() => ({ xOffset: 0 }));
-  const clickTimer = useRef(null);
-
-  const handleOrbClick = (orb, x, cy) => {
-    if (clickTimer.current) {
-      // Double tap
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      setActiveOrb(null); // Hide tooltip on double tap
-      console.log(`Double tapped on orb: ${orb.title}. Opening manifestation Lotus.`);
-    } else {
-      // Single tap
-      clickTimer.current = setTimeout(() => {
-        setActiveOrb({ ...orb, x, cy });
-        clickTimer.current = null;
-      }, 250);
-    }
-  };
-
-  const bind = useDrag(({ down, movement: [mx], distance, cancel }) => {
-    // If dragging, cancel any pending single-tap timers
-    if (distance > 5 && clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-    }
-    api.start({ xOffset: mx });
-  }, { from: () => [xOffset.get(), 0] });
-
-  // SVG dimensions
-  const width = 390;
-  const height = 150;
-  const amplitude = 30; // Height of the wave
-  const frequency = 0.05; // How many waves
-  const segments = 100; // How many points to draw the curve
-
-  const generatePath = (offset, viewOffset) => {
-    return viewOffset.to(v => {
-      let path = `M 0 ${height / 2 + Math.sin(offset + v * frequency) * amplitude}`;
-      for (let i = 0; i <= segments; i++) {
-        const x = (width / segments) * i;
-        const y = height / 2 + Math.sin(offset + (i + v) * frequency) * amplitude;
-        path += ` L ${x} ${y}`;
-      }
-      return path;
-    });
-  };
-
-  const path1 = generatePath(0, xOffset);
-  const path2 = generatePath(Math.PI, xOffset);
+const Tooltip = ({ text, x, y, visible }) => {
+  const { opacity, transform } = useSpring({
+    opacity: visible ? 1 : 0,
+    transform: `translate(${x}px, ${y - 30}px) scale(${visible ? 1 : 0.8})`,
+    config: { tension: 300, friction: 20 },
+  });
 
   return (
-    <div className="double-helix-container" {...bind()} style={{ touchAction: 'pan-x' }}>
-      <svg className="double-helix-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+    <animated.div
+      className="tooltip"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        opacity,
+        transform,
+      }}
+    >
+      {text}
+    </animated.div>
+  );
+};
+
+
+const DoubleHelix = () => {
+  const orbs = dummyData.doubleHelix;
+  const [scrollX, setScrollX] = useState(0);
+  const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+  const tapTimeout = useRef(null);
+
+  const containerRef = useRef(null);
+  const svgRef = useRef(null);
+
+  const handleOrbClick = (e, orb) => {
+     e.stopPropagation(); // Prevent drag gesture from firing
+    if (tapTimeout.current) {
+      clearTimeout(tapTimeout.current);
+      tapTimeout.current = null;
+      console.log(`Double tapped on: ${orb.title}`);
+      setTooltip({ visible: false });
+    } else {
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const x = e.clientX - svgRect.left;
+      const y = e.clientY - svgRect.top;
+
+      setTooltip({
+        visible: true,
+        text: orb.title,
+        x: x,
+        y: y
+      });
+
+      tapTimeout.current = setTimeout(() => {
+        tapTimeout.current = null;
+        // Hide tooltip after a delay if it's a single tap
+        setTimeout(() => setTooltip(t => ({ ...t, visible: false })), 2000);
+      }, 300); // 300ms window for double tap
+    }
+  };
+
+  const bind = useGesture({
+    onDrag: ({ offset: [dx] }) => {
+      setScrollX(dx);
+    },
+    onDragStart: () => setTooltip({ visible: false }),
+  });
+
+  const getOrbPosition = useCallback((index, total) => {
+    const width = 800; // Wider virtual canvas for scrolling
+    const height = 150;
+    const phase = scrollX * 0.01;
+    const x = (index / total) * width;
+    const angle = (x / width) * 4 * Math.PI + phase;
+    const y1 = height / 2 + Math.sin(angle) * 50;
+    const y2 = height / 2 + Math.cos(angle) * 50;
+    return index % 2 === 0 ? { x, y: y1 } : { x, y: y2 };
+  }, [scrollX]);
+
+  return (
+    <div ref={containerRef} className="double-helix-container" {...bind()}>
+       {tooltip.visible && <Tooltip {...tooltip} />}
+      <svg ref={svgRef} className="double-helix-svg" viewBox="0 0 400 150">
         <defs>
-          <linearGradient id="helixGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(255, 255, 255, 0)" />
-            <stop offset="50%" stopColor="rgba(255, 255, 255, 0.5)" />
-            <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
-          </linearGradient>
-          <filter id="glow">
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
@@ -75,48 +97,30 @@ const DoubleHelix = () => {
             </feMerge>
           </filter>
         </defs>
-
-        {/* Hide tooltip when scrubbing */}
-        <rect width={width} height={height} fill="transparent" onPointerDown={() => setActiveOrb(null)} />
-
-        <animated.path d={path1} className="helix-strand" />
-        <animated.path d={path2} className="helix-strand" />
-
+        {orbs.map((_, index) => {
+          const { x, y } = getOrbPosition(index, orbs.length);
+          const nextPos = getOrbPosition(index + 1, orbs.length);
+           return (
+              <path
+                key={`path-${index}`}
+                className="helix-path"
+                d={`M ${x} ${y} C ${(x + nextPos.x) / 2} ${y}, ${(x + nextPos.x) / 2} ${nextPos.y}, ${nextPos.x} ${nextPos.y}`}
+              />
+           );
+        })}
         {orbs.map((orb, index) => {
-          const progress = index / (orbs.length - 1);
-          const x = width * progress;
-          const strandOffset = index % 2 === 0 ? 0 : Math.PI;
-
-          const cy = xOffset.to(v =>
-            height / 2 + Math.sin(strandOffset + ((x/width * segments) + v) * frequency) * amplitude
-          );
-
+          const { x, y } = getOrbPosition(index, orbs.length);
           return (
-            <animated.circle
+            <circle
               key={orb.id}
+              className="helix-orb"
               cx={x}
-              cy={cy}
-              r="8"
-              className={`helix-orb orb-status-${orb.status}`}
-              onClick={() => handleOrbClick(orb, x, cy.get())}
+              cy={y}
+              style={{ '--glow-color': orb.glowColor }}
+              onClick={(e) => handleOrbClick(e, orb)}
             />
           );
         })}
-
-        {activeOrb && (
-          <g className="tooltip">
-            <rect
-              x={activeOrb.x - 60}
-              y={activeOrb.cy - 50}
-              width="120"
-              height="40"
-              rx="5"
-              className="tooltip-bg"
-            />
-            <text x={activeOrb.x} y={activeOrb.cy - 32} className="tooltip-title">{activeOrb.title}</text>
-            <text x={activeOrb.x} y={activeOrb.cy - 18} className="tooltip-desc">{activeOrb.description}</text>
-          </g>
-        )}
       </svg>
     </div>
   );
