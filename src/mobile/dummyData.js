@@ -29,7 +29,6 @@ export const dummyData = {
       { id: 'n6', cx: 170, cy: 120, r: 8, color: '#FF8FAB', title: 'Task 6', skillType: 'Plumbing' },
       { id: 'n7', cx: 235, cy: 60, r: 8, color: '#FFC4D6', title: 'Task 7', skillType: 'Cooking' },
       { id: 'n8', cx: 195, cy: 110, r: 8, color: '#70D6FF', title: 'Task 8', skillType: 'Design' },
-      { id: 'n9', cx: 155, cy: 150, r: 8, color: '#FF8FAB', title: 'Fix the gutters', skillType: 'Construction' },
     ]
   },
   lotusBlossom: {

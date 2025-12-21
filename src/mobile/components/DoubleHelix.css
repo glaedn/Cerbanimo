@@ -1,35 +1,33 @@
 :root {
-  --orb-color-healthy: #70ffd6;
-  --orb-color-progressing: #70d6ff;
-  --orb-color-stalled: #ff7070;
+  --orb-color-healthy: #70D6FF;
+  --orb-color-progressing: #FFD670;
+  --orb-color-stalled: #FF8FAB;
 }
 
 .double-helix-container {
   width: 100%;
   height: 150px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  animation: subtle-rotate 30s linear infinite alternate;
+  cursor: grab;
+  touch-action: pan-x; /* Allow horizontal scrolling on touch devices */
 }
 
 .double-helix-svg {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 15px rgba(207, 252, 255, 0.3));
 }
 
 .helix-strand {
   fill: none;
   stroke: url(#helixGradient);
   stroke-width: 2;
-  stroke-linecap: round;
+  filter: url(#glow);
 }
 
 .helix-orb {
-  stroke: #fff;
+  stroke: white;
   stroke-width: 1;
   filter: url(#glow);
+  transition: r 0.2s ease-in-out;
 }
 
 .orb-status-healthy {
@@ -44,12 +42,22 @@
   fill: var(--orb-color-stalled);
 }
 
-/* A subtle animation to give the helix life */
-@keyframes subtle-rotate {
-  from {
-    transform: perspective(500px) rotateY(5deg);
-  }
-  to {
-    transform: perspective(500px) rotateY(-5deg);
-  }
+/* Tooltip Styles */
+.tooltip-bg {
+  fill: rgba(0, 0, 0, 0.7);
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1;
+}
+
+.tooltip-title {
+  fill: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  text-anchor: middle;
+}
+
+.tooltip-desc {
+  fill: #dddddd;
+  font-size: 10px;
+  text-anchor: middle;
 }
