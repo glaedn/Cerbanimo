@@ -1,70 +1,61 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { dummyData } from '../dummyData';
 import './RootTasks.css';
 
-const RootTasks = () => {
-  const { branches, nodes } = dummyData.rootTasks;
-  const [selectedNode, setSelectedNode] = useState(null);
+// Helper to find node by ID
+const findNodeById = (nodes, id) => nodes.find(n => n.id === id);
 
-  const handleNodeClick = (node) => {
-    setSelectedNode(node);
-  };
+const RootTasks = () => {
+  const { links, nodes } = dummyData.rootTasks;
+
+  // Basic data validation
+  if (!links || !nodes) {
+    console.error("RootTasks data is missing or malformed!");
+    return <div className="root-tasks-container">Error loading tasks.</div>;
+  }
 
   return (
     <div className="root-tasks-container">
-      <svg width="390" height="200" viewBox="0 0 390 200">
-        {/* Render Branches */}
-        {branches.map(branch => (
-          <line
-            key={branch.id}
-            x1={branch.from.x}
-            y1={branch.from.y}
-            x2={branch.to.x}
-            y2={branch.to.y}
-            className="branch-line"
-          />
-        ))}
+      <svg className="root-tasks-svg" viewBox="0 0 400 200">
+        {/* Render Links as branches */}
+        {links.map((link, index) => {
+          const sourceNode = findNodeById(nodes, link.source);
+          const targetNode = findNodeById(nodes, link.target);
+
+          // Don't render a line if a node isn't found
+          if (!sourceNode || !targetNode) {
+            return null;
+          }
+
+          return (
+            <line
+              key={index}
+              x1={sourceNode.x}
+              y1={sourceNode.y}
+              x2={targetNode.x}
+              y2={targetNode.y}
+              className="root-branch"
+            />
+          );
+        })}
 
         {/* Render Nodes */}
-        {nodes.map(node => (
-          <circle
-            key={node.id}
-            cx={node.cx}
-            cy={node.cy}
-            r={node.r}
-            fill={node.color}
-            className="task-node"
-            onClick={() => handleNodeClick(node)}
-          />
-        ))}
-
-        {/* Render Label for Selected Node */}
-        {selectedNode && (
-          <g>
-            <rect 
-              x={selectedNode.cx - 50} 
-              y={selectedNode.cy + 15} 
-              width="100" 
-              height="40" 
-              rx="10"
-              className="label-background"
+        {nodes.map(node => {
+          // The root node is for positioning and shouldn't be rendered
+          if (node.id === 'root') {
+            return null;
+          }
+          return (
+            <circle
+              key={node.id}
+              cx={node.x}
+              cy={node.y}
+              className="root-node"
+              // Pass the glow color to the CSS via a custom property
+              style={{ '--glow-color': node.glowColor }}
             />
-            <text 
-              x={selectedNode.cx} 
-              y={selectedNode.cy + 30} 
-              className="label-text title"
-            >
-              {selectedNode.title}
-            </text>
-            <text 
-              x={selectedNode.cx} 
-              y={selectedNode.cy + 45} 
-              className="label-text skill"
-            >
-              {selectedNode.skillType}
-            </text>
-          </g>
-        )}
+          );
+        })}
       </svg>
     </div>
   );

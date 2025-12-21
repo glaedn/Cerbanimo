@@ -9,7 +9,7 @@ import './Rezzler.css';
 const Rezzler = () => {
   return (
     <div className="rezzler-container">
-      <Label text={dummyData.title} position="top" />
+      <Label text="Global Makers Society" position="top" />
       <LotusBlossom />
       <DoubleHelix />
       <RootTasks />
