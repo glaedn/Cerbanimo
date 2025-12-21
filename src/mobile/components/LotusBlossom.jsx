@@ -1,68 +1,80 @@
-import React, { useState } from 'react';
-import { useSprings, animated } from '@react-spring/web';
-import { useDrag } from '@use-gesture/react';
+import React, { useState, useRef } from 'react';
+import { useSpring, a } from '@react-spring/web';
+import { useGesture } from '@use-gesture/react';
 import { dummyData } from '../dummyData';
 import './LotusBlossom.css';
 
-const { petals } = dummyData.lotusBlossom;
-const PETAL_WIDTH = 90; // width of a petal
-const CONTAINER_WIDTH = 390; // width of the mobile canvas
+const Petal = ({ item, style }) => {
+  const [tapped, setTapped] = useState(false);
+  const tapTimeout = useRef(null);
 
-const LotusBlossom = () => {
-  const [index, setIndex] = useState(Math.floor(petals.length / 2)); // Start in the middle
-
-  // Function to set the springs based on the current index
-  const getSprings = (currentIndex) => (i) => {
-    const isActive = i === currentIndex;
-    // Corrected calculation for 'x' to center the petals properly
-    const x = (i - currentIndex) * (PETAL_WIDTH / 2) + (CONTAINER_WIDTH / 2) - (PETAL_WIDTH / 2);
-    const rot = (i - currentIndex) * 15;
-    const scale = isActive ? 1.2 : 1;
-    const zIndex = petals.length - Math.abs(i - currentIndex);
-
-    // Simplified display logic: always render, let transform and zIndex handle visibility
-    return {
-      to: {
-        transform: `translateX(${x}px) rotateY(${rot}deg) scale(${scale})`,
-        zIndex,
-        filter: `drop-shadow(0 0 ${isActive ? '25px' : '10px'} var(--glow-color-${petals[i].type || 'default'}))`,
-      },
-      config: { mass: 1, tension: 280, friction: 60 },
-    };
+  const handleClick = () => {
+    if (tapTimeout.current) {
+      // Double tap
+      clearTimeout(tapTimeout.current);
+      tapTimeout.current = null;
+      console.log(`Double tapped on: ${item.title}`);
+      // Add navigation/action for double tap here
+    } else {
+      // Single tap
+      setTapped(true);
+      console.log(`Single tapped on: ${item.title}`);
+      tapTimeout.current = setTimeout(() => {
+        tapTimeout.current = null;
+        setTapped(false);
+      }, 300); // 300ms window for double tap
+    }
   };
 
-  const [springs, api] = useSprings(petals.length, getSprings(index));
-
-  const bind = useDrag(({ down, movement: [mx], direction: [xDir], distance, cancel, active }) => {
-    if (!active && distance > PETAL_WIDTH / 4) {
-        const newIndex = Math.min(Math.max(0, index + (mx > 0 ? -1 : 1)), petals.length - 1);
-        setIndex(newIndex);
-    }
-    api.start(getSprings(index));
-  });
-
-  // Center on the initial render
-  React.useEffect(() => {
-    api.start(getSprings(index));
-  }, []);
-
+  const glowColor = tapped ? 'var(--glow-color-active, #0ff)' : item.glowColor;
 
   return (
-    <div className="lotus-blossom-container">
-      <div className="lotus-blossom" {...bind()}>
-        {springs.map((styles, i) => (
-          <animated.div
-            key={petals[i].id}
-            className={`petal petal-type-${petals[i].type}`}
-            style={styles}
-          >
-            <div className="petal-content">
-              <h3>{petals[i].title}</h3>
-              <p>{petals[i].capability}</p>
-            </div>
-          </animated.div>
-        ))}
-      </div>
+    <a.div
+      className="petal"
+      style={{ ...style, '--glow-color': glowColor }}
+      onClick={handleClick}
+    >
+      <h3>{item.title}</h3>
+      <p>{item.type}</p>
+    </a.div>
+  );
+};
+
+const LotusBlossom = () => {
+  const [rotation, setRotation] = useState(0);
+  const petals = dummyData.lotusBlossom;
+  const angleStep = 360 / petals.length;
+
+  const bind = useGesture({
+    onDrag: ({ down, movement: [mx] }) => {
+      if (down) {
+        setRotation(mx * 0.5); // Adjust sensitivity
+      } else {
+        // Snap to nearest petal
+        const nearestAngle = Math.round(rotation / angleStep) * angleStep;
+        setRotation(nearestAngle);
+      }
+    },
+  });
+
+  const { y } = useSpring({ y: rotation });
+
+  return (
+    <div className="lotus-blossom-container" {...bind()}>
+      <a.div className="lotus-blossom" style={{ transform: y.to(r => `rotateY(${r}deg)`) }}>
+        {petals.map((item, index) => {
+          const angle = index * angleStep;
+          return (
+            <Petal
+              key={item.id}
+              item={item}
+              style={{
+                transform: `rotateY(${angle}deg) translateZ(150px)`,
+              }}
+            />
+          );
+        })}
+      </a.div>
     </div>
   );
 };

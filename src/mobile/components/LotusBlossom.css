@@ -1,20 +1,11 @@
-:root {
-  --glow-color-realm: #e0cffc; /* pale violet */
-  --glow-color-manifestation: #cffcff; /* icy cyan */
-  --glow-color-completed: #fffccf; /* soft gold */
-  --glow-color-blocked: #ffcfcf; /* dim red ember */
-  --glow-color-default: #ffffff;
-}
-
 .lotus-blossom-container {
   position: relative;
   width: 100%;
-  height: 300px;
+  height: 200px;
   display: flex;
   justify-content: center;
   align-items: center;
   perspective: 1000px;
-  overflow: hidden;
 }
 
 .lotus-blossom {
@@ -22,69 +13,42 @@
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  transition: transform 0.5s;
   cursor: grab;
-  touch-action: pan-y;
 }
 
 .petal {
   position: absolute;
   width: 90px;
   height: 150px;
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.1) 100%
-  );
-  border-radius: 50% 50% 0 0;
-  transform-origin: bottom center;
-  will-change: transform, z-index, filter, display;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 10px;
-  box-sizing: border-box;
-  color: #fff;
-  font-family: 'Arial', sans-serif;
+  left: calc(50% - 45px);
+  top: calc(50% - 75px);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  user-select: none;
-}
-
-.petal::before {
-  content: '';
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 50%;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateX(-50%);
-  border-radius: 1px;
-}
-
-.petal-content {
+  border-radius: 50%;
+  color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 5px;
+  padding: 10px;
+  box-sizing: border-box;
+  transform-origin: bottom center;
+  text-align: center;
+  clip-path: polygon(50% 0%, 100% 35%, 100% 100%, 0 100%, 0 35%);
+  filter: drop-shadow(0 0 5px var(--glow-color, #fff));
+  transition: transform 0.5s ease-in-out, filter 0.3s ease;
 }
 
-.petal-content h3 {
+.petal h3 {
   font-size: 14px;
-  margin: 0;
+  margin: 0 0 5px 0;
   font-weight: 500;
-  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
 }
 
-.petal-content p {
-  font-size: 12px;
+.petal p {
+  font-size: 10px;
   margin: 0;
   opacity: 0.8;
-  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
 }

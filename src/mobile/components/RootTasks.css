@@ -1,52 +1,49 @@
 .root-tasks-container {
-  position: relative;
   width: 100%;
-  height: 200px;
+  height: 200px; /* Adjust height as needed */
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: -20px;
-  filter: drop-shadow(0 0 20px rgba(224, 207, 252, 0.2));
 }
 
-.branch-line {
-  stroke: rgba(255, 255, 255, 0.2);
-  stroke-width: 1;
+.root-tasks-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* Allows glows to extend beyond SVG bounds */
 }
 
-.task-node {
+.root-branch {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1px;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+
+.root-node {
+  r: 8px; /* Base radius for the node */
+  fill: var(--glow-color, #ff8888);
+  filter: drop-shadow(0 0 8px var(--glow-color, #ff8888));
+  transition: r 0.3s ease, filter 0.3s ease;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  filter: drop-shadow(0 0 8px currentColor);
+  /* Key fix for wiggling: ensure transform originates from the center */
+  transform-origin: center;
+  transform-box: fill-box;
 }
 
-.task-node:hover {
-  transform: scale(1.2);
+.root-node:hover {
+  animation: gentle-pulse 1.5s infinite;
 }
 
-.label-background {
-  fill: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  stroke: rgba(255, 255, 255, 0.2);
-  stroke-width: 1;
-}
-
-.label-text {
-  font-family: 'Arial', sans-serif;
-  text-anchor: middle;
-  fill: #ffffff;
-  pointer-events: none;
-}
-
-.label-text.title {
-  font-size: 14px;
-  font-weight: 500;
-  text-shadow: 0 0 3px #000;
-}
-
-.label-text.skill {
-  font-size: 12px;
-  opacity: 0.8;
-  text-shadow: 0 0 3px #000;
+@keyframes gentle-pulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px var(--glow-color, #ff8888));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px var(--glow-color, #ff8888));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px var(--glow-color, #ff8888));
+  }
 }
