@@ -1,7 +1,6 @@
 // src/mobile/dummyData.js
 
 export const dummyData = {
-  title: 'Global Makers Society',
   rootTasks: {
     // The central point from which roots emerge
     origin: { x: 195, y: 0 },
@@ -21,15 +20,15 @@ export const dummyData = {
     ],
     // Task nodes
     nodes: [
-      { id: 'n1', cx: 125, cy: 90, r: 8, color: '#FF8FAB', title: 'Task 1', skillType: 'Design' },
-      { id: 'n2', cx: 185, cy: 90, r: 8, color: '#FF8FAB', title: 'Task 2', skillType: 'Engineering' },
-      { id: 'n3', cx: 205, cy: 90, r: 8, color: '#FF8FAB', title: 'Task 3', skillType: 'Gardening' },
+      { id: 'n1', cx: 125, cy: 90, r: 8, color: '#fd6767ff', title: 'Task 1', skillType: 'Design' },
+      { id: 'n2', cx: 185, cy: 90, r: 8, color: '#ffa96fff', title: 'Task 2', skillType: 'Engineering' },
+      { id: 'n3', cx: 205, cy: 90, r: 8, color: '#fd6767ff', title: 'Task 3', skillType: 'Gardening' },
       { id: 'n4', cx: 280, cy: 120, r: 8, color: '#70D6FF', title: 'Task 4', skillType: 'Content' },
-      { id: 'n5', cx: 110, cy: 120, r: 8, color: '#FF8FAB', title: 'Task 5', skillType: 'Community' },
-      { id: 'n6', cx: 170, cy: 120, r: 8, color: '#FF8FAB', title: 'Task 6', skillType: 'Plumbing' },
-      { id: 'n7', cx: 235, cy: 60, r: 8, color: '#FFC4D6', title: 'Task 7', skillType: 'Cooking' },
+      { id: 'n5', cx: 110, cy: 120, r: 8, color: '#fd6767ff', title: 'Task 5', skillType: 'Community' },
+      { id: 'n6', cx: 170, cy: 120, r: 8, color: '#70D6FF', title: 'Task 6', skillType: 'Plumbing' },
+      { id: 'n7', cx: 235, cy: 60, r: 8, color: '#ff3366ff', title: 'Task 7', skillType: 'Cooking' },
       { id: 'n8', cx: 195, cy: 110, r: 8, color: '#70D6FF', title: 'Task 8', skillType: 'Design' },
-      { id: 'n9', cx: 155, cy: 150, r: 8, color: '#FF8FAB', title: 'Fix the gutters', skillType: 'Construction' },
+      { id: 'n9', cx: 155, cy: 150, r: 8, color: '#fd6767ff', title: 'Fix the gutters', skillType: 'Construction' },
     ]
   },
   lotusBlossom: {

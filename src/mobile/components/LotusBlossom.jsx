@@ -7,10 +7,10 @@ import './LotusBlossom.css';
 const { petals } = dummyData.lotusBlossom;
 
 const PETAL_WIDTH = 90;
-const FAN_ANGLE = 50;
-const LIFT = 120;
+const FAN_ANGLE = 70;
 const VISIBLE_COUNT = 7;
 const HALF = Math.floor(VISIBLE_COUNT / 2);
+
 
 const getWrappedIndex = (i, length) =>
   ((i % length) + length) % length;
@@ -20,8 +20,9 @@ const wrap = (v, range) => {
   return ((v % r) + r) % r - range;
 };
 
-const LotusBlossom = () => {
+const LotusBlossom = ({ spineHeight }) => {
   const dragging = useRef(false);
+  const LIFT = spineHeight < 600 ? 70 : 95;
 
   const [{ pos }, api] = useSpring(() => ({
     pos: 0,
@@ -49,20 +50,14 @@ const LotusBlossom = () => {
   );
 
   return (
-    <div className="lotus-blossom-container">
+    <div className="lotus-blossom-container"
+    style={{ '--spine-height': `${spineHeight}px` }}
+    >
       <div className="lotus-blossom" {...bind()}>
         {Array.from({ length: VISIBLE_COUNT }).map((_, slot) => (
           <animated.div
             key={slot}
             className="petal"
-            onClick={() => {
-              if (dragging.current) return;
-
-              api.start({
-                pos: Math.round(pos.get()) + (slot - HALF),
-                immediate: false
-              });
-            }}
             style={{
               transform: pos.to(p => {
                 const offset = wrap(slot - HALF - p, HALF);
