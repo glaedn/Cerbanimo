@@ -8,13 +8,12 @@
 }
 
 .lotus-blossom-container {
-  position: relative;
-  height: 520px;
+  height: calc(var(--spine-height) * 0.42);
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  overflow: hidden;
 }
+
 
 .lotus-blossom {
   position: relative;
@@ -91,4 +90,20 @@
   margin: 0;
   opacity: 0.75;
   text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.petal::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: 50%;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.164),
+    rgba(255, 255, 255, 0.027)
+  );
+  transform: translateX(-50%);
+  pointer-events: none;
 }

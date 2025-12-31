@@ -2,21 +2,22 @@ import React from 'react';
 import LotusBlossom from './components/LotusBlossom';
 import DoubleHelix from './components/DoubleHelix';
 import RootTasks from './components/RootTasks';
-import Label from './components/Label';
-import { dummyData } from './dummyData';
 import './Rezzler.css';
 
+const spineHeight = Math.min(window.innerHeight, 700);
+
+
 const Rezzler = () => {
-  const bottomTask = dummyData.rootTasks.nodes.find(node => node.title === 'Fix the gutters');
+  const spineHeight = Math.min(window.innerHeight, 700);
 
   return (
     <div className="rezzler-container">
-      <LotusBlossom />
-      <DoubleHelix />
-      <RootTasks />
-      {bottomTask && <Label text={bottomTask.title} position="bottom" />}
+      <LotusBlossom spineHeight={spineHeight} />
+      <DoubleHelix spineHeight={spineHeight} />
+      <RootTasks spineHeight={spineHeight} />
     </div>
   );
 };
+
 
 export default Rezzler;

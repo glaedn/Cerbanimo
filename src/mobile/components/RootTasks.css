@@ -5,14 +5,43 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: -20px;
+  margin-top: -390px;
   filter: drop-shadow(0 0 20px rgba(224, 207, 252, 0.2));
+}
+
+.root-tasks {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .branch-line {
   stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 1;
 }
+
+.branch-line.loading {
+  stroke: rgba(120,220,255,0.9);
+  stroke-width: 1.5;
+  animation: pulse-flow 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-flow {
+  0% {
+    stroke-dasharray: 2 10;
+    opacity: 0.4;
+  }
+  50% {
+    stroke-dasharray: 8 4;
+    opacity: 1;
+  }
+  100% {
+    stroke-dasharray: 2 10;
+    opacity: 0.4;
+  }
+}
+
 
 .task-node {
   cursor: pointer;
@@ -49,4 +78,9 @@
   font-size: 12px;
   opacity: 0.8;
   text-shadow: 0 0 3px #000;
+}
+
+.root-stem {
+  stroke-width: 1.5;
+  opacity: 0.4;
 }
