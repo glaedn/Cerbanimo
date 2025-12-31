@@ -9,7 +9,7 @@ const CommunityMarketplace = () => {
   const [communityId, setCommunityId] = useState(1); // Hardcoded for now, should be dynamic
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { getAccessTokenSilently } from useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
