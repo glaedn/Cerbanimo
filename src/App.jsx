@@ -10,7 +10,7 @@ import SiteNav from "./pages/SiteNav.jsx";
 //import IntentionCreation from "./pages/IntentionCreation.jsx";
 //import Intention from "./pages/Intention.jsx";
 //import CapabilityTree from "./pages/CapabilityTree.jsx";
-import RewardDashboard from "./pages/RewardDashboard.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 import PublicProfile from "./pages/PublicProfile.jsx";
 import BadgeCreation from "./pages/BadgeCreation.jsx";
 import HomePage from "./pages/HomePage.jsx";
@@ -31,6 +31,13 @@ import AuthWrapper from "./AuthWrapper.jsx";
 //import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
 import Rezzler from "./mobile/Rezzler.jsx";
 import CommunityMarketplace from "./components/CommunityMarketplace/CommunityMarketplace.jsx";
+import ProjectVisualizer from "./pages/ProjectVisualizer.jsx";
+import CommunityCreation from "./pages/CommunityCreation.jsx";
+import CommunityHub from "./pages/CommunityHub.jsx";
+import Communities from "./pages/Communities.jsx";
+import ProjectCreation from "./pages/ProjectCreation.jsx";
+import ProjectPages from "./pages/ProjectPages.jsx";
+import Project from "./pages/Project.jsx";
 
 const App = () => {
   return (
@@ -52,10 +59,10 @@ const App = () => {
             }
           />
           <Route
-            path="/reward-dashboard"
+            path="/dashboard"
             element={
               <PrivateRoute>
-                <RewardDashboard />
+                <Dashboard />
               </PrivateRoute>
             }
           />
@@ -67,11 +74,77 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route path="/profile/public/:userId" element={<PublicProfile />} />
+
           <Route
             path="/BadgeCreation"
             element={
               <PrivateRoute>
                 <BadgeCreation />
+              </PrivateRoute>
+            }
+          />
+           <Route
+            path="/projects"
+            element={
+              <PrivateRoute>
+                <ProjectPages />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projectcreation"
+            element={
+              <PrivateRoute>
+                <ProjectCreation />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/project/:projectId"
+            element={
+              <PrivateRoute>
+                <Project />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/communitycreation"
+            element={
+              <PrivateRoute>
+                <CommunityCreation />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/communityhub/:communityId"
+            element={
+              <PrivateRoute>
+                <CommunityHub />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/communities"
+            element={
+              <PrivateRoute>
+                <Communities />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/Visualizer/:projectId"
+            element={
+              <PrivateRoute>
+                <ProjectVisualizer />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/Visualizer/:projectId/:taskId"
+            element={
+              <PrivateRoute>
+                <ProjectVisualizer />
               </PrivateRoute>
             }
           />
