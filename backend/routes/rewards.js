@@ -90,6 +90,52 @@ router.get('/user/:userId', async (req, res) => {
     }
 });
 
+// Route: Get detailed token balance for a user in a specific community
+router.get('/balance/:userId/:communityId', async (req, res) => {
+  const { userId, communityId } = req.params;
+
+  try {
+    const query = `
+      WITH ledger_entries AS (
+        SELECT jsonb_array_elements(token_ledger) as entry
+        FROM users
+        WHERE id = $1
+      )
+      SELECT
+        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE COALESCE(entry->>'mode', 'earn') = 'earn'), 0) AS earned_total,
+        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'receive'), 0) AS received_total,
+        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'spend'), 0) AS spent_total,
+        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'escrow'), 0) AS escrowed,
+        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'fulfill'), 0) AS fulfilled_total
+      FROM ledger_entries
+      WHERE entry->>'type' = 'community' AND (entry->>'id')::int = $2;
+    `;
+
+    const result = await pool.query(query, [userId, communityId]);
+
+    if (result.rowCount === 0) {
+      // This can happen if the user has no token_ledger entries or does not exist
+      return res.json({
+        earned_total: 0,
+        received_total: 0,
+        spent_total: 0,
+        escrowed: 0,
+        fulfilled_total: 0,
+        spendable_balance: 0,
+      });
+    }
+
+    const balances = result.rows[0];
+    const spendable_balance = (parseInt(balances.earned_total) + parseInt(balances.received_total)) - (parseInt(balances.spent_total) + parseInt(balances.escrowed));
+
+    res.json({ ...balances, spendable_balance });
+
+  } catch (error) {
+    console.error(`Error fetching token balance for user ${userId} in community ${communityId}:`, error);
+    res.status(500).json({ message: 'Failed to fetch token balance' });
+  }
+});
+
 // ✅ Route: Get leaderboard (Top 100 users by tokens)
 router.get('/leaderboard', async (req, res) => {
     try {

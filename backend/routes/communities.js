@@ -34,7 +34,8 @@ async function calculateVoteWeight(
     // Step 2: Get token count per voter
     const { rows: tokenRows } = await client.query(
       `
-      SELECT u.id, COALESCE(SUM((token_json->>'tokens')::numeric), 0) AS tokens
+      SELECT u.id,
+             COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) AS tokens
       FROM users u
       LEFT JOIN LATERAL (
         SELECT token_json
@@ -58,7 +59,7 @@ async function calculateVoteWeight(
     // Calculate total vote weight across all users in the community
     const { rows } = await client.query(
       `
-      SELECT COALESCE(SUM((token_json->>'tokens')::numeric), 0) AS total_tokens
+      SELECT COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) AS total_tokens
       FROM users u
       LEFT JOIN LATERAL (
         SELECT token_json
@@ -160,10 +161,12 @@ router.get("/:communityId/scores", async (req, res) => {
         user.token_ledger.forEach((entry) => {
           try {
             const record = typeof entry === 'string' ? JSON.parse(entry) : entry;
+            const mode = record.mode || 'earn';
             if (
               record &&
               record.type === "community" &&
-              record.id === communityIdInt
+              record.id === communityIdInt &&
+              (mode === 'earn' || mode === 'receive')
             ) {
               communityScore += record.tokens || 0;
             }
