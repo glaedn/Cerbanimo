@@ -30,6 +30,7 @@ import AuthWrapper from "./AuthWrapper.jsx";
 //import ManifestationSession from "./pages/ManifestationSession.jsx";
 //import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
 import Rezzler from "./mobile/Rezzler.jsx";
+import CommunityMarketplace from "./components/CommunityMarketplace/CommunityMarketplace.jsx";
 
 const App = () => {
   return (
@@ -90,6 +91,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <GalacticActivityMap />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/marketplace"
+            element={
+              <PrivateRoute>
+                <CommunityMarketplace />
               </PrivateRoute>
             }
           />

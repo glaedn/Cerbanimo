@@ -806,10 +806,10 @@ const approveTask = async (taskId, io, client) => {
         [main_reward, submitted_by]
       );
       const submitterLedgerEntries = [
-        { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+        { mode: "earn", type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
       ];
       if (community_id) {
-        submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+        submitterLedgerEntries.push({ mode: "earn", type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
       }
       await localClient.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -827,10 +827,10 @@ const approveTask = async (taskId, io, client) => {
           [bonus_reward, userId]
         );
         const bonusLedgerEntries = [
-          { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
+          { mode: "earn", type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
         ];
         if (community_id) {
-          bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+          bonusLedgerEntries.push({ mode: "earn", type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
         }
         await localClient.query(
           `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -849,6 +849,7 @@ const approveTask = async (taskId, io, client) => {
 
       const creatorLedgerUpdates = [
         {
+          mode: "earn",
           type: "project",
           id: project_id,
           tokens: 10,
@@ -858,6 +859,7 @@ const approveTask = async (taskId, io, client) => {
 
       if (community_id) {
         creatorLedgerUpdates.push({
+          mode: "earn",
           type: "community",
           id: community_id,
           tokens: 10,
@@ -1681,10 +1683,10 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
       [main_reward, submitted_by]
     );
     const submitterLedgerEntries = [
-      { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+      { mode: "earn", type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
     ];
     if (community_id) {
-      submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+      submitterLedgerEntries.push({ mode: "earn", type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
     }
     await client.query(
       `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -1702,10 +1704,10 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
         [bonus_reward, userId]
       );
       const bonusLedgerEntries = [
-        { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
+        { mode: "earn", type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
       ];
       if (community_id) {
-        bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+        bonusLedgerEntries.push({ mode: "earn", type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
       }
       await client.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
@@ -1784,6 +1786,7 @@ const processReview = async (taskId, userId, action, io) => {
 
     // Add to reviewer's token ledger
     const reviewLedgerUpdate = {
+      mode: "earn",
       type: "task_review_reward",
       taskId: taskId,
       tokens: reviewerReward,
@@ -1939,10 +1942,10 @@ const finalizeTask = async (taskId, client, io) => {
         [task.creator_id]
       );
       const creatorLedgerUpdates = [
-        { type: "project", id: task.project_id, tokens: 10, creationDate: new Date() },
+        { mode: "earn", type: "project", id: task.project_id, tokens: 10, creationDate: new Date() },
       ];
       if (task.community_id) {
-        creatorLedgerUpdates.push({ type: "community", id: task.community_id, tokens: 10, creationDate: new Date() });
+        creatorLedgerUpdates.push({ mode: "earn", type: "community", id: task.community_id, tokens: 10, creationDate: new Date() });
       }
       await client.query(
         `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,

@@ -25,9 +25,11 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
+import goodsRoutes from './routes/goods.js';
 import timeoutService from './services/timeoutService.js';
 
 // Import database table creation functions
+import { createGoodsTable, createGoodsTransactionsTable } from './models/goods.js';
 //import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
 //import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
 //import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
@@ -166,6 +168,7 @@ app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
+app.use('/goods', jwtCheck, goodsRoutes);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
@@ -196,6 +199,8 @@ const PORT = process.env.PORT || 4000;
 async function initializeDatabase() {
   try {
     // Create tables first
+    await createGoodsTable();
+    await createGoodsTransactionsTable();
     //await createResourcesTable();
     //await createNeedsTable();
     //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
