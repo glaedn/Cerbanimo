@@ -33,6 +33,7 @@ import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
 import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
 import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
+import MyTransactions from '../components/MyTransactions/MyTransactions.jsx';
 
 const CommunityHub = () => {
     const { communityId } = useParams();
@@ -873,6 +874,7 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
+            {isMember && <MyTransactions communityId={communityId} />}
             <CommunityMarketplace communityId={communityId} />
             <CommunityChronicle communityId={communityId} />
             <Snackbar 
