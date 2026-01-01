@@ -83,25 +83,34 @@ router.get('/user/:userId', async (req, res) => {
 
 router.get('/balance/:userId/:communityId', async (req, res) => {
   const { userId, communityId } = req.params;
+  const communityIdInt = parseInt(communityId, 10);
+
 
   try {
     const query = `
+      WITH community_ledger AS (
+        SELECT jsonb_array_elements(token_ledger) as entry
+        FROM users
+        WHERE id = $1
+      )
       SELECT
-        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') = 'earn'), 0) as earned_total,
-        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE token_json->>'mode' = 'receive'), 0) as received_total,
-        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE token_json->>'mode' = 'spend'), 0) as spent_total,
-        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE token_json->>'mode' = 'escrow'), 0) as escrowed,
-        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE token_json->>'mode' = 'fulfill'), 0) as fulfilled_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE COALESCE(entry->>'mode', 'earn') = 'earn'), 0) as earned_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'receive'), 0) as received_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'spend'), 0) as spent_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'escrow'), 0) as escrowed,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'fulfill'), 0) as fulfilled_total,
         (
-          COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) -
-          COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE token_json->>'mode' IN ('spend', 'escrow')), 0)
+          COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE COALESCE(entry->>'mode', 'earn') IN ('earn', 'receive')), 0) -
+          COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' IN ('spend', 'escrow')), 0)
         ) as spendable_balance
-      FROM users u,
-      LATERAL jsonb_array_elements(u.token_ledger) as token_json
-      WHERE u.id = $1 AND (token_json->>'communityId')::int = $2;
+      FROM community_ledger
+      WHERE
+        (entry->>'communityId')::int = $2
+        OR
+        (entry->>'type' = 'community' AND (entry->>'id')::int = $2);
     `;
 
-    const { rows } = await pool.query(query, [userId, communityId]);
+    const { rows } = await pool.query(query, [userId, communityIdInt]);
 
     if (rows.length === 0) {
       return res.json({
@@ -124,24 +133,29 @@ router.get('/balance/:userId/:communityId', async (req, res) => {
 
 router.get('/transactions/:userId/:communityId', async (req, res) => {
   const { userId, communityId } = req.params;
+  const communityIdInt = parseInt(communityId, 10);
   try {
     const query = `
       SELECT
         entry->>'mode' as mode,
         (entry->>'tokens')::numeric as tokens,
-        entry->>'goodName' as good_name,
+        COALESCE(entry->>'goodName', 'Community Reward') as good_name,
         entry->>'creationDate' as date
       FROM
         users,
         jsonb_array_elements(token_ledger) AS entry
       WHERE
         id = $1
-        AND (entry->>'communityId')::int = $2
-        AND entry->>'mode' IN ('spend', 'receive')
+        AND (
+          (entry->>'communityId')::int = $2
+          OR
+          (entry->>'type' = 'community' AND (entry->>'id')::int = $2)
+        )
+        AND entry->>'mode' IN ('spend', 'receive', 'earn')
       ORDER BY
         (entry->>'creationDate')::timestamp DESC;
     `;
-    const { rows } = await pool.query(query, [userId, communityId]);
+    const { rows } = await pool.query(query, [userId, communityIdInt]);
     res.json(rows);
   } catch (error) {
     console.error(`Error fetching transaction history for user ${userId} in community ${communityId}:`, error);
