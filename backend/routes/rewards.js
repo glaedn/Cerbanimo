@@ -16,13 +16,12 @@ const upload = multer({ dest: "uploads/badges/" });
 router.post("/badges/create", upload.single("icon"), async (req, res) => {
   try {
     const { name, description, createdBy } = req.body;
-    // const imagePath = req.file ? `/uploads/badges/${req.file.filename}` : null; // For local deployment
     let iconFilename = null; 
     if (req.file) {
       try {
-        await uploadFile(req.file.path, req.file.filename, req.file.mimetype); // Ensure B2 upload is successful
-        iconFilename = req.file.filename; // Store only the filename
-        fs.unlinkSync(req.file.path); // Delete local temp file
+        await uploadFile(req.file.path, req.file.filename, req.file.mimetype);
+        iconFilename = req.file.filename;
+        fs.unlinkSync(req.file.path);
       } catch (b2UploadError) {
         console.error('B2 Badge Icon Upload Error:', b2UploadError);
         return res.status(500).json({ message: 'Failed to upload badge icon to B2.' });
@@ -30,7 +29,6 @@ router.post("/badges/create", upload.single("icon"), async (req, res) => {
     }
 
     if (!name || !description || !iconFilename) {
-      // Adjusted message slightly to reflect that icon itself is required
       return res.status(400).json({ message: "All fields and icon are required" });
     }
 
@@ -38,9 +36,7 @@ router.post("/badges/create", upload.single("icon"), async (req, res) => {
       INSERT INTO badges (name, description, icon)
       VALUES ($1, $2, $3) RETURNING *;
     `;
-
     const result = await pool.query(insertQuery, [name, description, iconFilename]);
-
     res.status(201).json({ message: "Badge created successfully", badge: result.rows[0] });
   } catch (err) {
     console.error("Error creating badge:", err);
@@ -48,12 +44,9 @@ router.post("/badges/create", upload.single("icon"), async (req, res) => {
   }
 });
 
-// ✅ Route: Get user rewards (tokens & badges)
 router.get('/user/:userId', async (req, res) => {
     const { userId } = req.params;
-
     try {
-        // Fetch user tokens
         const tokenQuery = `SELECT cotokens FROM users WHERE id = $1`;
         const tokenResult = await pool.query(tokenQuery, [userId]);
         if (tokenResult.rowCount === 0) {
@@ -61,7 +54,6 @@ router.get('/user/:userId', async (req, res) => {
         }
         const tokens = tokenResult.rows[0].cotokens || 0;
 
-        // Fetch user badges
         const badgeQuery = `
             SELECT b.id, b.name, b.icon , b.description
             FROM badges b
@@ -77,12 +69,11 @@ router.get('/user/:userId', async (req, res) => {
               return { ...badge, icon: signedUrl };
             } catch (err) {
               console.error(`Error generating signed URL for badge icon ${badge.icon}:`, err);
-              return { ...badge, icon: null }; // Fallback for this badge's icon
+              return { ...badge, icon: null };
             }
           }
-          return badge; // No icon filename to process
+          return badge;
         }));
-
         res.json({ tokens, badges: badgesWithSignedUrls });
     } catch (error) {
         console.error('Error fetching user rewards:', error);
@@ -90,31 +81,38 @@ router.get('/user/:userId', async (req, res) => {
     }
 });
 
-// Route: Get detailed token balance for a user in a specific community
 router.get('/balance/:userId/:communityId', async (req, res) => {
   const { userId, communityId } = req.params;
+  const communityIdInt = parseInt(communityId, 10);
+
 
   try {
     const query = `
-      WITH ledger_entries AS (
+      WITH community_ledger AS (
         SELECT jsonb_array_elements(token_ledger) as entry
         FROM users
         WHERE id = $1
       )
       SELECT
-        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE COALESCE(entry->>'mode', 'earn') = 'earn'), 0) AS earned_total,
-        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'receive'), 0) AS received_total,
-        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'spend'), 0) AS spent_total,
-        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'escrow'), 0) AS escrowed,
-        COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'fulfill'), 0) AS fulfilled_total
-      FROM ledger_entries
-      WHERE entry->>'type' = 'community' AND (entry->>'id')::int = $2;
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE COALESCE(entry->>'mode', 'earn') = 'earn'), 0) as earned_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'receive'), 0) as received_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'spend'), 0) as spent_total,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'escrow'), 0) as escrowed,
+        COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' = 'fulfill'), 0) as fulfilled_total,
+        (
+          COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE COALESCE(entry->>'mode', 'earn') IN ('earn', 'receive')), 0) -
+          COALESCE(SUM((entry->>'tokens')::numeric) FILTER (WHERE entry->>'mode' IN ('spend', 'escrow')), 0)
+        ) as spendable_balance
+      FROM community_ledger
+      WHERE
+        (entry->>'communityId')::int = $2
+        OR
+        (entry->>'type' = 'community' AND (entry->>'id')::int = $2);
     `;
 
-    const result = await pool.query(query, [userId, communityId]);
+    const { rows } = await pool.query(query, [userId, communityIdInt]);
 
-    if (result.rowCount === 0) {
-      // This can happen if the user has no token_ledger entries or does not exist
+    if (rows.length === 0) {
       return res.json({
         earned_total: 0,
         received_total: 0,
@@ -125,10 +123,7 @@ router.get('/balance/:userId/:communityId', async (req, res) => {
       });
     }
 
-    const balances = result.rows[0];
-    const spendable_balance = (parseInt(balances.earned_total) + parseInt(balances.received_total)) - (parseInt(balances.spent_total) + parseInt(balances.escrowed));
-
-    res.json({ ...balances, spendable_balance });
+    res.json(rows[0]);
 
   } catch (error) {
     console.error(`Error fetching token balance for user ${userId} in community ${communityId}:`, error);
@@ -136,7 +131,38 @@ router.get('/balance/:userId/:communityId', async (req, res) => {
   }
 });
 
-// ✅ Route: Get leaderboard (Top 100 users by tokens)
+router.get('/transactions/:userId/:communityId', async (req, res) => {
+  const { userId, communityId } = req.params;
+  const communityIdInt = parseInt(communityId, 10);
+  try {
+    const query = `
+      SELECT
+        entry->>'mode' as mode,
+        (entry->>'tokens')::numeric as tokens,
+        COALESCE(entry->>'goodName', 'Community Reward') as good_name,
+        entry->>'creationDate' as date
+      FROM
+        users,
+        jsonb_array_elements(token_ledger) AS entry
+      WHERE
+        id = $1
+        AND (
+          (entry->>'communityId')::int = $2
+          OR
+          (entry->>'type' = 'community' AND (entry->>'id')::int = $2)
+        )
+        AND entry->>'mode' IN ('spend', 'receive', 'earn')
+      ORDER BY
+        (entry->>'creationDate')::timestamp DESC;
+    `;
+    const { rows } = await pool.query(query, [userId, communityIdInt]);
+    res.json(rows);
+  } catch (error) {
+    console.error(`Error fetching transaction history for user ${userId} in community ${communityId}:`, error);
+    res.status(500).json({ message: 'Failed to fetch transaction history' });
+  }
+});
+
 router.get('/leaderboard', async (req, res) => {
     try {
         const leaderboardQuery = `
@@ -145,7 +171,6 @@ router.get('/leaderboard', async (req, res) => {
             ORDER BY cotokens DESC
             LIMIT 100`;
         const leaderboardResult = await pool.query(leaderboardQuery);
-        
         res.json(leaderboardResult.rows);
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
@@ -153,15 +178,12 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
-// Route to manually trigger badge check for a user
 router.post('/user/:userId/check-badges', async (req, res) => {
   const { userId } = req.params;
   const parsedUserId = parseInt(userId, 10);
-
   if (isNaN(parsedUserId)) {
     return res.status(400).json({ message: 'Invalid user ID.' });
   }
-
   try {
     console.log(`Manually triggering badge check for user ID: ${parsedUserId}`);
     await checkAndAwardBadges(parsedUserId);

@@ -5,14 +5,11 @@ import ensureAuthenticated from '../middlewares/authenticate.js';
 
 async function authenticate(req, res, next) {
   try {
-    const auth0Id = req.user?.sub; // <-- decoded JWT sub
+    const auth0Id = req.user?.sub;
     if (!auth0Id) return res.status(401).json({ message: 'User not found.' });
-
-    // Get numeric user ID from database
     const result = await pool.query('SELECT id FROM users WHERE auth0_id = $1', [auth0Id]);
     if (result.rowCount === 0) return res.status(401).json({ message: 'User not found.' });
-
-    req.user.id = result.rows[0].id; // store numeric user ID
+    req.user.id = result.rows[0].id;
     next();
   } catch (err) {
     console.error('Authentication error:', err);
@@ -20,15 +17,12 @@ async function authenticate(req, res, next) {
   }
 }
 
-
 const router = express.Router();
 
 // ✅ Route: List a new good for sale in a community
 router.post('/', ensureAuthenticated, authenticate, async (req, res) => {
   const { communityId, name, description, price } = req.body;
   const sellerId = req.user.id;
-
-  console.log("User ID:", sellerId);
 
   if (!communityId || !name || !price) {
     return res.status(400).json({ message: 'communityId, name, and price are required.' });
@@ -52,7 +46,7 @@ router.get('/community/:communityId', async (req, res) => {
   const { communityId } = req.params;
   try {
     const query = `
-      SELECT g.id, g.name, g.description, g.price, u.username as seller_name
+      SELECT g.id, g.name, g.description, g.price, g.seller_id, u.username as seller_name
       FROM goods g
       JOIN users u ON g.seller_id = u.id
       WHERE g.community_id = $1 AND g.status = 'available'
@@ -66,8 +60,8 @@ router.get('/community/:communityId', async (req, res) => {
   }
 });
 
-// ✅ Route: Purchase a good
-router.post('/:goodId/purchase', authenticate, async (req, res) => {
+// ✅ Route: Purchase a good (Direct Exchange)
+router.post('/:goodId/purchase', ensureAuthenticated, authenticate, async (req, res) => {
   const { goodId } = req.params;
   const buyerId = req.user.id;
 
@@ -83,63 +77,67 @@ router.post('/:goodId/purchase', authenticate, async (req, res) => {
       throw new Error('Good is not available for purchase.');
     }
     const good = goodResult.rows[0];
-    const { seller_id: sellerId, price, community_id: communityId } = good;
+    const { seller_id: sellerId, price, community_id: communityId, name: goodName } = good;
 
     if (sellerId === buyerId) {
       throw new Error('You cannot purchase your own item.');
     }
 
-    // 2. Atomically check buyer's balance and lock the user row
-    const balanceQuery = `
-      WITH ledger_entries AS (
-        SELECT jsonb_array_elements(token_ledger) as entry
-        FROM users
-        WHERE id = $1 FOR UPDATE
-      )
+    // 2. Check buyer's balance
+    const { rows: balanceRows } = await client.query(
+      `
       SELECT
-        (COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE COALESCE(entry->>'mode', 'earn') = 'earn'), 0) +
-         COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'receive'), 0)) -
-        (COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'spend'), 0) +
-         COALESCE(SUM((entry->>'tokens')::int) FILTER (WHERE entry->>'mode' = 'escrow'), 0)) AS spendable_balance
-      FROM ledger_entries
-      WHERE entry->>'type' = 'community' AND (entry->>'id')::int = $2;
-    `;
-    const balanceResult = await client.query(balanceQuery, [buyerId, communityId]);
-    const spendableBalance = balanceResult.rows[0]?.spendable_balance || 0;
+        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) -
+        COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('spend', 'escrow')), 0) as spendable_balance
+      FROM users u,
+      LATERAL jsonb_array_elements(u.token_ledger) as token_json
+      WHERE u.id = $1 AND (token_json->>'communityId')::int = $2
+      `,
+      [buyerId, communityId]
+    );
+
+    const spendableBalance = balanceRows[0]?.spendable_balance || 0;
 
     if (spendableBalance < price) {
       throw new Error('Insufficient spendable balance.');
     }
 
-    // 3. Create a transaction record
-    const transactionQuery = `
-      INSERT INTO goods_transactions (good_id, buyer_id)
-      VALUES ($1, $2) RETURNING *;
-    `;
-    const transactionResult = await client.query(transactionQuery, [goodId, buyerId]);
-    const transaction = transactionResult.rows[0];
+    // 3. Update good status to 'sold'
+    await client.query('UPDATE goods SET status = \'sold\' WHERE id = $1', [goodId]);
 
-    // 4. Update the good's status to 'pending'
-    await client.query('UPDATE goods SET status = \'pending\' WHERE id = $1', [goodId]);
-
-    // 5. Add 'escrow' entry to buyer's token ledger
-    const escrowEntry = {
-      id: communityId,
-      type: 'community',
-      mode: 'escrow',
+    // 4. Add 'spend' entry to buyer's token ledger
+    const spendEntry = {
+      mode: 'spend',
+      type: 'goods_purchase',
+      communityId: communityId,
+      goodId: goodId,
+      goodName: goodName,
       tokens: price,
-      transactionId: transaction.id,
-      creationDate: new Date().toISOString(),
+      creationDate: new Date(),
     };
-    const updateLedgerQuery = `
-      UPDATE users
-      SET token_ledger = token_ledger || $1::jsonb
-      WHERE id = $2;
-    `;
-    await client.query(updateLedgerQuery, [JSON.stringify(escrowEntry), buyerId]);
+    await client.query(
+      `UPDATE users SET token_ledger = token_ledger || $1::jsonb WHERE id = $2`,
+      [JSON.stringify(spendEntry), buyerId]
+    );
+
+    // 5. Add 'receive' entry to seller's token ledger
+    const receiveEntry = {
+      mode: 'receive',
+      type: 'goods_sale',
+      communityId: communityId,
+      goodId: goodId,
+      goodName: goodName,
+      tokens: price,
+      creationDate: new Date(),
+    };
+    await client.query(
+      `UPDATE users SET token_ledger = token_ledger || $1::jsonb WHERE id = $2`,
+      [JSON.stringify(receiveEntry), sellerId]
+    );
 
     await client.query('COMMIT');
-    res.status(201).json(transaction);
+    res.status(200).json({ message: 'Purchase successful.' });
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Purchase failed:', error);
@@ -149,104 +147,26 @@ router.post('/:goodId/purchase', authenticate, async (req, res) => {
   }
 });
 
-// Route to get all transactions for the logged-in user
-router.get('/transactions', authenticate, async (req, res) => {
+// ✅ Route: Remove a good listing
+router.delete('/:goodId', ensureAuthenticated, authenticate, async (req, res) => {
+  const { goodId } = req.params;
   const userId = req.user.id;
+
   try {
-    const query = `
-      SELECT
-        t.id,
-        t.status,
-        t.buyer_verified,
-        t.seller_verified,
-        g.name as good_name,
-        g.price,
-        t.buyer_id,
-        g.seller_id
-      FROM goods_transactions t
-      JOIN goods g ON t.good_id = g.id
-      WHERE t.buyer_id = $1 OR g.seller_id = $1
-      ORDER BY t.created_at DESC;
+    const deleteQuery = `
+      DELETE FROM goods WHERE id = $1 AND seller_id = $2 RETURNING *;
     `;
-    const result = await pool.query(query, [userId]);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching user transactions:', error);
-    res.status(500).json({ message: 'Failed to fetch transactions.' });
-  }
-});
+    const result = await pool.query(deleteQuery, [goodId, userId]);
 
-// ✅ Route: Verify a transaction
-router.post('/transactions/:transactionId/verify', authenticate, async (req, res) => {
-  const { transactionId } = req.params;
-  const userId = req.user.id;
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1. Get transaction details
-    const txQuery = 'SELECT * FROM goods_transactions WHERE id = $1 FOR UPDATE';
-    const txResult = await client.query(txQuery, [transactionId]);
-    if (txResult.rowCount === 0) throw new Error('Transaction not found.');
-    const transaction = txResult.rows[0];
-    const { good_id: goodId, buyer_id: buyerId } = transaction;
-
-    const goodQuery = 'SELECT * FROM goods WHERE id = $1';
-    const goodResult = await client.query(goodQuery, [goodId]);
-    const good = goodResult.rows[0];
-    const { seller_id: sellerId, price, community_id: communityId } = good;
-
-    // 2. Determine user role and update verification status
-    let userRole;
-    if (userId === buyerId) {
-      userRole = 'buyer';
-      await client.query('UPDATE goods_transactions SET buyer_verified = true WHERE id = $1', [transactionId]);
-    } else if (userId === sellerId) {
-      userRole = 'seller';
-      await client.query('UPDATE goods_transactions SET seller_verified = true WHERE id = $1', [transactionId]);
-    } else {
-      throw new Error('You are not authorized to verify this transaction.');
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Good not found or you are not authorized to remove this listing.' });
     }
 
-    // 3. Check if both parties have verified
-    const updatedTxResult = await client.query('SELECT * FROM goods_transactions WHERE id = $1', [transactionId]);
-    const { buyer_verified, seller_verified } = updatedTxResult.rows[0];
-
-    if (buyer_verified && seller_verified) {
-      // 4. Both verified: Finalize the transaction
-      // a. Add 'fulfill' entry to buyer's ledger
-      const fulfillEntry = {
-        id: communityId, type: 'community', mode: 'fulfill', tokens: price,
-        transactionId: transaction.id, creationDate: new Date().toISOString()
-      };
-      await client.query('UPDATE users SET token_ledger = token_ledger || $1::jsonb WHERE id = $2', [JSON.stringify(fulfillEntry), buyerId]);
-
-      // b. Add 'receive' entry to seller's ledger
-      const receiveEntry = {
-        id: communityId, type: 'community', mode: 'receive', tokens: price,
-        transactionId: transaction.id, creationDate: new Date().toISOString()
-      };
-      await client.query('UPDATE users SET token_ledger = token_ledger || $1::jsonb WHERE id = $2', [JSON.stringify(receiveEntry), sellerId]);
-
-      // c. Update transaction and good status
-      await client.query('UPDATE goods_transactions SET status = \'completed\' WHERE id = $1', [transactionId]);
-      await client.query('UPDATE goods SET status = \'sold\' WHERE id = $1', [goodId]);
-
-      console.log(`Transaction ${transactionId} completed.`);
-    }
-
-    await client.query('COMMIT');
-    res.json({ message: `Verification successful for ${userRole}.`, transaction: updatedTxResult.rows[0] });
-
+    res.status(200).json({ message: 'Good listing removed successfully.' });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Verification failed:', error);
-    res.status(500).json({ message: error.message || 'Failed to verify transaction.' });
-  } finally {
-    client.release();
+    console.error('Error removing good listing:', error);
+    res.status(500).json({ message: 'Failed to remove good listing.' });
   }
 });
-
 
 export default router;
