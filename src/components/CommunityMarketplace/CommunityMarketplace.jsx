@@ -3,15 +3,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const CommunityMarketplace = () => {
+const CommunityMarketplace = ({ communityId }) => {
   const [goods, setGoods] = useState([]);
-  const [newGood, setNewGood] = useState({ name: '', description: '', price: '' });
-  const [communityId, setCommunityId] = useState(1); // Hardcoded for now, should be dynamic
+  const [newGood, setNewGood] = useState({ name: '', description: '', price: '' });// Hardcoded for now, should be dynamic
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAccessTokenSilently } = useAuth0();
 
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiBaseUrl = import.meta.env.VITE_BACKEND_URL;
 
   // Fetch goods from the backend
   useEffect(() => {
@@ -22,7 +21,8 @@ const CommunityMarketplace = () => {
         const response = await axios.get(`${apiBaseUrl}/goods/community/${communityId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setGoods(response.data);
+        console.log("API response:", response.data);
+        setGoods(Array.isArray(response.data) ? response.data : []);
         setError(null);
       } catch (err) {
         setError('Failed to fetch goods. Please try again later.');
@@ -52,8 +52,11 @@ const CommunityMarketplace = () => {
     }
 
     try {
-      const token = await getAccessTokenSilently();
-      const payload = { ...newGood, communityId, price: parseInt(newGood.price) };
+      const token = await getAccessTokenSilently({
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+      });
+      const payload = { ...newGood, communityId: parseInt(communityId), price: parseInt(newGood.price) };
+      console.log("Submitting new good with payload:", payload);
       const response = await axios.post(`${apiBaseUrl}/goods`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -65,7 +68,7 @@ const CommunityMarketplace = () => {
     }
   };
 
-    // Handle purchasing a good
+  // Handle purchasing a good
   const handlePurchase = async (goodId) => {
     try {
       const token = await getAccessTokenSilently();

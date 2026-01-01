@@ -1,14 +1,34 @@
 // backend/routes/goods.js
 import express from 'express';
 import pool from '../db.js';
-import authenticate from '../middlewares/authenticate.js';
+import ensureAuthenticated from '../middlewares/authenticate.js';
+
+async function authenticate(req, res, next) {
+  try {
+    const auth0Id = req.user?.sub; // <-- decoded JWT sub
+    if (!auth0Id) return res.status(401).json({ message: 'User not found.' });
+
+    // Get numeric user ID from database
+    const result = await pool.query('SELECT id FROM users WHERE auth0_id = $1', [auth0Id]);
+    if (result.rowCount === 0) return res.status(401).json({ message: 'User not found.' });
+
+    req.user.id = result.rows[0].id; // store numeric user ID
+    next();
+  } catch (err) {
+    console.error('Authentication error:', err);
+    res.status(401).json({ message: 'Unauthorized', error: err.message });
+  }
+}
+
 
 const router = express.Router();
 
 // ✅ Route: List a new good for sale in a community
-router.post('/', authenticate, async (req, res) => {
+router.post('/', ensureAuthenticated, authenticate, async (req, res) => {
   const { communityId, name, description, price } = req.body;
   const sellerId = req.user.id;
+
+  console.log("User ID:", sellerId);
 
   if (!communityId || !name || !price) {
     return res.status(400).json({ message: 'communityId, name, and price are required.' });
