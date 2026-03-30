@@ -110,7 +110,7 @@ class GuildService {
 
   async syncGuildsWithSkills() {
     console.log('Synchronizing guilds with skills...');
-    const skillsQuery = 'SELECT id, name, description FROM skills';
+    const skillsQuery = 'SELECT id, name FROM skills';
     const skillsResult = await pool.query(skillsQuery);
 
     let createdCount = 0;
