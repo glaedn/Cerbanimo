@@ -340,6 +340,24 @@ const SiteNav = () => {
               >
                 Create a Community
               </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/constellations" ? "active" : ""
+                }`}
+                to="/constellations"
+                onClick={closeSidebar}
+              >
+                Constellations
+              </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/resources" ? "active" : ""
+                }`}
+                to="/resources"
+                onClick={closeSidebar}
+              >
+                Resources
+              </Link>
               {/* Declare a Need Button */}
               <Button
                 variant="text"

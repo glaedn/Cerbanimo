@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, TextField, InputAdornment, List, ListItem, ListItemText, Pagination } from '@mui/material';
+import { Box, Typography, TextField, InputAdornment, List, ListItem, ListItemText, Pagination, LinearProgress, Chip } from '@mui/material';
 import { Search } from 'lucide-react';
 
 const ProjectOverviewPage = () => {
@@ -49,8 +49,28 @@ const ProjectOverviewPage = () => {
 
             <List className="project-list">
                 {projects.map((project) => (
-                    <ListItem key={project.id} listItemButton component="a" href={`/project/${project.id}`}>
-                        <ListItemText primary={project.name} secondary={project.description} />
+                    <ListItem key={project.id} listItemButton component="a" href={`/project/${project.id}`} sx={{ display: 'block', mb: 2, border: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <ListItemText primary={project.name} secondary={project.description} />
+                            <Box sx={{ width: 150, ml: 2 }}>
+                                <Typography variant="caption" color="textSecondary">HEALTH SCORE: {project.health_score || 0}%</Typography>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={project.health_score || 0}
+                                    color={project.health_score > 70 ? 'success' : project.health_score > 30 ? 'warning' : 'error'}
+                                    sx={{ height: 8, borderRadius: 5 }}
+                                />
+                            </Box>
+                        </Box>
+                        <Box sx={{ mt: 1 }}>
+                            {project.status === 'decaying' && (
+                                <Chip label="DECAYING" size="small" color="error" sx={{ mr: 1 }} />
+                            )}
+                            {project.status === 'revived' && (
+                                <Chip label="REVIVED" size="small" color="primary" sx={{ mr: 1 }} />
+                            )}
+                            <Chip label={`STATUS: ${project.status || 'ACTIVE'}`} size="small" variant="outlined" />
+                        </Box>
                     </ListItem>
                 ))}
             </List>

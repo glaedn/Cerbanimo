@@ -38,6 +38,8 @@ import Communities from "./pages/Communities.jsx";
 import ProjectCreation from "./pages/ProjectCreation.jsx";
 import ProjectPages from "./pages/ProjectPages.jsx";
 import Project from "./pages/Project.jsx";
+import ResourceInventory from "./components/ResourceInventory/ResourceInventory.jsx";
+import Constellations from "./pages/Constellations.jsx";
 
 const App = () => {
   return (
@@ -55,6 +57,22 @@ const App = () => {
             element={
               <PrivateRoute>
                 <OnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/resources"
+            element={
+              <PrivateRoute>
+                <ResourceInventory />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/constellations"
+            element={
+              <PrivateRoute>
+                <Constellations />
               </PrivateRoute>
             }
           />

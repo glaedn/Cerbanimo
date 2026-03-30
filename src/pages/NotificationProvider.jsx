@@ -266,4 +266,5 @@ return (
 
 export const useNotifications = () => useContext(NotificationContext);
 
+export { NotificationProvider };
 export default NotificationProvider;
