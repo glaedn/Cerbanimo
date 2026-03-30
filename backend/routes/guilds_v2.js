@@ -13,10 +13,11 @@ router.get('/requests', async (req, res) => {
   }
 });
 
-router.get('/:guildId/intelligence', async (req, res) => {
+router.get('/:skillId/intelligence', async (req, res) => {
   try {
-    const intel = await GuildService.getGuildIntelligence(req.params.guildId);
-    res.json(intel);
+    // Note: The frontend sends skillId here, so we map it correctly.
+    const intel = await GuildService.getGuildIntelligenceBySkillId(req.params.skillId);
+    res.json(intel || null);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

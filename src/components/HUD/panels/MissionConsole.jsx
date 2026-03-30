@@ -99,18 +99,18 @@ const MissionConsole = () => {
       </div>
       {!isMinimized && (
         <div className="hud-panel-content">
-          <h5 style={{ fontFamily: 'Orbitron', color: '#00f3ff', margin: '10px 0 5px' }}>Assigned Tasks</h5>
+          <h5 className="section-subtitle">Assigned Tasks</h5>
           {assignedTasks.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
+            <ul className="task-list">
               {assignedTasks.map(task => (
-                <li key={task.id} className="task-item" style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
+                <li key={task.id} className="task-item">
                   <div className="task-info">
                     <span className="task-name" style={{ fontWeight: 'bold', color: '#00f3ff' }}>{task.name}</span> <br/> ({task.projectName})
                     <br />
                     Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
                   </div>
-                  <div className="task-actions" style={{ marginTop: '5px' }}>
-                    <button onClick={() => handleViewTask(task)} style={{ marginRight: '5px' }}>View</button>
+                  <div className="task-actions">
+                    <button onClick={() => handleViewTask(task)}>View</button>
                     {!(task.status.toLowerCase().includes('submitted') || task.status.toLowerCase().includes('completed')) && (
                       <button onClick={() => handleDropTask(task.id)}>Drop</button>
                     )}
@@ -122,19 +122,19 @@ const MissionConsole = () => {
             <p style={{ fontStyle: 'italic', color: '#888' }}>No tasks currently assigned.</p>
           )}
 
-          <h5 style={{ fontFamily: 'Orbitron', color: '#ff5ca2', margin: '20px 0 5px' }}>Recommended for You</h5>
+          <h5 className="section-subtitle recommended">Recommended for You</h5>
           {missionsLoading ? (
-            <p style={{ fontStyle: 'italic', color: '#888' }}>Scanning datacore...</p>
+            <p className="loading-text">Scanning datacore...</p>
           ) : recommendedMissions.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
+            <ul className="task-list">
               {recommendedMissions.slice(0, 3).map(mission => (
-                <li key={mission.id} className="task-item recommended" style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
+                <li key={mission.id} className="task-item recommended">
                   <div className="task-info">
                     <span className="task-name" style={{ fontWeight: 'bold', color: '#ff5ca2' }}>{mission.name}</span> <br/> ({mission.project_name})
                     <br />
                     <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {mission.reward_tokens} Tokens</span>
                   </div>
-                  <div className="task-actions" style={{ marginTop: '5px' }}>
+                  <div className="task-actions">
                     <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)}>Accept</button>
                   </div>
                 </li>
