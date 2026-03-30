@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import {
-  Box, Typography, Card, CardContent, Grid, Chip,
+  Box, Typography, Card, CardContent, Chip,
   Button, List, ListItem, ListItemText, Modal, TextField,
-  CircularProgress, LinearProgress, Divider
+  CircularProgress, LinearProgress, Paper
 } from '@mui/material';
-import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import Grid2 from '@mui/material/Grid2';
+import { Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const ConstellationHub = () => {
   const { getAccessTokenSilently, user } = useAuth0();
-  const navigate = useNavigate();
   const [constellations, setConstellations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -46,6 +45,25 @@ const ConstellationHub = () => {
     if (user) fetchData();
   }, [getAccessTokenSilently, user]);
 
+  // Fix for global SVG icon size issue (Lucide icons)
+  useEffectFix(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .lucide, .lucide * {
+        height: 1em !important;
+        width: 1em !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        max-height: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const handleFormSubmit = async () => {
     try {
       const token = await getAccessTokenSilently();
@@ -55,7 +73,7 @@ const ConstellationHub = () => {
       setFormModalOpen(false);
       setConstellations([...constellations, response.data]);
       alert("Constellation formed successfully.");
-    } catch (err) {
+    } catch {
       alert("Failed to form constellation.");
     }
   };
@@ -76,13 +94,13 @@ const ConstellationHub = () => {
         </Button>
       </Box>
 
-      <Grid container spacing={4}>
+      <Grid2 container spacing={4}>
         {constellations.length === 0 ? (
-            <Grid item xs={12}>
+            <Grid2 xs={12}>
                 <Typography color="gray">No active constellations found. Form an alliance between projects and guilds to begin complex work.</Typography>
-            </Grid>
+            </Grid2>
         ) : constellations.map(c => (
-          <Grid item xs={12} md={6} key={c.id}>
+          <Grid2 xs={12} md={6} key={c.id}>
             <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: '#fff', '&:hover': { borderColor: '#ff5ca2' } }}>
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -90,7 +108,7 @@ const ConstellationHub = () => {
                   <Chip label={c.status.toUpperCase()} size="small" sx={{ bgcolor: '#440022', color: '#ff5ca2' }} />
                 </Box>
 
-                <Typography variant="body2" sx={{ mb: 3, fontStyle: 'italic', color: 'gray' }}>"{c.shared_objective}"</Typography>
+                <Typography variant="body2" sx={{ mb: 3, fontStyle: 'italic', color: 'gray' }}>&quot;{c.shared_objective}&quot;</Typography>
 
                 <Box mb={3}>
                   <Box display="flex" justifyContent="space-between" mb={1}>
@@ -104,29 +122,29 @@ const ConstellationHub = () => {
                   />
                 </Box>
 
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
+                <Grid2 container spacing={2}>
+                  <Grid2 xs={4}>
                     <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
-                      <TrendingUp size={16} color="#ff5ca2" />
+                      <TrendingUp size={20} color="#ff5ca2" style={{ verticalAlign: 'middle' }} />
                       <Typography variant="caption" display="block">VELOCITY</Typography>
                       <Typography variant="h6">{Number(c.velocity || 12).toFixed(1)}</Typography>
                     </Box>
-                  </Grid>
-                  <Grid item xs={4}>
+                  </Grid2>
+                  <Grid2 xs={4}>
                     <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
-                      <CheckSquare size={16} color="#ff5ca2" />
+                      <CheckSquare size={20} color="#ff5ca2" style={{ verticalAlign: 'middle' }} />
                       <Typography variant="caption" display="block">TASKS</Typography>
                       <Typography variant="h6">{(c.tasks_completed || 8)}/{(c.tasks_total || 20)}</Typography>
                     </Box>
-                  </Grid>
-                  <Grid item xs={4}>
+                  </Grid2>
+                  <Grid2 xs={4}>
                     <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
-                      <AlertTriangle size={16} color="#ff5ca2" />
+                      <AlertTriangle size={20} color="#ff5ca2" style={{ verticalAlign: 'middle' }} />
                       <Typography variant="caption" display="block">DRIFT</Typography>
                       <Typography variant="h6">LOW</Typography>
                     </Box>
-                  </Grid>
-                </Grid>
+                  </Grid2>
+                </Grid2>
 
                 <Button
                     fullWidth
@@ -151,9 +169,9 @@ const ConstellationHub = () => {
                 </Button>
               </CardContent>
             </Card>
-          </Grid>
+          </Grid2>
         ))}
-      </Grid>
+      </Grid2>
 
       <Modal open={taskPoolOpen} onClose={() => setTaskPoolOpen(false)}>
         <Box sx={{
@@ -175,8 +193,10 @@ const ConstellationHub = () => {
                   <ListItemText
                     primary={task.name.toUpperCase()}
                     secondary={`Project: ${task.project_name} | Status: ${task.status}`}
-                    primaryTypographyProps={{ color: '#00f3ff', fontFamily: 'Orbitron' }}
-                    secondaryTypographyProps={{ color: 'gray' }}
+                    slotProps={{
+                      primary: { style: { color: '#00f3ff', fontFamily: 'Orbitron' } },
+                      secondary: { style: { color: 'gray' } }
+                    }}
                   />
                   <Button variant="outlined" size="small" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}>VIEW TASK</Button>
                 </ListItem>
@@ -194,8 +214,10 @@ const ConstellationHub = () => {
                     <ListItemText
                         primary="AMENDMENT PROPOSAL"
                         secondary={`New Objective: ${amendment.new_objective}`}
-                        primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
-                        secondaryTypographyProps={{ color: '#eee' }}
+                        slotProps={{
+                          primary: { style: { color: '#ff5ca2', fontFamily: 'Orbitron' } },
+                          secondary: { style: { color: '#eee' } }
+                        }}
                     />
                     <Box display="flex" gap={1}>
                         <Button variant="contained" size="small" color="success" onClick={async () => {
@@ -226,7 +248,7 @@ const ConstellationHub = () => {
                                     newObjective: newObj
                                 }, { headers: { Authorization: `Bearer ${token}` } });
                                 alert("Amendment proposed.");
-                            } catch (err) {
+                            } catch {
                                 alert("Failed to propose amendment.");
                             }
                         }
@@ -250,15 +272,19 @@ const ConstellationHub = () => {
           <TextField
             fullWidth label="CONSTELLATION NAME" sx={{ mb: 2 }}
             value={newConstellation.name} onChange={(e) => setNewConstellation({...newConstellation, name: e.target.value})}
-            InputLabelProps={{ style: { color: '#ff5ca2' } }}
-            inputProps={{ style: { color: '#fff' } }}
+            slotProps={{
+              inputLabel: { style: { color: '#ff5ca2' } },
+              input: { style: { color: '#fff' } }
+            }}
           />
           <TextField
             fullWidth label="SHARED OBJECTIVE" multiline rows={4} sx={{ mb: 3 }}
             value={newConstellation.sharedObjective} onChange={(e) => setNewConstellation({...newConstellation, sharedObjective: e.target.value})}
             placeholder="What is the unified goal of this multi-entity alliance?"
-            InputLabelProps={{ style: { color: '#ff5ca2' } }}
-            inputProps={{ style: { color: '#fff' } }}
+            slotProps={{
+              inputLabel: { style: { color: '#ff5ca2' } },
+              input: { style: { color: '#fff' } }
+            }}
           />
           <Button fullWidth variant="contained" onClick={handleFormSubmit} sx={{ bgcolor: '#ff5ca2', color: '#000', '&:hover': { bgcolor: '#ff89bc' } }}>IGNITE ALLIANCE</Button>
         </Box>
@@ -266,5 +292,8 @@ const ConstellationHub = () => {
     </Box>
   );
 };
+
+// Fix for global SVG icon size issue (Lucide icons)
+import { useEffect as useEffectFix } from 'react';
 
 export default ConstellationHub;
