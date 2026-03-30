@@ -74,15 +74,16 @@ const TaskBrowser = () => {
             headers: { Authorization: `Bearer ${token}` },
           });
       
-          // Sort tasks based on shared project tags and user interests
+          // Sort tasks based on priority score and shared interests
           const sortedTasks = tasksResponse.data.sort((a, b) => {
-            // Count shared tags for Task A and Task B, normalized for comparison
+            // Sort by Priority Score (primary) and shared tags (secondary)
+            if ((b.priority_score || 0) !== (a.priority_score || 0)) {
+                return (b.priority_score || 0) - (a.priority_score || 0);
+            }
+
             const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
-      
-            console.log(`Shared Tags for Task A: ${sharedA}, Shared Tags for Task B: ${sharedB}`);
-      
-            return sharedB - sharedA; // Sort in descending order based on shared tags
+            return sharedB - sharedA;
           });
       
           // Add shared tags to each task for display purposes
@@ -195,6 +196,10 @@ const TaskBrowser = () => {
                           {task.sharedTagsCount > 0
                             ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}`
                             : '⚠️ No shared interests'}
+                        </Typography>
+                        <br />
+                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
+                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
                         </Typography>
                         <br />
                         {task.project_id && (
