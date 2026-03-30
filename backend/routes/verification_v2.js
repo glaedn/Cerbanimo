@@ -39,7 +39,7 @@ router.get('/disputes/active', async (req, res) => {
       SELECT d.*, t.name as task_name, t.description as task_desc
       FROM disputes d
       JOIN tasks t ON d.task_id = t.id
-      WHERE d.status = 'open'
+      WHERE d.status IN ('open', 'review')
     `);
     res.json(result.rows);
   } catch (err) {

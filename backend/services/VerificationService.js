@@ -42,8 +42,8 @@ class DisputeService {
       await client.query('BEGIN');
 
       const insertQuery = `
-        INSERT INTO disputes (task_id, opener_id, reason)
-        VALUES ($1, $2, $3)
+        INSERT INTO disputes (task_id, opener_id, reason, status)
+        VALUES ($1, $2, $3, 'open')
         RETURNING *;
       `;
       const disputeResult = await client.query(insertQuery, [taskId, openerId, reason]);

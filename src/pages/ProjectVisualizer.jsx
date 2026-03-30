@@ -7,7 +7,7 @@ import "./ProjectVisualizer.css";
 import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
-import { Chip } from "@mui/material";
+import { Chip, Box, Typography } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 
 const ProjectVisualizer = () => {
@@ -593,6 +593,7 @@ useEffect(() => {
     if (!containerRef.current) return;
 
     const updateDimensions = () => {
+      if (!containerRef.current) return;
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
 
