@@ -37,20 +37,58 @@ class ImpactGraphService {
   }
 
   async getImpactTrace(taskId) {
-    // Trace Task -> Project -> Outcome
     const query = `
       WITH RECURSIVE impact_trace AS (
         SELECT id, type, entity_id, label FROM impact_nodes WHERE type = 'task' AND entity_id = $1
         UNION
         SELECT n.id, n.type, n.entity_id, n.label
         FROM impact_nodes n
-        JOIN impact_edges e ON n.id = e.to_node_id
+        JOIN impact_edges e ON e.to_node_id = n.id
         JOIN impact_trace it ON e.from_node_id = it.id
       )
       SELECT * FROM impact_trace;
     `;
     const result = await pool.query(query, [taskId]);
     return result.rows;
+  }
+
+  async getAtlasData(projectId = null, realmId = null) {
+    let nodesQuery = 'SELECT id, type, entity_id, label FROM impact_nodes';
+    let edgesQuery = 'SELECT from_node_id, to_node_id, relation_type FROM impact_edges';
+    let params = [];
+
+    if (projectId) {
+      nodesQuery = `
+        SELECT DISTINCT n.* FROM impact_nodes n
+        LEFT JOIN outcomes o ON n.entity_id = o.id AND n.type = 'outcome'
+        WHERE o.project_id = $1 OR (n.type = 'project' AND n.entity_id = $1)
+      `;
+      params = [projectId];
+    } else if (realmId) {
+       // Filter by community/realm
+       nodesQuery = `
+        SELECT DISTINCT n.* FROM impact_nodes n
+        LEFT JOIN outcomes o ON n.entity_id = o.id AND n.type = 'outcome'
+        LEFT JOIN projects p ON o.project_id = p.id OR (n.type = 'project' AND n.entity_id = p.id)
+        WHERE p.community_id = $1
+       `;
+       params = [realmId];
+    }
+
+    const nodes = await pool.query(nodesQuery, params);
+    const nodeIds = nodes.rows.map(n => n.id);
+
+    if (nodeIds.length > 0) {
+      edgesQuery = `
+        SELECT from_node_id, to_node_id, relation_type
+        FROM impact_edges
+        WHERE from_node_id = ANY($1) AND to_node_id = ANY($1)
+      `;
+      const edges = await pool.query(edgesQuery, [nodeIds]);
+      return { nodes: nodes.rows, links: edges.rows.map(e => ({ source: e.from_node_id, target: e.to_node_id, relation: e.relation_type })) };
+    }
+
+    return { nodes: [], links: [] };
   }
 }
 

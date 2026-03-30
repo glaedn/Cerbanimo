@@ -27,6 +27,18 @@ const createConstellationTables = async () => {
     );
   `;
 
+  const constellationInvitesTableQuery = `
+    CREATE TABLE IF NOT EXISTS constellation_invites (
+      id SERIAL PRIMARY KEY,
+      constellation_id INTEGER REFERENCES constellations(id) ON DELETE CASCADE,
+      inviter_community_id INTEGER,
+      invitee_community_id INTEGER,
+      status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'accepted', 'rejected'
+      votes JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   const constellationTasksTableQuery = `
     CREATE TABLE IF NOT EXISTS constellation_tasks (
       id SERIAL PRIMARY KEY,
@@ -76,6 +88,7 @@ const createConstellationTables = async () => {
   try {
     await pool.query(constellationsTableQuery);
     await pool.query(constellationMembersTableQuery);
+    await pool.query(constellationInvitesTableQuery);
     await pool.query(constellationTasksTableQuery);
     await pool.query(constellationPledgesTableQuery);
     await pool.query(contributionSplitsTableQuery);

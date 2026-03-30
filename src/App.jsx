@@ -41,6 +41,9 @@ import Communities from "./pages/Communities.jsx";
 import ProjectCreation from "./pages/ProjectCreation.jsx";
 import ProjectPages from "./pages/ProjectPages.jsx";
 import Project from "./pages/Project.jsx";
+import CoordinatorHUD from "./pages/CoordinatorHUD.jsx";
+import ImpactAtlas from "./pages/ImpactAtlas.jsx";
+import DisputeCourt from "./pages/DisputeCourt/DisputeCourt.jsx";
 
 const App = () => {
   return (
@@ -203,6 +206,30 @@ const App = () => {
             }
           />
           <Route path="/rezzler" element={<Rezzler />} />
+          <Route
+            path="/coordinator-hud"
+            element={
+              <PrivateRoute>
+                <CoordinatorHUD />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/impact-atlas"
+            element={
+              <PrivateRoute>
+                <ImpactAtlas />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dispute-court"
+            element={
+              <PrivateRoute>
+                <DisputeCourt />
+              </PrivateRoute>
+            }
+          />
           {/* Default Route */}
           <Route path="*" element={<HomePage />} />
         </Routes>

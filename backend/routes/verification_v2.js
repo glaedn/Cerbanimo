@@ -1,5 +1,6 @@
 import express from 'express';
 import { verificationService, disputeService } from '../services/VerificationService.js';
+import pool from '../db.js';
 
 const router = express.Router();
 
@@ -24,9 +25,9 @@ router.post('/disputes', async (req, res) => {
 });
 
 router.post('/disputes/:disputeId/votes', async (req, res) => {
-  const { voterId, vote, comment } = req.body;
+  const { voterId, vote, splitPercentage, comment } = req.body;
   try {
-    const castVote = await disputeService.castVote(req.params.disputeId, voterId, vote, comment);
+    const castVote = await disputeService.castVote(req.params.disputeId, voterId, vote, splitPercentage, comment);
     res.status(201).json(castVote);
   } catch (err) {
     res.status(500).json({ error: err.message });

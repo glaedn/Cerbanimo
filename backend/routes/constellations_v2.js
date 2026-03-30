@@ -1,6 +1,7 @@
 import express from 'express';
 import ConstellationService from '../services/ConstellationService.js';
 import pool from '../db.js';
+import { calculateVoteWeight } from '../utils/voteWeight.js';
 
 const router = express.Router();
 
@@ -14,12 +15,91 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/form', async (req, res) => {
-  const { name, sharedObjective, outcomeId } = req.body;
+  const { name, sharedObjective, outcomeId, initialCommunityId } = req.body;
   try {
-    const constellation = await ConstellationService.formConstellation(name, sharedObjective, outcomeId);
+    const constellation = await ConstellationService.formConstellation(name, sharedObjective, outcomeId, initialCommunityId);
     res.status(201).json(constellation);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:constellationId/invites', async (req, res) => {
+  const { inviterId, inviteeId } = req.body;
+  try {
+    const invite = await ConstellationService.inviteCommunity(req.params.constellationId, inviterId, inviteeId);
+    res.status(201).json(invite);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/invites/community/:communityId', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ci.*, c.name as constellation_name, com.name as inviter_name
+      FROM constellation_invites ci
+      JOIN constellations c ON ci.constellation_id = c.id
+      JOIN communities com ON ci.inviter_community_id = com.id
+      WHERE ci.invitee_community_id = $1 AND ci.status = 'pending'
+    `, [req.params.communityId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/invites/:inviteId/vote', async (req, res) => {
+  const { userId, vote, communityId } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Cast the vote
+    await client.query(`
+      UPDATE constellation_invites
+      SET votes = jsonb_set(COALESCE(votes, '{}'::jsonb), ARRAY[$1::text], to_jsonb($2::boolean), true)
+      WHERE id = $3
+    `, [userId, vote, req.params.inviteId]);
+
+    const inviteRes = await client.query('SELECT * FROM constellation_invites WHERE id = $1', [req.params.inviteId]);
+    const invite = inviteRes.rows[0];
+    const votes = invite.votes || {};
+
+    // Get community weight data
+    const { totalPossibleWeight } = await calculateVoteWeight(client, invite.invitee_community_id);
+
+    let yesWeight = 0;
+    let totalVotedWeight = 0;
+
+    for (const [voterId, val] of Object.entries(votes)) {
+      const { weight } = await calculateVoteWeight(client, invite.invitee_community_id, voterId);
+      totalVotedWeight += weight;
+      if (val === true) yesWeight += weight;
+    }
+
+    // Threshold: Majority (50%) of active weight AND at least 20% turnout of total community weight
+    const majorityReached = yesWeight > totalVotedWeight / 2;
+    const turnoutReached = totalVotedWeight >= totalPossibleWeight * 0.2;
+
+    if (majorityReached && turnoutReached) {
+      await client.query('UPDATE constellation_invites SET status = \'accepted\' WHERE id = $1', [req.params.inviteId]);
+      await client.query('INSERT INTO constellation_members (constellation_id, entity_type, entity_id) VALUES ($1, \'community\', $2)', [invite.constellation_id, invite.invitee_community_id]);
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      message: 'Vote recorded',
+      yesWeight,
+      totalVotedWeight,
+      totalPossibleWeight,
+      accepted: majorityReached && turnoutReached
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

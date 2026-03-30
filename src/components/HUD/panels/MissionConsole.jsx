@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import useAssignedTasks from '../../../hooks/useAssignedTasks'; // Adjust path
-import '../HUDPanel.css'; // Shared panel styles
-import './MissionConsole.css'; // Optional: For specific MissionConsole styles
+import { useUserProfile } from '../../../hooks/useUserProfile';
+import useAssignedTasks from '../../../hooks/useAssignedTasks';
+import '../HUDPanel.css';
+import './MissionConsole.css';
 
 const MissionConsole = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
@@ -13,6 +13,7 @@ const MissionConsole = () => {
   const [recommendedMissions, setRecommendedMissions] = useState([]);
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [taskOutcomes, setTaskOutcomes] = useState({});
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
 
@@ -26,6 +27,18 @@ const MissionConsole = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setRecommendedMissions(res.data || []);
+
+                // Fetch outcomes for assigned tasks
+                assignedTasks.forEach(async (task) => {
+                   try {
+                     const traceRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact_v2/trace/${task.id}`);
+                     const outcome = traceRes.data.find(n => n.type === 'outcome');
+                     if (outcome) {
+                       setTaskOutcomes(prev => ({ ...prev, [task.id]: outcome.label }));
+                     }
+                   } catch (e) { console.error(e); }
+                });
+
             } catch (err) {
                 console.error("Failed to fetch missions:", err);
             } finally {
@@ -34,7 +47,7 @@ const MissionConsole = () => {
         }
     };
     fetchMissions();
-  }, [profile?.id, getAccessTokenSilently]);
+  }, [profile?.id, getAccessTokenSilently, assignedTasks.length]);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -106,7 +119,9 @@ const MissionConsole = () => {
                 <li key={task.id} className="task-item">
                   <div className="task-info">
                     <span className="task-name" style={{ fontWeight: 'bold', color: '#00f3ff' }}>{task.name}</span> <br/> ({task.projectName})
-                    <br />
+                    <div className="task-outcome-label" style={{ fontSize: '0.75rem', color: '#ff00ff', margin: '4px 0' }}>
+                      WHY: {taskOutcomes[task.id] || 'TRACING IMPACT...'}
+                    </div>
                     Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
                   </div>
                   <div className="task-actions">

@@ -3,6 +3,7 @@ import {
   autoGenerateTasks,
   autoGenerateSubtasks,
 } from "../services/taskGenerator.js";
+import StoryEngineService from "../services/StoryEngineService.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -626,6 +627,16 @@ const approveTask = async (taskId, io, client) => {
     // Set completed_at
     await localClient.query("UPDATE tasks SET completed_at = NOW() WHERE id = $1", [taskId]);
 
+    // Phase 5: Story Engine Integration (Direct Service Call)
+    try {
+      const unit = await StoryEngineService.createStoryUnit(taskId, initialTask.submitted_by, 'implementer');
+      if (unit) {
+        await StoryEngineService.generateMicroNarrative(unit.id);
+      }
+    } catch (storyError) {
+      console.error("Story engine integration failed:", storyError);
+    }
+
     // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
     const taskQuery = `
       SELECT t.reward_tokens, 
@@ -909,52 +920,24 @@ const approveTask = async (taskId, io, client) => {
     // COMMIT the transaction before making external calls
     await localClient.query("COMMIT");
 
-    // Phase 5: Story Engine Integration
-    try {
-      const response = await fetch(
-        `${process.env.BACKEND_URL}/story_engine_v2/units`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ taskId, userId: submitted_by, role: 'implementer' }),
-        }
-      );
-      if (response.ok) {
-        const unit = await response.json();
-        // Generate micro-narrative
-        await fetch(`${process.env.BACKEND_URL}/story_engine_v2/narrative/${unit.id}`, { method: 'POST' });
-      }
-    } catch (storyError) {
-      console.error("Story engine integration failed:", storyError);
-    }
-
-    // After transaction is committed, conditionally create story node
+    // After transaction is committed, conditionally create story node (Direct DB Call)
     if (initialTask && initialTask.submitted_by) {
       const storyNodeData = {
         task_id: initialTask.id,
-        user_id: initialTask.submitted_by, // Strictly use submitted_by
+        user_id: initialTask.submitted_by,
         reflection: initialTask.reflection || "",
         media_urls: initialTask.proof_of_work_links || [],
-        tags: tags, // 'tags' was fetched earlier based on initialTask.skill_id
+        tags: tags,
       };
       try {
         console.log("Posting story node for submitted_by user:", initialTask.submitted_by, "with data:", storyNodeData);
-        const response = await fetch(
-          `${process.env.BACKEND_URL}/storyChronicles/story-node`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(storyNodeData),
-          }
+        await localClient.query(
+            `INSERT INTO story_nodes (task_id, user_id, reflection, media_urls, tags)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [storyNodeData.task_id, storyNodeData.user_id, storyNodeData.reflection, storyNodeData.media_urls, storyNodeData.tags]
         );
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
-        } else {
-            console.log("Story node creation request successful for user:", initialTask.submitted_by, "status:", response.status);
-        }
-      } catch (fetchError) {
-        console.error("Fetch error creating story node:", fetchError);
+      } catch (dbError) {
+        console.error("Error creating story node directly:", dbError);
       }
     } else {
       console.warn(`Skipping story node creation for task ${taskId} as submitted_by user is not defined or initialTask is missing.`);
@@ -2059,20 +2042,17 @@ const approveByPM = async (req, res, io) => {
 
     await client.query('COMMIT');
 
-    // Create story node after transaction commits
+    // Create story node after transaction commits (Direct DB Call)
     if (finalizeResult.storyNodeData && finalizeResult.storyNodeData.user_id) {
         try {
-            const response = await fetch(`${process.env.BACKEND_URL}/storyChronicles/story-node`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(finalizeResult.storyNodeData),
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
-            }
-        } catch (fetchError) {
-            console.error("Fetch error creating story node:", fetchError);
+            const { task_id, user_id, reflection, media_urls, tags } = finalizeResult.storyNodeData;
+            await client.query(
+                `INSERT INTO story_nodes (task_id, user_id, reflection, media_urls, tags)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [task_id, user_id, reflection, media_urls, tags]
+            );
+        } catch (dbError) {
+            console.error("Error creating story node directly:", dbError);
         }
     }
 

@@ -1,0 +1,84 @@
+
+.tabbed-hud-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  color: #00ffff;
+  font-family: 'Space Mono', monospace;
+  overflow: hidden;
+}
+
+.hud-content-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Ensure child panels take full space in tabbed mode */
+.hud-content-area .hud-panel,
+.hud-content-area .impact-atlas-container,
+.hud-content-area .dispute-court-container {
+  height: 100% !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  background: none !important;
+}
+
+.hud-tab-bar {
+  display: flex;
+  height: 60px;
+  background: rgba(0, 31, 63, 0.9);
+  border-top: 2px solid rgba(0, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.hud-tab-bar button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: rgba(0, 255, 255, 0.6);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-tab-bar button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: #00ffff;
+  transition: 0.3s;
+  transform: translateX(-50%);
+}
+
+.hud-tab-bar button.active {
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+}
+
+.hud-tab-bar button.active::after {
+  width: 60%;
+  box-shadow: 0 0 10px #00ffff;
+}
+
+.hud-tab-bar button:hover {
+  background: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 600px) {
+  .hud-tab-bar button {
+    font-size: 0.6rem;
+  }
+}

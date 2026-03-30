@@ -7,76 +7,7 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-/**
- * Calculates total or individual vote weight (including delegated votes).
- * @param {object} client - Postgres client from pool.connect().
- * @param {string} communityId - The community ID to filter by.
- * @param {string|number} [voterId] - Optional user ID whose weight to calculate.
- * @param {object} [delegations={}] - Optional delegations map: { delegatorId: delegateToId }
- * @returns {Promise<object>} Either { totalPossibleWeight } or { weight }
- **/
-async function calculateVoteWeight(
-  client,
-  communityId,
-  voterId = null,
-  delegations = {}
-) {
-  if (voterId) {
-    const userIdStr = voterId.toString();
-
-    // Step 1: Find delegators who have delegated to this user
-    const delegators = Object.entries(delegations)
-      .filter(([, delegateTo]) => delegateTo === userIdStr)
-      .map(([delegator]) => parseInt(delegator));
-
-    const voterIds = [parseInt(voterId), ...delegators];
-
-    // Step 2: Get token count per voter
-    const { rows: tokenRows } = await client.query(
-      `
-      SELECT u.id,
-             COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) AS tokens
-      FROM users u
-      LEFT JOIN LATERAL (
-        SELECT token_json
-        FROM unnest(u.token_ledger) AS token_json
-        WHERE token_json->>'type' = 'community'
-        AND (token_json->>'id')::int = $2
-      ) AS token_entries ON TRUE
-      WHERE u.id = ANY($1::int[])
-      GROUP BY u.id
-      `,
-      [voterIds, communityId]
-    );
-
-    // Step 3: Sum total weight for voter and their delegators
-    const weight = tokenRows.reduce(
-      (sum, row) => sum + parseFloat(row.tokens),
-      0
-    ) || 1;
-    return { weight };
-  } else {
-    // Calculate total vote weight across all users in the community
-    const { rows } = await client.query(
-      `
-      SELECT COALESCE(SUM((token_json->>'tokens')::numeric) FILTER (WHERE COALESCE(token_json->>'mode', 'earn') IN ('earn', 'receive')), 0) AS total_tokens
-      FROM users u
-      LEFT JOIN LATERAL (
-        SELECT token_json
-        FROM unnest(u.token_ledger) AS token_json
-        WHERE token_json->>'type' = 'community'
-        AND (token_json->>'id')::int = $1
-      ) AS token_entries ON TRUE
-
-      `,
-      [communityId]
-    );
-
-    const totalPossibleWeight = parseFloat(rows[0]?.total_tokens || 
-      (await client.query('SELECT ARRAY_LENGTH(members, 1) FROM communities WHERE id = $1', [communityId])).rows[0]?.array_length || 1);
-    return { totalPossibleWeight };
-  }
-}
+import { calculateVoteWeight } from "../utils/voteWeight.js";
 
 // Get all communities with optional search and pagination
 router.get("/", async (req, res) => {
