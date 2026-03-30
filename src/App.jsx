@@ -19,6 +19,9 @@ import CommunityCreation from "./pages/CommunityCreation.jsx";
 import CommunityHub from "./pages/CommunityHub.jsx";
 import Communities from "./pages/Communities.jsx";
 import UserPortfolio from "./pages/UserPortfolio.jsx";
+import GuildsDashboard from "./pages/GuildsDashboard.jsx";
+import ConstellationHub from "./pages/ConstellationHub.jsx";
+import ResourcesDashboard from "./pages/ResourcesDashboard.jsx";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import GalacticActivityMap from "./components/GalacticActivityMap/GalacticActivityMap.jsx";
@@ -42,6 +45,30 @@ const App = () => {
             element={
               <PrivateRoute>
                 <OnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/resources-inventory"
+            element={
+              <PrivateRoute>
+                <ResourcesDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/guilds"
+            element={
+              <PrivateRoute>
+                <GuildsDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/constellations"
+            element={
+              <PrivateRoute>
+                <ConstellationHub />
               </PrivateRoute>
             }
           />

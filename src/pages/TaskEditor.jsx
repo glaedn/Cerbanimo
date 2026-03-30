@@ -426,6 +426,25 @@ const TaskEditor = ({
                   </Select>
                 </div>
 
+                <div className="cyber-select">
+                  <InputLabel>VERIFICATION MODEL</InputLabel>
+                  <Select
+                    value={taskForm.verification_model || 'owner'}
+                    variant="outlined"
+                    MenuProps={{ className: "cyber-select-menu" }}
+                    onChange={(e) =>
+                      setTaskForm({ ...taskForm, verification_model: e.target.value })
+                    }
+                    disabled={!effectiveIsEdit}
+                  >
+                    <MenuItem value="self">SELF (High Risk)</MenuItem>
+                    <MenuItem value="peer">PEER (Medium Risk)</MenuItem>
+                    <MenuItem value="quorum">QUORUM (Low Risk)</MenuItem>
+                    <MenuItem value="owner">OWNER (Standard)</MenuItem>
+                    <MenuItem value="oracle">ORACLE (External Artifact)</MenuItem>
+                  </Select>
+                </div>
+
                 <TextField
                   className="cyber-input skill-level"
                   label="SKILL LVL"
