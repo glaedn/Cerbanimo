@@ -97,6 +97,17 @@ class GuildService {
     return result.rows[0];
   }
 
+  async getGuildIntelligenceBySkillId(skillId) {
+    const query = `
+      SELECT gm.* FROM guild_metrics gm
+      JOIN guilds g ON gm.guild_id = g.id
+      WHERE g.skill_id = $1
+      ORDER BY gm.recorded_at DESC LIMIT 1;
+    `;
+    const result = await pool.query(query, [skillId]);
+    return result.rows[0];
+  }
+
   async syncGuildsWithSkills() {
     console.log('Synchronizing guilds with skills...');
     const skillsQuery = 'SELECT id, name, description FROM skills';

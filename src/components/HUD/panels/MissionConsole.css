@@ -1,3 +1,79 @@
 .mission-console {
     max-width: 300px;
 }
+
+.mission-console .section-subtitle {
+    font-family: 'Orbitron', sans-serif;
+    color: #00f3ff;
+    margin: 15px 0 8px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+    padding-bottom: 4px;
+}
+
+.mission-console .section-subtitle.recommended {
+    color: #ff5ca2;
+    border-color: rgba(255, 92, 162, 0.2);
+    margin-top: 25px;
+}
+
+.mission-console .task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mission-console .task-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 10px 0;
+    transition: background-color 0.2s;
+}
+
+.mission-console .task-item:last-child {
+    border-bottom: none;
+}
+
+.mission-console .task-item:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.mission-console .task-name {
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.mission-console .task-info {
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+.mission-console .task-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.mission-console .task-actions button {
+    background: transparent;
+    border: 1px solid #444;
+    color: #eee;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    transition: all 0.2s;
+}
+
+.mission-console .task-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #888;
+}
+
+.mission-console .loading-text,
+.mission-console .no-data {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #666;
+    margin: 10px 0;
+}
