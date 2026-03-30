@@ -125,9 +125,10 @@ const GuildsDashboard = () => {
         <Typography variant="h3" className="guilds-title">GUILD INTELLIGENCE</Typography>
         <Button
           variant="outlined"
-          startIcon={<PlusCircle />}
+          startIcon={<PlusCircle size={20} />}
           onClick={() => setRequestModalOpen(true)}
           className="cyber-button-guild"
+          sx={{ minWidth: 'fit-content' }}
         >
           REQUEST NEW SKILL
         </Button>

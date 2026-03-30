@@ -12,7 +12,8 @@
   text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 2px;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
+  font-size: 2.5rem;
 }
 
 .cyber-card {
@@ -83,6 +84,8 @@
   border: 1px solid #00f3ff !important;
   margin-top: 1rem !important;
   transition: all 0.2s !important;
+  padding: 8px 16px !important; /* Ensure reasonable size */
+  font-size: 0.8rem !important;
 }
 
 .cyber-button-guild:hover {
