@@ -22,4 +22,14 @@ router.get('/trace/:taskId', async (req, res) => {
   }
 });
 
+router.get('/atlas', async (req, res) => {
+  const { projectId, realmId } = req.query;
+  try {
+    const atlasData = await ImpactGraphService.getAtlasData(projectId, realmId);
+    res.json(atlasData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

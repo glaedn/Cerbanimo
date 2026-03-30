@@ -159,12 +159,3 @@
   color: #00f3ff !important;
   font-family: 'Orbitron', sans-serif !important;
 }
-
-/* Fix for massive icons (SVGs) */
-.guilds-dashboard-container svg {
-  width: 24px !important;
-  height: 24px !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  vertical-align: middle;
-}

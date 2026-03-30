@@ -1,342 +1,168 @@
-/* Container for Communities Page */
+/* Communities Page - Space HUD Update */
 
-.html, body {
-    overflow-y: auto; /* Prevents scrolling on the main page */
-}
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 .communities-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    height: calc(100% - 60px);
-    width: 100vw;
-    padding: 5px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-top: 60px;
-    background: radial-gradient(circle, #0A0A2E, #000000);
+    min-height: 100vh;
+    width: 100%;
+    padding: 40px 20px;
+    background: radial-gradient(circle at center, #001219 0%, #000000 100%);
     color: #FFFFFF;
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Space Mono', monospace;
 }
 
-/* Page Title */
 .community-page-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #00F3FF;
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
-    margin-bottom: 10px;
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(0, 243, 255, 0.6);
+    margin-bottom: 32px;
 }
 
-/* Search Bar & Add Button */
 .search-bar-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 20px;
-    width: 80%;
-    max-width: 600px;
+    gap: 16px;
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 40px;
 }
 
 .search-input {
-    width: 100%;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #444444;
-    background: rgba(28, 28, 30, 0.8);
-    color: #FFFFFF;
-    margin-right: 10px;
-    font-family: 'Orbitron', sans-serif;
+    flex: 1;
+    padding: 12px 20px;
+    background: rgba(0, 243, 255, 0.05);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #00f3ff;
+    background: rgba(0, 243, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
 }
 
 .add-community-button {
-    background-color: #00F3FF;
-    color: #000000;
-    font-size: 1.5rem;
-    width: 40px;
-    height: 40px;
-    font-weight: bold;
-    border-radius: 50%;
-    border: none;
-    margin-left: 10px;
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid #00f3ff;
+    border-radius: 4px;
+    color: #00f3ff;
+    font-size: 24px;
     cursor: pointer;
-    transition: 0.3s;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .add-community-button:hover {
-    background-color: #4DABF7;
-    /* text-shadow for black text might not be ideal, removed */
+    background: #00f3ff;
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
 }
 
-/* Community List Wrapper */
 .community-list-wrapper {
-    flex-grow: 1;
-    width: 80%;
+    width: 100%;
     max-width: 1200px;
-    margin-top: 10px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: rgba(28, 28, 30, 0.9);
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
-    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
 }
 
-/* Custom Scrollbar */
-.community-list-wrapper::-webkit-scrollbar {
-    width: 10px;
-}
-
-.community-list-wrapper::-webkit-scrollbar-track {
-    background: rgba(0, 243, 255, 0.2);
-    border-radius: 5px;
-}
-
-.community-list-wrapper::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00F3FF, #4DABF7);
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
-}
-
-.community-list-wrapper::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #4DABF7, #00F3FF); /* Swapped for consistency */
-}
-
-/* Community Card */
 .community-card {
-    background-color: rgba(10, 10, 46, 0.7);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 20px;
-    transition: transform 0.2s ease-in-out;
-    border: 1px solid #444444; /* Added border */
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    background: rgba(0, 18, 25, 0.7);
+    border: 1px solid rgba(0, 243, 255, 0.15);
+    padding: 24px;
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 3px solid rgba(0, 243, 255, 0.3);
 }
 
 .community-card:hover {
-    transform: scale(1.02);
-    background: rgba(0, 243, 255, 0.1);
+    transform: translateY(-4px);
+    border-color: #00f3ff;
+    border-left-color: #00f3ff;
+    background: rgba(0, 243, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Community Title */
 .community-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #00F3FF;
-    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6), 0 0 15px rgba(0, 243, 255, 0.4); /* Adjusted shadow */
-    margin-bottom: 10px;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    font-size: 1.2rem;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
 }
 
-/* Community Description */
 .community-description {
-    font-size: 1rem;
-    color: #CCCCCC;
-    margin-bottom: 15px;
-    padding-right: 50px;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-}
-
-/* Tag Chips */
-.community-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 15px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+    margin-bottom: 20px;
 }
 
 .tag-chip {
-    background-color: rgba(0, 243, 255, 0.2);
-    color: #00F3FF;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    border: 1px solid #00F3FF;
-    box-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    background: rgba(0, 243, 255, 0.05);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    color: rgba(0, 243, 255, 0.8);
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-size: 11px;
+    text-transform: uppercase;
 }
 
-/* Community Stats */
-.community-stats {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.member-count {
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    color: #CCCCCC;
-}
-
-/* Community Actions */
-.community-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-/* Buttons */
 .view-projects-button, .join-button {
-    background-color: #00F3FF;
-    color: #000000;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: bold;
-    padding: 8px 15px;
-    border-radius: 5px;
-    border: none;
+    background: transparent;
+    border: 1px solid #00f3ff;
+    color: #00f3ff;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s ease;
+    border-radius: 2px;
 }
 
 .view-projects-button:hover, .join-button:hover {
-    background-color: #4DABF7;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8);
-}
-
-.open-project-button {
-    background-color: #00F3FF;
-    color: #000000;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: bold;
-    padding: 8px 15px;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-    transition: 0.3s;
-    margin-top: 10px;
-}
-
-.open-project-button:hover {
-    background-color: #4DABF7;
-    /* text-shadow for black text might not be ideal, removed */
+    background: #00f3ff;
+    color: #000;
 }
 
 /* Pagination */
 .pagination-container {
-    width: 80%;
-    max-width: 1200px;
+    margin-top: 40px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-top: 20px;
-    margin-bottom: 30px;
+    gap: 20px;
 }
 
 .pagination-button {
-    background-color: #9C27B0;
-    color: #FFFFFF;
-    font-weight: bold;
-    padding: 10px 20px;
-    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 20px;
     cursor: pointer;
-    transition: 0.3s;
-    margin: 0 10px;
-    border: none;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
 }
-.pagination-button:hover { /* Added hover state */
-    background-color: #B048C8;
+
+.pagination-button:hover:not(:disabled) {
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .pagination-button:disabled {
-    background-color: #444444;
+    opacity: 0.3;
     cursor: not-allowed;
-}
-
-.page-text {
-    color: #CCCCCC; /* Updated from #e0e0e0 */
-    margin: 0 15px;
-}
-
-/* Community Popup */
-.community-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.community-popup {
-    width: 80%;
-    max-width: 800px;
-    max-height: 80vh;
-    background: rgba(28, 28, 30, 0.95);
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.7);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.community-popup h2 {
-    color: #00F3FF;
-    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); /* Adjusted shadow */
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.community-projects-list {
-    overflow-y: auto;
-    max-height: 50vh;
-    padding-right: 10px;
-}
-
-.community-projects-list::-webkit-scrollbar {
-    width: 5px;
-}
-
-.community-projects-list::-webkit-scrollbar-track {
-    background: rgba(0, 243, 255, 0.2);
-    border-radius: 5px;
-}
-
-.community-projects-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00F3FF, #4DABF7);
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.8); /* Added consistent shadow */
-}
-/* Note: Removed duplicate .project-card styling specific to the popup, it's now more specific */
-.community-popup .project-card { /* Made selector more specific */
-    background-color: rgba(10, 10, 46, 0.7);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-}
-
-.community-popup .project-card h3 { /* Made selector more specific */
-    color: #00F3FF;
-    margin-bottom: 10px;
-}
-
-.close-popup-button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    background-color: #FF4136;
-    border: none;
-    border-radius: 5px;
-    color: #FFFFFF;
-    font-weight: bold;
-    cursor: pointer;
-    align-self: center;
-    transition: 0.3s; /* Added transition */
-}
-
-.close-popup-button:hover {
-    background-color: #FF79B8;
-    /* text-shadow for white text is fine, kept original */
-    text-shadow: 0 0 20px #ff5252; /* Original shadow from file, likely intended for the old red */
 }

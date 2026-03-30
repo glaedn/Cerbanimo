@@ -1,51 +1,55 @@
-/* Full-Screen Space Background */
+/* Dashboard - Space HUD Update */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 .dashboard-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   height: 100vh;
-  /* Fallback */
-  height: calc(var(--vh, 1vh) * 100);
-  min-height: 100vh;
   width: 100vw;
-  /* Ensures no extra space on sides */
-  min-width: 100vw;
   overflow: hidden;
-  background: radial-gradient(circle, #0A0A2E, #000000);
+  background: radial-gradient(circle at center, #001219 0%, #000000 100%);
   color: white;
-  font-family: 'Orbitron', sans-serif;
-  /* Futuristic font */
+  font-family: 'Space Mono', monospace;
 }
 
 .galactic-activity-map-container {
-  height: 98vh; /* Fallback */
-  height: calc(var(--vh, 1vh) * 98);
+  height: 100vh;
+  width: 100vw;
 }
 
 .dashboard-footer {
-  width: 80%;
-  max-width: 500px;
+  width: auto;
   position: absolute;
-  /* Instead of fixed, so it respects container height */
-  bottom: 20px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  justify-content: space-between;
-  padding: 10px;
+  gap: 20px;
+  background: rgba(0, 18, 25, 0.8);
+  backdrop-filter: blur(8px);
+  padding: 12px 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-.task-browser-wrapper {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+.dashboard-footer button {
+    background: transparent;
+    border: none;
+    color: #00f3ff;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: all 0.3s ease;
 }
 
-svg {
-  width: 100vw;
-  height: 100vh;
+.dashboard-footer button:hover {
+    color: #fff;
+    text-shadow: 0 0 10px #00f3ff;
 }

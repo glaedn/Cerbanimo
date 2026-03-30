@@ -20,7 +20,10 @@ const createVerificationTables = async () => {
       opener_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       status VARCHAR(50) DEFAULT 'review', -- 'review', 'resolved', 'closed'
       outcome VARCHAR(50), -- 'upheld', 'overturned', 'split'
+      split_percentage NUMERIC DEFAULT 0, -- For split outcome
       reason TEXT,
+      juror_selection_status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'selected'
+      jurors INTEGER[] DEFAULT '{}', -- Selected juror user IDs
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       resolved_at TIMESTAMP WITH TIME ZONE
     );
@@ -32,6 +35,7 @@ const createVerificationTables = async () => {
       dispute_id INTEGER REFERENCES disputes(id) ON DELETE CASCADE,
       voter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       vote VARCHAR(50), -- 'uphold', 'overturn', 'split'
+      split_percentage NUMERIC DEFAULT 0,
       comment TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

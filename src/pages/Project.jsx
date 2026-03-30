@@ -9,6 +9,7 @@ import { useNotifications } from "./NotificationProvider.jsx";
 import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
+import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 
 // Updated axios interceptor to handle errors more comprehensively
 axios.interceptors.response.use(
@@ -269,6 +270,10 @@ const Project = () => {
         </div>
         )}
         <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
+        <div className="impact-mini-atlas">
+          <ImpactGraph projectId={projectId} height="300px" />
+        </div>
+
         {isProjectCreator && (
         <Autocomplete
           multiple

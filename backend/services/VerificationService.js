@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import { calculateVoteWeight } from '../utils/voteWeight.js';
 
 class VerificationService {
   async recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink = null) {
@@ -43,7 +44,7 @@ class DisputeService {
 
       const insertQuery = `
         INSERT INTO disputes (task_id, opener_id, reason, status)
-        VALUES ($1, $2, $3, 'open')
+        VALUES ($1, $2, $3, 'review')
         RETURNING *;
       `;
       const disputeResult = await client.query(insertQuery, [taskId, openerId, reason]);
@@ -55,6 +56,9 @@ class DisputeService {
         ['under-dispute', taskId]
       );
 
+      // Trigger juror selection
+      await this.selectJurors(dispute.id, taskId);
+
       await client.query('COMMIT');
       return dispute;
     } catch (err) {
@@ -65,15 +69,63 @@ class DisputeService {
     }
   }
 
-  async castVote(disputeId, voterId, vote, comment = '') {
+  async selectJurors(disputeId, taskId) {
+    // 1. Find the skill guild for the task
+    const taskQuery = 'SELECT skill_id FROM tasks WHERE id = $1';
+    const taskRes = await pool.query(taskQuery, [taskId]);
+    const skillId = taskRes.rows[0].skill_id;
+
+    let jurors = [];
+
+    // 2. Look for 3 random guild members
+    const guildJurors = await pool.query(
+      `SELECT user_id FROM guild_memberships WHERE guild_id = (SELECT id FROM guilds WHERE skill_id = $1)
+       ORDER BY RANDOM() LIMIT 3`,
+      [skillId]
+    );
+    jurors = guildJurors.rows.map(r => r.user_id);
+
+    // 3. If not enough, fill with any skill guild members
+    if (jurors.length < 3) {
+      const otherGuildJurors = await pool.query(
+        `SELECT user_id FROM guild_memberships WHERE NOT (user_id = ANY($1))
+         ORDER BY RANDOM() LIMIT $2`,
+        [jurors.length > 0 ? jurors : [-1], 3 - jurors.length]
+      );
+      jurors = jurors.concat(otherGuildJurors.rows.map(r => r.user_id));
+    }
+
+    // 4. If still not enough, fill with any users
+    if (jurors.length < 3) {
+      const anyUsers = await pool.query(
+        `SELECT id FROM users WHERE NOT (id = ANY($1))
+         ORDER BY RANDOM() LIMIT $2`,
+        [jurors.length > 0 ? jurors : [-1], 3 - jurors.length]
+      );
+      jurors = jurors.concat(anyUsers.rows.map(r => r.id));
+    }
+
+    await pool.query(
+      'UPDATE disputes SET jurors = $1, juror_selection_status = \'selected\' WHERE id = $2',
+      [jurors, disputeId]
+    );
+  }
+
+  async castVote(disputeId, voterId, vote, splitPercentage = 0, comment = '') {
     const query = `
-      INSERT INTO dispute_votes (dispute_id, voter_id, vote, comment)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (dispute_id, voter_id) DO UPDATE SET vote = $3, comment = $4
+      INSERT INTO dispute_votes (dispute_id, voter_id, vote, split_percentage, comment)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (dispute_id, voter_id) DO UPDATE SET vote = $3, split_percentage = $4, comment = $5
       RETURNING *;
     `;
-    // Note: Added UNIQUE(dispute_id, voter_id) constraint mentally, but need to ensure it's in the model if not there.
-    const result = await pool.query(query, [disputeId, voterId, vote, comment]);
+    const result = await pool.query(query, [disputeId, voterId, vote, splitPercentage, comment]);
+
+    // Check for resolution
+    const votesRes = await pool.query('SELECT COUNT(*) FROM dispute_votes WHERE dispute_id = $1', [disputeId]);
+    if (parseInt(votesRes.rows[0].count) >= 3) {
+       await this.resolveDispute(disputeId);
+    }
+
     return result.rows[0];
   }
 
@@ -82,27 +134,59 @@ class DisputeService {
     try {
       await client.query('BEGIN');
 
-      const votesQuery = 'SELECT vote, count(*) FROM dispute_votes WHERE dispute_id = $1 GROUP BY vote';
+      const disputeRes = await client.query('SELECT task_id FROM disputes WHERE id = $1', [disputeId]);
+      const taskId = disputeRes.rows[0].task_id;
+      const projectRes = await client.query('SELECT community_id FROM tasks t JOIN projects p ON t.project_id = p.id WHERE t.id = $1', [taskId]);
+      const communityId = projectRes.rows[0].community_id;
+
+      const votesQuery = 'SELECT voter_id, vote, split_percentage FROM dispute_votes WHERE dispute_id = $1';
       const votesResult = await client.query(votesQuery, [disputeId]);
 
-      let outcome = 'split';
-      let maxVotes = 0;
-      votesResult.rows.forEach(row => {
-        if (parseInt(row.count) > maxVotes) {
-          maxVotes = parseInt(row.count);
-          outcome = row.vote === 'uphold' ? 'upheld' : (row.vote === 'overturn' ? 'overturned' : 'split');
+      let outcomeWeights = { uphold: 0, overturn: 0, split: 0 };
+      let sumSplitPerc = 0;
+      let totalWeight = 0;
+
+      for (const row of votesResult.rows) {
+        let weight = 1; // Default
+        if (communityId) {
+           const { weight: w } = await calculateVoteWeight(client, communityId, row.voter_id);
+           weight = w;
         }
-      });
+
+        outcomeWeights[row.vote] += weight;
+        totalWeight += weight;
+
+        if (row.vote === 'split') {
+          sumSplitPerc += (parseFloat(row.split_percentage) * weight);
+        }
+      }
+
+      let outcome = 'split';
+      let maxWeight = -1;
+      for (const [o, w] of Object.entries(outcomeWeights)) {
+        if (w > maxWeight) {
+          maxWeight = w;
+          outcome = o;
+        }
+      }
+
+      let avgSplit = 0;
+      if (outcome === 'split' && outcomeWeights.split > 0) {
+        avgSplit = sumSplitPerc / outcomeWeights.split;
+      }
 
       const updateQuery = `
-        UPDATE disputes SET status = 'resolved', outcome = $1, resolved_at = NOW()
-        WHERE id = $2 RETURNING *;
+        UPDATE disputes SET status = 'resolved', outcome = $1, split_percentage = $2, resolved_at = NOW()
+        WHERE id = $3 RETURNING *;
       `;
-      const disputeResult = await client.query(updateQuery, [outcome, disputeId]);
+      const disputeResult = await client.query(updateQuery, [outcome, avgSplit, disputeId]);
       const dispute = disputeResult.rows[0];
 
       // Finalize task status based on outcome
-      let finalTaskStatus = outcome === 'upheld' ? 'completed' : 'active-assigned';
+      let finalTaskStatus = outcome === 'uphold' ? 'completed' : (outcome === 'overturn' ? 'active-assigned' : 'completed');
+
+      // If split, we might need logic to distribute partial reward.
+      // For now, mark completed and record outcome.
       await client.query(
         'UPDATE tasks SET status = $1 WHERE id = $2',
         [finalTaskStatus, dispute.task_id]

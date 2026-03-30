@@ -1,0 +1,76 @@
+
+.impact-atlas-container {
+  background: radial-gradient(circle at center, #001f3f 0%, #000000 100%);
+  color: #00ffff;
+  font-family: 'Space Mono', monospace;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hud-header {
+  padding: 20px;
+  border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+.hud-title {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+}
+
+.hud-status {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  animation: pulse 2s infinite;
+}
+
+.atlas-main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hud-footer {
+  padding: 10px 20px;
+  border-top: 2px solid rgba(255, 0, 255, 0.3);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hud-legend {
+  display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-item.outcome::before { background: #ff00ff; box-shadow: 0 0 8px #ff00ff; }
+.legend-item.project::before { background: #00ffff; box-shadow: 0 0 8px #00ffff; }
+.legend-item.task::before { background: #ffffff; box-shadow: 0 0 8px #ffffff; }
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1.0; }
+  100% { opacity: 0.4; }
+}

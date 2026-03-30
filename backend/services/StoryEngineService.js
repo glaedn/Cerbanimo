@@ -61,9 +61,7 @@ class StoryEngineService {
       'Verifier': 0
     };
 
-    // Rule-based deterministic calculation
     if (units.length > 0) {
-      // Finisher: High completion rate (here we check completed units / accepted)
       // Specialist: Many units in same skill tags
       const skillCounts = {};
       units.forEach(u => {
@@ -74,8 +72,30 @@ class StoryEngineService {
       const maxSkills = Math.max(...Object.values(skillCounts));
       patterns['Specialist'] = Math.min(maxSkills / units.length, 1.0);
 
-      // Reviver: Works on tasks with high decay_factor (need to join tasks)
-      // Connector: Works in constellations (need to join story_units with constellations)
+      // Finisher: High completion rate for units that have high complexity
+      const finisherScore = units.reduce((acc, u) => acc + (u.complexity > 0.5 ? 1 : 0.5), 0) / units.length;
+      patterns['Finisher'] = Math.min(finisherScore, 1.0);
+
+      // Reviver: Works on tasks with high decay_factor (need join tasks)
+      const tasksWithDecay = await pool.query(
+        'SELECT count(*) FROM tasks t JOIN story_units su ON t.id = su.task_id WHERE su.user_id = $1 AND t.decay_factor > 1.5',
+        [userId]
+      );
+      patterns['Reviver'] = Math.min(parseInt(tasksWithDecay.rows[0].count) / 5, 1.0);
+
+      // Connector: Works in constellations
+      const constellationTasks = await pool.query(
+        'SELECT count(*) FROM constellation_tasks ct JOIN story_units su ON ct.task_id = su.task_id WHERE su.user_id = $1',
+        [userId]
+      );
+      patterns['Connector'] = Math.min(parseInt(constellationTasks.rows[0].count) / 3, 1.0);
+
+      // Verifier: High rate of successful verifications
+      const verifications = await pool.query(
+        'SELECT count(*) FROM verification_events WHERE verifier_id = $1 AND status = \'approved\'',
+        [userId]
+      );
+      patterns['Verifier'] = Math.min(parseInt(verifications.rows[0].count) / 10, 1.0);
     }
 
     // Update patterns in DB
@@ -87,7 +107,6 @@ class StoryEngineService {
         [userId, name, strength]
       );
     });
-    // Need UNIQUE(user_id, pattern) for ON CONFLICT
     await Promise.all(upsertPromises);
   }
 

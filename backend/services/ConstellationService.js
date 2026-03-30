@@ -1,13 +1,42 @@
 import pool from '../db.js';
 
 class ConstellationService {
-  async formConstellation(name, sharedObjective, outcomeId = null) {
+  async formConstellation(name, sharedObjective, outcomeId = null, initialCommunityId = null) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const query = `
+        INSERT INTO constellations (name, shared_objective, outcome_id, status)
+        VALUES ($1, $2, $3, 'forming')
+        RETURNING *;
+      `;
+      const result = await client.query(query, [name, sharedObjective, outcomeId]);
+      const constellation = result.rows[0];
+
+      if (initialCommunityId) {
+        await client.query(
+          'INSERT INTO constellation_members (constellation_id, entity_type, entity_id) VALUES ($1, $2, $3)',
+          [constellation.id, 'community', initialCommunityId]
+        );
+      }
+
+      await client.query('COMMIT');
+      return constellation;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async inviteCommunity(constellationId, inviterId, inviteeId) {
     const query = `
-      INSERT INTO constellations (name, shared_objective, outcome_id, status)
-      VALUES ($1, $2, $3, 'forming')
+      INSERT INTO constellation_invites (constellation_id, inviter_community_id, invitee_community_id, status)
+      VALUES ($1, $2, $3, 'pending')
       RETURNING *;
     `;
-    const result = await pool.query(query, [name, sharedObjective, outcomeId]);
+    const result = await pool.query(query, [constellationId, inviterId, inviteeId]);
     return result.rows[0];
   }
 
@@ -75,7 +104,6 @@ class ConstellationService {
         if (voteCounts[choice] > totalVotes / 2) return choice;
      }
 
-     // This is a simplified RCV, ideally would eliminate lowest and redistribute.
      return Object.keys(voteCounts).sort((a,b) => voteCounts[b] - voteCounts[a])[0];
   }
 }

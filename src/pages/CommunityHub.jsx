@@ -33,6 +33,7 @@ import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
 import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
 import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
+import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 
 const CommunityHub = () => {
     const { communityId } = useParams();
@@ -44,6 +45,7 @@ const CommunityHub = () => {
     const [community, setCommunity] = useState(null);
     const [members, setMembers] = useState([]);
     const [membershipRequests, setMembershipRequests] = useState([]);
+    const [constellationInvites, setConstellationInvites] = useState([]);
     const [proposals, setProposals] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
     const [userId, setUserId] = useState(null);
@@ -196,6 +198,12 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                 
                 const requestUsers = await Promise.all(requestUserPromises);
                 setMembershipRequests(requestUsers);
+
+                // Fetch constellation invites
+                const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setConstellationInvites(constellationInvitesRes.data);
                 
                 // Fetch proposal details
                 if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
@@ -448,6 +456,29 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         }
     };
 
+    const handleVoteConstellation = async (inviteId, vote) => {
+        if (!isMember) return;
+        try {
+            const token = await getAccessTokenSilently({
+                audience: 'import.meta.env.VITE_BACKEND_URL',
+                scope: 'openid profile email',
+            });
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/${inviteId}/vote`,
+                { userId, vote, communityId },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            showNotification('Alliance vote recorded.');
+            // Refresh invites
+            const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setConstellationInvites(constellationInvitesRes.data);
+        } catch (error) {
+            console.error('Failed to vote on constellation invite:', error);
+            alert('Failed to submit your vote.');
+        }
+    };
+
     const handleRevokeVote = async () => {
         if (!isMember) return;
         
@@ -500,6 +531,9 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             {/* Community Info Section */}
             <div className="community-info">
+                <div className="impact-mini-atlas">
+                    <ImpactGraph realmId={communityId} height="300px" />
+                </div>
                 <Typography variant="body1" className="community-description">{community.description}</Typography>
                 <div className="tag-container">
                     {community.interest_tags && community.interest_tags.map((tag, index) => (
@@ -736,6 +770,38 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </div>
                 )}
                 
+                {/* Constellation Invites Card - Only for members */}
+                {isMember && constellationInvites.length > 0 && (
+                    <div className="hub-grid-item">
+                        <Card className="hub-card constellation-invites-card">
+                            <CardContent>
+                                <RocketLaunchIcon className="hub-icon" />
+                                <Typography variant="h5" sx={{ color: '#ff5ca2', textShadow: '0 0 5px #ff5ca2' }}>Alliance Requests</Typography>
+                                <List>
+                                    {constellationInvites.map(invite => (
+                                        <ListItem key={invite.id} sx={{ borderBottom: '1px solid rgba(255, 92, 162, 0.2)' }}>
+                                            <ListItemText
+                                                primary={`Invite from ${invite.inviter_name}`}
+                                                secondary={`Alliance: ${invite.constellation_name}`}
+                                                primaryTypographyProps={{ color: '#ff5ca2' }}
+                                                secondaryTypographyProps={{ color: 'gray' }}
+                                            />
+                                            <div className="vote-actions">
+                                                <Tooltip title="Accept Alliance">
+                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, true)} sx={{ color: 'var(--hud-success-color)' }}><CheckCircleIcon /></IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Reject Alliance">
+                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, false)} sx={{ color: 'var(--hud-error-color)' }}><CancelIcon /></IconButton>
+                                                </Tooltip>
+                                            </div>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
                 {/* Membership Requests Card - Only for members */}
                 {isMember && (
                     <div className="hub-grid-item">
