@@ -30,6 +30,7 @@ router.post('/disputes/:disputeId/votes', async (req, res) => {
     const castVote = await disputeService.castVote(req.params.disputeId, voterId, vote, splitPercentage, comment);
     res.status(201).json(castVote);
   } catch (err) {
+    console.error("Error casting vote:", err);
     res.status(500).json({ error: err.message });
   }
 });
