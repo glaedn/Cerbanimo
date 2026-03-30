@@ -60,7 +60,13 @@ const TaskBrowser = () => {
             headers: { Authorization: `Bearer ${token}` },
           });
       
+          // Sort tasks based on priority score and shared interests
           const sortedTasks = tasksResponse.data.sort((a, b) => {
+            // Sort by Priority Score (primary) and shared tags (secondary)
+            if ((b.priority_score || 0) !== (a.priority_score || 0)) {
+                return (b.priority_score || 0) - (a.priority_score || 0);
+            }
+
             const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             return sharedB - sharedA;
@@ -134,6 +140,14 @@ const TaskBrowser = () => {
                         <br />
                         <Typography component="span" variant="body2" className="task-tags">
                           {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
+                        </Typography>
+                        <br />
+                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
+                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
+                        </Typography>
+                        <br />
+                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
+                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
                         </Typography>
                         <br />
                         {task.project_id && <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>}

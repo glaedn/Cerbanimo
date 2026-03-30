@@ -30,6 +30,7 @@ const StoryNode = ({
   media_urls = [],
   endorsements = [],
   feedback = [],
+  narrative,
   onAddEndorsement,
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -75,6 +76,13 @@ const StoryNode = ({
         <Typography variant="body1" className="reflection-text">
           "{reflection}"
         </Typography>
+
+        {narrative && (
+          <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, bgcolor: 'rgba(0, 243, 255, 0.05)', borderLeft: '3px solid #00f3ff' }}>
+             <Typography variant="subtitle2" sx={{ color: '#00f3ff', mb: 0.5, fontSize: '0.75rem', fontWeight: 'bold' }}>AI INTERPRETATION:</Typography>
+             <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#e0e0e0' }}>{narrative}</Typography>
+          </Box>
+        )}
         <Typography variant="subtitle2" className="story-node-subheader">
           Skill type:
         </Typography>

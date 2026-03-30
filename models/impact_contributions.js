@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Path relative to models/ directory
+import pool from '../backend/db.js'; // Path relative to models/ directory
 
 const createImpactContributionsTable = async () => {
   const tableQuery = `
@@ -59,6 +59,6 @@ const createImpactContributionsTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createImpactContributionsTable,
 };

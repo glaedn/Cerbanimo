@@ -1,5 +1,4 @@
-const pool = require('../backend/db.js');
-
+import pool from '../backend/db.js';
 const createTaskTable = async () => {
   const taskTableQuery = `
     CREATE TABLE IF NOT EXISTS tasks (
@@ -102,6 +101,6 @@ const createTaskTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createTaskTable,
 };

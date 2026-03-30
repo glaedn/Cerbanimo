@@ -320,6 +320,33 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
+                  location.pathname === "/guilds" ? "active" : ""
+                }`}
+                to="/guilds"
+                onClick={closeSidebar}
+              >
+                Guilds
+              </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/constellations" ? "active" : ""
+                }`}
+                to="/constellations"
+                onClick={closeSidebar}
+              >
+                Constellations
+              </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/resources-inventory" ? "active" : ""
+                }`}
+                to="/resources-inventory"
+                onClick={closeSidebar}
+              >
+                Resources
+              </Link>
+              <Link
+                className={`nav-link ${
                   location.pathname.startsWith("/projectcreation")
                     ? "active"
                     : ""

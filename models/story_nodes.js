@@ -1,5 +1,4 @@
-const pool = require('../backend/db.js'); // Path relative to models/
-
+import pool from '../backend/db.js';
 const createStoryNodesTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS story_nodes (
@@ -61,6 +60,6 @@ const createStoryNodesTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createStoryNodesTable,
 };
