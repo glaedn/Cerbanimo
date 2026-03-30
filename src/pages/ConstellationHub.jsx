@@ -6,7 +6,6 @@ import {
   Button, List, ListItem, ListItemText, Modal, TextField,
   CircularProgress, LinearProgress, Divider
 } from '@mui/material';
-import Paper from '@mui/material/Paper';
 import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,8 +19,11 @@ const ConstellationHub = () => {
   const [currentConstellation, setCurrentConstellation] = useState(null);
   const [sharedTasks, setSharedTasks] = useState([]);
   const [amendments, setAmendments] = useState([]);
-  const [newConstellation, setNewConstellation] = useState({ name: '', sharedObjective: '', outcomeId: null });
+  const [newConstellation, setNewConstellation] = useState({ name: '', sharedObjective: '', outcomeId: null, initialCommunityId: null });
   const [platformUserId, setPlatformUserId] = useState(null);
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [invitesOpen, setInvitesOpen] = useState(false);
+  const [targetCommunityId, setTargetCommunityId] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +40,12 @@ const ConstellationHub = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         setConstellations(constellationsRes.data || []);
+
+        const communitiesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${profileRes.data.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserCommunities(communitiesRes.data || []);
+
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch constellation data:", err);
@@ -132,6 +140,17 @@ const ConstellationHub = () => {
                 <Button
                     fullWidth
                     sx={{ mt: 3, color: '#ff5ca2', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(255, 92, 162, 0.1)' } }}
+                    onClick={async () => {
+                        setCurrentConstellation(c);
+                        setInvitesOpen(true);
+                    }}
+                >
+                    INVITE COMMUNITY
+                </Button>
+
+                <Button
+                    fullWidth
+                    sx={{ mt: 1, color: '#00f3ff', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(0, 243, 255, 0.1)' } }}
                     onClick={async () => {
                         setCurrentConstellation(c);
                         const token = await getAccessTokenSilently();
@@ -242,6 +261,45 @@ const ConstellationHub = () => {
         </Box>
       </Modal>
 
+      <Modal open={invitesOpen} onClose={() => setInvitesOpen(false)}>
+        <Box sx={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: 400, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff'
+        }}>
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 3 }}>INVITE COMMUNITY TO ALLIANCE</Typography>
+          <TextField
+            select
+            fullWidth
+            label="YOUR COMMUNITY (INVITER)"
+            value={newConstellation.initialCommunityId}
+            onChange={(e) => setNewConstellation({...newConstellation, initialCommunityId: e.target.value})}
+            sx={{ mb: 2 }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ style: { color: '#ff5ca2' } }}
+          >
+            <option value=""></option>
+            {userCommunities.map(com => <option key={com.id} value={com.id}>{com.name}</option>)}
+          </TextField>
+          <TextField
+            fullWidth label="TARGET COMMUNITY ID (INVITEE)" sx={{ mb: 3 }}
+            value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)}
+            InputLabelProps={{ style: { color: '#ff5ca2' } }}
+            inputProps={{ style: { color: '#fff' } }}
+          />
+          <Button fullWidth variant="contained" sx={{ bgcolor: '#ff5ca2', color: '#000' }} onClick={async () => {
+              try {
+                  const token = await getAccessTokenSilently();
+                  await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/invites`, {
+                      inviterId: newConstellation.initialCommunityId,
+                      inviteeId: targetCommunityId
+                  }, { headers: { Authorization: `Bearer ${token}` } });
+                  alert("Alliance invite sent.");
+                  setInvitesOpen(false);
+              } catch (err) { alert("Failed to send invite."); }
+          }}>SEND ALLIANCE PROPOSAL</Button>
+        </Box>
+      </Modal>
+
       <Modal open={formModalOpen} onClose={() => setFormModalOpen(false)}>
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -254,6 +312,19 @@ const ConstellationHub = () => {
             InputLabelProps={{ style: { color: '#ff5ca2' } }}
             inputProps={{ style: { color: '#fff' } }}
           />
+          <TextField
+            select
+            fullWidth
+            label="CREATING COMMUNITY"
+            value={newConstellation.initialCommunityId}
+            onChange={(e) => setNewConstellation({...newConstellation, initialCommunityId: e.target.value})}
+            sx={{ mb: 2 }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ style: { color: '#ff5ca2' } }}
+          >
+            <option value=""></option>
+            {userCommunities.map(com => <option key={com.id} value={com.id}>{com.name}</option>)}
+          </TextField>
           <TextField
             fullWidth label="SHARED OBJECTIVE" multiline rows={4} sx={{ mb: 3 }}
             value={newConstellation.sharedObjective} onChange={(e) => setNewConstellation({...newConstellation, sharedObjective: e.target.value})}
