@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Standardized path
+import pool from '../backend/db.js'; // Standardized path
 
 const createResourcesTable = async () => {
   const tableQuery = `
@@ -71,6 +71,6 @@ const createResourcesTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createResourcesTable,
 };

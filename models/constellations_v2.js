@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createConstellationTables = async () => {
   const constellationsTableQuery = `
@@ -86,4 +86,4 @@ const createConstellationTables = async () => {
   }
 };
 
-module.exports = { createConstellationTables };
+export { createConstellationTables };

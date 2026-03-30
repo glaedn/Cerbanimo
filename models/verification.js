@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createVerificationTables = async () => {
   const verificationEventsTableQuery = `
@@ -47,4 +47,4 @@ const createVerificationTables = async () => {
   }
 };
 
-module.exports = { createVerificationTables };
+export { createVerificationTables };

@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Ensure this path is correct relative to models/
+import pool from '../backend/db.js'; // Ensure this path is correct relative to models/
 
 const createProjectsTable = async () => {
   const tableQuery = `
@@ -65,6 +65,6 @@ const createProjectsTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createProjectsTable,
 };

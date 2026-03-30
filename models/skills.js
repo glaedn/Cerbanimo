@@ -1,5 +1,4 @@
-const pool = require('../backend/db.js'); // Assuming models are in models/ and db.js is in backend/
-
+import pool from '../backend/db.js';
 const createSkillsTable = async () => {
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS skills (
@@ -46,6 +45,6 @@ const createSkillsTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createSkillsTable,
 };
