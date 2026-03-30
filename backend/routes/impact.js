@@ -4,7 +4,7 @@ import {
   getOverallPlatformImpact,
   getCommunityImpactStats,
 } from '../services/impactService.js';
-import db from '../db.js'; // Database pool
+import pool from '../db.js'; // Database pool
 import ensureAuthenticated from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
@@ -13,11 +13,20 @@ const authenticate = ensureAuthenticated; // Alias for clarity
 // Path: /impact/summary (when mounted in server.js as app.use('/impact', impactRoutes))
 router.get('/summary', authenticate, async (req, res) => {
   try {
-    const summary = await getOverallPlatformImpact(db);
+    const summary = await getOverallPlatformImpact(pool);
     res.json(summary);
   } catch (error) {
     console.error('Error fetching platform impact summary:', error);
     res.status(500).json({ message: 'Failed to fetch platform impact summary.' });
+  }
+});
+
+router.get('/project/:projectId/outcomes', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM outcomes WHERE project_id = $1', [req.params.projectId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -36,7 +45,7 @@ router.get('/community/:communityId', authenticate, async (req, res) => {
     // The impactService.getCommunityImpactStats currently returns 0 counts if communityId doesn't exist
     // or has no fulfilled/exchanged items. It doesn't throw a specific "not found" error for the community itself.
     // Thus, a 404 for the community specifically is not handled here unless the service changes.
-    const stats = await getCommunityImpactStats(db, parsedCommunityId);
+    const stats = await getCommunityImpactStats(pool, parsedCommunityId);
     res.json(stats);
   } catch (error) {
     // This catch block will handle errors thrown by the service, e.g., DB connection errors.
