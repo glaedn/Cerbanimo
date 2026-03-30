@@ -35,6 +35,7 @@ import storyEngineRoutesV2 from './routes/story_engine_v2.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
+import GuildService from './services/GuildService.js';
 import pool from './db.js';
 
 // Import database table creation functions
@@ -251,7 +252,14 @@ async function initializeDatabase() {
   }
 }
 
-initializeDatabase().then(() => {
+initializeDatabase().then(async () => {
+  // Post-initialization synchronization
+  try {
+    await GuildService.syncGuildsWithSkills();
+  } catch (syncError) {
+    console.error('Failed to sync guilds with skills:', syncError);
+  }
+
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

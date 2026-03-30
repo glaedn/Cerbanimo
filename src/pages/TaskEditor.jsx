@@ -805,6 +805,28 @@ const TaskEditor = ({
                           >
                             REJECT
                           </Button>
+                          <Button
+                            className="cyber-button cancel" // Using cancel style for dispute
+                            onClick={async () => {
+                              const reason = prompt("STATE THE NATURE OF YOUR DISPUTE:");
+                              if (reason) {
+                                try {
+                                  const token = await getAccessTokenSilently();
+                                  await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verification_v2/disputes`, {
+                                    taskId: taskForm.id,
+                                    openerId: platformUserId,
+                                    reason
+                                  }, { headers: { Authorization: `Bearer ${token}` } });
+                                  alert("DISPUTE PROTOCOL INITIATED.");
+                                  onClose();
+                                } catch (err) {
+                                  alert("FAILED TO OPEN DISPUTE.");
+                                }
+                              }
+                            }}
+                          >
+                            OPEN DISPUTE
+                          </Button>
                         </>
                       )}
 

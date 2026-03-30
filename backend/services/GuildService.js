@@ -96,6 +96,21 @@ class GuildService {
     const result = await pool.query(query, [guildId]);
     return result.rows[0];
   }
+
+  async syncGuildsWithSkills() {
+    console.log('Synchronizing guilds with skills...');
+    const skillsQuery = 'SELECT id, name, description FROM skills';
+    const skillsResult = await pool.query(skillsQuery);
+
+    let createdCount = 0;
+    for (const skill of skillsResult.rows) {
+      const guild = await this.autoCreateGuild(skill.id, skill.name, skill.description);
+      if (guild) createdCount++;
+    }
+
+    console.log(`Synchronization complete. Created ${createdCount} new guilds.`);
+    return createdCount;
+  }
 }
 
 export default new GuildService();

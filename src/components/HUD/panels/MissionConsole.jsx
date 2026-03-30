@@ -10,9 +10,31 @@ import './MissionConsole.css'; // Optional: For specific MissionConsole styles
 const MissionConsole = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { assignedTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useAssignedTasks(profile?.id);
+  const [recommendedMissions, setRecommendedMissions] = useState([]);
+  const [missionsLoading, setMissionsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+
+  useEffect(() => {
+    const fetchMissions = async () => {
+        if (profile?.id) {
+            setMissionsLoading(true);
+            try {
+                const token = await getAccessTokenSilently();
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/matching/missions/${profile.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setRecommendedMissions(res.data || []);
+            } catch (err) {
+                console.error("Failed to fetch missions:", err);
+            } finally {
+                setMissionsLoading(false);
+            }
+        }
+    };
+    fetchMissions();
+  }, [profile?.id, getAccessTokenSilently]);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -70,25 +92,25 @@ const MissionConsole = () => {
   return (
     <div className={`hud-panel mission-console ${isMinimized ? 'minimized' : ''}`}>
       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Mission Console (Assigned Tasks)</h4>
+        <h4>Mission Console</h4>
         <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Mission Console" : "Minimize Mission Console"}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       {!isMinimized && (
         <div className="hud-panel-content">
+          <h5 style={{ fontFamily: 'Orbitron', color: '#00f3ff', margin: '10px 0 5px' }}>Assigned Tasks</h5>
           {assignedTasks.length > 0 ? (
-            <ul>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
               {assignedTasks.map(task => (
-                <li key={task.id} className="task-item">
+                <li key={task.id} className="task-item" style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
                   <div className="task-info">
-                    <span className="task-name">{task.name}</span> <br/> ({task.projectName})
+                    <span className="task-name" style={{ fontWeight: 'bold', color: '#00f3ff' }}>{task.name}</span> <br/> ({task.projectName})
                     <br />
                     Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
-                    {task.timeRemaining !== 'N/A' && <span> - Time Left: {task.timeRemaining}</span>}
                   </div>
-                  <div className="task-actions">
-                    <button onClick={() => handleViewTask(task)}>View</button>
+                  <div className="task-actions" style={{ marginTop: '5px' }}>
+                    <button onClick={() => handleViewTask(task)} style={{ marginRight: '5px' }}>View</button>
                     {!(task.status.toLowerCase().includes('submitted') || task.status.toLowerCase().includes('completed')) && (
                       <button onClick={() => handleDropTask(task.id)}>Drop</button>
                     )}
@@ -97,7 +119,29 @@ const MissionConsole = () => {
               ))}
             </ul>
           ) : (
-            <p>No tasks currently assigned.</p>
+            <p style={{ fontStyle: 'italic', color: '#888' }}>No tasks currently assigned.</p>
+          )}
+
+          <h5 style={{ fontFamily: 'Orbitron', color: '#ff5ca2', margin: '20px 0 5px' }}>Recommended for You</h5>
+          {missionsLoading ? (
+            <p style={{ fontStyle: 'italic', color: '#888' }}>Scanning datacore...</p>
+          ) : recommendedMissions.length > 0 ? (
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {recommendedMissions.slice(0, 3).map(mission => (
+                <li key={mission.id} className="task-item recommended" style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
+                  <div className="task-info">
+                    <span className="task-name" style={{ fontWeight: 'bold', color: '#ff5ca2' }}>{mission.name}</span> <br/> ({mission.project_name})
+                    <br />
+                    <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {mission.reward_tokens} Tokens</span>
+                  </div>
+                  <div className="task-actions" style={{ marginTop: '5px' }}>
+                    <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)}>Accept</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ fontStyle: 'italic', color: '#888' }}>No unique matches found.</p>
           )}
         </div>
       )}

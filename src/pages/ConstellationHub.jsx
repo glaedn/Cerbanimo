@@ -15,6 +15,10 @@ const ConstellationHub = () => {
   const [constellations, setConstellations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [taskPoolOpen, setTaskPoolOpen] = useState(false);
+  const [currentConstellation, setCurrentConstellation] = useState(null);
+  const [sharedTasks, setSharedTasks] = useState([]);
+  const [amendments, setAmendments] = useState([]);
   const [newConstellation, setNewConstellation] = useState({ name: '', sharedObjective: '', outcomeId: null });
   const [platformUserId, setPlatformUserId] = useState(null);
 
@@ -124,12 +128,118 @@ const ConstellationHub = () => {
                   </Grid>
                 </Grid>
 
-                <Button fullWidth sx={{ mt: 3, color: '#ff5ca2', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(255, 92, 162, 0.1)' } }}>VIEW SHARED TASK POOL</Button>
+                <Button
+                    fullWidth
+                    sx={{ mt: 3, color: '#ff5ca2', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(255, 92, 162, 0.1)' } }}
+                    onClick={async () => {
+                        setCurrentConstellation(c);
+                        const token = await getAccessTokenSilently();
+                        const tasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/tasks`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setSharedTasks(tasksRes.data);
+
+                        const amendmentsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/amendments`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setAmendments(amendmentsRes.data);
+
+                        setTaskPoolOpen(true);
+                    }}
+                >
+                    VIEW ALLIANCE CONSOLE
+                </Button>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
+
+      <Modal open={taskPoolOpen} onClose={() => setTaskPoolOpen(false)}>
+        <Box sx={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: '80%', maxWidth: 800, bgcolor: '#0a0a0a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff',
+          maxHeight: '90vh', overflowY: 'auto'
+        }}>
+          <Typography variant="h4" sx={{ fontFamily: 'Orbitron', mb: 3, color: '#ff5ca2' }}>
+            {currentConstellation?.name.toUpperCase()} - ALLIANCE CONSOLE
+          </Typography>
+
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>SHARED TASK POOL</Typography>
+          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
+            <List>
+              {sharedTasks.length === 0 ? (
+                <ListItem><ListItemText primary="No shared tasks in this alliance pool." sx={{ color: 'gray' }} /></ListItem>
+              ) : sharedTasks.map(task => (
+                <ListItem key={task.id} divider sx={{ borderColor: '#222' }}>
+                  <ListItemText
+                    primary={task.name.toUpperCase()}
+                    secondary={`Project: ${task.project_name} | Status: ${task.status}`}
+                    primaryTypographyProps={{ color: '#00f3ff', fontFamily: 'Orbitron' }}
+                    secondaryTypographyProps={{ color: 'gray' }}
+                  />
+                  <Button variant="outlined" size="small" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}>VIEW TASK</Button>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>OBJECTIVE AMENDMENTS</Typography>
+          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
+            <List>
+              {amendments.length === 0 ? (
+                <ListItem><ListItemText primary="No active objective amendments." sx={{ color: 'gray' }} /></ListItem>
+              ) : amendments.map(amendment => (
+                <ListItem key={amendment.id} divider sx={{ borderColor: '#222' }}>
+                    <ListItemText
+                        primary="AMENDMENT PROPOSAL"
+                        secondary={`New Objective: ${amendment.new_objective}`}
+                        primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                        secondaryTypographyProps={{ color: '#eee' }}
+                    />
+                    <Box display="flex" gap={1}>
+                        <Button variant="contained" size="small" color="success" onClick={async () => {
+                             const token = await getAccessTokenSilently();
+                             await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/amendments/${amendment.id}/vote`, {
+                                voterId: platformUserId,
+                                rankings: ['approve', 'reject']
+                             }, { headers: { Authorization: `Bearer ${token}` } });
+                             alert("Vote cast.");
+                        }}>VOTE FOR</Button>
+                    </Box>
+                </ListItem>
+              ))}
+            </List>
+            <Box p={2}>
+                <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                    onClick={async () => {
+                        const newObj = prompt("ENTER NEW SHARED OBJECTIVE:");
+                        if (newObj) {
+                            try {
+                                const token = await getAccessTokenSilently();
+                                await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/amendments`, {
+                                    proposerId: platformUserId,
+                                    oldObjective: currentConstellation.shared_objective,
+                                    newObjective: newObj
+                                }, { headers: { Authorization: `Bearer ${token}` } });
+                                alert("Amendment proposed.");
+                            } catch (err) {
+                                alert("Failed to propose amendment.");
+                            }
+                        }
+                    }}
+                >
+                    PROPOSE NEW OBJECTIVE
+                </Button>
+            </Box>
+          </Paper>
+
+          <Button fullWidth variant="outlined" onClick={() => setTaskPoolOpen(false)} sx={{ color: 'gray', borderColor: 'gray' }}>CLOSE CONSOLE</Button>
+        </Box>
+      </Modal>
 
       <Modal open={formModalOpen} onClose={() => setFormModalOpen(false)}>
         <Box sx={{

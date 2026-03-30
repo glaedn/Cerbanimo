@@ -1,5 +1,6 @@
 import express from 'express';
 import { findMatchesForNeed, findMatchesForResource } from '../services/matchingService.js'; 
+import TaskRoutingService from '../services/TaskRoutingService.js';
 import db from '../db.js'; // Database pool
 import ensureAuthenticated from '../middlewares/authenticate.js'; // Authentication middleware
 
@@ -76,6 +77,15 @@ router.get('/resource/:resourceId', authenticate, async (req, res) => {
     // }
     res.status(500).json({ message: 'Failed to get matches for resource due to an internal error.' });
   }
+});
+
+router.get('/missions/:userId', async (req, res) => {
+    try {
+        const missions = await TaskRoutingService.getMatchingTasksForUser(req.params.userId);
+        res.json(missions);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 export default router;

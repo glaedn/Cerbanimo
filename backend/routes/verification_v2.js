@@ -33,4 +33,18 @@ router.post('/disputes/:disputeId/votes', async (req, res) => {
   }
 });
 
+router.get('/disputes/active', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT d.*, t.name as task_name, t.description as task_desc
+      FROM disputes d
+      JOIN tasks t ON d.task_id = t.id
+      WHERE d.status = 'open'
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

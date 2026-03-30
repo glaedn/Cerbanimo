@@ -1,0 +1,158 @@
+.guilds-dashboard-container {
+  background-color: #0a0a0a;
+  min-height: 100vh;
+  color: #e0e0e0;
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.guilds-title {
+  font-family: 'Orbitron', sans-serif;
+  color: #00f3ff;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 2rem;
+}
+
+.cyber-card {
+  background-color: rgba(10, 10, 46, 0.9) !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+  transition: all 0.3s ease-in-out !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-card:hover {
+  border-color: #00f3ff !important;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.3) !important;
+  transform: translateY(-5px);
+}
+
+.guild-name {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #00f3ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.guild-status-chip {
+  background-color: rgba(0, 68, 68, 0.5) !important;
+  color: #00f3ff !important;
+  border: 1px solid #00f3ff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 0.7rem !important;
+}
+
+.health-bar {
+  height: 8px !important;
+  border-radius: 4px !important;
+  background-color: #222 !important;
+}
+
+.health-bar .MuiLinearProgress-bar {
+  background-color: #00f3ff !important;
+  box-shadow: 0 0 10px #00f3ff;
+}
+
+.metric-box {
+  background-color: rgba(0, 20, 40, 0.7);
+  border-radius: 4px;
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid #222;
+}
+
+.metric-label {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #888;
+  font-size: 0.65rem !important;
+  margin-top: 0.25rem !important;
+}
+
+.metric-value {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #fff;
+  font-size: 1.1rem !important;
+}
+
+.cyber-button-guild {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #00f3ff !important;
+  border: 1px solid #00f3ff !important;
+  margin-top: 1rem !important;
+  transition: all 0.2s !important;
+}
+
+.cyber-button-guild:hover {
+  background-color: rgba(0, 243, 255, 0.1) !important;
+  box-shadow: 0 0 10px #00f3ff;
+}
+
+.pending-requests-section {
+  margin-top: 4rem;
+}
+
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  color: #ff5ca2;
+  text-shadow: 0 0 10px rgba(255, 92, 162, 0.5);
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+
+.cyber-paper {
+  background-color: rgba(10, 10, 30, 0.8) !important;
+  border: 1px solid #333 !important;
+  padding: 1rem;
+}
+
+.request-item {
+  border-bottom: 1px solid #222 !important;
+}
+
+.request-name {
+  color: #00f3ff !important;
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+.request-desc {
+  color: #aaa !important;
+}
+
+.vote-button-approve {
+  background-color: rgba(0, 255, 100, 0.2) !important;
+  color: #00ff64 !important;
+  border: 1px solid #00ff64 !important;
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+.vote-button-deny {
+  background-color: rgba(255, 0, 60, 0.2) !important;
+  color: #ff003c !important;
+  border: 1px solid #ff003c !important;
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+/* Modal Styling */
+.guild-modal {
+  background-color: #0a0a2e !important;
+  border: 2px solid #00f3ff !important;
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.5) !important;
+  color: #fff !important;
+  padding: 2rem !important;
+}
+
+.cyber-textfield .MuiOutlinedInput-root {
+  color: #fff !important;
+}
+
+.cyber-textfield .MuiOutlinedInput-notchedOutline {
+  border-color: #00f3ff !important;
+}
+
+.cyber-textfield .MuiInputLabel-root {
+  color: #00f3ff !important;
+  font-family: 'Orbitron', sans-serif !important;
+}

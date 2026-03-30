@@ -41,6 +41,7 @@ const ProjectVisualizer = () => {
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [loading, setLoading] = useState(false);
   const [popupLaunched, setPopupLaunched] = useState(false);
+  const [outcomes, setOutcomes] = useState([]);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
   // Check if any task is active, completed, or urgent
@@ -244,6 +245,21 @@ const ProjectVisualizer = () => {
     fetchInterests();
     
   }, [getAccessTokenSilently]);
+
+  useEffect(() => {
+    const fetchOutcomes = async () => {
+        try {
+            const token = await getAccessTokenSilently();
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact/project/${projectId}/outcomes`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setOutcomes(res.data || []);
+        } catch (err) {
+            console.error("Failed to fetch outcomes:", err);
+        }
+    };
+    if (projectId) fetchOutcomes();
+  }, [projectId, getAccessTokenSilently]);
 
   
   // Modify your fetchTasks call to preserve the category
@@ -1381,6 +1397,20 @@ links.forEach(link => {
       <div className="project-info">
         <h3>{project?.name}</h3>
         <p className="project-description">{project?.description}</p>
+
+        {outcomes.length > 0 && (
+          <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}>
+            <Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>
+              INTENDED REAL-WORLD EFFECT
+            </Typography>
+            {outcomes.map(o => (
+              <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>
+                "{o.statement}"
+              </Typography>
+            ))}
+          </Box>
+        )}
+
         <br />
         <p className="token-pool-label">Token Pool:</p>
         <div className="token-pool">
