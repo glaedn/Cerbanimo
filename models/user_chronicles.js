@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Adjust path as necessary
+import pool from '../backend/db.js';
 
 const createUserChroniclesTable = async () => {
   const tableQuery = `
@@ -65,6 +65,6 @@ const createUserChroniclesTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createUserChroniclesTable,
 };

@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const alterExistingTables = async () => {
   const alterTasksQuery = `
@@ -34,4 +34,4 @@ const alterExistingTables = async () => {
   }
 };
 
-module.exports = { alterExistingTables };
+export { alterExistingTables };

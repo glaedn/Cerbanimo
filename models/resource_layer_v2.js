@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createResourceLayerTables = async () => {
   const resourceAllocationsTableQuery = `
@@ -36,4 +36,4 @@ const createResourceLayerTables = async () => {
   }
 };
 
-module.exports = { createResourceLayerTables };
+export { createResourceLayerTables };

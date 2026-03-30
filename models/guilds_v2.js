@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createGuildTables = async () => {
   const guildsTableQuery = `
@@ -63,4 +63,4 @@ const createGuildTables = async () => {
   }
 };
 
-module.exports = { createGuildTables };
+export { createGuildTables };

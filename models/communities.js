@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Assuming shared pool
+import pool from '../backend/db.js';
 
 const createCommunitiesTable = async () => {
     const communityTableQuery = `
@@ -48,6 +48,6 @@ const createCommunitiesTable = async () => {
   };
   
 
-module.exports = {
+export {
   createCommunitiesTable, // PostgreSQL
 };

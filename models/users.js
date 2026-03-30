@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Adjusted path
+import pool from '../backend/db.js';
 
 // User schema with tasks relationship
 const createUserTable = async () => {
@@ -55,6 +55,6 @@ const createUserTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createUserTable, // PostgreSQL
 };

@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createImpactTables = async () => {
   const outcomesTableQuery = `
@@ -44,4 +44,4 @@ const createImpactTables = async () => {
   }
 };
 
-module.exports = { createImpactTables };
+export { createImpactTables };
