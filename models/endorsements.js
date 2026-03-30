@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createEndorsementsTable = async () => {
   const query = `
@@ -24,4 +24,4 @@ const createEndorsementsTable = async () => {
   }
 };
 
-module.exports = { createEndorsementsTable };
+export { createEndorsementsTable };

@@ -30,6 +30,7 @@ const ProjectCreation = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [outcome, setOutcome] = useState("");
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
@@ -104,6 +105,19 @@ const ProjectCreation = () => {
         const projectId = response.data.id;
         setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
 
+        // Step 1.5: Create Outcome node
+        if (outcome) {
+          try {
+            await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/impact_v2/outcomes`,
+              { projectId, statement: outcome },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (outcomeError) {
+            console.error("Failed to create outcome:", outcomeError);
+          }
+        }
+
         if (autoGenerateTasks) {
           setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
           // Step 2: Auto-generate tasks using LLM
@@ -158,6 +172,17 @@ const ProjectCreation = () => {
         rows={4}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
+        margin="normal"
+      />
+      <TextField
+        label="Intended Outcome (Real-world effect)"
+        variant="outlined"
+        fullWidth
+        multiline
+        rows={2}
+        value={outcome}
+        onChange={(e) => setOutcome(e.target.value)}
+        placeholder="e.g. Reduce food waste in the local neighborhood by 20%"
         margin="normal"
       />
       <Autocomplete

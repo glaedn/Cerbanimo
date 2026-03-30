@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Path relative to models/
+import pool from '../backend/db.js';
 
 const createNotificationsTable = async () => {
   const tableQuery = `
@@ -54,6 +54,6 @@ const createNotificationsTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createNotificationsTable,
 };

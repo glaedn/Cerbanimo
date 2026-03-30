@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
-import { Chip, Autocomplete, TextField, Button } from '@mui/material';
+import { Chip, Autocomplete, TextField, Button, Box, Typography, Paper, Grid } from '@mui/material';
 import { useNotifications } from "./NotificationProvider.jsx"; 
 import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
@@ -130,6 +130,23 @@ const Project = () => {
     }
   };
 
+  const handleCloseProject = async () => {
+    const reason = prompt("Reason for closure:");
+    if (!reason) return;
+    try {
+      const token = await getToken();
+      // Using impact_v2 or projects routes? Let's use a hypothetical unified health service route if added,
+      // or just direct axios to the new backend endpoint.
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}/close`, { reason }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchProject();
+      alert("Project closed.");
+    } catch (err) {
+      alert("Failed to close project.");
+    }
+  };
+
   // Consolidated useEffects
   useEffect(() => {
     fetchSkillsAndProfile();
@@ -244,6 +261,7 @@ const Project = () => {
         />
         {isProjectCreator && (
         <div className="token-display">
+          <div style={{ color: '#00f3ff', marginBottom: '5px' }}><strong>PROJECT HEALTH:</strong> {(project.health_score * 100 || 0).toFixed(0)}%</div>
           <div><strong>Total Token Pool:</strong> {project.token_pool || 250}</div>
           <div><strong>Tokens Allocated:</strong> {project.reserved_tokens}</div>
           <div><strong>Tokens Spent:</strong> {project.used_tokens || 0}</div>
@@ -337,6 +355,11 @@ const Project = () => {
       <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={saveProject}>
         Save Project
       </Button>
+      {isProjectCreator && project.status !== 'closed' && (
+        <Button variant="contained" sx={{ backgroundColor: 'error.main', color: 'white', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={handleCloseProject}>
+          Close Project
+        </Button>
+      )}
       <Button variant="contained" sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={() => window.location.href = '/projects'}>
         Projects
       </Button>

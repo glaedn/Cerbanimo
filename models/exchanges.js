@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js'); // Adjust path as necessary based on project structure
+import pool from '../backend/db.js'; // Adjust path as necessary based on project structure
 
 const createExchangesTable = async () => {
   const tableQuery = `
@@ -53,6 +53,6 @@ const createExchangesTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createExchangesTable,
 };

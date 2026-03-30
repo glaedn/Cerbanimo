@@ -166,6 +166,10 @@ const acceptTask = async (taskId, userId) => {
 
     const result = await client.query(updateQuery, [userId, newStatus, taskId]);
 
+    if (newStatus.includes('assigned')) {
+       await client.query("UPDATE tasks SET accepted_at = NOW() WHERE id = $1", [taskId]);
+    }
+
     await client.query("COMMIT");
     return result.rows[0];
   } catch (error) {
@@ -616,8 +620,11 @@ const approveTask = async (taskId, io, client) => {
     const task = updateTask.rows[0];
     if (!task) {
       await localClient.query("ROLLBACK");
-      return { error: "Task not found.", status: 404 };
+      return { error: "Task not found during update", status: 404 };
     }
+
+    // Set completed_at
+    await localClient.query("UPDATE tasks SET completed_at = NOW() WHERE id = $1", [taskId]);
 
     // 🧠 Fetch extended task info for XP, notifications, skill leveling, etc.
     const taskQuery = `
@@ -901,6 +908,25 @@ const approveTask = async (taskId, io, client) => {
 
     // COMMIT the transaction before making external calls
     await localClient.query("COMMIT");
+
+    // Phase 5: Story Engine Integration
+    try {
+      const response = await fetch(
+        `${process.env.BACKEND_URL}/story_engine_v2/units`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId, userId: submitted_by, role: 'implementer' }),
+        }
+      );
+      if (response.ok) {
+        const unit = await response.json();
+        // Generate micro-narrative
+        await fetch(`${process.env.BACKEND_URL}/story_engine_v2/narrative/${unit.id}`, { method: 'POST' });
+      }
+    } catch (storyError) {
+      console.error("Story engine integration failed:", storyError);
+    }
 
     // After transaction is committed, conditionally create story node
     if (initialTask && initialTask.submitted_by) {

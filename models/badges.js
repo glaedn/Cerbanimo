@@ -1,4 +1,4 @@
-const pool = require('../backend/db.js');
+import pool from '../backend/db.js';
 
 const createBadgesTable = async () => {
   const badgesTableQuery = `
@@ -68,6 +68,6 @@ const createBadgesTable = async () => {
   }
 };
 
-module.exports = {
+export {
   createBadgesTable,
 };
