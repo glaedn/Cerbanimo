@@ -4,7 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   Box, Typography, Card, CardContent, Grid, Chip,
   Button, List, ListItem, ListItemText, Modal, TextField,
-  CircularProgress, LinearProgress, Divider
+  CircularProgress, LinearProgress, Divider, Autocomplete
 } from '@mui/material';
 import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,11 +19,13 @@ const ConstellationHub = () => {
   const [currentConstellation, setCurrentConstellation] = useState(null);
   const [sharedTasks, setSharedTasks] = useState([]);
   const [amendments, setAmendments] = useState([]);
+  const [contributionSplits, setContributionSplits] = useState([]);
   const [newConstellation, setNewConstellation] = useState({ name: '', sharedObjective: '', outcomeId: null, initialCommunityId: null });
   const [platformUserId, setPlatformUserId] = useState(null);
   const [userCommunities, setUserCommunities] = useState([]);
+  const [allCommunities, setAllCommunities] = useState([]);
   const [invitesOpen, setInvitesOpen] = useState(false);
-  const [targetCommunityId, setTargetCommunityId] = useState('');
+  const [selectedTargetCommunity, setSelectedTargetCommunity] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +47,12 @@ const ConstellationHub = () => {
             headers: { Authorization: `Bearer ${token}` }
         });
         setUserCommunities(communitiesRes.data || []);
+
+        // Fetch all communities for the dropdown
+        const allComRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setAllCommunities(allComRes.data.communities || []);
 
         setLoading(false);
       } catch (err) {
@@ -162,7 +170,12 @@ const ConstellationHub = () => {
                         const amendmentsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/amendments`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
-                        setAmendments(amendmentsRes.data);
+                        setAmendments(amendmentsRes.data || []);
+
+                        const splitsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/contribution-splits`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setContributionSplits(splitsRes.data || []);
 
                         setTaskPoolOpen(true);
                     }}
@@ -257,6 +270,53 @@ const ConstellationHub = () => {
             </Box>
           </Paper>
 
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>CONTRIBUTION SPLITS</Typography>
+          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
+            <List>
+              {contributionSplits.length === 0 ? (
+                <ListItem><ListItemText primary="No active contribution split proposals." sx={{ color: 'gray' }} /></ListItem>
+              ) : contributionSplits.map(split => (
+                <ListItem key={split.id} divider sx={{ borderColor: '#222' }}>
+                    <ListItemText
+                        primary={`TASK: ${split.task_name.toUpperCase()}`}
+                        secondary={`Proposal: ${Object.entries(split.splits).map(([id, p]) => `Community ${id}: ${p}%`).join(', ')}`}
+                        primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                        secondaryTypographyProps={{ color: '#eee' }}
+                    />
+                    <Box display="flex" gap={1}>
+                        <Button variant="contained" size="small" color="success">CONFIRM</Button>
+                    </Box>
+                </ListItem>
+              ))}
+            </List>
+            <Box p={2}>
+                <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                    onClick={async () => {
+                        const taskId = prompt("ENTER TASK ID:");
+                        const splitsStr = prompt("ENTER SPLITS (e.g. {\"1\": 50, \"2\": 50}):");
+                        if (taskId && splitsStr) {
+                            try {
+                                const token = await getAccessTokenSilently();
+                                await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/contribution-splits`, {
+                                    taskId: parseInt(taskId),
+                                    proposerId: platformUserId,
+                                    splits: JSON.parse(splitsStr)
+                                }, { headers: { Authorization: `Bearer ${token}` } });
+                                alert("Split proposed.");
+                            } catch (err) {
+                                alert("Failed to propose split.");
+                            }
+                        }
+                    }}
+                >
+                    PROPOSE NEW SPLIT
+                </Button>
+            </Box>
+          </Paper>
+
           <Button fullWidth variant="outlined" onClick={() => setTaskPoolOpen(false)} sx={{ color: 'gray', borderColor: 'gray' }}>CLOSE CONSOLE</Button>
         </Box>
       </Modal>
@@ -267,31 +327,66 @@ const ConstellationHub = () => {
           width: 400, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff'
         }}>
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 3 }}>INVITE COMMUNITY TO ALLIANCE</Typography>
-          <TextField
-            select
-            fullWidth
-            label="YOUR COMMUNITY (INVITER)"
-            value={newConstellation.initialCommunityId}
-            onChange={(e) => setNewConstellation({...newConstellation, initialCommunityId: e.target.value})}
-            sx={{ mb: 2 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ style: { color: '#ff5ca2' } }}
-          >
-            <option value=""></option>
-            {userCommunities.map(com => <option key={com.id} value={com.id}>{com.name}</option>)}
-          </TextField>
-          <TextField
-            fullWidth label="TARGET COMMUNITY ID (INVITEE)" sx={{ mb: 3 }}
-            value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)}
-            InputLabelProps={{ style: { color: '#ff5ca2' } }}
-            inputProps={{ style: { color: '#fff' } }}
+
+          <Autocomplete
+            options={userCommunities}
+            getOptionLabel={(option) => option.name}
+            onChange={(event, newValue) => {
+              setNewConstellation({...newConstellation, initialCommunityId: newValue?.id || null});
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="YOUR COMMUNITY (INVITER)"
+                sx={{ mb: 2 }}
+                InputLabelProps={{ style: { color: '#ff5ca2' } }}
+              />
+            )}
+            sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#444' },
+                  '&:hover fieldset': { borderColor: '#ff5ca2' },
+                  '&.Mui-focused fieldset': { borderColor: '#ff5ca2' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' }
+            }}
           />
-          <Button fullWidth variant="contained" sx={{ bgcolor: '#ff5ca2', color: '#000' }} onClick={async () => {
+
+          <Autocomplete
+            options={allCommunities}
+            getOptionLabel={(option) => option.name}
+            onChange={(event, newValue) => {
+              setSelectedTargetCommunity(newValue);
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="TARGET COMMUNITY (INVITEE)"
+                sx={{ mb: 3 }}
+                InputLabelProps={{ style: { color: '#ff5ca2' } }}
+              />
+            )}
+            sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#444' },
+                  '&:hover fieldset': { borderColor: '#ff5ca2' },
+                  '&.Mui-focused fieldset': { borderColor: '#ff5ca2' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' }
+            }}
+          />
+
+          <Button
+            fullWidth
+            variant="contained"
+            sx={{ bgcolor: '#ff5ca2', color: '#000', '&:hover': { bgcolor: '#ff89bc' } }}
+            disabled={!newConstellation.initialCommunityId || !selectedTargetCommunity}
+            onClick={async () => {
               try {
                   const token = await getAccessTokenSilently();
                   await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/invites`, {
                       inviterId: newConstellation.initialCommunityId,
-                      inviteeId: targetCommunityId
+                      inviteeId: selectedTargetCommunity.id
                   }, { headers: { Authorization: `Bearer ${token}` } });
                   alert("Alliance invite sent.");
                   setInvitesOpen(false);
@@ -312,19 +407,29 @@ const ConstellationHub = () => {
             InputLabelProps={{ style: { color: '#ff5ca2' } }}
             inputProps={{ style: { color: '#fff' } }}
           />
-          <TextField
-            select
-            fullWidth
-            label="CREATING COMMUNITY"
-            value={newConstellation.initialCommunityId}
-            onChange={(e) => setNewConstellation({...newConstellation, initialCommunityId: e.target.value})}
-            sx={{ mb: 2 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ style: { color: '#ff5ca2' } }}
-          >
-            <option value=""></option>
-            {userCommunities.map(com => <option key={com.id} value={com.id}>{com.name}</option>)}
-          </TextField>
+          <Autocomplete
+            options={userCommunities}
+            getOptionLabel={(option) => option.name}
+            onChange={(event, newValue) => {
+              setNewConstellation({...newConstellation, initialCommunityId: newValue?.id || null});
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="CREATING COMMUNITY"
+                sx={{ mb: 2 }}
+                InputLabelProps={{ style: { color: '#ff5ca2' } }}
+              />
+            )}
+            sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#444' },
+                  '&:hover fieldset': { borderColor: '#ff5ca2' },
+                  '&.Mui-focused fieldset': { borderColor: '#ff5ca2' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' }
+            }}
+          />
           <TextField
             fullWidth label="SHARED OBJECTIVE" multiline rows={4} sx={{ mb: 3 }}
             value={newConstellation.sharedObjective} onChange={(e) => setNewConstellation({...newConstellation, sharedObjective: e.target.value})}

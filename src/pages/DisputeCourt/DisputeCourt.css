@@ -7,7 +7,7 @@
   width: 100vw;
   display: flex;
   flex-direction: column;
-  padding-top: 60px;
+  padding-top: 80px;
 }
 
 .hud-header {
@@ -31,7 +31,6 @@
   display: flex;
   padding: 20px;
   gap: 20px;
-  overflow: hidden;
 }
 
 .dispute-list {

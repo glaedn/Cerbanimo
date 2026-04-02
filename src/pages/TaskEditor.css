@@ -4,30 +4,33 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(10, 10, 46, 0.9); /* Dark, slightly transparent blue */
-    padding: 0.5rem; /* Reduced padding as border provides some spacing */
+    background: #000; /* Pitch black for better HUD contrast */
+    padding: 0;
     width: 90%;
-    max-width: 700px; /* Slightly wider for more complex forms */
-    max-height: 70vh;
-    border-radius: 8px; /* Specified border-radius */
-    font-family: 'Inter', sans-serif; /* Default font for modal content */
-    color: #00F3FF; /* Primary text color */
-    border: 1px solid #00F3FF; /* Specified border */
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5); /* Specified box-shadow */
+    max-width: 700px;
+    max-height: 90vh;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    color: #00F3FF;
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 243, 255, 0.2);
+    display: flex;
+    flex-direction: column;
 }
 
 .cyber-border {
     position: relative;
-    padding: 1.5rem; /* Padding inside the main border */
-    height: 100%;
-    overflow: hidden; /* Contains the scanline effect if any */
-    /* The main border is now on .cyber-modal, so this can be adjusted or removed if not needed for other effects */
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
 }
 
 .cyber-content {
-    max-height: calc(90vh - 3rem - 40px); /* Adjust based on padding */
+    flex: 1;
     overflow-y: auto;
-    padding-right: 10px; /* Space for scrollbar */
+    padding-right: 15px;
     font-family: 'Inter', sans-serif;
 }
 
@@ -43,9 +46,8 @@
 }
 
 .cyber-content::-webkit-scrollbar-thumb {
-    background: #00F3FF; /* Cyan thumb */
+    background: #444;
     border-radius: 4px;
-    border: 1px solid rgba(10, 10, 46, 0.8);
 }
 
 .cyber-content::-webkit-scrollbar-thumb:hover {

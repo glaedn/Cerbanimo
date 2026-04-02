@@ -1,7 +1,6 @@
 /* Homepage.css - Improved Version */
 
 html, body {
-    height: 100%;
     margin: 0;
     padding: 0;
     overflow-y: auto;
@@ -10,15 +9,13 @@ html, body {
   }
   
   .homepage {
-    font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase */
-    background: #0A0A2E; /* theme.colors.backgroundDefault */
-    color: #FFFFFF; /* theme.colors.textPrimary */
-    height: calc(100% - 60px);
+    font-family: 'Inter', sans-serif;
+    background: #0A0A2E;
+    color: #FFFFFF;
+    min-height: calc(100vh - 60px);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     overflow-x: hidden;
-  
   }
   
   /* Custom Scrollbar Styling */
@@ -58,16 +55,15 @@ html, body {
   }
   
   .hero {
-    display: flex; /* Reverted to flex */
-    flex-direction: column; /* Added */
-    align-items: center; /* Added */
-    justify-content: center; /* Added */
-    padding: 20px max(8vw, 40px) 60px max(8vw, 40px);
-    background: transparent; /* Ensure map is visible */
-    position: relative; /* For z-indexing context and absolute positioning of map */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px max(8vw, 40px) 60px max(8vw, 40px);
+    background: transparent;
+    position: relative;
     overflow: hidden;
-    text-align: center; /* Ensures text within the centered block is also centered */
-    /* place-items: center; Removed */
+    text-align: center;
   }
   
   /* Add subtle animated background elements */

@@ -108,6 +108,71 @@ class GuildService {
     return result.rows[0];
   }
 
+  async updateCareerProgression(userId, guildId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get user's current membership
+      const membershipQuery = 'SELECT role, xp FROM guild_memberships WHERE user_id = $1 AND guild_id = $2 FOR UPDATE';
+      const membershipResult = await client.query(membershipQuery, [userId, guildId]);
+
+      if (membershipResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const { role: currentRole, xp } = membershipResult.rows[0];
+
+      // Get user's patterns for this skill
+      const patternsQuery = `
+        SELECT pattern, strength FROM user_patterns
+        WHERE user_id = $1 AND pattern IN ('Finisher', 'Specialist', 'Verifier')
+      `;
+      const patternsResult = await client.query(patternsQuery, [userId]);
+      const patterns = patternsResult.rows.reduce((acc, p) => ({ ...acc, [p.pattern]: parseFloat(p.strength) }), {});
+
+      let nextRole = currentRole;
+
+      // Logic for Career Path Progression: Apprentice → Specialist → Architect → Mentor
+      // Progression is driven purely by story patterns (skill level handles XP)
+
+      if (currentRole === 'Apprentice') {
+        // Apprentice -> Specialist: Needs some 'Finisher' or 'Specialist' pattern
+        if (patterns['Finisher'] > 0.3 || patterns['Specialist'] > 0.3) {
+          nextRole = 'Specialist';
+        }
+      } else if (currentRole === 'Specialist') {
+        // Specialist -> Architect: Needs strong 'Specialist' pattern
+        if (patterns['Specialist'] > 0.6) {
+          nextRole = 'Architect';
+        }
+      } else if (currentRole === 'Architect') {
+        // Architect -> Mentor: Needs 'Verifier' pattern (suggesting they can guide others)
+        if (patterns['Verifier'] > 0.5) {
+          nextRole = 'Mentor';
+        }
+      }
+
+      if (nextRole !== currentRole) {
+        await client.query(
+          'UPDATE guild_memberships SET role = $1 WHERE user_id = $2 AND guild_id = $3',
+          [nextRole, userId, guildId]
+        );
+        console.log(`User ${userId} promoted to ${nextRole} in guild ${guildId}`);
+      }
+
+      await client.query('COMMIT');
+      return nextRole;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error updating career progression:', err);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   async syncGuildsWithSkills() {
     console.log('Synchronizing guilds with skills...');
     const skillsQuery = 'SELECT id, name, description FROM skills';

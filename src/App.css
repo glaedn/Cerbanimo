@@ -1,5 +1,10 @@
 .App {
   text-align: center;
+  padding-top: 80px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
 }
 
 /* Custom Scrollbar */

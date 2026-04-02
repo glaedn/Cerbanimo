@@ -4,6 +4,7 @@ import {
   autoGenerateSubtasks,
 } from "../services/taskGenerator.js";
 import StoryEngineService from "../services/StoryEngineService.js";
+import GuildService from "../services/GuildService.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -109,7 +110,12 @@ const getTasksByProjectId = async (projectId) => {
 
   console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
 
-  const query = `SELECT * FROM tasks WHERE project_id = $1`;
+  const query = `
+    SELECT t.*, o.statement as outcome_statement
+    FROM tasks t
+    LEFT JOIN outcomes o ON t.project_id = o.project_id
+    WHERE t.project_id = $1
+  `;
   const { rows } = await pool.query(query, [parsedProjectId]);
   return rows;
 };
@@ -804,6 +810,25 @@ const approveTask = async (taskId, io, client) => {
       [finalUpdatedSkillEntries, skill_id]
     );
 
+    // Update Guild XP and Member Status
+    try {
+        const guildResult = await localClient.query('SELECT id FROM guilds WHERE skill_id = $1', [skill_id]);
+        if (guildResult.rows.length > 0) {
+            const guildId = guildResult.rows[0].id;
+            for (const userId of assigned_user_ids) {
+                // Join guild automatically if not already a member
+                await localClient.query(
+                    'INSERT INTO guild_memberships (guild_id, user_id, role, xp) VALUES ($1, $2, $3, $4) ON CONFLICT (guild_id, user_id) DO UPDATE SET xp = guild_memberships.xp + $4',
+                    [guildId, userId, 'Apprentice', rewardPerUser]
+                );
+                // Trigger career progression check
+                await GuildService.updateCareerProgression(userId, guildId);
+            }
+        }
+    } catch (guildUpdateError) {
+        console.error("Guild XP update failed:", guildUpdateError);
+    }
+
     // Step 5: Update user experience
     if (assigned_user_ids && assigned_user_ids.length > 0) {
       await localClient.query(
@@ -1326,9 +1351,11 @@ const findById = async (taskId) => {
     const query = `
       SELECT 
         t.*,
-        p.name as project_name
+        p.name as project_name,
+        o.statement as outcome_statement
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN outcomes o ON p.id = o.project_id
       WHERE t.id = $1
     `;
 
