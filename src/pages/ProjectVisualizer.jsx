@@ -74,7 +74,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
   
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -87,8 +87,8 @@ const ProjectVisualizer = () => {
   
       const data = await response.json();
       
-      if (Array.isArray(data)) {
-        setUserCommunities(data);
+      if (data && Array.isArray(data.communities)) {
+        setUserCommunities(data.communities);
       } else {
         setUserCommunities([]);
       }

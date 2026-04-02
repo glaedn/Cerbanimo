@@ -48,9 +48,10 @@ import DisputeCourt from "./pages/DisputeCourt/DisputeCourt.jsx";
 const App = () => {
   return (
     <Router>
-      <SiteNav />
-      <AuthWrapper>
-        <Routes>
+      <div className="App">
+        <SiteNav />
+        <AuthWrapper>
+          <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/waiting-list" element={<WaitingListPage />} /> {/* Added route */}
@@ -232,8 +233,9 @@ const App = () => {
           />
           {/* Default Route */}
           <Route path="*" element={<HomePage />} />
-        </Routes>
-      </AuthWrapper>
+          </Routes>
+        </AuthWrapper>
+      </div>
     </Router>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { Box, Typography, Card, CardContent, Button, Slider, TextField, Chip } from '@mui/material';
+import { Box, Typography, Card, CardContent, Button, Slider, TextField, Chip, Divider } from '@mui/material';
 import './DisputeCourt.css';
 
 const DisputeCourt = () => {
@@ -117,5 +117,4 @@ const DisputeCourt = () => {
   );
 };
 
-import { Divider } from '@mui/material';
 export default DisputeCourt;

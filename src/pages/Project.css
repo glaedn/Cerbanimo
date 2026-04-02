@@ -4,14 +4,80 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    height: 100vh;
-    width: 100vw;
-    padding: 20px;
+    min-height: 100vh;
+    width: 100%;
+    padding: 2rem;
     box-sizing: border-box;
-    overflow: hidden;
-    background: radial-gradient(circle, #0A0A2E, #000000);
+    background: radial-gradient(circle at top, #001f3f 0%, #000000 100%);
     color: #FFFFFF;
+}
+
+.cyber-panel {
+    background: rgba(0, 20, 40, 0.6);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+.project-title-hud {
     font-family: 'Orbitron', sans-serif;
+    color: #00f3ff;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    margin-bottom: 1rem !important;
+}
+
+.cyber-button-hud {
+    font-family: 'Orbitron', sans-serif !important;
+    border-width: 1px !important;
+    letter-spacing: 1px !important;
+}
+
+.cyber-button-hud.primary {
+    color: #00f3ff !important;
+    border-color: #00f3ff !important;
+}
+
+.cyber-button-hud.secondary {
+    color: #ff5ca2 !important;
+    border-color: #ff5ca2 !important;
+}
+
+.cyber-button-hud.danger {
+    color: #ff003c !important;
+    border-color: #ff003c !important;
+}
+
+.hud-progress-bar {
+    height: 8px !important;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.hud-progress-bar .MuiLinearProgress-bar {
+    background: linear-gradient(90deg, #00f3ff, #4dabf7);
+    box-shadow: 0 0 10px #00f3ff;
+}
+
+.mini-metric {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid #222;
+}
+
+.metric-label {
+    font-family: 'Orbitron', sans-serif;
+    color: #888;
+    font-size: 0.65rem;
+}
+
+.metric-value {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    font-size: 1.2rem;
 }
 
 /* Project Header Section */
@@ -76,24 +142,26 @@
 
 /* Add Task Button */
 .add-task-button {
-    background-color: #00F3FF;
+    background: linear-gradient(135deg, #00F3FF, #4DABF7);
     color: #000000;
-    font-size: 2rem;
-    width: 40px;
-    height: 40px;
+    font-size: 1.5rem;
+    width: 50px;
+    height: 50px;
     font-weight: bold;
     border-radius: 50%;
     border: none;
-    margin-left: 20px;
-    margin-bottom: 10px;
+    margin-bottom: 1rem;
     cursor: pointer;
     transition: 0.3s;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.7);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .add-task-button:hover {
-    background-color: #4DABF7;
-    text-shadow: 0 0 20px #6dd5ed; /* This text-shadow might not be visible with black text, consider removing or adjusting */
+    transform: scale(1.1);
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
 }
 
 /* Task List */
@@ -127,18 +195,20 @@
 }
 
 .task-card {
-    background-color: rgba(28, 28, 30, 0.7);
-    border-radius: 10px;
-    padding: 15px;
+    background-color: rgba(10, 10, 46, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 8px;
+    padding: 20px;
     width: calc(33.33% - 20px);
     box-sizing: border-box;
-    transition: transform 0.2s ease-in-out;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .task-card:hover {
-    transform: scale(1.02);
-    background: rgba(0, 243, 255, 0.1); /* Updated hover background */
+    transform: translateY(-5px);
+    border-color: #00f3ff;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
 .task-card h3 {
@@ -465,14 +535,25 @@
     font-weight: bold;
   }
   
-  .task-status.active {
-    background-color: #4caf50;
-    color: white;
-  }
+.status-indicator {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Orbitron', sans-serif;
+    margin-bottom: 0.5rem;
+}
 
-  .task-status.inactive {
-    background-color: #f44336;
-    color: white;
-  }
+.status-indicator.active {
+    background-color: rgba(0, 255, 100, 0.2);
+    color: #00ff64;
+    border: 1px solid #00ff64;
+}
+
+.status-indicator.inactive {
+    background-color: rgba(255, 0, 60, 0.2);
+    color: #ff003c;
+    border: 1px solid #ff003c;
+}
 
   
