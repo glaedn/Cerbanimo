@@ -1,0 +1,140 @@
+.guild-hub-container {
+  padding: 40px;
+  background-color: #0a0a0a;
+  min-height: 100vh;
+  color: #e0e0e0;
+}
+
+.hub-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #0a0a0a;
+}
+
+.hub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 60px;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 20px;
+}
+
+.hub-title {
+  font-family: 'Orbitron', sans-serif;
+  color: #00f3ff;
+  font-weight: 700;
+}
+
+.status-chip {
+  background-color: rgba(0, 243, 255, 0.1);
+  color: #00f3ff;
+  border: 1px solid #00f3ff;
+  font-family: 'Orbitron';
+  font-weight: 600;
+}
+
+.status-chip.forming {
+  background-color: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+  border-color: #ffa500;
+}
+
+.hub-card {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  height: 100%;
+}
+
+.progression-card {
+  background-color: #111;
+  border-color: #ff5ca2;
+  border-left: 5px solid #ff5ca2;
+}
+
+.card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  color: #00f3ff;
+  margin-bottom: 20px;
+  margin-top: 40px;
+  font-size: 1.5rem;
+}
+
+.hub-progress {
+  height: 8px;
+  border-radius: 4px;
+  background-color: #333;
+}
+
+.hub-progress .MuiLinearProgress-bar {
+  background-color: #00f3ff;
+  box-shadow: 0 0 10px #00f3ff;
+}
+
+.rank-progress .MuiLinearProgress-bar {
+  background-color: #ff5ca2;
+  box-shadow: 0 0 10px #ff5ca2;
+}
+
+.hub-metric {
+  background-color: #111;
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid #222;
+}
+
+.m-value {
+  font-family: 'Orbitron';
+  font-size: 1.3rem;
+  color: #fff;
+  margin-top: 5px;
+}
+
+.m-label {
+  font-size: 0.6rem;
+  color: #666;
+  font-family: 'Orbitron';
+}
+
+.mission-paper {
+  background-color: #111;
+  border: 1px solid #222;
+}
+
+.mission-item {
+  border-bottom: 1px solid #222;
+  transition: background-color 0.2s;
+}
+
+.mission-item:hover {
+  background-color: rgba(0, 243, 255, 0.05);
+}
+
+.m-name {
+  color: #00f3ff !important;
+  font-family: 'Orbitron' !important;
+  font-weight: 600 !important;
+}
+
+.m-desc {
+  color: #888 !important;
+  font-size: 0.8rem !important;
+}
+
+.mission-btn {
+  color: #00f3ff !important;
+  border-color: #00f3ff !important;
+  font-family: 'Orbitron' !important;
+  font-size: 0.7rem !important;
+}

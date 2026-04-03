@@ -35,6 +35,7 @@ const createGuildTables = async () => {
       reward_average NUMERIC,
       verification_pass_rate NUMERIC,
       health_score NUMERIC,
+      submitted_tasks_count INTEGER DEFAULT 0,
       recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;

@@ -20,6 +20,7 @@ import HomePage from "./pages/HomePage.jsx";
 //import Realms from "./pages/Realms.jsx";
 import UserPortfolio from "./pages/UserPortfolio.jsx";
 import GuildsDashboard from "./pages/GuildsDashboard.jsx";
+import GuildHub from "./pages/GuildHub.jsx";
 import ConstellationHub from "./pages/ConstellationHub.jsx";
 import ResourcesDashboard from "./pages/ResourcesDashboard.jsx";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -62,6 +63,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <OnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/guilds/:id"
+            element={
+              <PrivateRoute>
+                <GuildHub />
               </PrivateRoute>
             }
           />

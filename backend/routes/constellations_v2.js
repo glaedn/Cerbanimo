@@ -7,7 +7,13 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM constellations');
+    const query = `
+      SELECT c.*,
+        (SELECT count(*) FROM constellation_tasks ct JOIN tasks t ON ct.task_id = t.id WHERE ct.constellation_id = c.id AND t.status = 'completed') as tasks_completed,
+        (SELECT count(*) FROM constellation_tasks WHERE constellation_id = c.id) as tasks_total
+      FROM constellations c
+    `;
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
