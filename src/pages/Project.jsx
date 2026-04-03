@@ -248,66 +248,143 @@ const Project = () => {
     console.log("task form: ", taskForm);
   }, [taskForm]); 
 
+  const [activeTab, setActiveTab] = useState('summary');
 
   return (
     <div className="project-page-container">
       {project && (
-      <div className="project-header">
-        <h1 className="project-title">{project.name}</h1>
-        <textarea
-        className="project-description"
-        value={project.description}
-        onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
-        readOnly={!isProjectCreator}
-        />
-        {isProjectCreator && (
-        <div className="token-display">
-          <div style={{ color: '#00f3ff', marginBottom: '5px' }}><strong>PROJECT HEALTH:</strong> {(project.health_score * 100 || 0).toFixed(0)}%</div>
-          <div><strong>Total Token Pool:</strong> {project.token_pool || 250}</div>
-          <div><strong>Tokens Allocated:</strong> {project.reserved_tokens}</div>
-          <div><strong>Tokens Spent:</strong> {project.used_tokens || 0}</div>
-          <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
-        </div>
-        )}
-        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
-        <div className="impact-mini-atlas">
-          <ImpactGraph projectId={projectId} height="300px" />
-        </div>
+      <Box className="project-hud-header" sx={{ width: '90%', mb: 4 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <Box className="cyber-panel">
+              <Typography variant="h3" className="project-title-hud">{project.name.toUpperCase()}</Typography>
 
-        {isProjectCreator && (
-        <Autocomplete
-          multiple
-          options={interestsPool}
-          value={project.tags || []}
-          onChange={(event, newValue) => setProject({ ...project, tags: newValue })}
-          renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="outlined"
-            label="Project Tags"
-            placeholder="Add tags"
-          />
+              <Box mt={3} display="flex" gap={2}>
+                <Button
+                  variant="outlined"
+                  className="cyber-button-hud primary"
+                  onClick={() => navigate(`/visualizer/${projectId}`)}
+                >
+                  SYSTEM VISUALIZER
+                </Button>
+                {isProjectCreator && (
+                  <Button
+                    variant="outlined"
+                    className="cyber-button-hud secondary"
+                    onClick={saveProject}
+                  >
+                    SYNC TO DATACORE
+                  </Button>
+                )}
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Box className="cyber-panel status-panel">
+              <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 2 }}>PROJECT VITALS</Typography>
+              <Box mt={1}>
+                <Box display="flex" justifyContent="space-between" mb={0.5}>
+                  <Typography variant="caption" sx={{ color: '#888' }}>OPERATIONAL HEALTH</Typography>
+                  <Typography variant="caption" sx={{ color: '#00f3ff' }}>{(project.health_score * 100 || 0).toFixed(0)}%</Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={project.health_score * 100 || 0}
+                  className="hud-progress-bar"
+                />
+              </Box>
+
+              <Box mt={3}>
+                <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1 }}>TOKEN LEDGER</Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>
+                    <Box className="mini-metric">
+                      <Typography className="metric-label">POOL</Typography>
+                      <Typography className="metric-value">{project.token_pool || 250}</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Box className="mini-metric">
+                      <Typography className="metric-label">AVAIL</Typography>
+                      <Typography className="metric-value">{(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {isProjectCreator && project.status !== 'closed' && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  className="cyber-button-hud danger"
+                  sx={{ mt: 2 }}
+                  onClick={handleCloseProject}
+                >
+                  TERMINATE PROJECT
+                </Button>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+
+        <Box mt={3} className="cyber-panel">
+          <Box display="flex" gap={4} mb={2} borderBottom="1px solid rgba(0,243,255,0.2)">
+            <Button
+                onClick={() => setActiveTab('summary')}
+                sx={{
+                    color: activeTab === 'summary' ? '#00f3ff' : '#888',
+                    fontFamily: 'Orbitron',
+                    borderBottom: activeTab === 'summary' ? '2px solid #00f3ff' : 'none',
+                    borderRadius: 0
+                }}
+            >
+                SUMMARY
+            </Button>
+            <Button
+                onClick={() => setActiveTab('impact')}
+                sx={{
+                    color: activeTab === 'impact' ? '#ff5ca2' : '#888',
+                    fontFamily: 'Orbitron',
+                    borderBottom: activeTab === 'impact' ? '2px solid #ff5ca2' : 'none',
+                    borderRadius: 0
+                }}
+            >
+                IMPACT ATLAS
+            </Button>
+          </Box>
+
+          {activeTab === 'summary' ? (
+             <Box sx={{ color: '#eee', fontFamily: 'Inter', minHeight: '150px' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  variant="standard"
+                  value={project.description}
+                  onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
+                  InputProps={{
+                    readOnly: !isProjectCreator,
+                    disableUnderline: true,
+                    style: { color: '#ccc', fontFamily: 'Inter', fontSize: '1.1rem' }
+                  }}
+                />
+                <Box mt={2}>
+                    {project.tags?.map((tag, i) => <Chip key={i} label={tag} size="small" sx={{ mr: 1, bgcolor: 'rgba(0,243,255,0.1)', color: '#00f3ff', border: '1px solid #00f3ff' }} />)}
+                </Box>
+             </Box>
+          ) : (
+            <Box sx={{ height: '300px', width: '100%' }}>
+                <ImpactGraph projectId={projectId} height="100%" />
+            </Box>
           )}
-          renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
-            const { key, ...otherProps } = getTagProps({ index });
-            return (
-            <Chip
-              key={key}
-              label={option}
-              sx={{ margin: '2px' }}
-              {...otherProps}
-            />
-            );
-          })
-          }
-        />
-        )}
-      </div>
+        </Box>
+      </Box>
       )}
+
       <div className="tasks-section">
-      <h2 className="tasks-title">Tasks</h2>
-      {isProjectCreator && <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '2rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0, marginY: 1 }} onClick={() => handleTaskPopupOpen()}>+</Button>}
+      <h2 className="tasks-title">OPERATIONAL TASKS</h2>
+      {isProjectCreator && <button className="add-task-button" onClick={() => handleTaskPopupOpen()}>+</button>}
       <div className="tasks-list">
         {tasks.map((task) => (
         <div key={task.id} className="task-card">
@@ -318,70 +395,70 @@ const Project = () => {
           <p>{task.description || 'No description provided.'}</p>
           <p><strong>Skill:</strong> {task.skill_name || 'Not specified'}</p>
           <p><strong>Reward Tokens:</strong> {task.reward_tokens || 'None'}</p>
-          {task.submitted && isProjectCreator && task.active_ind && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'approve')}>
-            Approve Work
-          </Button>
-          )}
-          {isProjectCreator && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentBlue.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskPopupOpen(task)}>
-            Edit
-          </Button>
-          )}
-          {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
-          <Button variant="contained" sx={{ backgroundColor: 'accentGreen.main', color: 'common.black', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'submit')}>
-            Submit for Approval
-          </Button>
-          )}
-          <Button 
-            variant="contained" 
-            sx={{ 
-              backgroundColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'error.main' : 'primary.main', 
-              color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'common.white' : 'common.black', 
-              margin: '4px' 
-            }}
-            onClick={() => handleTaskAction(
-              task.id, 
-              task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+          <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
+            {task.submitted && isProjectCreator && task.active_ind && (
+            <Button variant="outlined" size="small" sx={{ borderColor: '#00ff64', color: '#00ff64' }} onClick={() => handleTaskAction(task.id, 'approve')}>
+                APPROVE
+            </Button>
             )}
-          >
-            {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "Drop" : "Accept"}
-          </Button>
-          {isProjectCreator && task.submitted && (
-          <Button variant="contained" sx={{ backgroundColor: 'secondary.main', color: 'text.primary', margin: '4px' }} onClick={() => handleTaskAction(task.id, 'reject')}>
-            Reject Work
-          </Button>
-          )}
+            {isProjectCreator && (
+            <Button variant="outlined" size="small" sx={{ borderColor: '#00f3ff', color: '#00f3ff' }} onClick={() => handleTaskPopupOpen(task)}>
+                EDIT
+            </Button>
+            )}
+            {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
+            <Button variant="outlined" size="small" sx={{ borderColor: '#ff5ca2', color: '#ff5ca2' }} onClick={() => handleTaskAction(task.id, 'submit')}>
+                SUBMIT
+            </Button>
+            )}
+            <Button
+                variant="outlined"
+                size="small"
+                sx={{
+                    borderColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                    color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                }}
+                onClick={() => handleTaskAction(
+                task.id,
+                task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+                )}
+            >
+                {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "DROP" : "ACCEPT"}
+            </Button>
+            {isProjectCreator && task.submitted && (
+            <Button variant="outlined" size="small" sx={{ borderColor: '#ff003c', color: '#ff003c' }} onClick={() => handleTaskAction(task.id, 'reject')}>
+                REJECT
+            </Button>
+            )}
+          </Box>
         </div>
         ))}
       </div>
       </div>
-      <div className="project-controls">
-      <Button variant="contained" sx={{ backgroundColor: 'primary.main', color: 'common.black', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={saveProject}>
-        Save Project
-      </Button>
-      {isProjectCreator && project.status !== 'closed' && (
-        <Button variant="contained" sx={{ backgroundColor: 'error.main', color: 'white', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={handleCloseProject}>
-          Close Project
+      <Box className="project-controls" sx={{ height: 'auto', mt: 4, display: 'flex', gap: 2 }}>
+        <Button
+            variant="outlined"
+            sx={{ color: '#888', borderColor: '#444', fontFamily: 'Orbitron' }}
+            onClick={() => navigate('/projects')}
+        >
+            RETURN TO PROJECT HUB
         </Button>
-      )}
-      <Button variant="contained" sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', fontFamily: 'Orbitron, sans-serif', padding: '10px 10px', margin: '4px' }} onClick={() => window.location.href = '/projects'}>
-        Projects
-      </Button>
-      </div>
+      </Box>
 
-      <TaskEditor
-  open={showTaskPopup}
-  onClose={() => setShowTaskPopup(false)}
-  taskForm={taskForm}
-  setTaskForm={setTaskForm}
-  onSubmit={handleSubmitTask}
-  skills={skills}
-  isEdit={!!taskForm.id} // This should check if we're editing an existing task
-  projectId={Number(projectId)} // Convert to number
-  currentUser={user}
-  projectCreatorId={Number(project?.creator_id)} // Convert to number
-/>
+      {showTaskPopup && (
+        <TaskEditor
+          open={showTaskPopup}
+          onClose={() => setShowTaskPopup(false)}
+          taskForm={taskForm}
+          setTaskForm={setTaskForm}
+          onSubmit={handleSubmitTask}
+          skills={skills}
+          isEdit={!!taskForm.id}
+          projectId={Number(projectId)}
+          currentUser={user}
+          projectCreatorId={Number(project?.creator_id)}
+        />
+      )}
     </div>
     );
 };

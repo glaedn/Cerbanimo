@@ -398,6 +398,9 @@ const TaskEditor = ({
   };
   const isProjectManager = Number(platformUserId) === Number(projectCreatorId);
   console.log('isReviewer:', isReviewer, 'isSubmitted:', isSubmitted, 'isProjectManager:', isProjectManager, 'taskForm.status:', taskForm.status);
+
+  if (!open) return null;
+
   return (
     <Modal open={open} onClose={onClose}>
       <div className="cyber-modal">
@@ -408,6 +411,17 @@ const TaskEditor = ({
             </h3>
 
             <div className="cyber-form">
+              {taskForm.outcome_statement && (
+                <Box sx={{ mb: 2, p: 1.5, borderLeft: '3px solid #FF5CA2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}>
+                  <Typography variant="caption" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron', display: 'block', mb: 0.5, letterSpacing: 1 }}>
+                    IMPACT GOAL
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#eee', fontStyle: 'italic', fontFamily: 'Inter' }}>
+                    "{taskForm.outcome_statement}"
+                  </Typography>
+                </Box>
+              )}
+
               <TextField
                 className="cyber-input"
                 label="TASK NAME"

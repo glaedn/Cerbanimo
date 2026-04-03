@@ -19,6 +19,7 @@ const GuildsDashboard = () => {
   const [newSkillName, setNewSkillName] = useState('');
   const [newSkillDesc, setNewSkillDesc] = useState('');
   const [platformUserId, setPlatformUserId] = useState(null);
+  const [myMemberships, setMyMemberships] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +59,11 @@ const GuildsDashboard = () => {
            headers: { Authorization: `Bearer ${token}` }
         });
         setActiveDisputes(disputesRes.data || []);
+
+        const membershipsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/my-memberships/${profileRes.data.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setMyMemberships(membershipsRes.data || []);
 
         setLoading(false);
       } catch (err) {
@@ -134,6 +140,45 @@ const GuildsDashboard = () => {
         </Button>
       </Box>
 
+      {myMemberships.length > 0 && (
+        <Box mb={6}>
+          <Typography variant="h4" className="section-title">MY GUILD PROGRESSION</Typography>
+          <Grid container spacing={4}>
+            {myMemberships.map(membership => (
+              <Grid item xs={12} sm={6} md={4} key={membership.id}>
+                <Card className="cyber-card membership-card">
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="h5" className="guild-name">{membership.guild_name}</Typography>
+                      <Chip label={membership.role.toUpperCase()} size="small" className={`role-chip ${membership.role.toLowerCase()}`} />
+                    </Box>
+                    <Typography variant="caption" sx={{ color: '#888', fontFamily: 'Orbitron', mb: 2, display: 'block' }}>
+                      RANK: {membership.role}
+                    </Typography>
+
+                    <Box mb={2}>
+                      <Box display="flex" justifyContent="space-between" mb={0.5}>
+                        <Typography variant="caption" sx={{ color: '#aaa' }}>GUILD XP</Typography>
+                        <Typography variant="caption" sx={{ color: '#00f3ff' }}>{membership.xp}</Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min((membership.xp / 5000) * 100, 100)}
+                        className="xp-progress-bar"
+                      />
+                    </Box>
+                    <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic' }}>
+                      {membership.role === 'Mentor' ? 'Mastery Achieved' : `Next Rank: ${membership.role === 'Apprentice' ? 'Specialist' : membership.role === 'Specialist' ? 'Architect' : 'Mentor'}`}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
+      <Typography variant="h4" className="section-title">GUILD REGISTRY</Typography>
       <Grid container spacing={4}>
         {guilds.map(guild => (
           <Grid item xs={12} sm={6} md={4} key={guild.id}>

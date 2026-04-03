@@ -43,4 +43,20 @@ router.post('/requests/:requestId/vote', async (req, res) => {
   }
 });
 
+router.get('/my-memberships/:userId', async (req, res) => {
+  try {
+    const query = `
+      SELECT gm.*, g.name as guild_name, s.name as skill_name, g.skill_id
+      FROM guild_memberships gm
+      JOIN guilds g ON gm.guild_id = g.id
+      JOIN skills s ON g.skill_id = s.id
+      WHERE gm.user_id = $1
+    `;
+    const result = await pool.query(query, [req.params.userId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
