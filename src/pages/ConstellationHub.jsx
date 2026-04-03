@@ -6,6 +6,7 @@ import {
   Button, List, ListItem, ListItemText, Modal, TextField,
   CircularProgress, LinearProgress, Divider
 } from '@mui/material';
+import Paper from '@mui/material/Paper';
 import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
