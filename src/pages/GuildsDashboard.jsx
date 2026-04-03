@@ -50,10 +50,16 @@ const GuildsDashboard = () => {
            }
         }));
 
+        const membershipsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/my-memberships/${profileRes.data.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const myMembershipsData = membershipsRes.data || [];
+        setMyMemberships(myMembershipsData);
+
         // Implement complex sorting logic
         const sortedGuilds = [...guildsWithIntel].sort((a, b) => {
-            const aMember = membershipsRes.data.some(m => m.guild_id === a.id);
-            const bMember = membershipsRes.data.some(m => m.guild_id === b.id);
+            const aMember = myMembershipsData.some(m => m.guild_id === a.id);
+            const bMember = myMembershipsData.some(m => m.guild_id === b.id);
 
             if (aMember && !bMember) return -1;
             if (!aMember && bMember) return 1;
@@ -73,11 +79,6 @@ const GuildsDashboard = () => {
            headers: { Authorization: `Bearer ${token}` }
         });
         setActiveDisputes(disputesRes.data || []);
-
-        const membershipsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/my-memberships/${profileRes.data.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setMyMemberships(membershipsRes.data || []);
 
         setLoading(false);
       } catch (err) {
