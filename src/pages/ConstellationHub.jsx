@@ -113,11 +113,11 @@ const ConstellationHub = () => {
                 <Box mb={3}>
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography variant="caption" color="gray">CONSTELLATION HEALTH</Typography>
-                    <Typography variant="caption" color="#ff5ca2">{(Number(c.health_score || 0.85) * 100).toFixed(0)}%</Typography>
+                    <Typography variant="caption" color="#ff5ca2">{(Number(c.health_score || 0) * 100).toFixed(0)}%</Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={Number(c.health_score || 0.85) * 100}
+                    value={Number(c.health_score || 0) * 100}
                     sx={{ height: 6, borderRadius: 3, bgcolor: '#333', '& .MuiLinearProgress-bar': { bgcolor: '#ff5ca2' } }}
                   />
                 </Box>
@@ -127,14 +127,14 @@ const ConstellationHub = () => {
                     <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
                       <TrendingUp size={16} color="#ff5ca2" />
                       <Typography variant="caption" display="block">VELOCITY</Typography>
-                      <Typography variant="h6">{Number(c.velocity || 12).toFixed(1)}</Typography>
+                      <Typography variant="h6">{Number(c.velocity || 0).toFixed(1)}</Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={4}>
                     <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
                       <CheckSquare size={16} color="#ff5ca2" />
                       <Typography variant="caption" display="block">TASKS</Typography>
-                      <Typography variant="h6">{(c.tasks_completed || 8)}/{(c.tasks_total || 20)}</Typography>
+                      <Typography variant="h6">{(c.tasks_completed || 0)}/{(c.tasks_total || 0)}</Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={4}>

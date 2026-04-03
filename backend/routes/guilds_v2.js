@@ -13,6 +13,57 @@ router.get('/requests', async (req, res) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const guildQuery = `
+      SELECT g.*, s.name as skill_name, s.description as skill_description
+      FROM guilds g
+      JOIN skills s ON g.skill_id = s.id
+      WHERE g.id = $1
+    `;
+    const guildRes = await pool.query(guildQuery, [req.params.id]);
+
+    if (guildRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Guild not found' });
+    }
+
+    const intel = await GuildService.getGuildIntelligence(req.params.id);
+
+    const membersQuery = `
+      SELECT gm.*, u.name as user_name, u.avatar_url
+      FROM guild_memberships gm
+      JOIN users u ON gm.user_id = u.id
+      WHERE gm.guild_id = $1
+    `;
+    const membersRes = await pool.query(membersQuery, [req.params.id]);
+
+    res.json({
+      ...guildRes.rows[0],
+      intel: intel || null,
+      members: membersRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/tasks', async (req, res) => {
+  try {
+    const tasksQuery = `
+      SELECT t.*, p.name as project_name
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      JOIN guilds g ON t.skill_id = g.skill_id
+      WHERE g.id = $1
+      ORDER BY t.priority_score DESC
+    `;
+    const result = await pool.query(tasksQuery, [req.params.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:skillId/intelligence', async (req, res) => {
   try {
     // Note: The frontend sends skillId here, so we map it correctly.

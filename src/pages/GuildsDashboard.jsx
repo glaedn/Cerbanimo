@@ -7,10 +7,12 @@ import {
   Modal, TextField, CircularProgress, Paper
 } from '@mui/material';
 import { Shield, TrendingUp, Users, PlusCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import './GuildsDashboard.css';
 
 const GuildsDashboard = () => {
   const { getAccessTokenSilently, user } = useAuth0();
+  const navigate = useNavigate();
   const [guilds, setGuilds] = useState([]);
   const [skillRequests, setSkillRequests] = useState([]);
   const [activeDisputes, setActiveDisputes] = useState([]);
@@ -48,7 +50,19 @@ const GuildsDashboard = () => {
            }
         }));
 
-        setGuilds(guildsWithIntel);
+        // Implement complex sorting logic
+        const sortedGuilds = [...guildsWithIntel].sort((a, b) => {
+            const aMember = membershipsRes.data.some(m => m.guild_id === a.id);
+            const bMember = membershipsRes.data.some(m => m.guild_id === b.id);
+
+            if (aMember && !bMember) return -1;
+            if (!aMember && bMember) return 1;
+
+            // Secondary sort: Number of tasks for this skill (descending)
+            return (b.intel?.submitted_tasks_count || 0) - (a.intel?.submitted_tasks_count || 0);
+        });
+
+        setGuilds(sortedGuilds);
 
         const requestsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/requests`, {
            headers: { Authorization: `Bearer ${token}` }
@@ -222,7 +236,13 @@ const GuildsDashboard = () => {
                   </Grid>
                 </Grid>
 
-                <Button fullWidth className="cyber-button-guild">ENTER HUB</Button>
+                <Button
+                  fullWidth
+                  className="cyber-button-guild"
+                  onClick={() => navigate(`/guilds/${guild.id}`)}
+                >
+                  ENTER HUB
+                </Button>
               </CardContent>
             </Card>
           </Grid>
