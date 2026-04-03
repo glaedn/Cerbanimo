@@ -167,4 +167,23 @@ router.post('/amendments/:amendmentId/vote', async (req, res) => {
     }
 });
 
+router.post('/:constellationId/contribution-splits', async (req, res) => {
+  const { taskId, splits, proposerId } = req.body;
+  try {
+    const split = await ConstellationService.proposeContributionSplit(taskId, req.params.constellationId, splits, proposerId);
+    res.status(201).json(split);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:constellationId/contribution-splits', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT cs.*, t.name as task_name FROM contribution_splits cs JOIN tasks t ON cs.task_id = t.id WHERE cs.constellation_id = $1', [req.params.constellationId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

@@ -1,8 +1,8 @@
 .hud-container {
   position: relative;
-  top: 0px;
+  top: 80px;
   width: 100%;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 80px);
   box-sizing: border-box;
   overflow: hidden;
   background-color: #0A0A2E; /* From theme.colors.backgroundDefault */
