@@ -15,7 +15,7 @@ class GuildHealthService {
         (SELECT count(*) FROM tasks WHERE skill_id = $1 AND status::text NOT LIKE $2) as submitted_tasks,
         (SELECT count(*) FROM tasks WHERE skill_id = $1) as total_tasks,
         (SELECT AVG(reward_tokens) FROM tasks WHERE skill_id = $1) as avg_reward,
-        (SELECT count(*) FROM verification_events ve JOIN tasks t ON ve.task_id = t.id WHERE t.skill_id = $1 AND ve.result = 'verified') as verified_count,
+        (SELECT count(*) FROM verification_events ve JOIN tasks t ON ve.task_id = t.id WHERE t.skill_id = $1 AND ve.status = 'verified') as verified_count,
         (SELECT count(*) FROM disputes d JOIN tasks t ON d.task_id = t.id WHERE t.skill_id = $1 AND d.status = 'overturned') as overturned_count
     `;
     // Removed FROM tasks LIMIT 1 to avoid crash if tasks table is empty.
