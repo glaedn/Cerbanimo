@@ -20,9 +20,8 @@ const ConstellationHub = () => {
   const [taskPoolOpen, setTaskPoolOpen] = useState(false);
   const [currentConstellation, setCurrentConstellation] = useState(null);
   const [sharedProjects, setSharedProjects] = useState([]);
-  const [sharedTasks, setSharedTasks] = useState([]);
+  const [sharedCommunities, setSharedCommunities] = useState([]);
   const [amendments, setAmendments] = useState([]);
-  const [contributionSplits, setContributionSplits] = useState([]);
   const [newConstellation, setNewConstellation] = useState({ name: '', sharedObjective: '', outcomeId: null, initialCommunityId: null });
   const [platformUserId, setPlatformUserId] = useState(null);
   const [userCommunities, setUserCommunities] = useState([]);
@@ -196,20 +195,15 @@ const ConstellationHub = () => {
                         });
                         setSharedProjects(projectsRes.data || []);
 
-                        const tasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/tasks`, {
+                        const communitiesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/communities`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
-                        setSharedTasks(tasksRes.data);
+                        setSharedCommunities(communitiesRes.data || []);
 
                         const amendmentsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/amendments`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
                         setAmendments(amendmentsRes.data || []);
-
-                        const splitsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/contribution-splits`, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        setContributionSplits(splitsRes.data || []);
 
                         setTaskPoolOpen(true);
                     }}
@@ -232,6 +226,32 @@ const ConstellationHub = () => {
             {currentConstellation?.name.toUpperCase()} - ALLIANCE CONSOLE
           </Typography>
 
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>COMMUNITY ALLIANCE</Typography>
+          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
+            <List>
+              {sharedCommunities.length === 0 ? (
+                <ListItem><ListItemText primary="No community alliances formed yet." sx={{ color: 'gray' }} /></ListItem>
+              ) : sharedCommunities.map(comm => (
+                <ListItem key={comm.id} divider sx={{ borderColor: '#222' }}>
+                  <ListItemText
+                    primary={comm.name.toUpperCase()}
+                    secondary={comm.description}
+                    primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                    secondaryTypographyProps={{ color: 'gray' }}
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                    onClick={() => navigate(`/communityhub/${comm.id}`)}
+                  >
+                    ENTER HUB
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>SHARED PROJECTS</Typography>
           <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
             <List>
@@ -245,26 +265,17 @@ const ConstellationHub = () => {
                     primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
                     secondaryTypographyProps={{ color: 'gray' }}
                   />
-                  <Chip label={project.status.toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-
-          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>SHARED TASK POOL</Typography>
-          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
-            <List>
-              {sharedTasks.length === 0 ? (
-                <ListItem><ListItemText primary="No shared tasks in this alliance pool." sx={{ color: 'gray' }} /></ListItem>
-              ) : sharedTasks.map(task => (
-                <ListItem key={task.id} divider sx={{ borderColor: '#222' }}>
-                  <ListItemText
-                    primary={task.name.toUpperCase()}
-                    secondary={`Project: ${task.project_name} | Status: ${task.status}`}
-                    primaryTypographyProps={{ color: '#00f3ff', fontFamily: 'Orbitron' }}
-                    secondaryTypographyProps={{ color: 'gray' }}
-                  />
-                  <Button variant="outlined" size="small" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}>VIEW TASK</Button>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Chip label={project.status.toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}
+                      onClick={() => navigate(`/Visualizer/${project.id}`)}
+                    >
+                      VIEW PROJECT
+                    </Button>
+                  </Box>
                 </ListItem>
               ))}
             </List>
@@ -323,52 +334,6 @@ const ConstellationHub = () => {
             </Box>
           </Paper>
 
-          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>CONTRIBUTION SPLITS</Typography>
-          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
-            <List>
-              {contributionSplits.length === 0 ? (
-                <ListItem><ListItemText primary="No active contribution split proposals." sx={{ color: 'gray' }} /></ListItem>
-              ) : contributionSplits.map(split => (
-                <ListItem key={split.id} divider sx={{ borderColor: '#222' }}>
-                    <ListItemText
-                        primary={`TASK: ${split.task_name.toUpperCase()}`}
-                        secondary={`Proposal: ${Object.entries(split.splits).map(([id, p]) => `Community ${id}: ${p}%`).join(', ')}`}
-                        primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
-                        secondaryTypographyProps={{ color: '#eee' }}
-                    />
-                    <Box display="flex" gap={1}>
-                        <Button variant="contained" size="small" color="success">CONFIRM</Button>
-                    </Box>
-                </ListItem>
-              ))}
-            </List>
-            <Box p={2}>
-                <Button
-                    variant="outlined"
-                    fullWidth
-                    sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
-                    onClick={async () => {
-                        const taskId = prompt("ENTER TASK ID:");
-                        const splitsStr = prompt("ENTER SPLITS (e.g. {\"1\": 50, \"2\": 50}):");
-                        if (taskId && splitsStr) {
-                            try {
-                                const token = await getAccessTokenSilently();
-                                await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/contribution-splits`, {
-                                    taskId: parseInt(taskId),
-                                    proposerId: platformUserId,
-                                    splits: JSON.parse(splitsStr)
-                                }, { headers: { Authorization: `Bearer ${token}` } });
-                                alert("Split proposed.");
-                            } catch (err) {
-                                alert("Failed to propose split.");
-                            }
-                        }
-                    }}
-                >
-                    PROPOSE NEW SPLIT
-                </Button>
-            </Box>
-          </Paper>
 
           <Button fullWidth variant="outlined" onClick={() => setTaskPoolOpen(false)} sx={{ color: 'gray', borderColor: 'gray' }}>CLOSE CONSOLE</Button>
         </Box>

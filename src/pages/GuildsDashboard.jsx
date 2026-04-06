@@ -185,9 +185,16 @@ const GuildsDashboard = () => {
                         className="xp-progress-bar"
                       />
                     </Box>
-                    <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic' }}>
+                    <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic', display: 'block', mb: 2 }}>
                       {membership.role === 'Mentor' ? 'Mastery Achieved' : `Next Rank: ${membership.role === 'Apprentice' ? 'Specialist' : membership.role === 'Specialist' ? 'Architect' : 'Mentor'}`}
                     </Typography>
+                    <Button
+                        fullWidth
+                        className="cyber-button-guild"
+                        onClick={() => navigate(`/guilds/${membership.guild_id}`)}
+                    >
+                        ENTER HUB
+                    </Button>
                   </CardContent>
                 </Card>
               </Grid>
