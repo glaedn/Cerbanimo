@@ -40,7 +40,7 @@ class ProjectHealthService {
 
       // Resolve all open tasks (cancel them for now)
       await client.query(
-        'UPDATE tasks SET status = $1 WHERE project_id = $2 AND status NOT LIKE $3',
+        'UPDATE tasks SET status = $1 WHERE project_id = $2 AND status::text NOT LIKE $3',
         ['cancelled', projectId, 'completed']
       );
 
