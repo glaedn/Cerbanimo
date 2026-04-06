@@ -20,10 +20,43 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/form', async (req, res) => {
-  const { name, sharedObjective, outcomeId, initialCommunityId } = req.body;
+router.get('/eligible-projects', async (req, res) => {
+  const { userId, communityId } = req.query;
   try {
-    const constellation = await ConstellationService.formConstellation(name, sharedObjective, outcomeId, initialCommunityId);
+    let projects = [];
+    if (communityId) {
+      const commRes = await pool.query(
+        'SELECT approved_projects, proposals FROM communities WHERE id = $1',
+        [communityId]
+      );
+      if (commRes.rows.length > 0) {
+        const { approved_projects = [], proposals = [] } = commRes.rows[0];
+        const allIds = [...new Set([...(approved_projects || []), ...(proposals || [])])];
+        if (allIds.length > 0) {
+          const projRes = await pool.query(
+            'SELECT id, name, description, status FROM projects WHERE id = ANY($1)',
+            [allIds]
+          );
+          projects = projRes.rows;
+        }
+      }
+    } else if (userId) {
+      const projRes = await pool.query(
+        'SELECT id, name, description, status FROM projects WHERE creator_id = $1',
+        [userId]
+      );
+      projects = projRes.rows;
+    }
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/form', async (req, res) => {
+  const { name, sharedObjective, outcomeId, initialCommunityId, initialProjectId } = req.body;
+  try {
+    const constellation = await ConstellationService.formConstellation(name, sharedObjective, outcomeId, initialCommunityId, initialProjectId);
     res.status(201).json(constellation);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -31,10 +64,20 @@ router.post('/form', async (req, res) => {
 });
 
 router.post('/:constellationId/invites', async (req, res) => {
-  const { inviterId, inviteeId } = req.body;
+  const { inviterId, inviteeIds } = req.body; // inviteeIds should be an array
   try {
-    const invite = await ConstellationService.inviteCommunity(req.params.constellationId, inviterId, inviteeId);
-    res.status(201).json(invite);
+    const invites = [];
+    if (Array.isArray(inviteeIds)) {
+      for (const inviteeId of inviteeIds) {
+        const invite = await ConstellationService.inviteCommunity(req.params.constellationId, inviterId, inviteeId);
+        invites.push(invite);
+      }
+    } else if (req.body.inviteeId) {
+        // Fallback for single invitee if still sent that way
+        const invite = await ConstellationService.inviteCommunity(req.params.constellationId, inviterId, req.body.inviteeId);
+        invites.push(invite);
+    }
+    res.status(201).json(invites);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -124,6 +167,20 @@ router.post('/:constellationId/tasks', async (req, res) => {
   try {
     const task = await ConstellationService.addSharedTask(req.params.constellationId, taskId);
     res.status(201).json(task);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:constellationId/projects', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.*
+      FROM projects p
+      JOIN constellation_members cm ON p.id = cm.entity_id
+      WHERE cm.constellation_id = $1 AND cm.entity_type = 'project'
+    `, [req.params.constellationId]);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

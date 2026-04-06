@@ -18,6 +18,7 @@ const ConstellationHub = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [taskPoolOpen, setTaskPoolOpen] = useState(false);
   const [currentConstellation, setCurrentConstellation] = useState(null);
+  const [sharedProjects, setSharedProjects] = useState([]);
   const [sharedTasks, setSharedTasks] = useState([]);
   const [amendments, setAmendments] = useState([]);
   const [contributionSplits, setContributionSplits] = useState([]);
@@ -25,8 +26,9 @@ const ConstellationHub = () => {
   const [platformUserId, setPlatformUserId] = useState(null);
   const [userCommunities, setUserCommunities] = useState([]);
   const [allCommunities, setAllCommunities] = useState([]);
+  const [eligibleProjects, setEligibleProjects] = useState([]);
   const [invitesOpen, setInvitesOpen] = useState(false);
-  const [selectedTargetCommunity, setSelectedTargetCommunity] = useState(null);
+  const [selectedTargetCommunities, setSelectedTargetCommunities] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,7 +69,11 @@ const ConstellationHub = () => {
   const handleFormSubmit = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/form`, newConstellation, {
+      const payload = {
+          ...newConstellation,
+          initialProjectId: newConstellation.initialProjectId
+      };
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/form`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFormModalOpen(false);
@@ -163,6 +169,12 @@ const ConstellationHub = () => {
                     onClick={async () => {
                         setCurrentConstellation(c);
                         const token = await getAccessTokenSilently();
+
+                        const projectsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/projects`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setSharedProjects(projectsRes.data || []);
+
                         const tasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${c.id}/tasks`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
@@ -198,6 +210,25 @@ const ConstellationHub = () => {
           <Typography variant="h4" sx={{ fontFamily: 'Orbitron', mb: 3, color: '#ff5ca2' }}>
             {currentConstellation?.name.toUpperCase()} - ALLIANCE CONSOLE
           </Typography>
+
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>SHARED PROJECTS</Typography>
+          <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
+            <List>
+              {sharedProjects.length === 0 ? (
+                <ListItem><ListItemText primary="No shared projects in this alliance." sx={{ color: 'gray' }} /></ListItem>
+              ) : sharedProjects.map(project => (
+                <ListItem key={project.id} divider sx={{ borderColor: '#222' }}>
+                  <ListItemText
+                    primary={project.name.toUpperCase()}
+                    secondary={project.description}
+                    primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                    secondaryTypographyProps={{ color: 'gray' }}
+                  />
+                  <Chip label={project.status.toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
 
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>SHARED TASK POOL</Typography>
           <Paper sx={{ bgcolor: '#111', border: '1px solid #333', mb: 4 }}>
@@ -354,15 +385,16 @@ const ConstellationHub = () => {
           />
 
           <Autocomplete
+            multiple
             options={allCommunities}
             getOptionLabel={(option) => option.name}
             onChange={(event, newValue) => {
-              setSelectedTargetCommunity(newValue);
+              setSelectedTargetCommunities(newValue);
             }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="TARGET COMMUNITY (INVITEE)"
+                label="TARGET COMMUNITIES (INVITEES)"
                 sx={{ mb: 3 }}
                 InputLabelProps={{ style: { color: '#ff5ca2' } }}
               />
@@ -381,17 +413,17 @@ const ConstellationHub = () => {
             fullWidth
             variant="contained"
             sx={{ bgcolor: '#ff5ca2', color: '#000', '&:hover': { bgcolor: '#ff89bc' } }}
-            disabled={!newConstellation.initialCommunityId || !selectedTargetCommunity}
+            disabled={!newConstellation.initialCommunityId || selectedTargetCommunities.length === 0}
             onClick={async () => {
               try {
                   const token = await getAccessTokenSilently();
                   await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/${currentConstellation.id}/invites`, {
                       inviterId: newConstellation.initialCommunityId,
-                      inviteeId: selectedTargetCommunity.id
+                      inviteeIds: selectedTargetCommunities.map(c => c.id)
                   }, { headers: { Authorization: `Bearer ${token}` } });
-                  alert("Alliance invite sent.");
+                  alert("Alliance invites sent.");
                   setInvitesOpen(false);
-              } catch (err) { alert("Failed to send invite."); }
+              } catch (err) { alert("Failed to send invites."); }
           }}>SEND ALLIANCE PROPOSAL</Button>
         </Box>
       </Modal>
@@ -411,13 +443,19 @@ const ConstellationHub = () => {
           <Autocomplete
             options={userCommunities}
             getOptionLabel={(option) => option.name}
-            onChange={(event, newValue) => {
+            onChange={async (event, newValue) => {
               setNewConstellation({...newConstellation, initialCommunityId: newValue?.id || null});
+              const token = await getAccessTokenSilently();
+              const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/eligible-projects`, {
+                  params: { communityId: newValue?.id, userId: platformUserId },
+                  headers: { Authorization: `Bearer ${token}` }
+              });
+              setEligibleProjects(res.data || []);
             }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="CREATING COMMUNITY"
+                label="CREATING ENTITY (COMMUNITY OR SELF)"
                 sx={{ mb: 2 }}
                 InputLabelProps={{ style: { color: '#ff5ca2' } }}
               />
@@ -431,6 +469,31 @@ const ConstellationHub = () => {
                 '& .MuiInputBase-input': { color: '#fff' }
             }}
           />
+
+          <Autocomplete
+            options={eligibleProjects}
+            getOptionLabel={(option) => option.name}
+            onChange={(event, newValue) => {
+              setNewConstellation({...newConstellation, initialProjectId: newValue?.id || null});
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="LINK INITIAL PROJECT"
+                sx={{ mb: 2 }}
+                InputLabelProps={{ style: { color: '#ff5ca2' } }}
+              />
+            )}
+            sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#444' },
+                  '&:hover fieldset': { borderColor: '#ff5ca2' },
+                  '&.Mui-focused fieldset': { borderColor: '#ff5ca2' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' }
+            }}
+          />
+
           <TextField
             fullWidth label="SHARED OBJECTIVE" multiline rows={4} sx={{ mb: 3 }}
             value={newConstellation.sharedObjective} onChange={(e) => setNewConstellation({...newConstellation, sharedObjective: e.target.value})}
@@ -438,7 +501,15 @@ const ConstellationHub = () => {
             InputLabelProps={{ style: { color: '#ff5ca2' } }}
             inputProps={{ style: { color: '#fff' } }}
           />
-          <Button fullWidth variant="contained" onClick={handleFormSubmit} sx={{ bgcolor: '#ff5ca2', color: '#000', '&:hover': { bgcolor: '#ff89bc' } }}>IGNITE ALLIANCE</Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleFormSubmit}
+            sx={{ bgcolor: '#ff5ca2', color: '#000', '&:hover': { bgcolor: '#ff89bc' } }}
+            disabled={!newConstellation.initialProjectId}
+          >
+            IGNITE ALLIANCE
+          </Button>
         </Box>
       </Modal>
     </Box>
