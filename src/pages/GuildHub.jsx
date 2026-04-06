@@ -55,12 +55,32 @@ const GuildHub = () => {
   if (loading) return <Box className="hub-loader"><CircularProgress sx={{ color: '#00f3ff' }} /></Box>;
   if (!guild) return <Box p={4}><Typography color="error">Guild not found.</Typography></Box>;
 
-  const nextRank = {
-    'Apprentice': 'Specialist',
-    'Specialist': 'Architect',
-    'Architect': 'Mentor',
-    'Mentor': 'Master'
+  const rankThresholds = {
+    'Apprentice': { next: 'Specialist', xp: 1000 },
+    'Specialist': { next: 'Architect', xp: 3000 },
+    'Architect': { next: 'Mentor', xp: 6000 },
+    'Mentor': { next: 'Master', xp: 10000 },
+    'Master': { next: null, xp: 0 }
   };
+
+  const getRankProgress = (role, xp) => {
+    const current = rankThresholds[role];
+    if (!current || !current.next) return 100;
+    const prevXP = Object.values(rankThresholds).find(v => v.next === role)?.xp || 0;
+    const progress = ((xp - prevXP) / (current.xp - prevXP)) * 100;
+    return Math.min(Math.max(progress, 5), 100);
+  };
+
+  const getTasksToNext = (role, xp) => {
+    const current = rankThresholds[role];
+    if (!current || !current.next) return "MAX RANK";
+    const remaining = current.xp - xp;
+    const avgTaskXp = guild.intel?.reward_average || 50;
+    const tasksNeeded = Math.ceil(remaining / avgTaskXp);
+    return `Complete ~${tasksNeeded} more specialized tasks to unlock ${current.next} rank.`;
+  };
+
+  const myMembership = guild.members.find(m => m.user_id === platformUserId);
 
   return (
     <Box className="guild-hub-container">
@@ -159,12 +179,16 @@ const GuildHub = () => {
                   </Box>
                   <Box textAlign="right">
                     <Typography variant="caption" color="gray">NEXT RANK</Typography>
-                    <Typography variant="h6" color="#888">{nextRank[myRole]?.toUpperCase() || 'MAX RANK'}</Typography>
+                    <Typography variant="h6" color="#888">{rankThresholds[myRole]?.next?.toUpperCase() || 'MAX RANK'}</Typography>
                   </Box>
                 </Box>
-                <LinearProgress variant="determinate" value={45} className="hub-progress rank-progress" sx={{ mt: 2 }} />
+                <LinearProgress
+                    variant="determinate"
+                    value={getRankProgress(myRole, myMembership?.xp || 0)}
+                    className="hub-progress rank-progress" sx={{ mt: 2 }}
+                />
                 <Typography variant="caption" sx={{ mt: 1, display: 'block', color: '#666', fontStyle: 'italic' }}>
-                  Complete 5 more specialized tasks to unlock {nextRank[myRole]} rank.
+                  {getTasksToNext(myRole, myMembership?.xp || 0)}
                 </Typography>
               </CardContent>
             </Card>
@@ -179,15 +203,6 @@ const GuildHub = () => {
                 <ListItem
                   key={task.id}
                   className="mission-item"
-                  secondaryAction={
-                    <Button
-                      variant="outlined"
-                      className="mission-btn"
-                      onClick={() => navigate(`/Visualizer/${task.project_id}/${task.id}`)}
-                    >
-                      VIEW
-                    </Button>
-                  }
                 >
                   <ListItemText
                     primary={task.name.toUpperCase()}
@@ -195,8 +210,15 @@ const GuildHub = () => {
                     primaryTypographyProps={{ className: 'm-name' }}
                     secondaryTypographyProps={{ className: 'm-desc' }}
                   />
-                  <Box sx={{ mr: 6 }}>
-                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 2 }}>
+                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', fontFamily: 'Orbitron', fontWeight: 'bold' }} />
+                    <Button
+                      variant="outlined"
+                      className="mission-btn"
+                      onClick={() => navigate(`/Visualizer/${task.project_id}/${task.id}`)}
+                    >
+                      VIEW
+                    </Button>
                   </Box>
                 </ListItem>
               ))}

@@ -187,6 +187,47 @@ class GuildService {
     console.log(`Synchronization complete. Created ${createdCount} new guilds.`);
     return createdCount;
   }
+
+  async syncMembershipsWithSkills() {
+    console.log('Synchronizing guild memberships with unlocked skills...');
+    const skillsQuery = 'SELECT id, unlocked_users FROM skills';
+    const skillsResult = await pool.query(skillsQuery);
+
+    let addedCount = 0;
+    for (const skill of skillsResult.rows) {
+      if (!skill.unlocked_users || skill.unlocked_users.length === 0) continue;
+
+      const guildQuery = 'SELECT id FROM guilds WHERE skill_id = $1';
+      const guildRes = await pool.query(guildQuery, [skill.id]);
+      if (guildRes.rows.length === 0) continue;
+      const guildId = guildRes.rows[0].id;
+
+      for (const entry of skill.unlocked_users) {
+        let parsedEntry = entry;
+        if (typeof entry === 'string') {
+          try {
+            parsedEntry = JSON.parse(entry);
+          } catch (e) {
+            try {
+              parsedEntry = JSON.parse(entry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, ""));
+            } catch (e2) { continue; }
+          }
+        }
+
+        if (!parsedEntry || !parsedEntry.user_id) continue;
+
+        const memberQuery = 'SELECT 1 FROM guild_memberships WHERE guild_id = $1 AND user_id = $2';
+        const memberRes = await pool.query(memberQuery, [guildId, parsedEntry.user_id]);
+
+        if (memberRes.rows.length === 0) {
+          await this.addMember(guildId, parsedEntry.user_id);
+          addedCount++;
+        }
+      }
+    }
+    console.log(`Membership synchronization complete. Added ${addedCount} new memberships.`);
+    return addedCount;
+  }
 }
 
 export default new GuildService();
