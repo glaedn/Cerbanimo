@@ -1,7 +1,7 @@
 import pool from '../db.js';
 
 class ConstellationService {
-  async formConstellation(name, sharedObjective, outcomeId = null, initialCommunityId = null) {
+  async formConstellation(name, sharedObjective, outcomeId = null, initialCommunityId = null, initialProjectId = null) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -17,6 +17,13 @@ class ConstellationService {
         await client.query(
           'INSERT INTO constellation_members (constellation_id, entity_type, entity_id) VALUES ($1, $2, $3)',
           [constellation.id, 'community', initialCommunityId]
+        );
+      }
+
+      if (initialProjectId) {
+        await client.query(
+          'INSERT INTO constellation_members (constellation_id, entity_type, entity_id) VALUES ($1, $2, $3)',
+          [constellation.id, 'project', initialProjectId]
         );
       }
 
