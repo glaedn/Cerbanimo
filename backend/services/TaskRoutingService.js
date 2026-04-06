@@ -38,11 +38,11 @@ class TaskRoutingService {
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
       WHERE (t.skill_id = ANY($1) OR t.skill_id IS NULL)
-      AND t.status LIKE '%unassigned'
+      AND t.status::text LIKE $2
       ORDER BY t.priority_score DESC
       LIMIT 20;
     `;
-    const result = await pool.query(matchingTasksQuery, [userSkills]);
+    const result = await pool.query(matchingTasksQuery, [userSkills, '%unassigned']);
     return result.rows;
   }
 
@@ -53,11 +53,11 @@ class TaskRoutingService {
       SET
         reward_tokens = LEAST(reward_tokens * 1.1, COALESCE(reward_ceiling, reward_tokens * 3)),
         decay_factor = decay_factor * 1.1
-      WHERE status LIKE '%unassigned'
+      WHERE status::text LIKE $1
       AND created_at < NOW() - INTERVAL '3 days'
       RETURNING id, reward_tokens;
     `;
-    const result = await pool.query(query);
+    const result = await pool.query(query, ['%unassigned']);
     return result.rows;
   }
 }

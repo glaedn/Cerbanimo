@@ -31,6 +31,16 @@
   transform: translateY(-5px);
 }
 
+.cyber-card.selected-skill {
+  border-color: #ff5ca2 !important;
+  box-shadow: 0 0 20px rgba(255, 92, 162, 0.4) !important;
+}
+
+.cyber-card.active-contribution {
+  border-color: #00f3ff !important;
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.4) !important;
+}
+
 .guild-name {
   font-family: 'Orbitron', sans-serif !important;
   color: #00f3ff;

@@ -22,17 +22,19 @@ const GuildsDashboard = () => {
   const [newSkillDesc, setNewSkillDesc] = useState('');
   const [platformUserId, setPlatformUserId] = useState(null);
   const [myMemberships, setMyMemberships] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = await getAccessTokenSilently();
 
-        // Fetch User ID
+        // Fetch Profile
         const profileRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         setPlatformUserId(profileRes.data.id);
+        setUserProfile(profileRes.data);
 
         // Fetch Guilds with intelligence
         const guildsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2`, {
@@ -47,12 +49,23 @@ const GuildsDashboard = () => {
         setMyMemberships(myMembershipsData);
 
         // Implement complex sorting logic
-        const sortedGuilds = [...guildsWithIntel].sort((a, b) => {
-            const aMember = myMembershipsData.some(m => m.guild_id === a.id);
-            const bMember = myMembershipsData.some(m => m.guild_id === b.id);
+        // 1. User's selected skills (from profile.skills) - Magenta highlight
+        // 2. User has submitted tasks in guild but not in selected skills - Cyan highlight
+        // 3. The rest
+        const userSelectedSkills = profileRes.data.skills || [];
 
-            if (aMember && !bMember) return -1;
-            if (!aMember && bMember) return 1;
+        const sortedGuilds = [...guildsWithIntel].sort((a, b) => {
+            const aIsSelected = userSelectedSkills.includes(a.skill_name);
+            const bIsSelected = userSelectedSkills.includes(b.skill_name);
+
+            if (aIsSelected && !bIsSelected) return -1;
+            if (!aIsSelected && bIsSelected) return 1;
+
+            const aIsMember = myMembershipsData.some(m => m.guild_id === a.id);
+            const bIsMember = myMembershipsData.some(m => m.guild_id === b.id);
+
+            if (aIsMember && !bIsMember) return -1;
+            if (!aIsMember && bIsMember) return 1;
 
             // Secondary sort: Number of tasks for this skill (descending)
             return (Number(b.intel?.submitted_tasks_count || 0)) - (Number(a.intel?.submitted_tasks_count || 0));
@@ -185,9 +198,14 @@ const GuildsDashboard = () => {
 
       <Typography variant="h4" className="section-title">GUILD REGISTRY</Typography>
       <Grid container spacing={4}>
-        {guilds.map(guild => (
+        {guilds.map(guild => {
+          const isSelected = userProfile?.skills?.includes(guild.skill_name);
+          const isMember = myMemberships.some(m => m.guild_id === guild.id);
+          const cardClass = isSelected ? 'selected-skill' : (isMember ? 'active-contribution' : '');
+
+          return (
           <Grid item xs={12} sm={6} md={4} key={guild.id}>
-            <Card className="cyber-card">
+            <Card className={`cyber-card ${cardClass}`}>
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h5" className="guild-name">{guild.name}</Typography>
@@ -237,7 +255,8 @@ const GuildsDashboard = () => {
               </CardContent>
             </Card>
           </Grid>
-        ))}
+          );
+        })}
       </Grid>
 
       <Box className="pending-requests-section">
