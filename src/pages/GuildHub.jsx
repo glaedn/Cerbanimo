@@ -92,9 +92,9 @@ const GuildHub = () => {
               <Box mb={4}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="caption" color="gray">HEALTH SCORE</Typography>
-                  <Typography variant="caption" color="#00f3ff">{(guild.intel?.health_score * 100 || 50).toFixed(0)}%</Typography>
+                  <Typography variant="caption" color="#00f3ff">{(Number(guild.intel?.health_score || 0) * 100).toFixed(0)}%</Typography>
                 </Box>
-                <LinearProgress variant="determinate" value={(guild.intel?.health_score || 0.5) * 100} className="hub-progress" />
+                <LinearProgress variant="determinate" value={Number(guild.intel?.health_score || 0) * 100} className="hub-progress" />
               </Box>
 
               <Grid container spacing={2} mb={4}>

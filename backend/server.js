@@ -271,8 +271,35 @@ initializeDatabase().then(async () => {
   // Post-initialization synchronization
   try {
     await GuildService.syncGuildsWithSkills();
+
+    console.log('Performing initial intelligence scoring...');
+    // Initial score all unassigned tasks
+    const tasks = await pool.query("SELECT id FROM tasks WHERE status LIKE '%unassigned'");
+    for (const task of tasks.rows) {
+      await TaskRoutingService.calculatePriorityScore(task.id);
+    }
+
+    // Initial score all active projects
+    const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
+    for (const project of projects.rows) {
+      await ProjectHealthService.calculateHealthScore(project.id);
+    }
+
+    // Initial score all guilds
+    const guilds = await pool.query("SELECT id FROM guilds WHERE status != 'dissolved'");
+    for (const guild of guilds.rows) {
+      await GuildHealthService.calculateGuildMetrics(guild.id);
+    }
+
+    // Initial score all active constellations
+    const constellations = await pool.query("SELECT id FROM constellations WHERE status NOT IN ('completed', 'dissolved')");
+    for (const constellation of constellations.rows) {
+      await ConstellationHealthService.calculateConstellationMetrics(constellation.id);
+    }
+    console.log('Initial intelligence scoring complete.');
+
   } catch (syncError) {
-    console.error('Failed to sync guilds with skills:', syncError);
+    console.error('Failed to sync or perform initial scoring:', syncError);
   }
 
   server.listen(PORT, () => {

@@ -4,6 +4,31 @@ import pool from '../db.js';
 
 const router = express.Router();
 
+router.get('/', async (req, res) => {
+  try {
+    const query = `
+      SELECT g.*, s.name as skill_name, s.description as skill_description,
+             (SELECT json_build_object(
+                'health_score', gm.health_score,
+                'task_demand', gm.task_demand,
+                'verification_pass_rate', gm.verification_pass_rate,
+                'submitted_tasks_count', gm.submitted_tasks_count
+              )
+              FROM guild_metrics gm
+              WHERE gm.guild_id = g.id
+              ORDER BY gm.recorded_at DESC
+              LIMIT 1
+             ) as intel
+      FROM guilds g
+      JOIN skills s ON g.skill_id = s.id
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/requests', async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM skill_requests WHERE status = 'pending'");
@@ -30,7 +55,7 @@ router.get('/:id', async (req, res) => {
     const intel = await GuildService.getGuildIntelligence(req.params.id);
 
     const membersQuery = `
-      SELECT gm.*, u.username as user_name, u.profile_picture
+      SELECT gm.*, u.name as user_name, u.avatar_url
       FROM guild_memberships gm
       JOIN users u ON gm.user_id = u.id
       WHERE gm.guild_id = $1

@@ -34,21 +34,11 @@ const GuildsDashboard = () => {
         });
         setPlatformUserId(profileRes.data.id);
 
-        // Fetch Skills (which have associated guilds)
-        const skillsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
+        // Fetch Guilds with intelligence
+        const guildsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
-        const guildsWithIntel = await Promise.all(skillsRes.data.map(async (skill) => {
-           try {
-             const intelRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/${skill.id}/intelligence`, {
-                headers: { Authorization: `Bearer ${token}` }
-             });
-             return { ...skill, intel: intelRes.data || { health_score: 0.5, task_demand: 0.7, verification_pass_rate: 0.9 } };
-           } catch {
-             return { ...skill, intel: { health_score: 0.5, task_demand: 0.7, verification_pass_rate: 0.9 } };
-           }
-        }));
+        const guildsWithIntel = guildsRes.data || [];
 
         const membershipsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/my-memberships/${profileRes.data.id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -65,7 +55,7 @@ const GuildsDashboard = () => {
             if (!aMember && bMember) return 1;
 
             // Secondary sort: Number of tasks for this skill (descending)
-            return (b.intel?.submitted_tasks_count || 0) - (a.intel?.submitted_tasks_count || 0);
+            return (Number(b.intel?.submitted_tasks_count || 0)) - (Number(a.intel?.submitted_tasks_count || 0));
         });
 
         setGuilds(sortedGuilds);
@@ -211,11 +201,11 @@ const GuildsDashboard = () => {
                 <Box mb={3}>
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography variant="caption" sx={{ color: '#888', fontFamily: 'Orbitron' }}>GUILD HEALTH</Typography>
-                    <Typography variant="caption" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>{(guild.intel?.health_score * 100 || 50).toFixed(0)}%</Typography>
+                    <Typography variant="caption" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>{(Number(guild.intel?.health_score || 0) * 100).toFixed(0)}%</Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={(guild.intel?.health_score || 0.5) * 100}
+                    value={Number(guild.intel?.health_score || 0) * 100}
                     className="health-bar"
                   />
                 </Box>
@@ -224,14 +214,14 @@ const GuildsDashboard = () => {
                   <Grid item xs={6}>
                     <Box className="metric-box">
                       <TrendingUp size={16} color="#00f3ff" />
-                      <Typography className="metric-value">{(guild.intel?.task_demand * 100 || 70).toFixed(0)}%</Typography>
+                      <Typography className="metric-value">{(Number(guild.intel?.task_demand || 0) * 100).toFixed(0)}%</Typography>
                       <Typography className="metric-label">DEMAND</Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={6}>
                     <Box className="metric-box">
                       <Shield size={16} color="#00f3ff" />
-                      <Typography className="metric-value">{(guild.intel?.verification_pass_rate * 100 || 95).toFixed(0)}%</Typography>
+                      <Typography className="metric-value">{(Number(guild.intel?.verification_pass_rate || 0) * 100).toFixed(0)}%</Typography>
                       <Typography className="metric-label">VERIFIED</Typography>
                     </Box>
                   </Grid>
