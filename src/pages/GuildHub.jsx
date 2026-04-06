@@ -211,7 +211,7 @@ const GuildHub = () => {
                     secondaryTypographyProps={{ className: 'm-desc' }}
                   />
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 2 }}>
-                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', fontFamily: 'Orbitron', fontWeight: 'bold' }} />
+                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff9ecb', borderColor: '#ff5ca2', fontFamily: 'Orbitron', fontWeight: 'bold' }} />
                     <Button
                       variant="outlined"
                       className="mission-btn"
