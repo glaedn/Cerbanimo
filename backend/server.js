@@ -200,6 +200,16 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 // Roadmap Background Workers
+// Sync Guild Memberships (Every 15 minutes)
+cron.schedule('*/15 * * * *', async () => {
+  console.log('Running guild membership synchronization...');
+  try {
+    await GuildService.syncMembershipsWithSkills();
+  } catch (err) {
+    console.error('Membership sync worker failed:', err);
+  }
+});
+
 // Dynamic Reward & Decay Adjustment (Every 6 hours)
 cron.schedule('0 */6 * * *', async () => {
   console.log('Running dynamic reward and decay adjustment');
@@ -271,6 +281,7 @@ initializeDatabase().then(async () => {
   // Post-initialization synchronization
   try {
     await GuildService.syncGuildsWithSkills();
+    await GuildService.syncMembershipsWithSkills();
 
     console.log('Performing initial intelligence scoring...');
     // Initial score all unassigned tasks
