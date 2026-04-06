@@ -274,7 +274,7 @@ initializeDatabase().then(async () => {
 
     console.log('Performing initial intelligence scoring...');
     // Initial score all unassigned tasks
-    const tasks = await pool.query("SELECT id FROM tasks WHERE status LIKE '%unassigned'");
+    const tasks = await pool.query("SELECT id FROM tasks WHERE status LIKE $1", ['%unassigned']);
     for (const task of tasks.rows) {
       await TaskRoutingService.calculatePriorityScore(task.id);
     }
