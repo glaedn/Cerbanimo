@@ -731,6 +731,15 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                     </div>
                                                     
                                                     <div className="vote-actions">
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            startIcon={<RocketLaunchIcon />}
+                                                            onClick={() => navigate('/constellations', { state: { prefill: { communityId, project: proposal } } })}
+                                                            sx={{ mr: 1, color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                                                        >
+                                                            REQUEST CONSTELLATION
+                                                        </Button>
                                                         <Tooltip title="Approve">
                                                             <IconButton 
                                                                 onClick={() => handleVoteProject(proposal.id, true)}
@@ -914,22 +923,32 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         <Chip key={idx} label={tag} size="small" /* sx from CSS */ />
                                                     ))}
                                                 </div>
-                                                <Button 
-                                                    variant="outlined" 
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
-                                                    className="view-project-btn" // CSS handles margin-top: auto
-                                                    sx={{
-                                                        color: 'var(--hud-primary-color)',
-                                                        borderColor: 'var(--hud-primary-color)',
-                                                        '&:hover': {
-                                                            backgroundColor: 'rgba(var(--hud-primary-color-rgb), 0.1)',
-                                                            borderColor: 'var(--hud-glow-color)',
-                                                            boxShadow: '0 0 8px var(--hud-glow-color)',
-                                                        }
-                                                    }}
-                                                >
-                                                    View Project
-                                                </Button>
+                                                <Box display="flex" flexDirection="column" gap={1} mt="auto">
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                        className="view-project-btn"
+                                                        sx={{
+                                                            color: 'var(--hud-primary-color)',
+                                                            borderColor: 'var(--hud-primary-color)',
+                                                            '&:hover': {
+                                                                backgroundColor: 'rgba(var(--hud-primary-color-rgb), 0.1)',
+                                                                borderColor: 'var(--hud-glow-color)',
+                                                                boxShadow: '0 0 8px var(--hud-glow-color)',
+                                                            }
+                                                        }}
+                                                    >
+                                                        View Project
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        startIcon={<RocketLaunchIcon />}
+                                                        onClick={() => navigate('/constellations', { state: { prefill: { communityId, project } } })}
+                                                        sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                                                    >
+                                                        REQUEST CONSTELLATION
+                                                    </Button>
+                                                </Box>
                                             </CardContent>
                                         </Card>
                                     ))}

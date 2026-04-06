@@ -183,7 +183,7 @@ const GuildHub = () => {
                     <Button
                       variant="outlined"
                       className="mission-btn"
-                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      onClick={() => navigate(`/Visualizer/${task.project_id}/${task.id}`)}
                     >
                       VIEW
                     </Button>
@@ -195,8 +195,8 @@ const GuildHub = () => {
                     primaryTypographyProps={{ className: 'm-name' }}
                     secondaryTypographyProps={{ className: 'm-desc' }}
                   />
-                  <Box sx={{ mr: 4 }}>
-                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
+                  <Box sx={{ mr: 6 }}>
+                    <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }} />
                   </Box>
                 </ListItem>
               ))}

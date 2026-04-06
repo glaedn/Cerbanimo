@@ -9,7 +9,6 @@ const createVerificationTables = async () => {
       status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
       proof_of_work_link TEXT, -- Optional, for oracle model
       accuracy_score NUMERIC, -- Calibrated against quorum
-      result TEXT, -- Add appropriate type for result column
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;

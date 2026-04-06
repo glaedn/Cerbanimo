@@ -8,11 +8,12 @@ import {
 } from '@mui/material';
 import Paper from '@mui/material/Paper';
 import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ConstellationHub = () => {
   const { getAccessTokenSilently, user } = useAuth0();
   const navigate = useNavigate();
+  const location = useLocation();
   const [constellations, setConstellations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formModalOpen, setFormModalOpen] = useState(false);
@@ -49,7 +50,8 @@ const ConstellationHub = () => {
         const communitiesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${profileRes.data.id}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        setUserCommunities(communitiesRes.data || []);
+        const userComms = communitiesRes.data || [];
+        setUserCommunities([{ id: 'personal', name: 'Personal (Self)' }, ...userComms]);
 
         // Fetch all communities for the dropdown
         const allComRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
@@ -58,13 +60,32 @@ const ConstellationHub = () => {
         setAllCommunities(allComRes.data.communities || []);
 
         setLoading(false);
+
+        // Pre-fill check
+        if (location.state?.prefill) {
+            const { communityId, project } = location.state.prefill;
+            setFormModalOpen(true);
+            setNewConstellation(prev => ({
+                ...prev,
+                initialCommunityId: communityId,
+                initialProjectId: project.id
+            }));
+
+            // Fetch projects for the pre-filled entity
+            const projRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/eligible-projects`, {
+                params: { communityId: communityId, userId: profileRes.data.id },
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setEligibleProjects(projRes.data || []);
+        }
+
       } catch (err) {
         console.error("Failed to fetch constellation data:", err);
         setLoading(false);
       }
     };
     if (user) fetchData();
-  }, [getAccessTokenSilently, user]);
+  }, [getAccessTokenSilently, user, location.state]);
 
   const handleFormSubmit = async () => {
     try {
@@ -443,11 +464,12 @@ const ConstellationHub = () => {
           <Autocomplete
             options={userCommunities}
             getOptionLabel={(option) => option.name}
+            value={userCommunities.find(c => c.id === newConstellation.initialCommunityId) || null}
             onChange={async (event, newValue) => {
               setNewConstellation({...newConstellation, initialCommunityId: newValue?.id || null});
               const token = await getAccessTokenSilently();
               const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/eligible-projects`, {
-                  params: { communityId: newValue?.id, userId: platformUserId },
+                  params: { communityId: newValue?.id === 'personal' ? null : newValue?.id, userId: platformUserId },
                   headers: { Authorization: `Bearer ${token}` }
               });
               setEligibleProjects(res.data || []);
@@ -473,6 +495,7 @@ const ConstellationHub = () => {
           <Autocomplete
             options={eligibleProjects}
             getOptionLabel={(option) => option.name}
+            value={eligibleProjects.find(p => p.id === newConstellation.initialProjectId) || null}
             onChange={(event, newValue) => {
               setNewConstellation({...newConstellation, initialProjectId: newValue?.id || null});
             }}
