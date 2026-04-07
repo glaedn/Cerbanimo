@@ -103,7 +103,7 @@ class ResourceService {
   async getBookingSchedule(userId) {
     // Resources owned by user and their allocations
     const query = `
-      SELECT ra.*, r.name as resource_name, t.name as task_name, u.name as requester_name
+      SELECT ra.*, r.name as resource_name, t.name as task_name, u.username as requester_name
       FROM resource_allocations ra
       JOIN resources r ON ra.resource_id = r.id
       LEFT JOIN tasks t ON ra.task_id = t.id
