@@ -218,11 +218,18 @@ const CommunityHub = () => {
                 directApproved = projectResults.filter(r => r !== null).map(r => r.data);
             }
 
-            const allActive = [...directApproved, ...sharedProjects.filter(p => p.status === 'active')];
-            setApprovedProjects(allActive);
+            const directApprovedIds = new Set(directApproved.map(p => p.id));
+            const directProposalIds = new Set(directProposals.map(p => p.id));
 
-            const sharedPlanning = sharedProjects.filter(p => p.status === 'planning');
-            setProposals([...directProposals, ...sharedPlanning]);
+            const filteredSharedActive = sharedProjects.filter(p =>
+                p.status === 'active' && !directApprovedIds.has(p.id) && !directProposalIds.has(p.id)
+            );
+            const filteredSharedPlanning = sharedProjects.filter(p =>
+                p.status === 'planning' && !directApprovedIds.has(p.id) && !directProposalIds.has(p.id)
+            );
+
+            setApprovedProjects([...directApproved, ...filteredSharedActive]);
+            setProposals([...directProposals, ...filteredSharedPlanning]);
 
         } catch (error) {
             console.error('Failed to fetch community data:', error);

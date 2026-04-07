@@ -58,19 +58,20 @@ const GuildsDashboard = () => {
             const aIsMember = myMembershipsData.some(m => m.guild_id === a.id);
             const bIsMember = myMembershipsData.some(m => m.guild_id === b.id);
 
-            if (aIsMember && !bIsMember) return -1;
-            if (!aIsMember && bIsMember) return 1;
+            if (aIsMember !== bIsMember) {
+                return aIsMember ? -1 : 1;
+            }
 
-            // Secondary sort: User's selected skills
+            // Sort by number of submitted tasks (descending)
+            const aTasks = Number(a.intel?.submitted_tasks_count || 0);
+            const bTasks = Number(b.intel?.submitted_tasks_count || 0);
+            if (bTasks !== aTasks) return bTasks - aTasks;
+
+            // User's selected skills as tie-breaker
             const aIsSelected = userSelectedSkills.includes(a.skill_name);
             const bIsSelected = userSelectedSkills.includes(b.skill_name);
             if (aIsSelected && !bIsSelected) return -1;
             if (!aIsSelected && bIsSelected) return 1;
-
-            // Tertiary sort: Number of tasks for this skill (descending)
-            const aTasks = Number(a.intel?.submitted_tasks_count || 0);
-            const bTasks = Number(b.intel?.submitted_tasks_count || 0);
-            if (bTasks !== aTasks) return bTasks - aTasks;
 
             return 0;
         });

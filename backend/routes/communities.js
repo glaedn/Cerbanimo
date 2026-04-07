@@ -211,7 +211,7 @@ router.get("/:communityId", async (req, res) => {
               ) as interest_names,
               COALESCE(
                   (
-                      SELECT array_agg(cm_proj.entity_id)
+                      SELECT array_agg(DISTINCT cm_proj.entity_id)
                       FROM constellation_members cm_proj
                       JOIN constellation_members cm_comm ON cm_proj.constellation_id = cm_comm.constellation_id
                       WHERE cm_comm.entity_id = c.id
