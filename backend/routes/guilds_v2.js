@@ -55,7 +55,7 @@ router.get('/:id', async (req, res) => {
     const intel = await GuildService.getGuildIntelligence(req.params.id);
 
     const membersQuery = `
-      SELECT gm.*, u.username as user_name, u.profile_picture
+      SELECT gm.*, u.name as user_name, u.avatar_url
       FROM guild_memberships gm
       JOIN users u ON gm.user_id = u.id
       WHERE gm.guild_id = $1

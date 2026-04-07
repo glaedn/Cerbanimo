@@ -208,7 +208,18 @@ router.get("/:communityId", async (req, res) => {
                       WHERE i.id = ANY(c.interest_tags)
                   ),
                   '[]'::jsonb
-              ) as interest_names
+              ) as interest_names,
+              COALESCE(
+                  (
+                      SELECT array_agg(cm_proj.entity_id)
+                      FROM constellation_members cm_proj
+                      JOIN constellation_members cm_comm ON cm_proj.constellation_id = cm_comm.constellation_id
+                      WHERE cm_comm.entity_id = c.id
+                      AND cm_comm.entity_type = 'community'
+                      AND cm_proj.entity_type = 'project'
+                  ),
+                  ARRAY[]::integer[]
+              ) as shared_project_ids
           FROM community_data c
       `;
     const result = await client.query(query, [communityId]);
@@ -408,7 +419,7 @@ router.post("/:communityId/vote/:projectId", async (req, res) => {
          WHERE id = $2`,
         [projectId, communityId]
       );
-      await client.query(`UPDATE projects SET token_pool = 400 WHERE id = $1`, [
+      await client.query(`UPDATE projects SET token_pool = 400, status = 'active' WHERE id = $1`, [
         projectId,
       ]);
     }
