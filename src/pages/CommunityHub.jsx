@@ -110,133 +110,129 @@ const CommunityHub = () => {
         fetchUserProfile();
     }, [isAuthenticated, user, getAccessTokenSilently]);
 
-    useEffect(() => {
-        const fetchCommunityData = async () => {
-            if (!communityId || !userId) { setIsLoading(false); return; }
-            
-            try {
-                setIsLoading(true);
-                const token = await getAccessTokenSilently({
-                    audience: import.meta.env.VITE_BACKEND_URL,
-                    scope: 'openid profile email',
-                });
+    const fetchCommunityData = async (showLoading = true) => {
+        if (!communityId || !userId) { if (showLoading) setIsLoading(false); return; }
 
-                // Fetch community details
-                console.log('Fetching community data for ID:', communityId);
-const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-});
-console.log('Community Data:', communityResponse.data);
-setCommunity(communityResponse.data);
-
-// Debug members array
-console.log('Members array:', communityResponse.data.members);
-console.log('Members array type:', typeof communityResponse.data.members);
-
-// Fetch member details
-if (communityResponse.data.members && communityResponse.data.members.length > 0) {
-    const memberPromises = communityResponse.data.members.map(memberId => {
-        console.log('Fetching member:', memberId);
-        return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).catch(error => {
-            console.error(`Failed to fetch member ${memberId}:`, error);
-            return null;
-        });
-    });
-    
-    const memberResults = await Promise.all(memberPromises);
-    const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
-    console.log('Fetched members:', validMembers);
-    setMembers(validMembers);
-
-    // Fetch member scores
-    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
         try {
-            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
+            if (showLoading) setIsLoading(true);
+            const token = await getAccessTokenSilently({
+                audience: import.meta.env.VITE_BACKEND_URL,
+                scope: 'openid profile email',
+            });
+
+            // Fetch community details
+            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            console.log('Fetched member scores:', scoresResponse.data);
-            setMemberScores(scoresResponse.data);
-        } catch (scoresError) {
-            console.error('Failed to fetch member scores:', scoresError);
-            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
-            setMemberScores([]); 
-        }
-    } else {
-        setMemberScores([]); // No members, so no scores
-    }
+            setCommunity(communityResponse.data);
 
-} else {
-    console.log('No members in this community');
-    setMembers([]);
-    setMemberScores([]); // No members, so no scores
-}
-                
-                // Fetch membership requests
-                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                console.log('Membership Requests:', requestsResponse.data);
-                console.log('User ID:', userId);
-                // Check if current user has already requested to join
-                if (userId) {
-                    setHasRequestedJoin(requestsResponse.data.some(request => 
-                        String(request.user_id) === String(userId)
-                    ));
-                }
-                
-                // Fetch user data for each request
-                const requestUserPromises = requestsResponse.data.map(request => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
+            // Fetch member details
+            if (communityResponse.data.members && communityResponse.data.members.length > 0) {
+                const memberPromises = communityResponse.data.members.map(memberId => {
+                    return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
                         headers: { Authorization: `Bearer ${token}` },
-                    }).then(userResponse => ({
-                        ...request,
-                        userData: userResponse.data
-                    }))
-                );
-                
-                const requestUsers = await Promise.all(requestUserPromises);
-                setMembershipRequests(requestUsers);
-
-                // Fetch constellation invites
-                const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
+                    }).catch(() => null);
                 });
-                setConstellationInvites(constellationInvitesRes.data);
                 
-                // Fetch proposal details
-                if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                    const proposalPromises = communityResponse.data.proposals.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                        })
-                    );
-                    
-                    const proposalResults = await Promise.all(proposalPromises);
-                    setProposals(proposalResults.map(result => result.data));
-                }
-                
-                // Fetch approved projects
-                if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                    const projectPromises = communityResponse.data.approved_projects.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                        })
-                    );
-                    
-                    const projectResults = await Promise.all(projectPromises);
-                    setApprovedProjects(projectResults.map(result => result.data));
-                }
-                
-            } catch (error) {
-                console.error('Failed to fetch community data:', error);
-                setError('Failed to load community data. Please try again later.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+                const memberResults = await Promise.all(memberPromises);
+                const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
+                setMembers(validMembers);
 
+                // Fetch member scores
+                try {
+                    const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    setMemberScores(scoresResponse.data);
+                } catch (scoresError) {
+                    console.error('Failed to fetch member scores:', scoresError);
+                    setMemberScores([]);
+                }
+            } else {
+                setMembers([]);
+                setMemberScores([]);
+            }
+
+            // Fetch membership requests
+            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (userId) {
+                setHasRequestedJoin(requestsResponse.data.some(request =>
+                    String(request.user_id) === String(userId)
+                ));
+            }
+
+            const requestUserPromises = requestsResponse.data.map(request =>
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }).then(userResponse => ({
+                    ...request,
+                    userData: userResponse.data
+                })).catch(() => null)
+            );
+
+            const requestUsers = await Promise.all(requestUserPromises);
+            setMembershipRequests(requestUsers.filter(r => r !== null));
+
+            // Fetch constellation invites
+            const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setConstellationInvites(constellationInvitesRes.data);
+
+            // Fetch and categorize shared projects
+            let sharedProjects = [];
+            if (communityResponse.data.shared_project_ids && communityResponse.data.shared_project_ids.length > 0) {
+                const sharedPromises = communityResponse.data.shared_project_ids.map(id =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${id}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    }).catch(() => null)
+                );
+                const sharedResults = await Promise.all(sharedPromises);
+                sharedProjects = sharedResults.filter(r => r !== null).map(r => ({ ...r.data, isShared: true }));
+            }
+
+            // Fetch proposal details
+            let directProposals = [];
+            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
+                const proposalPromises = communityResponse.data.proposals.map(projectId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }).catch(() => null)
+                );
+                const proposalResults = await Promise.all(proposalPromises);
+                directProposals = proposalResults.filter(r => r !== null).map(r => r.data);
+            }
+
+            // Fetch approved projects
+            let directApproved = [];
+            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
+                const projectPromises = communityResponse.data.approved_projects.map(projectId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }).catch(() => null)
+                );
+                const projectResults = await Promise.all(projectPromises);
+                directApproved = projectResults.filter(r => r !== null).map(r => r.data);
+            }
+
+            const allActive = [...directApproved, ...sharedProjects.filter(p => p.status === 'active')];
+            setApprovedProjects(allActive);
+
+            const sharedPlanning = sharedProjects.filter(p => p.status === 'planning');
+            setProposals([...directProposals, ...sharedPlanning]);
+
+        } catch (error) {
+            console.error('Failed to fetch community data:', error);
+            setError('Failed to load community data. Please try again later.');
+        } finally {
+            if (showLoading) setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchCommunityData();
     }, [communityId, getAccessTokenSilently, userId]);
 
@@ -338,36 +334,8 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
             
             setCommunity(communityResponse.data);
     
-            // After voting, we need to fully refresh both proposals and approved projects
-            // First, get all current proposals from the API
-            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                const proposalPromises = communityResponse.data.proposals.map(propId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${propId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    })
-                );
-                
-                const proposalResults = await Promise.all(proposalPromises);
-                setProposals(proposalResults.map(result => result.data));
-            } else {
-                // If no proposals are left, set to empty array
-                setProposals([]);
-            }
-            
-            // Then get all approved projects from the API
-            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                const projectPromises = communityResponse.data.approved_projects.map(projId => 
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    })
-                );
-                
-                const projectResults = await Promise.all(projectPromises);
-                setApprovedProjects(projectResults.map(result => result.data));
-            } else {
-                // If no approved projects, set to empty array
-                setApprovedProjects([]);
-            }
+            // Refresh the entire community data after voting
+            await fetchCommunityData(false);
             
         } catch (error) {
             console.error('Failed to vote on project:', error);
@@ -690,20 +658,22 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                         {proposals.map((proposal) => (
                                             <ListItem key={proposal.id} className="proposal-entry">
                                                 <div className="proposal-content">
-                                                    <Link
-                                                        component="button"
-                                                        variant="h6"
-                                                        onClick={() => navigate(`/visualizer/${proposal.id}`)}
-                                                        className="clickable-title" // CSS handles base style
-                                                        sx={{ 
-                                                            textAlign: 'center', 
-                                                            display: 'block', // Ensure it takes full width for centering
-                                                            marginBottom: '8px',
-                                                            // sx for Link component might need different approach for color if not inheriting
-                                                        }}
-                                                    >
-                                                        {proposal.name}
-                                                    </Link>
+                                                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} mb={1}>
+                                                        <Link
+                                                            component="button"
+                                                            variant="h6"
+                                                            onClick={() => navigate(`/visualizer/${proposal.id}`)}
+                                                            className="clickable-title" // CSS handles base style
+                                                            sx={{
+                                                                textAlign: 'center',
+                                                                display: 'block', // Ensure it takes full width for centering
+                                                                // sx for Link component might need different approach for color if not inheriting
+                                                            }}
+                                                        >
+                                                            {proposal.name}
+                                                        </Link>
+                                                        {proposal.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.2)', color: '#ff5ca2', fontSize: '0.6rem', height: '20px' }} />}
+                                                    </Box>
                                                     <Typography variant="body2" className="proposal-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                         {proposal.description}
                                                     </Typography>
@@ -740,34 +710,38 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                                         >
                                                             REQUEST CONSTELLATION
                                                         </Button>
-                                                        <Tooltip title="Approve">
-                                                            <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, true)}
-                                                                sx={{ 
-                                                                    color: 'var(--hud-success-color)', 
-                                                                    '&:hover': { 
-                                                                        backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)', // Define --hud-success-color-rgb or use static
-                                                                        boxShadow: '0 0 8px var(--hud-success-color)',
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <CheckCircleIcon />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        <Tooltip title="Reject">
-                                                            <IconButton 
-                                                                onClick={() => handleVoteProject(proposal.id, false)}
-                                                                sx={{ 
-                                                                    color: 'var(--hud-error-color)', 
-                                                                    '&:hover': { 
-                                                                        backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)', // Define --hud-error-color-rgb or use static
-                                                                        boxShadow: '0 0 8px var(--hud-error-color)',
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <CancelIcon />
-                                                            </IconButton>
-                                                        </Tooltip>
+                                                        {!proposal.isShared && (
+                                                            <>
+                                                                <Tooltip title="Approve">
+                                                                    <IconButton
+                                                                        onClick={() => handleVoteProject(proposal.id, true)}
+                                                                        sx={{
+                                                                            color: 'var(--hud-success-color)',
+                                                                            '&:hover': {
+                                                                                backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)', // Define --hud-success-color-rgb or use static
+                                                                                boxShadow: '0 0 8px var(--hud-success-color)',
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <CheckCircleIcon />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Reject">
+                                                                    <IconButton
+                                                                        onClick={() => handleVoteProject(proposal.id, false)}
+                                                                        sx={{
+                                                                            color: 'var(--hud-error-color)',
+                                                                            '&:hover': {
+                                                                                backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)', // Define --hud-error-color-rgb or use static
+                                                                                boxShadow: '0 0 8px var(--hud-error-color)',
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <CancelIcon />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </ListItem>
@@ -906,15 +880,18 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                                     {approvedProjects.map((project) => (
                                         <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
-                                                <Link
-                                                    component="button"
-                                                    variant="h6"
-                                                    onClick={() => navigate(`/visualizer/${project.id}`)}
-                                                    className="clickable-title" // CSS handles base style
-                                                    sx={{ textAlign: 'center', display: 'block', marginBottom: '8px' }}
-                                                >
-                                                    {project.name}
-                                                </Link>
+                                                <Box display="flex" justifyContent="center" alignItems="center" gap={1} mb={1}>
+                                                    <Link
+                                                        component="button"
+                                                        variant="h6"
+                                                        onClick={() => navigate(`/visualizer/${project.id}`)}
+                                                        className="clickable-title" // CSS handles base style
+                                                        sx={{ textAlign: 'center', display: 'block' }}
+                                                    >
+                                                        {project.name}
+                                                    </Link>
+                                                    {project.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.2)', color: '#ff5ca2', fontSize: '0.6rem', height: '20px' }} />}
+                                                </Box>
                                                 <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                     {project.description}
                                                 </Typography>

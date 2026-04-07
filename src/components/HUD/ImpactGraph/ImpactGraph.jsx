@@ -32,19 +32,25 @@ const ImpactGraph = ({ projectId, realmId, width, height }) => {
 
   return (
     <div className="impact-graph-container" style={{ width: width || '100%', height: height || '400px' }}>
-      <ForceGraph2D
-        ref={graphRef}
-        graphData={data}
-        nodeColor={n => getNodeColor(n.type)}
-        nodeLabel={n => `${n.type.toUpperCase()}: ${n.label}`}
-        linkColor={() => 'rgba(0, 255, 255, 0.2)'}
-        linkDirectionalArrowLength={3.5}
-        linkDirectionalArrowRelPos={1}
-        backgroundColor="rgba(0,0,0,0)"
-        nodeRelSize={6}
-        width={width}
-        height={height}
-      />
+      {data && data.nodes && data.nodes.length > 0 ? (
+        <ForceGraph2D
+          ref={graphRef}
+          graphData={data}
+          nodeColor={n => getNodeColor(n.type)}
+          nodeLabel={n => `${n.type.toUpperCase()}: ${n.label}`}
+          linkColor={() => 'rgba(0, 255, 255, 0.2)'}
+          linkDirectionalArrowLength={3.5}
+          linkDirectionalArrowRelPos={1}
+          backgroundColor="rgba(0,0,0,0)"
+          nodeRelSize={6}
+          width={width}
+          height={height}
+        />
+      ) : (
+        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+           No impact graph data available
+        </div>
+      )}
     </div>
   );
 };
