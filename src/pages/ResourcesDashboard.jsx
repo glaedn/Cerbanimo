@@ -6,16 +6,25 @@ import {
   Button, List, ListItem, ListItemText, Modal, TextField,
   CircularProgress, Divider, Paper
 } from '@mui/material';
-import { Box as BoxIcon, Calendar, Wrench, MapPin, Plus } from 'lucide-react';
+import { Box as BoxIcon, Calendar, Wrench, MapPin, Plus, Search, Book } from 'lucide-react';
 import ResourceListingForm from '../components/ResourceListingForm/ResourceListingForm';
 
 const ResourcesDashboard = () => {
   const { getAccessTokenSilently, user } = useAuth0();
   const [resources, setResources] = useState([]);
+  const [catalog, setCatalog] = useState([]);
   const [allocations, setAllocations] = useState([]);
+  const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState(null);
   const [platformUserId, setPlatformUserId] = useState(null);
+  const [assignedTasks, setAssignedTasks] = useState([]);
+  const [bookingForm, setBookingForm] = useState({ taskId: '', startTime: '', endTime: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isConflictOpen, setIsConflictOpen] = useState(false);
+  const [selectedConflict, setSelectedConflict] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,10 +41,26 @@ const ResourcesDashboard = () => {
         });
         setResources(resourcesRes.data || []);
 
-        // Mock allocations for now
-        setAllocations([
-            { id: 1, resourceName: '3D Printer', taskName: 'Prototype Housing', startTime: '2023-10-27 10:00', status: 'reserved' }
-        ]);
+        const catalogRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/catalog`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setCatalog(catalogRes.data || []);
+
+        const scheduleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/schedule/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setAllocations(scheduleRes.data || []);
+
+        const tasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted`, {
+            params: { userId },
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setAssignedTasks(tasksRes.data || []);
+
+        const conflictsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/conflicts/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        setConflicts(conflictsRes.data || []);
 
         setLoading(false);
       } catch (err) {
@@ -50,14 +75,71 @@ const ResourcesDashboard = () => {
     try {
       const token = await getAccessTokenSilently();
       const payload = { ...resourceData, ownerUserId: platformUserId };
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/allocate`, payload, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/add`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsModalOpen(false);
-      alert("Resource listed/allocated successfully.");
+
+      // Refresh inventory
+      const resourcesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/inventory/${platformUserId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setResources(resourcesRes.data || []);
+
+      alert("Resource listed successfully.");
     } catch (err) {
       alert("Failed to process resource.");
     }
+  };
+
+  const handleBookingSubmit = async () => {
+      try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/allocate`, {
+              ...bookingForm,
+              resourceId: selectedResource.id,
+              userId: platformUserId
+          }, { headers: { Authorization: `Bearer ${token}` } });
+
+          alert(`Booking successful. ${response.data.conflictCount > 0 ? `Detected ${response.data.conflictCount} overlaps requiring resolution.` : ''}`);
+          setIsBookingOpen(false);
+
+          // Refresh schedule
+          const scheduleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/schedule/${platformUserId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setAllocations(scheduleRes.data || []);
+      } catch (err) {
+          alert("Failed to book resource.");
+      }
+  };
+
+  const handleResolveConflict = async (winningAllocationId) => {
+      const resolutionText = prompt("REASON FOR SELECTION:");
+      if (!resolutionText) return;
+
+      try {
+          const token = await getAccessTokenSilently();
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/conflicts/${selectedConflict.id}/resolve`, {
+              winningAllocationId,
+              resolutionText
+          }, { headers: { Authorization: `Bearer ${token}` } });
+
+          alert("Conflict resolved.");
+          setIsConflictOpen(false);
+
+          // Refresh data
+          const scheduleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/schedule/${platformUserId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setAllocations(scheduleRes.data || []);
+          const conflictsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources_v2/conflicts/${platformUserId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setConflicts(conflictsRes.data || []);
+      } catch (err) {
+          alert("Failed to resolve conflict.");
+      }
   };
 
   if (loading) return <Box p={4}><CircularProgress /></Box>;
@@ -66,19 +148,70 @@ const ResourcesDashboard = () => {
     <Box p={4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#e0e0e0' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h3" sx={{ fontFamily: 'Orbitron', color: '#00d787' }}>RESOURCE INVENTORY</Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Plus />}
-          onClick={() => setIsModalOpen(true)}
-          sx={{ color: '#00d787', borderColor: '#00d787' }}
-        >
-          LIST NEW RESOURCE
-        </Button>
+        <Box display="flex" gap={2}>
+            <TextField
+                size="small"
+                placeholder="Search catalog..."
+                InputProps={{ startAdornment: <Search size={18} style={{ marginRight: 8, color: '#666' }} /> }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ bgcolor: '#111', borderRadius: 1, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#333' } } }}
+            />
+            <Button
+                variant="outlined"
+                startIcon={<Plus />}
+                onClick={() => setIsModalOpen(true)}
+                sx={{ color: '#00d787', borderColor: '#00d787' }}
+            >
+                LIST NEW RESOURCE
+            </Button>
+        </Box>
       </Box>
+
+      {conflicts.length > 0 && (
+          <Box mb={4} p={2} sx={{ bgcolor: 'rgba(255, 50, 50, 0.1)', border: '1px solid #ff3232', borderRadius: 1, cursor: 'pointer' }} onClick={() => setIsConflictOpen(true)}>
+              <Typography variant="h6" color="#ff3232" gutterBottom sx={{ fontFamily: 'Orbitron' }}>BOOKING CONFLICTS DETECTED</Typography>
+              <Typography variant="body2" color="#ff8888">You have {conflicts.length} overlapping resource requests that require resolution. Click to manage.</Typography>
+          </Box>
+      )}
 
       <Grid container spacing={4}>
         <Grid item xs={12} md={8}>
-          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#00d787' }}>YOUR ASSETS</Typography>
+          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#00d787' }}>GLOBAL CATALOG</Typography>
+          <Grid container spacing={2}>
+            {catalog.filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())).map(r => (
+              <Grid item xs={12} sm={6} key={r.id}>
+                <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: '#fff', '&:hover': { borderColor: '#00d787' } }}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="h6">{r.name}</Typography>
+                      <Chip label={r.status.toUpperCase()} size="small" sx={{ bgcolor: '#003311', color: '#00d787' }} />
+                    </Box>
+                    <Typography variant="body2" color="gray" sx={{ mb: 2 }}>{r.description}</Typography>
+
+                    <Grid container spacing={1} mb={2}>
+                        <Grid item xs={6}><Box display="flex" alignItems="center" gap={1}><BoxIcon size={14} /> <Typography variant="caption">{r.category}</Typography></Box></Grid>
+                        <Grid item xs={6}><Box display="flex" alignItems="center" gap={1}><Wrench size={14} /> <Typography variant="caption">{r.condition}</Typography></Box></Grid>
+                        <Grid item xs={12}><Box display="flex" alignItems="center" gap={1}><MapPin size={14} /> <Typography variant="caption">{r.location_text || 'Remote'}</Typography></Box></Grid>
+                    </Grid>
+
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<Book size={16} />}
+                        disabled={r.owner_user_id === platformUserId}
+                        onClick={() => { setSelectedResource(r); setIsBookingOpen(true); }}
+                        sx={{ bgcolor: '#00d787', color: '#000', '&:hover': { bgcolor: '#00b572' } }}
+                    >
+                        {r.owner_user_id === platformUserId ? 'OWNED' : 'RESERVE'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', mt: 6, mb: 2, color: '#00d787' }}>YOUR ASSETS</Typography>
           <Grid container spacing={2}>
             {resources.length === 0 ? (
                 <Grid item xs={12}><Typography color="gray">No resources listed in your inventory.</Typography></Grid>
@@ -90,16 +223,7 @@ const ResourcesDashboard = () => {
                       <Typography variant="h6">{r.name}</Typography>
                       <Chip label={r.status.toUpperCase()} size="small" sx={{ bgcolor: '#003311', color: '#00d787' }} />
                     </Box>
-                    <Typography variant="body2" color="gray" sx={{ mb: 2 }}>{r.description}</Typography>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <BoxIcon size={14} /> <Typography variant="caption">{r.category} ({r.quantity} {r.unit})</Typography>
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <Wrench size={14} /> <Typography variant="caption">Condition: {r.condition}</Typography>
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <MapPin size={14} /> <Typography variant="caption">{r.location_text || 'Digital/Remote'}</Typography>
-                    </Box>
+                    <Typography variant="body2" color="gray">{r.description}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -111,15 +235,17 @@ const ResourcesDashboard = () => {
           <Typography variant="h5" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#00d787' }}>BOOKING SCHEDULE</Typography>
           <Paper sx={{ bgcolor: '#111', p: 2, border: '1px solid #333' }}>
             <List>
-              {allocations.map(a => (
+              {allocations.length === 0 ? (
+                  <ListItem><ListItemText primary="No bookings found." sx={{ color: 'gray' }} /></ListItem>
+              ) : allocations.map(a => (
                 <ListItem key={a.id} divider sx={{ borderColor: '#222', px: 0 }}>
                   <ListItemText
-                    primary={a.resourceName}
-                    secondary={`${a.taskName} | ${a.startTime}`}
+                    primary={a.resource_name}
+                    secondary={`${a.task_name || 'Coordination'} | ${new Date(a.start_time).toLocaleString()}`}
                     primaryTypographyProps={{ color: '#00d787' }}
                     secondaryTypographyProps={{ color: 'gray' }}
                   />
-                  <Chip label={a.status} size="small" variant="outlined" sx={{ color: 'gray', borderColor: 'gray' }} />
+                  <Chip label={a.status} size="small" variant="outlined" sx={{ color: '#aaa', borderColor: '#444' }} />
                 </ListItem>
               ))}
             </List>
@@ -127,6 +253,98 @@ const ResourcesDashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      <Modal open={isConflictOpen} onClose={() => setIsConflictOpen(false)}>
+          <Box sx={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              width: 600, bgcolor: '#0a0a0a', border: '2px solid #ff3232', p: 4, borderRadius: 2
+          }}>
+              <Typography variant="h5" color="#ff3232" gutterBottom sx={{ fontFamily: 'Orbitron' }}>CONFLICT RESOLUTION PROTOCOL</Typography>
+              <Typography variant="body2" color="gray" sx={{ mb: 3 }}>Multiple operatives have reserved overlapping time slots for the same resource. Select the allocation that should proceed.</Typography>
+
+              <List>
+                  {conflicts.map(c => (
+                      <Paper key={c.id} sx={{ bgcolor: '#111', p: 2, mb: 2, border: '1px solid #333' }}>
+                          <Typography variant="subtitle1" color="#ff3232" sx={{ fontFamily: 'Orbitron', mb: 2 }}>{c.resource_name.toUpperCase()}</Typography>
+
+                          <Grid container spacing={2}>
+                              <Grid item xs={6}>
+                                  <Box p={1} sx={{ bgcolor: 'rgba(0, 215, 135, 0.05)', border: '1px solid #222' }}>
+                                      <Typography variant="caption" color="gray">OPTION A</Typography>
+                                      <Typography variant="body1">{new Date(c.start_1).toLocaleString()}</Typography>
+                                      <Button size="small" variant="contained" sx={{ mt: 1, bgcolor: '#00d787', color: '#000' }} onClick={() => { setSelectedConflict(c); handleResolveConflict(c.allocation_id_1); }}>APPROVE A</Button>
+                                  </Box>
+                              </Grid>
+                              <Grid item xs={6}>
+                                  <Box p={1} sx={{ bgcolor: 'rgba(0, 215, 135, 0.05)', border: '1px solid #222' }}>
+                                      <Typography variant="caption" color="gray">OPTION B</Typography>
+                                      <Typography variant="body1">{new Date(c.start_2).toLocaleString()}</Typography>
+                                      <Button size="small" variant="contained" sx={{ mt: 1, bgcolor: '#00d787', color: '#000' }} onClick={() => { setSelectedConflict(c); handleResolveConflict(c.allocation_id_2); }}>APPROVE B</Button>
+                                  </Box>
+                              </Grid>
+                          </Grid>
+                      </Paper>
+                  ))}
+              </List>
+
+              <Button fullWidth onClick={() => setIsConflictOpen(false)} sx={{ mt: 2, color: 'gray' }}>CLOSE PROTOCOL</Button>
+          </Box>
+      </Modal>
+
+      <Modal open={isBookingOpen} onClose={() => setIsBookingOpen(false)}>
+          <Box sx={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              width: 400, bgcolor: '#1a1a1a', border: '2px solid #00d787', p: 4, borderRadius: 2
+          }}>
+              <Typography variant="h6" color="#00d787" gutterBottom sx={{ fontFamily: 'Orbitron' }}>RESERVE {selectedResource?.name.toUpperCase()}</Typography>
+
+              <TextField
+                  select
+                  fullWidth
+                  label="ASSIGNED TASK"
+                  value={bookingForm.taskId}
+                  onChange={(e) => setBookingForm({ ...bookingForm, taskId: e.target.value })}
+                  sx={{ mb: 2, mt: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#444' } } }}
+                  InputLabelProps={{ style: { color: '#00d787' } }}
+                  SelectProps={{ native: true }}
+              >
+                  <option value="" disabled></option>
+                  {assignedTasks.map(t => (
+                      <option key={t.task_id} value={t.task_id}>{t.name}</option>
+                  ))}
+              </TextField>
+
+              <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="START TIME"
+                  value={bookingForm.startTime}
+                  onChange={(e) => setBookingForm({ ...bookingForm, startTime: e.target.value })}
+                  InputLabelProps={{ shrink: true, style: { color: '#00d787' } }}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#444' } } }}
+              />
+
+              <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="END TIME"
+                  value={bookingForm.endTime}
+                  onChange={(e) => setBookingForm({ ...bookingForm, endTime: e.target.value })}
+                  InputLabelProps={{ shrink: true, style: { color: '#00d787' } }}
+                  sx={{ mb: 3, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#444' } } }}
+              />
+
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleBookingSubmit}
+                disabled={!bookingForm.taskId || !bookingForm.startTime || !bookingForm.endTime}
+                sx={{ bgcolor: '#00d787', color: '#000' }}
+              >
+                  CONFIRM RESERVATION
+              </Button>
+          </Box>
+      </Modal>
 
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <Box sx={{

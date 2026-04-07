@@ -5,6 +5,7 @@ import {
 } from "../services/taskGenerator.js";
 import StoryEngineService from "../services/StoryEngineService.js";
 import GuildService from "../services/GuildService.js";
+import ResourceService from "../services/ResourceService.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -195,7 +196,8 @@ const createNewTask = async (
   projectId,
   reward_tokens = 10,
   dependencies = [],
-  skill_level = 0
+  skill_level = 0,
+  resource_requirements = []
 ) => {
   console.log("Creating task with:", {
     name,
@@ -206,6 +208,7 @@ const createNewTask = async (
     reward_tokens,
     dependencies,
     skill_level,
+    resource_requirements,
   });
 
   const client = await pool.connect();
@@ -266,8 +269,8 @@ const createNewTask = async (
 
     // Create the task
     const createQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level, resource_requirements)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *;
     `;
 
@@ -280,6 +283,7 @@ const createNewTask = async (
       reward_tokens,
       dependencies,
       skill_level,
+      resource_requirements,
     ]);
 
     await client.query("COMMIT");
@@ -304,7 +308,8 @@ const updateTask = async (
   reward_tokens = 10,
   dependencies = [],
   assigned_user_ids,
-  skill_level = 0
+  skill_level = 0,
+  resource_requirements = []
 ) => {
   console.log("Controller received:", {
     name,
@@ -318,6 +323,7 @@ const updateTask = async (
     status,
     assigned_user_ids,
     skill_level,
+    resource_requirements,
   });
 
   const client = await pool.connect();
@@ -412,8 +418,8 @@ const updateTask = async (
     // Update task
     const updateQuery = `
       UPDATE tasks 
-      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8
-      WHERE id = $9 RETURNING *;
+      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8, resource_requirements = $9
+      WHERE id = $10 RETURNING *;
     `;
 
     console.log("Executing update with params:", [
@@ -425,6 +431,7 @@ const updateTask = async (
       dependencies,
       assigned_user_ids,
       skill_level,
+      resource_requirements,
       taskId,
     ]);
 
@@ -437,6 +444,7 @@ const updateTask = async (
       dependencies,
       assigned_user_ids,
       skill_level,
+      resource_requirements,
       taskId,
     ]);
 
@@ -632,6 +640,13 @@ const approveTask = async (taskId, io, client) => {
 
     // Set completed_at
     await localClient.query("UPDATE tasks SET completed_at = NOW() WHERE id = $1", [taskId]);
+
+    // Phase 6: Resource Layer - Complete Allocations
+    try {
+      await ResourceService.completeAllocations(taskId);
+    } catch (resError) {
+      console.error("Resource allocation finalization failed:", resError);
+    }
 
     // Phase 5: Story Engine Integration (Direct Service Call)
     try {

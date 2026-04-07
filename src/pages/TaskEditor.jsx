@@ -276,6 +276,9 @@ const TaskEditor = ({
       delete formData.dependenciesWithNames;
       if (!formData.id) delete formData.id;
 
+      // Handle resource requirements
+      formData.resource_requirements = taskForm.resource_requirements || [];
+
       const result = await onSubmit(formData);
       // Only show success if no error returned
       if (!result.error) {
@@ -661,6 +664,47 @@ const TaskEditor = ({
                 InputProps={{ inputProps: { min: 0 } }}
                 disabled={!effectiveIsEdit}
               />
+
+              <div className="cyber-section-container">
+                <InputLabel className="cyber-section-label">RESOURCE REQUIREMENTS</InputLabel>
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    className="cyber-input"
+                    placeholder="e.g., High-end Laptop, Lab Space"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.target.value.trim()) {
+                        const val = e.target.value.trim();
+                        if (!taskForm.resource_requirements?.includes(val)) {
+                          setTaskForm({
+                            ...taskForm,
+                            resource_requirements: [...(taskForm.resource_requirements || []), val]
+                          });
+                        }
+                        e.target.value = '';
+                        e.preventDefault();
+                      }
+                    }}
+                    disabled={!effectiveIsEdit}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                  {taskForm.resource_requirements?.map((res, idx) => (
+                    <Chip
+                      key={idx}
+                      label={res}
+                      onDelete={effectiveIsEdit ? () => {
+                        setTaskForm({
+                          ...taskForm,
+                          resource_requirements: taskForm.resource_requirements.filter((_, i) => i !== idx)
+                        });
+                      } : undefined}
+                      className="cyber-chip resource-chip"
+                    />
+                  ))}
+                </Box>
+              </div>
 
               <div className="cyber-button-group">
                 {isEdit ? (

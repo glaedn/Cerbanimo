@@ -61,6 +61,18 @@
     font-size: 1.1rem;
 }
 
+.proposal-description, .project-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 12px;
+    line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
 /* Hub Grid Layout */
 .hub-grid {
     display: grid;
@@ -142,6 +154,9 @@
     padding: 20px;
     border-radius: 4px;
     border-left: 3px solid var(--hud-primary-color);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .project-card h3 {

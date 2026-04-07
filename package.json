@@ -76,6 +76,7 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^3.2.4",
+    "axios-mock-adapter": "^2.1.0",
     "babel-plugin-transform-import-meta": "^2.3.3",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",

@@ -271,7 +271,7 @@ const ConstellationHub = () => {
                       variant="outlined"
                       size="small"
                       sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}
-                      onClick={() => navigate(`/Visualizer/${project.id}`)}
+                      onClick={() => navigate(`/visualizer/${project.id}`)}
                     >
                       VIEW PROJECT
                     </Button>
