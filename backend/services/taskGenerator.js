@@ -105,6 +105,7 @@ For each task below, return a **JSON array** of objects like this format:
     "name": "Subtask name",
     "description": "Brief description",
     "skill_id": "Optional related skill ID or null",
+    "resource_requirements": [Optional array of strings like "Laptop", "Meeting Space"],
     "dependencies": [Optional array of subtask names this subtask depends on]
   },
   ...
@@ -594,7 +595,26 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id} } 
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 1, "dependencies": [], "reward_tokens": 80 },
+    {
+      "id": 1,
+      "name": "Task Name",
+      "description": "Task Desc",
+      "project_id": 1,
+      "skill_id": 1,
+      "resource_requirements": ["Equipment A", "Space B"],
+      "dependencies": [],
+      "reward_tokens": 80
+    },
+    {
+      "id": 1,
+      "name": "Task Name",
+      "description": "Task Desc",
+      "project_id": 1,
+      "skill_id": 1,
+      "resource_requirements": ["Item X"],
+      "dependencies": [],
+      "reward_tokens": 80
+    },
     { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 2, "dependencies": [1], "reward_tokens": 120 },
     { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_id": 2, "dependencies": [1,2], "reward_tokens": 60 }
   ]
@@ -604,7 +624,8 @@ Expected Output Format:
 Notes:
 
 ONLY return the JSON object described.
-Dependencies are the IDs of the tasks that must be completed before this task can be started. THere can be multiple.
+Dependencies are the IDs of the tasks that must be completed before this task can be started. There can be multiple.
+Include "resource_requirements" (array of strings) for each task if labor alone is not sufficient.
 `;
  const systemPrompt = "You are an expert project manager and task engineer.";
 

@@ -41,6 +41,29 @@ class StoryEngineService {
     ]);
     const unit = unitResult.rows[0];
 
+    // Resource Attribution Story Units
+    try {
+      const resourceQuery = `
+        SELECT ra.*, r.owner_user_id
+        FROM resource_allocations ra
+        JOIN resources r ON ra.resource_id = r.id
+        WHERE ra.task_id = $1 AND ra.status = 'allocated'
+      `;
+      const resourcesUsed = await pool.query(resourceQuery, [taskId]);
+      for (const ra of resourcesUsed.rows) {
+        if (ra.owner_user_id) {
+          await pool.query(
+            `INSERT INTO story_units (user_id, task_id, project_id, role, task_type)
+             VALUES ($1, $2, $3, 'provider', 'resource_contribution')`,
+            [ra.owner_user_id, taskId, task.project_id]
+          );
+          await this.detectUserPatterns(ra.owner_user_id);
+        }
+      }
+    } catch (err) {
+      console.error("Resource attribution failed:", err);
+    }
+
     // Trigger Pattern Detection
     await this.detectUserPatterns(userId);
 
@@ -58,7 +81,8 @@ class StoryEngineService {
       'Reviver': 0,
       'Specialist': 0,
       'Connector': 0,
-      'Verifier': 0
+      'Verifier': 0,
+      'Provider': 0
     };
 
     if (units.length > 0) {
@@ -96,6 +120,10 @@ class StoryEngineService {
         [userId]
       );
       patterns['Verifier'] = Math.min(parseInt(verifications.rows[0].count) / 10, 1.0);
+
+      // Provider: High rate of resource contributions
+      const resourceContributions = units.filter(u => u.task_type === 'resource_contribution').length;
+      patterns['Provider'] = Math.min(resourceContributions / 5, 1.0);
     }
 
     // Update patterns in DB

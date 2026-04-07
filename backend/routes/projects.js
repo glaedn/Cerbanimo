@@ -342,8 +342,8 @@ router.post('/auto-generate', async (req, res) => {
 
     for (const task of tasks) {
       const result = await pool.query(
-        'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens) VALUES ($1, $2, $3, $4, $5, $6::int[], $7) RETURNING id',
-        [projectId, task.name, task.description, task.skill_id, 'inactive-unassigned', [], task.reward_tokens] 
+        'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens, resource_requirements) VALUES ($1, $2, $3, $4, $5, $6::int[], $7, $8) RETURNING id',
+        [projectId, task.name, task.description, task.skill_id, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
       );
       const dbId = result.rows[0].id;
       llmToDbIdMap[task.id] = dbId;

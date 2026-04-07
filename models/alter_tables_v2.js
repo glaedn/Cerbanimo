@@ -10,7 +10,8 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS decay_factor NUMERIC DEFAULT 1,
     ADD COLUMN IF NOT EXISTS priority_score NUMERIC DEFAULT 0,
     ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+    ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS resource_requirements TEXT[] DEFAULT '{}';
   `;
 
   const alterProjectsQuery = `

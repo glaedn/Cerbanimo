@@ -40,7 +40,7 @@ const GuildHub = () => {
         });
         setTasks(tasksRes.data);
 
-        const userMember = guildRes.data.members.find(m => m.user_id === profileRes.data.id);
+        const userMember = (guildRes.data.members || []).find(m => m.user_id === profileRes.data.id);
         if (userMember) setMyRole(userMember.role);
 
         setLoading(false);
@@ -80,12 +80,12 @@ const GuildHub = () => {
     return `Complete ~${tasksNeeded} more specialized tasks to unlock ${current.next} rank.`;
   };
 
-  const myMembership = guild.members.find(m => m.user_id === platformUserId);
+  const myMembership = (guild.members || []).find(m => m.user_id === platformUserId);
 
   return (
     <Box className="guild-hub-container">
       {/* Header Section */}
-      <Box className="hub-header">
+      <Box className="hub-header guild-hub-header">
         <Box>
           <Typography variant="h2" className="hub-title">{guild.name.toUpperCase()} GUILD</Typography>
           <Box display="flex" gap={2} alignItems="center" mt={1}>
@@ -97,7 +97,7 @@ const GuildHub = () => {
         </Box>
         <Box textAlign="right">
           <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>MEMBER COUNT</Typography>
-          <Typography variant="h3" sx={{ color: '#fff', fontFamily: 'Orbitron' }}>{guild.members.length}</Typography>
+          <Typography variant="h3" sx={{ color: '#fff', fontFamily: 'Orbitron' }}>{(guild.members || []).length}</Typography>
         </Box>
       </Box>
 
@@ -151,7 +151,7 @@ const GuildHub = () => {
               <Typography variant="h5" className="card-title" sx={{ mt: 4 }}>ACTIVE OPERATIVES</Typography>
               <Divider sx={{ mb: 2, bgcolor: '#333' }} />
               <List>
-                {guild.members.map(m => (
+                {(guild.members || []).map(m => (
                   <ListItem key={m.id} sx={{ px: 0 }}>
                     <Avatar src={m.avatar_url} sx={{ mr: 2, border: '1px solid #00f3ff' }} />
                     <ListItemText
@@ -215,7 +215,7 @@ const GuildHub = () => {
                     <Button
                       variant="outlined"
                       className="mission-btn"
-                      onClick={() => navigate(`/Visualizer/${task.project_id}/${task.id}`)}
+                      onClick={() => navigate(`/visualizer/${task.project_id}/${task.id}`)}
                     >
                       VIEW
                     </Button>

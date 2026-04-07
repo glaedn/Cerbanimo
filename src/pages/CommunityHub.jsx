@@ -182,54 +182,42 @@ const CommunityHub = () => {
             });
             setConstellationInvites(constellationInvitesRes.data);
 
-            // Fetch and categorize shared projects
-            let sharedProjects = [];
-            if (communityResponse.data.shared_project_ids && communityResponse.data.shared_project_ids.length > 0) {
-                const sharedPromises = communityResponse.data.shared_project_ids.map(id =>
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    }).catch(() => null)
-                );
-                const sharedResults = await Promise.all(sharedPromises);
-                sharedProjects = sharedResults.filter(r => r !== null).map(r => ({ ...r.data, isShared: true }));
-            }
+            // Fetch All Relevant Projects
+            const sharedIds = communityResponse.data.shared_project_ids || [];
+            const directProposalIds = communityResponse.data.proposals || [];
+            const directApprovedIds = communityResponse.data.approved_projects || [];
 
-            // Fetch proposal details
-            let directProposals = [];
-            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                const proposalPromises = communityResponse.data.proposals.map(projectId =>
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }).catch(() => null)
-                );
-                const proposalResults = await Promise.all(proposalPromises);
-                directProposals = proposalResults.filter(r => r !== null).map(r => r.data);
-            }
+            // Combine all unique IDs to fetch
+            const allUniqueIds = [...new Set([
+                ...sharedIds,
+                ...directProposalIds,
+                ...directApprovedIds
+            ])];
 
-            // Fetch approved projects
-            let directApproved = [];
-            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                const projectPromises = communityResponse.data.approved_projects.map(projectId =>
-                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }).catch(() => null)
-                );
-                const projectResults = await Promise.all(projectPromises);
-                directApproved = projectResults.filter(r => r !== null).map(r => r.data);
-            }
-
-            const directApprovedIds = new Set(directApproved.map(p => p.id));
-            const directProposalIds = new Set(directProposals.map(p => p.id));
-
-            const filteredSharedActive = sharedProjects.filter(p =>
-                p.status === 'active' && !directApprovedIds.has(p.id) && !directProposalIds.has(p.id)
-            );
-            const filteredSharedPlanning = sharedProjects.filter(p =>
-                p.status === 'planning' && !directApprovedIds.has(p.id) && !directProposalIds.has(p.id)
+            const projectPromises = allUniqueIds.map(id =>
+                axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => null)
             );
 
-            setApprovedProjects([...directApproved, ...filteredSharedActive]);
-            setProposals([...directProposals, ...filteredSharedPlanning]);
+            const projectResults = await Promise.all(projectPromises);
+            const allProjects = projectResults
+                .filter(r => r !== null)
+                .map(r => {
+                    const project = r.data;
+                    return {
+                        ...project,
+                        isShared: sharedIds.map(id => String(id)).includes(String(project.id)),
+                        isDirect: directProposalIds.map(id => String(id)).includes(String(project.id)) ||
+                                  directApprovedIds.map(id => String(id)).includes(String(project.id))
+                    };
+                });
+
+            // Categorize primarily by status
+            // Note: If a project's status is 'active', it goes into approvedProjects.
+            // If it's 'planning', it goes into proposals.
+            setApprovedProjects(allProjects.filter(p => p.status === 'active'));
+            setProposals(allProjects.filter(p => p.status === 'planning'));
 
         } catch (error) {
             console.error('Failed to fetch community data:', error);
@@ -501,7 +489,7 @@ const CommunityHub = () => {
     }
 
     return (
-        <div className="community-hub">
+        <div className="community-hub community-hub-container">
             <Typography variant="h4" className="hub-title">{community.name}</Typography>
             
             {/* Community Info Section */}
@@ -717,7 +705,7 @@ const CommunityHub = () => {
                                                         >
                                                             REQUEST CONSTELLATION
                                                         </Button>
-                                                        {!proposal.isShared && (
+                                                        {proposal.isDirect && (
                                                             <>
                                                                 <Tooltip title="Approve">
                                                                     <IconButton
