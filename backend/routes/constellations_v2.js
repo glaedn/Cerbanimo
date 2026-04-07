@@ -175,7 +175,10 @@ router.post('/:constellationId/tasks', async (req, res) => {
 router.get('/:constellationId/communities', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT c.id, c.name, c.description, c.avatar_url
+      SELECT 
+        c.id, 
+        c.name, 
+        c.description
       FROM communities c
       JOIN constellation_members cm ON c.id = cm.entity_id
       WHERE cm.constellation_id = $1 AND cm.entity_type = 'community'
