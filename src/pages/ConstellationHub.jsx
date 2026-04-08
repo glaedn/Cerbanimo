@@ -130,8 +130,8 @@ const ConstellationHub = () => {
             <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: '#fff', '&:hover': { borderColor: '#ff5ca2' } }}>
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ff5ca2' }}>{c.name.toUpperCase()}</Typography>
-                  <Chip label={c.status.toUpperCase()} size="small" sx={{ bgcolor: '#440022', color: '#ff5ca2' }} />
+                  <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ff5ca2' }}>{(c.name ?? '').toUpperCase()}</Typography>
+                  <Chip label={(c.status ?? '').toUpperCase()} size="small" sx={{ bgcolor: '#440022', color: '#ff5ca2' }} />
                 </Box>
 
                 <Typography variant="body2" sx={{ mb: 3, fontStyle: 'italic', color: 'gray' }}>"{c.shared_objective}"</Typography>
@@ -222,8 +222,8 @@ const ConstellationHub = () => {
           width: '80%', maxWidth: 800, bgcolor: '#0a0a0a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff',
           maxHeight: '90vh', overflowY: 'auto'
         }}>
-          <Typography variant="h4" sx={{ fontFamily: 'Orbitron', mb: 3, color: '#ff5ca2' }}>
-            {currentConstellation?.name.toUpperCase()} - ALLIANCE CONSOLE
+            <Typography variant="h4" sx={{ fontFamily: 'Orbitron', mb: 3, color: '#ff5ca2' }}>
+              {(currentConstellation?.name ?? '').toUpperCase()} - ALLIANCE CONSOLE
           </Typography>
 
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#ff5ca2' }}>COMMUNITY ALLIANCE</Typography>
@@ -234,7 +234,7 @@ const ConstellationHub = () => {
               ) : sharedCommunities.map(comm => (
                 <ListItem key={comm.id} divider sx={{ borderColor: '#222' }}>
                   <ListItemText
-                    primary={comm.name.toUpperCase()}
+                    primary={(comm.name ?? '').toUpperCase()}
                     secondary={comm.description}
                     primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
                     secondaryTypographyProps={{ color: 'gray' }}
@@ -260,13 +260,13 @@ const ConstellationHub = () => {
               ) : sharedProjects.map(project => (
                 <ListItem key={project.id} divider sx={{ borderColor: '#222' }}>
                   <ListItemText
-                    primary={project.name.toUpperCase()}
+                    primary={(project.name ?? '').toUpperCase()}
                     secondary={project.description}
                     primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
                     secondaryTypographyProps={{ color: 'gray' }}
                   />
                   <Box display="flex" alignItems="center" gap={2}>
-                    <Chip label={project.status.toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
+                    <Chip label={(project.status ?? '').toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
                     <Button
                       variant="outlined"
                       size="small"
