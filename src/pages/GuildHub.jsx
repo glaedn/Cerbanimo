@@ -5,12 +5,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   Box, Typography, Grid, Card, CardContent, Chip,
   LinearProgress, List, ListItem, ListItemText, CircularProgress,
-  Avatar, Button, Paper, Divider
+  Avatar, Button, Paper, Divider, Snackbar, Alert
 } from '@mui/material';
-import { Shield, TrendingUp, Users, Target, BookOpen, ChevronRight } from 'lucide-react';
+import { Shield, TrendingUp, Users, Target, BookOpen, ChevronRight, CheckCircle } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import './GuildHub.css';
 
 const GuildHub = () => {
+  const isMobile = useIsMobile();
   const { id } = useParams();
   const navigate = useNavigate();
   const { getAccessTokenSilently, user } = useAuth0();
@@ -19,6 +21,8 @@ const GuildHub = () => {
   const [loading, setLoading] = useState(true);
   const [myRole, setMyRole] = useState(null);
   const [platformUserId, setPlatformUserId] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,26 +86,52 @@ const GuildHub = () => {
 
   const myMembership = (guild.members || []).find(m => m.user_id === platformUserId);
 
+  const handleTaskAction = async (taskId, action) => {
+    setActionLoading(prev => ({ ...prev, [taskId]: true }));
+    try {
+      const token = await getAccessTokenSilently();
+      const endpoint = action === 'accept'
+        ? `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`
+        : `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`;
+
+      await axios.put(endpoint, { userId: platformUserId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Refresh tasks
+      const tasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/${id}/tasks`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(tasksRes.data);
+      setSnackbar({ open: true, message: `Task ${action === 'accept' ? 'accepted' : 'dropped'}!`, severity: 'success' });
+    } catch (err) {
+      console.error(`Failed to ${action} task:`, err);
+      setSnackbar({ open: true, message: `Failed to ${action} task.`, severity: 'error' });
+    } finally {
+      setActionLoading(prev => ({ ...prev, [taskId]: false }));
+    }
+  };
+
   return (
-    <Box className="guild-hub-container">
+    <Box className={`guild-hub-container ${isMobile ? 'mobile-hub' : ''}`} sx={{ pb: isMobile ? 10 : 2 }}>
       {/* Header Section */}
-      <Box className="hub-header guild-hub-header">
+      <Box className="hub-header guild-hub-header" sx={{ flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 2 : 0 }}>
         <Box>
-          <Typography variant="h2" className="hub-title">{guild.name.toUpperCase()} GUILD</Typography>
-          <Box display="flex" gap={2} alignItems="center" mt={1}>
+          <Typography variant={isMobile ? "h4" : "h2"} className="hub-title">{guild.name.toUpperCase()} GUILD</Typography>
+          <Box display="flex" gap={2} alignItems="center" mt={1} flexWrap="wrap">
             <Chip label={guild.status.toUpperCase()} className={`status-chip ${guild.status}`} />
-            <Typography variant="body1" sx={{ color: '#888', fontFamily: 'Orbitron' }}>
+            <Typography variant="body2" sx={{ color: '#888', fontFamily: 'Orbitron' }}>
               FOUNDED: {new Date(guild.founded_at).toLocaleDateString()}
             </Typography>
           </Box>
         </Box>
-        <Box textAlign="right">
-          <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>MEMBER COUNT</Typography>
-          <Typography variant="h3" sx={{ color: '#fff', fontFamily: 'Orbitron' }}>{(guild.members || []).length}</Typography>
+        <Box textAlign={isMobile ? 'left' : 'right'}>
+          <Typography variant="caption" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', display: 'block' }}>MEMBER COUNT</Typography>
+          <Typography variant={isMobile ? "h4" : "h3"} sx={{ color: '#fff', fontFamily: 'Orbitron' }}>{(guild.members || []).length}</Typography>
         </Box>
       </Box>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={isMobile ? 2 : 4}>
         {/* Left Column: Intelligence & Members */}
         <Grid item xs={12} md={4}>
           <Card className="hub-card">
@@ -168,7 +198,7 @@ const GuildHub = () => {
         </Grid>
 
         {/* Right Column: Mission Board & Progression */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={8} sx={{ order: isMobile ? -1 : 0 }}>
           {myRole && (
             <Card className="hub-card progression-card" sx={{ mb: 4 }}>
               <CardContent>
@@ -203,6 +233,7 @@ const GuildHub = () => {
                 <ListItem
                   key={task.id}
                   className="mission-item"
+                  sx={{ flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 1 : 0 }}
                 >
                   <ListItemText
                     primary={task.name.toUpperCase()}
@@ -210,15 +241,32 @@ const GuildHub = () => {
                     primaryTypographyProps={{ className: 'm-name' }}
                     secondaryTypographyProps={{ className: 'm-desc' }}
                   />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, ml: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 2, ml: isMobile ? 0 : 2, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                     <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff9ecb', borderColor: '#ff5ca2', fontFamily: 'Orbitron', fontWeight: 'bold' }} />
-                    <Button
-                      variant="outlined"
-                      className="mission-btn"
-                      onClick={() => navigate(`/visualizer/${task.project_id}/${task.id}`)}
-                    >
-                      VIEW
-                    </Button>
+                    <Box display="flex" gap={1}>
+                        <Button
+                        variant="outlined"
+                        className="mission-btn"
+                        onClick={() => navigate(`/visualizer/${task.project_id}/${task.id}`)}
+                        >
+                        VIEW
+                        </Button>
+                        <Button
+                        variant="contained"
+                        size="small"
+                        disabled={actionLoading[task.id]}
+                        onClick={() => handleTaskAction(task.id, task.assigned_user_ids?.includes(platformUserId) ? 'drop' : 'accept')}
+                        sx={{
+                            bgcolor: task.assigned_user_ids?.includes(platformUserId) ? '#ff003c' : '#00f3ff',
+                            color: '#000',
+                            fontFamily: 'Orbitron',
+                            fontSize: '0.7rem',
+                            minWidth: '80px'
+                        }}
+                        >
+                        {actionLoading[task.id] ? <CircularProgress size={16} color="inherit" /> : (task.assigned_user_ids?.includes(platformUserId) ? 'DROP' : 'ACCEPT')}
+                        </Button>
+                    </Box>
                   </Box>
                 </ListItem>
               ))}
@@ -226,6 +274,13 @@ const GuildHub = () => {
           </Paper>
         </Grid>
       </Grid>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity={snackbar.severity} variant="filled">{snackbar.message}</Alert>
+      </Snackbar>
     </Box>
   );
 };

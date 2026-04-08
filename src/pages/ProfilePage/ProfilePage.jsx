@@ -11,6 +11,8 @@ import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/mater
 import { useNavigate } from 'react-router-dom';
 import theme from '../../styles/theme'; // Import the theme
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import ChronicleTimeline from '../../components/ChronicleTimeline';
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
@@ -22,6 +24,8 @@ const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { profile: dynamicProfile, loading: profileLoading } = useUserProfile();
+  const [userChronicle, setUserChronicle] = useState([]);
 
   // Base style for panels
   const panelStyle = {
@@ -294,6 +298,22 @@ const ProfilePage = () => {
   }, [profileData.id, fetchUserBadges]);
   // --- End Badge Management Functions ---
 
+  useEffect(() => {
+    const fetchChronicle = async () => {
+        if (!profileData.id) return;
+        try {
+            const token = await getAccessTokenSilently();
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/story/user/${profileData.id}/chronicle`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setUserChronicle(res.data || []);
+        } catch (err) {
+            console.error("Failed to fetch chronicle:", err);
+        }
+    };
+    fetchChronicle();
+  }, [profileData.id, getAccessTokenSilently]);
+
   const handleOpenResourceModal = (resource = null) => {
     setEditingResource(resource);
     setIsResourceModalOpen(true);
@@ -418,7 +438,7 @@ const ProfilePage = () => {
     return <div>Loading...</div>;
   }
   return (
-    <Box className={`profile-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 10 : 2 }}>
+    <Box className={`profile-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>
       <Typography 
         className="profile-title" 
         variant={isMobile ? "h5" : "h4"}
@@ -439,7 +459,7 @@ const ProfilePage = () => {
           borderColor: theme.colors.primary,
           boxShadow: theme.effects.glowStrong(theme.colors.primary),
           paddingBottom: '20px',
-          flexDirection: isMobile ? 'column' : 'column' // Keep column but ensure spacing
+          flexDirection: 'column'
         }}>
           <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
             User Identification
@@ -448,66 +468,85 @@ const ProfilePage = () => {
             className="profile-card" 
             sx={{
           display: 'flex', 
-          flexDirection: 'column', 
+          flexDirection: isMobile ? 'row' : 'column',
           alignItems: 'center', 
+          justifyContent: isMobile ? 'flex-start' : 'center',
           padding: theme.spacing.md, 
-          width: '100%', // Ensure full width on mobile
-          backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
+          width: '100%',
+          backgroundColor: 'rgba(10, 10, 46, 0.5)',
             borderRadius: theme.borders.borderRadiusMd,
-            boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`, // Inner shadow
-            mb: 1, // Margin bottom before username field
+            boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`,
+            mb: 1,
+            gap: 2
           }}
         >
-          <Avatar
-            alt="Profile Picture"
-            src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
-            sx={{ 
-              width: isMobile ? 100 : 120,
-              height: isMobile ? 100 : 120,
-              border: `3px solid ${theme.colors.primary}`,
-              boxShadow: theme.effects.glowStrong(theme.colors.primary),
-            }}
-          />
-          <Button 
-            variant="contained" 
-            component="label" 
-            size="small"
-            sx={{ 
-              mt: 1, // Adjusted margin for internal spacing
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.backgroundDefault,
-              fontFamily: theme.typography.fontFamilyAccent,
-              boxShadow: theme.effects.glowSubtle(theme.colors.primary),
-              '&:hover': {
-                backgroundColor: theme.colors.accentBlue,
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Avatar
+                alt="Profile Picture"
+                src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
+                sx={{
+                width: isMobile ? 80 : 120,
+                height: isMobile ? 80 : 120,
+                border: `3px solid ${theme.colors.primary}`,
                 boxShadow: theme.effects.glowStrong(theme.colors.primary),
-              }
-            }}
-          >
-            Edit Picture
-            <input type="file" hidden onChange={handleProfilePictureChange} />
-          </Button>
+                }}
+            />
+            <Button
+                variant="contained"
+                component="label"
+                size="small"
+                sx={{
+                mt: 1,
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.backgroundDefault,
+                fontFamily: theme.typography.fontFamilyAccent,
+                fontSize: isMobile ? '0.6rem' : '0.8rem',
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                '&:hover': {
+                    backgroundColor: theme.colors.accentBlue,
+                    boxShadow: theme.effects.glowStrong(theme.colors.primary),
+                }
+                }}
+            >
+                Edit
+                <input type="file" hidden onChange={handleProfilePictureChange} />
+            </Button>
+          </Box>
+          {isMobile && (
+            <Box flexGrow={1}>
+                <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>{profileData.username}</Typography>
+                <Box mt={1}>
+                    <Typography variant="caption" sx={{ color: '#888' }}>
+                        LEVEL {dynamicProfile?.experience?.current_level || 1} ARCHITECT
+                    </Typography>
+                    <LinearProgress
+                        variant="determinate"
+                        value={((dynamicProfile?.experience?.total_xp || 0) / (dynamicProfile?.experience?.xp_for_next_level || 100)) * 100}
+                        sx={{ height: 6, borderRadius: 3, mt: 0.5, bgcolor: 'rgba(255,255,255,0.1)', '& .MuiLinearProgress-bar': { bgcolor: '#00f3ff' } }}
+                    />
+                </Box>
+            </Box>
+          )}
         </Box>
         <TextField
           label="Username"
           value={profileData.username || ''}
           onChange={(e) => handleInputChange('username', e.target.value)}
-          margin="none" // Margin is handled by panel's gap or specific sx here
-          fullWidth // Take full width of the panel's constraint
+          margin="none"
+          fullWidth
         sx={{
-          // width: '100%', // Already fullWidth
-          maxWidth: '400px', // Specific max width for username field
+          maxWidth: '400px',
           '& .MuiInputLabel-root': { 
             color: theme.colors.textSecondary,
             fontFamily: theme.typography.fontFamilyAccent,
           },
           '& .MuiInputLabel-root.Mui-focused': {
-            color: theme.colors.primary, // Label color when focused
+            color: theme.colors.primary,
           },
           '& .MuiOutlinedInput-root': {
             fontFamily: theme.typography.fontFamilyAccent,
             color: theme.colors.textPrimary,
-            backgroundColor: 'rgba(10, 10, 46, 0.6)', // theme.colors.backgroundDefault with transparency
+            backgroundColor: 'rgba(10, 10, 46, 0.6)',
             '& fieldset': {
               borderColor: theme.colors.border,
               borderRadius: theme.borders.borderRadiusMd,
@@ -844,14 +883,12 @@ const ProfilePage = () => {
         sx={{
           ...panelStyle,
           borderColor: theme.colors.primary, 
-          // boxShadow is from panelStyle, padding from panelStyle
-          // backgroundColor is from panelStyle
-          // borderRadius is from panelStyle
         }}
       >
         <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
           Mission Log
         </Typography>
+        {isMobile && <Box sx={{ width: '100%', mb: 2 }}><ChronicleTimeline stories={userChronicle} /></Box>}
         <UserPortfolio userId={profileData.id}/>
       </Box>
       
@@ -1044,13 +1081,14 @@ const ProfilePage = () => {
       </Box>
 
       {/* Command Module Panel */}
-      <Box sx={{ ...panelStyle, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <Box sx={{ ...panelStyle, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', mb: isMobile ? 4 : theme.spacing.lg }}>
         <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
           Command Module
         </Typography>
         <Button 
           variant="contained" 
           onClick={handleSaveProfile}
+          fullWidth={isMobile}
           sx={{
             backgroundColor: theme.colors.primary,
             color: theme.colors.backgroundDefault,

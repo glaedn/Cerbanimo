@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-import { Button, TextField, Typography, Chip } from '@mui/material';
+import { Button, TextField, Typography, Chip, Box, Grid } from '@mui/material';
+import { useIsMobile } from '../hooks/useIsMobile';
 import './ProjectPages.css';
 import ReactMarkdown from 'react-markdown';
 import useSkillData from '../hooks/useSkillData';
 
 const ProjectPages = () => {
+  const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState('');
@@ -170,8 +172,8 @@ const ProjectPages = () => {
   }, [userProfile, page, search]);
 
   return (
-    <div className="project-pages-container">
-      <div className="search-bar-container">
+    <div className={`project-pages-container ${isMobile ? 'mobile-registry' : ''}`} style={{ pb: isMobile ? '80px' : '20px' }}>
+      <div className="search-bar-container" style={{ width: isMobile ? '100%' : '80%' }}>
         <TextField
           variant="outlined"
           size="small"
@@ -183,7 +185,7 @@ const ProjectPages = () => {
         />
         <Button
           variant="contained"
-          onClick={() => window.location.href = '/projectcreation'}
+          onClick={() => navigate('/projectcreation')}
           title="Add New Project"
           sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '1.5rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0 }}
         >
@@ -191,47 +193,55 @@ const ProjectPages = () => {
         </Button>
       </div>
 
-      <div className="project-list-wrapper">
+      <div className="project-list-wrapper" style={{ width: isMobile ? '100%' : '80%' }}>
+        <Grid container spacing={isMobile ? 2 : 0} direction={isMobile ? 'column' : 'row'}>
         {projects.map((project) => (
-          <div key={project.id} className="project-card">
-            <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-              {project.tags.map((tag, index) => (
-                <Chip
-                  className="tag-chip"
-                  key={index}
-                  label={tag}
+          <Grid item xs={12} key={project.id} sx={{ width: '100%' }}>
+            <div className="project-card">
+              <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                {project.tags.map((tag, index) => (
+                  <Chip
+                    className="tag-chip"
+                    key={index}
+                    label={tag}
+                    size="small"
+                  />
+                ))}
+              </div>
+              <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
+              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={1} mt={1}>
+                <Button
+                  variant="contained"
                   size="small"
-                />
-              ))}
+                  fullWidth={isMobile}
+                  sx={{ backgroundColor: 'primary.main', color: 'common.black' }}
+                  onClick={() => {
+                    setSelectedProject(project);
+                    fetchTasks(project.id);
+                  }}
+                >
+                  Contribute
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth={isMobile}
+                  sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+                  onClick={() => {
+                    navigate(`/visualizer/${project.id}`);
+                  }}
+                >
+                  Open Project
+                </Button>
+              </Box>
             </div>
-            <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
-            <Button
-              variant="contained"
-              size="small"
-              sx={{ marginBottom: '5px', backgroundColor: 'primary.main', color: 'common.black', mr: 1 }}
-              onClick={() => {
-                setSelectedProject(project);
-                fetchTasks(project.id);
-              }}
-            >
-              Contribute
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-              onClick={() => {
-                navigate(`/visualizer/${project.id}`);
-              }}
-            >
-              Open Project
-            </Button>
-          </div>
+          </Grid>
         ))}
+        </Grid>
       </div>
 
-      <div className="pagination-container">
+      <div className="pagination-container" style={{ width: isMobile ? '100%' : '80%', justifyContent: 'center' }}>
         <Button
           variant="contained"
           sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' } }}
@@ -255,7 +265,7 @@ const ProjectPages = () => {
 
       {selectedProject && (
         <div className="task-popup-overlay">
-          <div className="task-popup">
+          <div className="task-popup" style={{ width: isMobile ? '90%' : '80%', padding: isMobile ? '15px' : '20px' }}>
             <Typography variant="h5" sx={{ color: 'primary.main', mb: 2 }}>Tasks for {selectedProject.name}</Typography>
             <div className="ptask-list">
               {tasks.length > 0 ? tasks.map((task) => {
@@ -276,28 +286,33 @@ const ProjectPages = () => {
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {task.status}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {task.skill_level})</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} tokens</Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black', mr: 1 }}
-                      onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
-                    >
-                      {isAssigned ? 'Drop' : 'Accept'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-                      onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
-                    >
-                      View Task
-                    </Button>
+                    <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={1}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        fullWidth={isMobile}
+                        sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black' }}
+                        onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
+                      >
+                        {isAssigned ? 'Drop' : 'Accept'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth={isMobile}
+                        sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+                        onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
+                      >
+                        View Task
+                      </Button>
+                    </Box>
                   </div>
                 );
               }) : <Typography sx={{ color: 'text.secondary' }}>No tasks available</Typography>}
             </div>
             <Button
               variant="contained"
+              fullWidth={isMobile}
               sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2 }}
               onClick={() => setSelectedProject(null)}
             >

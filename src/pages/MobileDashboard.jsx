@@ -10,6 +10,7 @@ const MobileDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [activeTasks, setActiveTasks] = useState([]);
   const [suggestedTasks, setSuggestedTasks] = useState([]);
+  const [userChronicle, setUserChronicle] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,6 +44,12 @@ const MobileDashboard = () => {
             });
             setSuggestedTasks(suggestedRes.data.slice(0, 5));
           }
+
+          // Fetch Chronicle
+          const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/story/user/${profileRes.data.id}/chronicle`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setUserChronicle(chronicleRes.data || []);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -167,7 +174,7 @@ const MobileDashboard = () => {
         backgroundColor: 'rgba(28, 28, 30, 0.5)',
         borderRadius: '12px'
       }}>
-        <ChronicleTimeline stories={[]} />
+        <ChronicleTimeline stories={userChronicle} />
       </Paper>
     </Box>
   );

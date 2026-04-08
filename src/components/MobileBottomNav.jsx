@@ -32,7 +32,7 @@ const MobileBottomNav = () => {
     switch (newValue) {
       case 0: navigate('/dashboard'); break;
       case 1: navigate('/projects'); break;
-      case 2: navigate('/projects'); break; // TaskBrowser route is not explicitly mapped in App.jsx yet, using projects for now as requested
+      case 2: navigate('/tasks'); break;
       case 3: navigate('/guilds'); break;
       case 4: navigate('/profile'); break;
       default: navigate('/dashboard');
