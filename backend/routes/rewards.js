@@ -1,15 +1,12 @@
 import express from 'express';
-import pg from 'pg';
+import pool from '../db.js';
 import multer from 'multer';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 
-const { Pool } = pg;
+
 const router = express.Router();
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
 
 const upload = multer({ dest: "uploads/badges/" });
 

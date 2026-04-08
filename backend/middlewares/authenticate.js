@@ -50,17 +50,17 @@ const ensureAuthenticated = (req, res, next) => {
       console.log('Decoded Token:', decoded);
   
       // Check for required scopes
-      //const requiredScopes = ['read:profile'];
-      //const tokenScopes = decoded.scope ? decoded.scope.split(' ') : [];
+      const requiredScopes = ['read:profile'];
+      const tokenScopes = decoded.scope ? decoded.scope.split(' ') : [];
   
-      //const hasRequiredScopes = requiredScopes.every((scope) =>
-      //  tokenScopes.includes(scope)
-      //);
+      const hasRequiredScopes = requiredScopes.every((scope) =>
+        tokenScopes.includes(scope)
+      );
   
-      //if (!hasRequiredScopes) {
-      //  console.error('Insufficient scopes:', tokenScopes);
-      //  return res.status(403).json({ message: 'Forbidden: Insufficient scope' });
-      //}
+      if (!hasRequiredScopes) {
+        console.error('Insufficient scopes:', tokenScopes);
+        return res.status(403).json({ message: 'Forbidden: Insufficient scope' });
+      }
   
       req.user = decoded; // Attach decoded user info to the request
       next();

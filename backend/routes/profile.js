@@ -1,16 +1,12 @@
 import express from 'express';
 import multer from 'multer';
-import pg from 'pg';
+import pool from '../db.js';
 import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 
-const { Pool } = pg;
 
 // Create a router instance
 const router = express.Router();
-
-// PostgreSQL connection
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
