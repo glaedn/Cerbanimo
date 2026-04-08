@@ -34,6 +34,54 @@ class VerificationService {
     const result = await pool.query(query, [userId]);
     return result.rows;
   }
+
+  async detectBadActors(userId) {
+    const flags = [];
+
+    // 1. Unusual self-verification clustering (>3 in 24h)
+    const selfVerificationQuery = `
+      SELECT COUNT(*) FROM verification_events ve
+      JOIN tasks t ON ve.task_id = t.id
+      WHERE ve.verifier_id = $1
+      AND t.submitted_by = $1
+      AND ve.created_at > NOW() - INTERVAL '24 hours'
+    `;
+    const selfRes = await pool.query(selfVerificationQuery, [userId]);
+    if (parseInt(selfRes.rows[0].count) > 3) {
+      flags.push({ type: 'self_verification_cluster', count: selfRes.rows[0].count });
+    }
+
+    // 2. Verifier collusion (high rate of mutual approvals in last 30 days)
+    // Find pairs where A approved B and B approved A
+    const collusionQuery = `
+      SELECT t.submitted_by as other_user_id, COUNT(*) as approval_count
+      FROM verification_events ve
+      JOIN tasks t ON ve.task_id = t.id
+      WHERE ve.verifier_id = $1
+      AND ve.status = 'approved'
+      AND t.submitted_by != $1
+      AND ve.created_at > NOW() - INTERVAL '30 days'
+      GROUP BY t.submitted_by
+      HAVING COUNT(*) > 5
+    `;
+    const collusionRes = await pool.query(collusionQuery, [userId]);
+    for (const row of collusionRes.rows) {
+       // Check if the other user also approved this user's tasks
+       const reverseQuery = `
+         SELECT COUNT(*) FROM verification_events ve
+         JOIN tasks t ON ve.task_id = t.id
+         WHERE ve.verifier_id = $1
+         AND t.submitted_by = $2
+         AND ve.status = 'approved'
+       `;
+       const reverseRes = await pool.query(reverseQuery, [row.other_user_id, userId]);
+       if (parseInt(reverseRes.rows[0].count) > 0) {
+          flags.push({ type: 'collusion_pattern', target_user_id: row.other_user_id, count: row.approval_count });
+       }
+    }
+
+    return flags;
+  }
 }
 
 class DisputeService {
@@ -58,6 +106,54 @@ class DisputeService {
 
       // Trigger juror selection
       await this.selectJurors(dispute.id, taskId);
+
+      await client.query('COMMIT');
+      return dispute;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async openDissolutionDispute(constellationId, taskId, openerId, reason) {
+    // Phase 3: Mini-dispute protocol for rewards for partial work in dissolved constellations
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const insertQuery = `
+        INSERT INTO disputes (task_id, opener_id, reason, status)
+        VALUES ($1, $2, $3, 'review')
+        RETURNING *;
+      `;
+      const disputeResult = await client.query(insertQuery, [taskId, openerId, reason]);
+      const dispute = disputeResult.rows[0];
+
+      // Select 3 random jurors from guilds participating in the constellation
+      const jurorsQuery = `
+        SELECT DISTINCT gm.user_id
+        FROM constellation_members cm
+        JOIN guilds g ON cm.entity_id = g.id AND cm.entity_type = 'guild'
+        JOIN guild_memberships gm ON gm.guild_id = g.id
+        WHERE cm.constellation_id = $1
+        ORDER BY RANDOM() LIMIT 3
+      `;
+      const jurorsRes = await client.query(jurorsQuery, [constellationId]);
+      let jurors = jurorsRes.rows.map(r => r.user_id);
+
+      // Fallback to general selectJurors logic if needed
+      if (jurors.length < 3) {
+          // Placeholder for fallback or simple union
+          const anyUsers = await client.query("SELECT id FROM users WHERE id != $1 ORDER BY RANDOM() LIMIT $2", [openerId, 3 - jurors.length]);
+          jurors = jurors.concat(anyUsers.rows.map(r => r.id));
+      }
+
+      await client.query(
+        'UPDATE disputes SET jurors = $1, juror_selection_status = \'selected\' WHERE id = $2',
+        [jurors, dispute.id]
+      );
 
       await client.query('COMMIT');
       return dispute;

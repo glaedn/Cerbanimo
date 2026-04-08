@@ -90,6 +90,30 @@ class ImpactGraphService {
 
     return { nodes: [], links: [] };
   }
+
+  async calculateImpactDepth(taskId) {
+    // Find the shortest distance from a task impact node to any outcome impact node.
+    // Base case: Find the impact node for the task.
+    // Then use a recursive CTE to traverse upwards through impact_edges.
+    const query = `
+      WITH RECURSIVE impact_path AS (
+        SELECT from_node_id, to_node_id, 1 as depth
+        FROM impact_edges
+        WHERE from_node_id = (SELECT id FROM impact_nodes WHERE type = 'task' AND entity_id = $1 LIMIT 1)
+        UNION ALL
+        SELECT e.from_node_id, e.to_node_id, ip.depth + 1
+        FROM impact_edges e
+        JOIN impact_path ip ON e.from_node_id = ip.to_node_id
+        WHERE ip.depth < 10 -- Safety limit
+      )
+      SELECT MIN(ip.depth) as impact_depth
+      FROM impact_path ip
+      JOIN impact_nodes n ON ip.to_node_id = n.id
+      WHERE n.type = 'outcome';
+    `;
+    const result = await pool.query(query, [taskId]);
+    return parseInt(result.rows[0].impact_depth) || 0;
+  }
 }
 
 export default new ImpactGraphService();

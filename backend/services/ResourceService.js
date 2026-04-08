@@ -16,10 +16,11 @@ class ResourceService {
     try {
       await client.query('BEGIN');
 
-      // 1. Create the new allocation as 'reserved'
+      // Phase 6: first-come-first-served with 24h hold option
+      // 1. Create the new allocation with a 'hold' status initially
       const insertQuery = `
         INSERT INTO resource_allocations (resource_id, task_id, user_id, start_time, end_time, status)
-        VALUES ($1, $2, $3, $4, $5, 'reserved')
+        VALUES ($1, $2, $3, $4, $5, 'hold')
         RETURNING *;
       `;
       const allocationResult = await client.query(insertQuery, [resourceId, taskId, userId, startTime, endTime]);
@@ -27,7 +28,7 @@ class ResourceService {
 
       // 2. Find overlapping allocations (excluding itself)
       const overlapQuery = `
-        SELECT id FROM resource_allocations
+        SELECT id, status, created_at FROM resource_allocations
         WHERE resource_id = $1 AND id != $2 AND status NOT IN ('cancelled', 'completed')
         AND (
           (start_time, end_time) OVERLAPS ($3, $4)
@@ -35,13 +36,20 @@ class ResourceService {
       `;
       const overlapResult = await client.query(overlapQuery, [resourceId, newAllocation.id, startTime, endTime]);
 
-      // 3. Record conflicts for overlaps
-      for (const overlap of overlapResult.rows) {
-        await client.query(
-          `INSERT INTO resource_conflicts (resource_id, allocation_id_1, allocation_id_2, conflict_type, status)
-           VALUES ($1, $2, $3, 'double_booking', 'open')`,
-          [resourceId, overlap.id, newAllocation.id]
-        );
+      // 3. Conflict mechanics:
+      if (overlapResult.rows.length === 0) {
+          // No overlaps, promote to reserved
+          await client.query("UPDATE resource_allocations SET status = 'reserved' WHERE id = $1", [newAllocation.id]);
+          newAllocation.status = 'reserved';
+      } else {
+          // Record conflicts for overlaps
+          for (const overlap of overlapResult.rows) {
+            await client.query(
+              `INSERT INTO resource_conflicts (resource_id, allocation_id_1, allocation_id_2, conflict_type, status)
+               VALUES ($1, $2, $3, 'double_booking', 'open')`,
+              [resourceId, overlap.id, newAllocation.id]
+            );
+          }
       }
 
       await client.query('COMMIT');
