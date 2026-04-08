@@ -10,6 +10,7 @@ import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
 import theme from '../../styles/theme'; // Import the theme
+import { useIsMobile } from '../../hooks/useIsMobile';
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
@@ -20,6 +21,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Base style for panels
   const panelStyle = {
@@ -416,21 +418,29 @@ const ProfilePage = () => {
     return <div>Loading...</div>;
   }
   return (
-    <Box className="profile-container">
+    <Box className={`profile-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 10 : 2 }}>
       <Typography 
         className="profile-title" 
-        variant="h4" 
+        variant={isMobile ? "h5" : "h4"}
         gutterBottom
         sx={{
           color: theme.colors.primary,
           fontFamily: theme.typography.fontFamilyAccent,
           textShadow: `0 0 8px ${theme.colors.primary}7A`,
+          textAlign: isMobile ? 'center' : 'left',
+          mt: isMobile ? 2 : 0
         }}
       >
         Your Profile
       </Typography>
       {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
-        <Box sx={{ ...panelStyle, borderColor: theme.colors.primary, boxShadow: theme.effects.glowStrong(theme.colors.primary), paddingBottom: '20px' }}>
+        <Box sx={{
+          ...panelStyle,
+          borderColor: theme.colors.primary,
+          boxShadow: theme.effects.glowStrong(theme.colors.primary),
+          paddingBottom: '20px',
+          flexDirection: isMobile ? 'column' : 'column' // Keep column but ensure spacing
+        }}>
           <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
             User Identification
           </Typography>
@@ -441,6 +451,7 @@ const ProfilePage = () => {
           flexDirection: 'column', 
           alignItems: 'center', 
           padding: theme.spacing.md, 
+          width: '100%', // Ensure full width on mobile
           backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
             borderRadius: theme.borders.borderRadiusMd,
             boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`, // Inner shadow
@@ -451,12 +462,10 @@ const ProfilePage = () => {
             alt="Profile Picture"
             src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
             sx={{ 
-              width: 120, 
-              height: 120, 
+              width: isMobile ? 100 : 120,
+              height: isMobile ? 100 : 120,
               border: `3px solid ${theme.colors.primary}`,
               boxShadow: theme.effects.glowStrong(theme.colors.primary),
-              // Attempting hexagonal clip-path. Revert if problematic.
-              // clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', 
             }}
           />
           <Button 
