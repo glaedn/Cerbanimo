@@ -80,12 +80,13 @@
 
 /* Project Card */
 .project-card {
-    background-color: rgba(10, 10, 46, 0.7);
+    background-color: rgba(10, 10, 46, 0.85); /* Increased contrast */
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 10px;
     transition: transform 0.2s ease-in-out;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.3); /* Reduced glow */
+    border: 1px solid rgba(0, 243, 255, 0.1);
 }
 
 .project-card:hover {

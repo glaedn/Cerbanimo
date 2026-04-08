@@ -12,6 +12,7 @@ const MobileTaskDetail = () => {
   const { getAccessTokenSilently } = useAuth0();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
   const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'info' });
 
@@ -34,6 +35,7 @@ const MobileTaskDetail = () => {
 
   const handleAction = async (action) => {
     try {
+      setActionLoading(true);
       const token = await getAccessTokenSilently();
       let res;
       if (action === 'accept') {
@@ -55,6 +57,8 @@ const MobileTaskDetail = () => {
       setTask(updatedTaskRes.data);
     } catch (err) {
         setFeedback({ open: true, message: `Failed to ${action} mission.`, severity: 'error' });
+    } finally {
+        setActionLoading(false);
     }
   };
 
@@ -123,16 +127,28 @@ const MobileTaskDetail = () => {
       <Paper sx={{ position: 'fixed', bottom: 65, left: 0, right: 0, p: 2, backgroundColor: 'rgba(10, 10, 46, 0.95)', borderTop: '1px solid #00F3FF', zIndex: 1000 }} elevation={10}>
         <Box display="flex" gap={2}>
           {task.status === 'available' || task.status === 'active-unassigned' ? (
-            <Button variant="contained" fullWidth onClick={() => handleAction('accept')} sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold' }}>
-              Accept Mission
+            <Button
+                variant="contained"
+                fullWidth
+                onClick={() => handleAction('accept')}
+                disabled={actionLoading}
+                sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold' }}
+            >
+              {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'Accept Mission'}
             </Button>
           ) : task.status === 'active-assigned' || task.status === 'in_progress' ? (
             <>
               <Button variant="contained" fullWidth onClick={() => setIsSubmissionModalOpen(true)} sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold' }}>
                 Submit Mission
               </Button>
-              <Button variant="outlined" fullWidth onClick={() => handleAction('drop')} sx={{ color: '#FF4136', borderColor: '#FF4136' }}>
-                Drop Mission
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => handleAction('drop')}
+                disabled={actionLoading}
+                sx={{ color: '#FF4136', borderColor: '#FF4136' }}
+              >
+                {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'Drop Mission'}
               </Button>
             </>
           ) : (

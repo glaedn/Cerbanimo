@@ -256,17 +256,18 @@ const Project = () => {
   return (
     <div className={`project-page-container ${isMobile ? 'mobile-container' : ''}`} style={{ paddingBottom: isMobile ? '80px' : '20px' }}>
       {project && (
-      <Box className="project-hud-header" sx={{ width: '90%', mb: 4 }}>
-        <Grid container spacing={3}>
+      <Box className="project-hud-header" sx={{ width: isMobile ? '100%' : '90%', mb: 4 }}>
+        <Grid container spacing={isMobile ? 2 : 3}>
           <Grid item xs={12} md={8}>
             <Box className="cyber-panel">
-              <Typography variant="h3" className="project-title-hud">{project.name.toUpperCase()}</Typography>
+              <Typography variant={isMobile ? "h4" : "h3"} className="project-title-hud">{project.name.toUpperCase()}</Typography>
 
-              <Box mt={3} display="flex" gap={2}>
+              <Box mt={isMobile ? 2 : 3} display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2}>
                 <Button
                   variant="outlined"
                   className="cyber-button-hud primary"
                   onClick={() => navigate(`/visualizer/${projectId}`)}
+                  fullWidth={isMobile}
                 >
                   SYSTEM VISUALIZER
                 </Button>
@@ -275,6 +276,7 @@ const Project = () => {
                     variant="outlined"
                     className="cyber-button-hud secondary"
                     onClick={saveProject}
+                    fullWidth={isMobile}
                   >
                     SYNC TO DATACORE
                   </Button>
@@ -332,7 +334,7 @@ const Project = () => {
         </Grid>
 
         <Box mt={3} className="cyber-panel">
-          <Box display="flex" gap={4} mb={2} borderBottom="1px solid rgba(0,243,255,0.2)">
+          <Box display="flex" gap={isMobile ? 2 : 4} mb={2} borderBottom="1px solid rgba(0,243,255,0.2)">
             <Button
                 onClick={() => setActiveTab('summary')}
                 sx={{
@@ -391,62 +393,99 @@ const Project = () => {
 
       {isMobile ? (
         <Box sx={{ width: '100%', mt: 2 }}>
-          {tasks.map((task) => (
-            <Accordion key={task.id} sx={{ bgcolor: 'rgba(28, 28, 30, 0.8)', color: '#fff', mb: 1, border: '1px solid rgba(0, 243, 255, 0.2)' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#00F3FF' }} />}>
-                <Box display="flex" justifyContent="space-between" width="100%" alignItems="center" pr={2}>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{task.name}</Typography>
-                  <Chip
-                    label={task.active_ind ? 'Active' : 'Inactive'}
-                    size="small"
-                    sx={{ height: 20, fontSize: '0.6rem', bgcolor: task.active_ind ? 'success.main' : 'grey.700' }}
-                  />
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{task.description}</Typography>
-                <Typography variant="caption" display="block">Skill: {task.skill_name}</Typography>
-                <Typography variant="caption" display="block">Reward: {task.reward_tokens} coTokens</Typography>
+          {/* Active Tasks Section */}
+          <Accordion defaultExpanded sx={{ bgcolor: 'rgba(10, 10, 46, 0.9)', color: '#fff', mb: 1, border: '1px solid #00F3FF' }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#00F3FF' }} />}>
+              <Typography sx={{ fontFamily: 'Orbitron', color: '#00F3FF' }}>ACTIVE TASKS</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 1 }}>
+              {tasks.filter(t => t.status !== 'completed').map((task) => (
+                <Accordion key={task.id} sx={{ bgcolor: 'rgba(28, 28, 30, 0.8)', color: '#fff', mb: 1, border: '1px solid rgba(0, 243, 255, 0.2)' }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#00F3FF' }} />}>
+                    <Box display="flex" justifyContent="space-between" width="100%" alignItems="center" pr={2}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{task.name}</Typography>
+                      <Chip
+                        label={task.status || 'Active'}
+                        size="small"
+                        sx={{ height: 20, fontSize: '0.6rem', bgcolor: task.active_ind ? 'success.main' : 'grey.700' }}
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{task.description}</Typography>
+                    <Typography variant="caption" display="block">Skill: {task.skill_name}</Typography>
+                    <Typography variant="caption" display="block">Reward: {task.reward_tokens} coTokens</Typography>
 
-                <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
-                  {task.submitted && isProjectCreator && task.active_ind && (
-                  <Button variant="outlined" size="small" sx={{ borderColor: '#00ff64', color: '#00ff64' }} onClick={() => handleTaskAction(task.id, 'approve')}>
-                      APPROVE
-                  </Button>
-                  )}
-                  {isProjectCreator && (
-                  <Button variant="outlined" size="small" sx={{ borderColor: '#00f3ff', color: '#00f3ff' }} onClick={() => handleTaskPopupOpen(task)}>
-                      EDIT
-                  </Button>
-                  )}
-                  {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
-                  <Button variant="outlined" size="small" sx={{ borderColor: '#ff5ca2', color: '#ff5ca2' }} onClick={() => handleTaskAction(task.id, 'submit')}>
-                      SUBMIT
-                  </Button>
-                  )}
-                  <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{
-                          borderColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
-                          color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
-                      }}
-                      onClick={() => handleTaskAction(
-                      task.id,
-                      task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+                    <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
+                      {task.submitted && isProjectCreator && task.active_ind && (
+                      <Button variant="outlined" size="small" sx={{ borderColor: '#00ff64', color: '#00ff64' }} onClick={() => handleTaskAction(task.id, 'approve')}>
+                          APPROVE
+                      </Button>
                       )}
-                  >
-                      {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "DROP" : "ACCEPT"}
-                  </Button>
-                  {isProjectCreator && task.submitted && (
-                  <Button variant="outlined" size="small" sx={{ borderColor: '#ff003c', color: '#ff003c' }} onClick={() => handleTaskAction(task.id, 'reject')}>
-                      REJECT
-                  </Button>
-                  )}
+                      {isProjectCreator && (
+                      <Button variant="outlined" size="small" sx={{ borderColor: '#00f3ff', color: '#00f3ff' }} onClick={() => handleTaskPopupOpen(task)}>
+                          EDIT
+                      </Button>
+                      )}
+                      {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
+                      <Button variant="outlined" size="small" sx={{ borderColor: '#ff5ca2', color: '#ff5ca2' }} onClick={() => handleTaskAction(task.id, 'submit')}>
+                          SUBMIT
+                      </Button>
+                      )}
+                      <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{
+                              borderColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                              color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                          }}
+                          onClick={() => handleTaskAction(
+                          task.id,
+                          task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+                          )}
+                      >
+                          {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "DROP" : "ACCEPT"}
+                      </Button>
+                      {isProjectCreator && task.submitted && (
+                      <Button variant="outlined" size="small" sx={{ borderColor: '#ff003c', color: '#ff003c' }} onClick={() => handleTaskAction(task.id, 'reject')}>
+                          REJECT
+                      </Button>
+                      )}
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Completed Tasks Section */}
+          <Accordion sx={{ bgcolor: 'rgba(10, 10, 46, 0.9)', color: '#fff', mb: 1, border: '1px solid #ff5ca2' }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#ff5ca2' }} />}>
+              <Typography sx={{ fontFamily: 'Orbitron', color: '#ff5ca2' }}>COMPLETED TASKS</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 1 }}>
+              {tasks.filter(t => t.status === 'completed').map((task) => (
+                <Box key={task.id} sx={{ p: 2, mb: 1, bgcolor: 'rgba(28, 28, 30, 0.5)', borderRadius: 1, border: '1px solid rgba(255, 92, 162, 0.3)' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#ff5ca2' }}>{task.name}</Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>{task.description}</Typography>
                 </Box>
-              </AccordionDetails>
-            </Accordion>
-          ))}
+              ))}
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Contributors Section */}
+          <Accordion sx={{ bgcolor: 'rgba(10, 10, 46, 0.9)', color: '#fff', mb: 1, border: '1px solid #00ff64' }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#00ff64' }} />}>
+              <Typography sx={{ fontFamily: 'Orbitron', color: '#00ff64' }}>CONTRIBUTORS</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {Array.from(new Set(tasks.flatMap(t => t.assigned_user_ids || []))).map(userId => (
+                <Box key={userId} sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Typography variant="body2">User ID: {userId}</Typography>
+                </Box>
+              ))}
+            </AccordionDetails>
+          </Accordion>
         </Box>
       ) : (
       <div className="tasks-list">

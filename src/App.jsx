@@ -36,6 +36,7 @@ import AuthWrapper from "./AuthWrapper.jsx";
 import Rezzler from "./mobile/Rezzler.jsx";
 import MobileDashboard from "./pages/MobileDashboard.jsx";
 import MobileTaskDetail from "./pages/MobileTaskDetail.jsx";
+import TaskBrowser from "./pages/TaskBrowser.jsx";
 import CommunityMarketplace from "./components/CommunityMarketplace/CommunityMarketplace.jsx";
 import ProjectVisualizer from "./pages/ProjectVisualizer.jsx";
 import CommunityCreation from "./pages/CommunityCreation.jsx";
@@ -69,6 +70,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <OnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <PrivateRoute>
+                <TaskBrowser />
               </PrivateRoute>
             }
           />

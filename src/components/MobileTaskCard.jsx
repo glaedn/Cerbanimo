@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Card, CardContent, Typography, Chip, Button, Box, Divider, Snackbar, Alert } from '@mui/material';
+import { Card, CardContent, Typography, Chip, Button, Box, Divider, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 const MobileTaskCard = ({ task, onAccept }) => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const handleView = () => {
@@ -50,13 +53,22 @@ const MobileTaskCard = ({ task, onAccept }) => {
               variant="contained"
               fullWidth
               size="small"
-              onClick={() => {
-                onAccept(task.id);
+              disabled={loading || success}
+              onClick={async () => {
+                setLoading(true);
+                await onAccept(task.id);
+                setLoading(false);
+                setSuccess(true);
                 setSnackbar({ open: true, message: 'Mission accepted!', severity: 'success' });
+                setTimeout(() => setSuccess(false), 2000);
               }}
-              sx={{ backgroundColor: '#00F3FF', color: '#000' }}
+              sx={{
+                backgroundColor: success ? '#00ff64' : '#00F3FF',
+                color: '#000',
+                transition: 'all 0.3s ease'
+              }}
             >
-              Accept
+              {loading ? <CircularProgress size={20} color="inherit" /> : (success ? <CheckCircleOutlineIcon /> : 'Accept')}
             </Button>
           )}
           <Button

@@ -43,8 +43,8 @@
 }
 
 .hub-card {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
+  background-color: #121212; /* Darker for better contrast */
+  border: 1px solid #2a2a2a;
   color: #fff;
   height: 100%;
 }

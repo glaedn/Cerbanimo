@@ -70,15 +70,15 @@ const GuildsDashboard = () => {
   if (loading) return <Box p={4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress sx={{ color: '#00f3ff' }} /></Box>;
 
   return (
-    <Box className={`guilds-dashboard-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 10 : 2 }}>
+    <Box className={`guilds-dashboard-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={isMobile ? 2 : 6}>
-        <Typography variant={isMobile ? "h5" : "h3"} className="guilds-title">GUILD INTELLIGENCE</Typography>
+        <Typography variant={isMobile ? "h5" : "h3"} className="guilds-title" sx={{ fontFamily: 'Orbitron', color: '#00f3ff' }}>GUILD INTELLIGENCE</Typography>
       </Box>
 
       {myMemberships.length > 0 && (
-        <Box mb={6}>
-          <Typography variant="h4" className="section-title">MY GUILD PROGRESSION</Typography>
-          <Grid container spacing={4}>
+        <Box mb={isMobile ? 4 : 6}>
+          <Typography variant={isMobile ? "h6" : "h4"} className="section-title" sx={{ fontFamily: 'Orbitron', mb: 2 }}>MY GUILD PROGRESSION</Typography>
+          <Grid container spacing={isMobile ? 2 : 4}>
             {myMemberships.map(membership => (
               <Grid item xs={12} sm={6} md={4} key={membership.guild_id}>
                 <Card className="cyber-card membership-card">
@@ -94,8 +94,8 @@ const GuildsDashboard = () => {
         </Box>
       )}
 
-      <Typography variant="h4" className="section-title">GUILD REGISTRY</Typography>
-      <Grid container spacing={4}>
+      <Typography variant={isMobile ? "h6" : "h4"} className="section-title" sx={{ fontFamily: 'Orbitron', mb: 2 }}>GUILD REGISTRY</Typography>
+      <Grid container spacing={isMobile ? 2 : 4}>
         {guilds.map(guild => {
           const isSelected = userProfile?.skills?.includes(guild.skill_name);
           const isMember = myMemberships.some(m => m.guild_id === guild.id);
@@ -116,18 +116,18 @@ const GuildsDashboard = () => {
                     <LinearProgress variant="determinate" value={Number(guild.intel?.health_score || 0) * 100} className="health-bar" />
                 </Box>
 
-                <Grid container spacing={1} mb={2}>
+                <Grid container spacing={isMobile ? 1 : 1} mb={2}>
                     <Grid item xs={6}>
-                        <Box sx={{ bgcolor: '#111', p: 1, borderRadius: 1, textAlign: 'center' }}>
-                            <TrendingUp size={14} color="#00f3ff" />
-                            <Typography sx={{ fontSize: '0.8rem' }}>{(Number(guild.intel?.task_demand || 0) * 100).toFixed(0)}%</Typography>
+                        <Box sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 1, borderRadius: 1, textAlign: 'center', border: '1px solid rgba(0, 243, 255, 0.1)' }}>
+                            <TrendingUp size={isMobile ? 12 : 14} color="#00f3ff" />
+                            <Typography sx={{ fontSize: isMobile ? '0.7rem' : '0.8rem' }}>{(Number(guild.intel?.task_demand || 0) * 100).toFixed(0)}%</Typography>
                             <Typography sx={{ fontSize: '0.6rem', color: '#666' }}>DEMAND</Typography>
                         </Box>
                     </Grid>
                     <Grid item xs={6}>
-                        <Box sx={{ bgcolor: '#111', p: 1, borderRadius: 1, textAlign: 'center' }}>
-                            <Shield size={14} color="#00f3ff" />
-                            <Typography sx={{ fontSize: '0.8rem' }}>{(Number(guild.intel?.verification_pass_rate || 0) * 100).toFixed(0)}%</Typography>
+                        <Box sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 1, borderRadius: 1, textAlign: 'center', border: '1px solid rgba(0, 243, 255, 0.1)' }}>
+                            <Shield size={isMobile ? 12 : 14} color="#00f3ff" />
+                            <Typography sx={{ fontSize: isMobile ? '0.7rem' : '0.8rem' }}>{(Number(guild.intel?.verification_pass_rate || 0) * 100).toFixed(0)}%</Typography>
                             <Typography sx={{ fontSize: '0.6rem', color: '#666' }}>VERIFIED</Typography>
                         </Box>
                     </Grid>
