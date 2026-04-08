@@ -60,7 +60,7 @@ export default function Homepage() {
           whileInView={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h2>Run You Own Community, and Join Others</h2>
+          <h2>Run Your Own Community, and Join Others</h2>
           <p>Communities get a pool of tokens to allocate every day. Make your own project and generate tokens for others, and take on tasks for projects doing things that matter to you.</p>
         </motion.div>
       </section>
