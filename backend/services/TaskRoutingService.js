@@ -1,7 +1,12 @@
 import pool from '../db.js';
+import ImpactGraphService from './ImpactGraphService.js';
 
 class TaskRoutingService {
   async calculatePriorityScore(taskId) {
+    // Phase 4: Dynamic Impact Depth calculation
+    const impactDepth = await ImpactGraphService.calculateImpactDepth(taskId);
+    await pool.query('UPDATE tasks SET impact_depth = $1 WHERE id = $2', [impactDepth, taskId]);
+
     const query = `
       SELECT t.reward_tokens, t.impact_depth, t.decay_factor,
              t.created_at, t.status,
@@ -33,16 +38,42 @@ class TaskRoutingService {
     const userResult = await pool.query(userQuery, [userId]);
     const userSkills = userResult.rows[0].skills || []; // Assuming skill IDs or names
 
+    // Phase 4: Matching with Impact Alignment
+    // Boost tasks that are linked to outcomes the user has successfully contributed to before.
     const matchingTasksQuery = `
-      SELECT t.*, p.name as project_name
+      WITH user_impacted_outcomes AS (
+        SELECT DISTINCT o.id
+        FROM story_units su
+        JOIN outcomes o ON su.project_id = o.project_id
+        WHERE su.user_id = $1
+      )
+      SELECT t.*, p.name as project_name,
+             CASE WHEN EXISTS (
+               SELECT 1 FROM impact_nodes tn
+               JOIN impact_edges te ON tn.id = te.from_node_id
+               JOIN impact_nodes onode ON te.to_node_id = onode.id
+               WHERE tn.type = 'task' AND tn.entity_id = t.id
+               AND onode.type = 'outcome' AND onode.entity_id IN (SELECT id FROM user_impacted_outcomes)
+             ) THEN 1.2 ELSE 1.0 END as impact_alignment_boost
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
-      WHERE (t.skill_id = ANY($1) OR t.skill_id IS NULL)
-      AND t.status::text LIKE $2
-      ORDER BY t.priority_score DESC
+      WHERE (t.skill_id = ANY($2) OR t.skill_id IS NULL)
+      AND t.status::text LIKE $3
+      ORDER BY (t.priority_score * (
+             CASE WHEN EXISTS (
+               SELECT 1 FROM impact_nodes tn
+               JOIN impact_edges te ON tn.id = te.from_node_id
+               JOIN impact_nodes onode ON te.to_node_id = onode.id
+               WHERE tn.type = 'task' AND tn.entity_id = t.id
+               AND onode.type = 'outcome' AND onode.entity_id IN (SELECT id FROM user_impacted_outcomes)
+             ) THEN 1.2 ELSE 1.0 END
+      )) DESC
       LIMIT 20;
     `;
-    const result = await pool.query(matchingTasksQuery, [userSkills, '%unassigned']);
+    // Note: Applying the boost in ORDER BY would be ideal:
+    // ORDER BY (t.priority_score * (CASE WHEN ... THEN 1.2 ELSE 1.0 END)) DESC
+
+    const result = await pool.query(matchingTasksQuery, [userId, userSkills, '%unassigned']);
     return result.rows;
   }
 

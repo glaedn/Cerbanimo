@@ -1,6 +1,8 @@
 import express from 'express';
 import pg from 'pg';
 import { autoGenerateTasks } from '../services/taskGenerator.js';
+import ImpactGraphService from '../services/ImpactGraphService.js';
+import ProjectHealthService from '../services/ProjectHealthService.js';
 
 const { Pool } = pg;
 
@@ -121,11 +123,11 @@ router.patch('/:projectId', async (req, res) => {
 // Create a new project
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, auth0_id } = req.body;
-    const tags = req.body.tags.map(tag => tag.name);
+    const { name, description, auth0_id, outcomeStatement } = req.body;
+    const tags = (req.body.tags || []).map(tag => tag.name);
 
-    if (!name || !description || !auth0_id) {
-      return res.status(400).json({ message: 'Name, description, and Auth0 ID are required' });
+    if (!name || !description || !auth0_id || !outcomeStatement) {
+      return res.status(400).json({ message: 'Name, description, Auth0 ID, and outcomeStatement are required' });
     }
 
     // Step 1: Fetch the internal user ID from the Auth0 ID
@@ -148,7 +150,12 @@ router.post('/create', async (req, res) => {
     `;
 
     const result = await pool.query(insertQuery, [name, description, tags, creator_id]);
-    res.status(201).json(result.rows[0]);
+    const project = result.rows[0];
+
+    // Step 3: Enforce Outcome authorship (Phase 0)
+    await ImpactGraphService.createOutcome(project.id, outcomeStatement);
+
+    res.status(201).json(project);
   } catch (err) {
     console.error('Error creating project:', err);
     res.status(500).json({ message: 'Failed to create project' });
@@ -178,14 +185,23 @@ router.put('/:projectId', async (req, res) => {
   }
 });
 
-import ProjectHealthService from '../services/ProjectHealthService.js';
-
 router.post('/:projectId/close', async (req, res) => {
   const { projectId } = req.params;
   const { reason } = req.body;
   try {
     await ProjectHealthService.closeProject(projectId, reason);
     res.json({ message: 'Project closed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:projectId/revive', async (req, res) => {
+  const { projectId } = req.params;
+  const { reviverId } = req.body;
+  try {
+    const project = await ProjectHealthService.reviveProject(projectId, reviverId);
+    res.json({ message: 'Project revived', project });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

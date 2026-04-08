@@ -49,4 +49,13 @@ router.get('/disputes/active', async (req, res) => {
   }
 });
 
+router.get('/detect-bad-actors/:userId', async (req, res) => {
+  try {
+    const flags = await verificationService.detectBadActors(req.params.userId);
+    res.json(flags);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

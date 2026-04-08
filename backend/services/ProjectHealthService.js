@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import StoryEngineService from './StoryEngineService.js';
 
 class ProjectHealthService {
   async calculateHealthScore(projectId) {
@@ -59,12 +60,29 @@ class ProjectHealthService {
     }
   }
 
-  async reviveProject(projectId) {
+  async reviveProject(projectId, reviverId) {
      const query = `
-      UPDATE projects SET status = 'active' WHERE id = $1 RETURNING *;
+      UPDATE projects SET status = 'active', health_score = 0.5 WHERE id = $1 RETURNING *;
     `;
     const result = await pool.query(query, [projectId]);
-    return result.rows[0];
+    const project = result.rows[0];
+
+    // Phase 7: Revival Mechanics - Log revival in Story Engine
+    // We create a story unit for the reviver, linked to the project.
+    // Since there's no task_id, we might need to handle this specially in StoryEngine or use a placeholder.
+    // For now, let's assume StoryEngineService.createStoryUnit can handle null taskId for project-level events.
+    try {
+      await pool.query(
+        `INSERT INTO story_units (user_id, project_id, role, task_type)
+         VALUES ($1, $2, 'reviver', 'project_revival')`,
+        [reviverId, projectId]
+      );
+      await StoryEngineService.detectUserPatterns(reviverId);
+    } catch (err) {
+      console.error("Failed to log project revival story unit:", err);
+    }
+
+    return project;
   }
 }
 
