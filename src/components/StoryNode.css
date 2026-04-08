@@ -199,3 +199,29 @@
     color: #AAAAAA; /* Example color from .story-node-subheader */
     font-size: 0.875rem; /* theme.typography.fontSizeSm */
 }
+
+@media (max-width: 600px) {
+  .story-node-card {
+    padding: 12px;
+    margin: 8px 0;
+  }
+  .story-node-header-label {
+    font-size: 0.85rem;
+    padding: 2px 8px;
+    margin-bottom: 0.75rem !important;
+  }
+  .reflection-text {
+    font-size: 0.9rem;
+  }
+  .endorsement-panel {
+    padding: 8px;
+    gap: 4px;
+  }
+  .endorse-btn {
+    min-width: 32px;
+    padding: 4px;
+  }
+  .endorse-input .neon-input {
+    font-size: 0.8rem;
+  }
+}

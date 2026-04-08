@@ -87,7 +87,23 @@ const GuildHub = () => {
   const myMembership = (guild.members || []).find(m => m.user_id === platformUserId);
 
   const handleTaskAction = async (taskId, action) => {
+    // Optimistic Update
+    const originalTasks = [...tasks];
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        const currentAssignees = t.assigned_user_ids || [];
+        return {
+          ...t,
+          assigned_user_ids: action === 'accept'
+            ? [...new Set([...currentAssignees, platformUserId])]
+            : currentAssignees.filter(id => id !== platformUserId)
+        };
+      }
+      return t;
+    }));
+
     setActionLoading(prev => ({ ...prev, [taskId]: true }));
+    if (window.navigator.vibrate) window.navigator.vibrate(50);
     try {
       const token = await getAccessTokenSilently();
       const endpoint = action === 'accept'
@@ -103,9 +119,12 @@ const GuildHub = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTasks(tasksRes.data);
+      if (window.navigator.vibrate) window.navigator.vibrate(action === 'accept' ? [30, 30, 30] : 20);
       setSnackbar({ open: true, message: `Task ${action === 'accept' ? 'accepted' : 'dropped'}!`, severity: 'success' });
     } catch (err) {
       console.error(`Failed to ${action} task:`, err);
+      // Rollback
+      setTasks(originalTasks);
       setSnackbar({ open: true, message: `Failed to ${action} task.`, severity: 'error' });
     } finally {
       setActionLoading(prev => ({ ...prev, [taskId]: false }));
@@ -147,32 +166,32 @@ const GuildHub = () => {
                 <LinearProgress variant="determinate" value={Number(guild.intel?.health_score || 0) * 100} className="hub-progress" />
               </Box>
 
-              <Grid container spacing={2} mb={4}>
+              <Grid container spacing={isMobile ? 1 : 2} mb={4}>
                 <Grid item xs={6}>
-                  <Box className="hub-metric">
-                    <Target size={20} color="#00f3ff" />
-                    <Typography className="m-value">{(guild.intel?.task_demand * 100 || 0).toFixed(0)}%</Typography>
+                  <Box className="hub-metric" sx={{ p: isMobile ? 1 : 2 }}>
+                    <Target size={isMobile ? 16 : 20} color="#00f3ff" />
+                    <Typography className="m-value" sx={{ fontSize: isMobile ? '1.1rem' : '1.3rem' }}>{(guild.intel?.task_demand * 100 || 0).toFixed(0)}%</Typography>
                     <Typography className="m-label">DEMAND</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={6}>
-                  <Box className="hub-metric">
-                    <Shield size={20} color="#00f3ff" />
-                    <Typography className="m-value">{(guild.intel?.verification_pass_rate * 100 || 100).toFixed(0)}%</Typography>
+                  <Box className="hub-metric" sx={{ p: isMobile ? 1 : 2 }}>
+                    <Shield size={isMobile ? 16 : 20} color="#00f3ff" />
+                    <Typography className="m-value" sx={{ fontSize: isMobile ? '1.1rem' : '1.3rem' }}>{(guild.intel?.verification_pass_rate * 100 || 100).toFixed(0)}%</Typography>
                     <Typography className="m-label">VERIFIED</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={6}>
-                  <Box className="hub-metric">
-                    <TrendingUp size={20} color="#00f3ff" />
-                    <Typography className="m-value">{guild.intel?.completion_rate ? (guild.intel.completion_rate * 100).toFixed(0) : 0}%</Typography>
+                  <Box className="hub-metric" sx={{ p: isMobile ? 1 : 2 }}>
+                    <TrendingUp size={isMobile ? 16 : 20} color="#00f3ff" />
+                    <Typography className="m-value" sx={{ fontSize: isMobile ? '1.1rem' : '1.3rem' }}>{guild.intel?.completion_rate ? (guild.intel.completion_rate * 100).toFixed(0) : 0}%</Typography>
                     <Typography className="m-label">THROUGHPUT</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={6}>
-                  <Box className="hub-metric">
-                    <BookOpen size={20} color="#00f3ff" />
-                    <Typography className="m-value">{Math.round(guild.intel?.reward_average || 0)}</Typography>
+                  <Box className="hub-metric" sx={{ p: isMobile ? 1 : 2 }}>
+                    <BookOpen size={isMobile ? 16 : 20} color="#00f3ff" />
+                    <Typography className="m-value" sx={{ fontSize: isMobile ? '1.1rem' : '1.3rem' }}>{Math.round(guild.intel?.reward_average || 0)}</Typography>
                     <Typography className="m-label">AVG REWARD</Typography>
                   </Box>
                 </Grid>
@@ -202,14 +221,14 @@ const GuildHub = () => {
           {myRole && (
             <Card className="hub-card progression-card" sx={{ mb: 4 }}>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'flex-start' : 'center'} gap={isMobile ? 2 : 0}>
                   <Box>
                     <Typography variant="h5" className="card-title">MY CAREER PATH</Typography>
-                    <Typography variant="h4" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', my: 1 }}>{myRole.toUpperCase()}</Typography>
+                    <Typography variant={isMobile ? "h5" : "h4"} sx={{ color: '#00f3ff', fontFamily: 'Orbitron', my: 1 }}>{myRole.toUpperCase()}</Typography>
                   </Box>
-                  <Box textAlign="right">
+                  <Box textAlign={isMobile ? 'left' : 'right'}>
                     <Typography variant="caption" color="gray">NEXT RANK</Typography>
-                    <Typography variant="h6" color="#888">{rankThresholds[myRole]?.next?.toUpperCase() || 'MAX RANK'}</Typography>
+                    <Typography variant={isMobile ? "body1" : "h6"} color="#888">{rankThresholds[myRole]?.next?.toUpperCase() || 'MAX RANK'}</Typography>
                   </Box>
                 </Box>
                 <LinearProgress
@@ -238,16 +257,17 @@ const GuildHub = () => {
                   <ListItemText
                     primary={task.name.toUpperCase()}
                     secondary={`PROJECT: ${task.project_name} | REWARD: ${task.reward_tokens} Essence`}
-                    primaryTypographyProps={{ className: 'm-name' }}
-                    secondaryTypographyProps={{ className: 'm-desc' }}
+                    primaryTypographyProps={{ className: 'm-name', sx: { fontSize: isMobile ? '0.85rem' : '1rem' } }}
+                    secondaryTypographyProps={{ className: 'm-desc', sx: { fontSize: isMobile ? '0.65rem' : '0.8rem' } }}
                   />
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 2, ml: isMobile ? 0 : 2, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                     <Chip label={`LVL ${task.skill_level}`} size="small" variant="outlined" sx={{ color: '#ff9ecb', borderColor: '#ff5ca2', fontFamily: 'Orbitron', fontWeight: 'bold' }} />
-                    <Box display="flex" gap={1}>
+                    <Box display="flex" gap={1} width={isMobile ? '100%' : 'auto'} justifyContent={isMobile ? 'flex-end' : 'flex-start'}>
                         <Button
                         variant="outlined"
                         className="mission-btn"
                         onClick={() => navigate(`/visualizer/${task.project_id}/${task.id}`)}
+                        sx={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '70px' : '64px' }}
                         >
                         VIEW
                         </Button>
@@ -261,7 +281,8 @@ const GuildHub = () => {
                             color: '#000',
                             fontFamily: 'Orbitron',
                             fontSize: '0.7rem',
-                            minWidth: '80px'
+                            minWidth: isMobile ? '100px' : '80px',
+                            height: isMobile ? '48px' : 'auto'
                         }}
                         >
                         {actionLoading[task.id] ? <CircularProgress size={16} color="inherit" /> : (task.assigned_user_ids?.includes(platformUserId) ? 'DROP' : 'ACCEPT')}

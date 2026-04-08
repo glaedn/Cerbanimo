@@ -9,8 +9,10 @@ import {
 import Paper from '@mui/material/Paper';
 import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const ConstellationHub = () => {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently, user } = useAuth0();
   const navigate = useNavigate();
   const location = useLocation();
@@ -107,20 +109,20 @@ const ConstellationHub = () => {
   if (loading) return <Box p={4}><CircularProgress /></Box>;
 
   return (
-    <Box p={4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#e0e0e0' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h3" sx={{ fontFamily: 'Orbitron', color: '#ff5ca2' }}>CONSTELLATION HUB</Typography>
+    <Box p={isMobile ? 2 : 4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#e0e0e0', pb: isMobile ? 12 : 4 }}>
+      <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'} mb={4} gap={2}>
+        <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontFamily: 'Orbitron', color: '#ff5ca2', textAlign: isMobile ? 'center' : 'left' }}>CONSTELLATION HUB</Typography>
         <Button
           variant="outlined"
           startIcon={<Plus size={20} />}
           onClick={() => setFormModalOpen(true)}
-          sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', minWidth: 'fit-content' }}
+          sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', minWidth: 'fit-content', height: isMobile ? '48px' : 'auto' }}
         >
           FORM ALLIANCE
         </Button>
       </Box>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={isMobile ? 2 : 4}>
         {constellations.length === 0 ? (
             <Grid item xs={12}>
                 <Typography color="gray">No active constellations found. Form an alliance between projects and guilds to begin complex work.</Typography>
@@ -148,33 +150,33 @@ const ConstellationHub = () => {
                   />
                 </Box>
 
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
-                    <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={isMobile ? 12 : 4}>
+                    <Box textAlign="center" p={isMobile ? 1 : 1} sx={{ bgcolor: '#111', borderRadius: 1, display: isMobile ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <TrendingUp size={16} color="#ff5ca2" />
-                      <Typography variant="caption" display="block">VELOCITY</Typography>
-                      <Typography variant="h6">{Number(c.velocity || 0).toFixed(1)}</Typography>
+                      <Typography variant="caption" display="block" sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>VELOCITY</Typography>
+                      <Typography variant={isMobile ? "body1" : "h6"} sx={{ ml: isMobile ? 'auto' : 0 }}>{Number(c.velocity || 0).toFixed(1)}</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={4}>
-                    <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
+                  <Grid item xs={isMobile ? 12 : 4}>
+                    <Box textAlign="center" p={isMobile ? 1 : 1} sx={{ bgcolor: '#111', borderRadius: 1, display: isMobile ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <CheckSquare size={16} color="#ff5ca2" />
-                      <Typography variant="caption" display="block">TASKS</Typography>
-                      <Typography variant="h6">{(c.tasks_completed || 0)}/{(c.tasks_total || 0)}</Typography>
+                      <Typography variant="caption" display="block" sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>TASKS</Typography>
+                      <Typography variant={isMobile ? "body1" : "h6"} sx={{ ml: isMobile ? 'auto' : 0 }}>{(c.tasks_completed || 0)}/{(c.tasks_total || 0)}</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={4}>
-                    <Box textAlign="center" p={1} sx={{ bgcolor: '#111', borderRadius: 1 }}>
+                  <Grid item xs={isMobile ? 12 : 4}>
+                    <Box textAlign="center" p={isMobile ? 1 : 1} sx={{ bgcolor: '#111', borderRadius: 1, display: isMobile ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <AlertTriangle size={16} color="#ff5ca2" />
-                      <Typography variant="caption" display="block">DRIFT</Typography>
-                      <Typography variant="h6">LOW</Typography>
+                      <Typography variant="caption" display="block" sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>DRIFT</Typography>
+                      <Typography variant={isMobile ? "body1" : "h6"} sx={{ ml: isMobile ? 'auto' : 0 }}>LOW</Typography>
                     </Box>
                   </Grid>
                 </Grid>
 
                 <Button
                     fullWidth
-                    sx={{ mt: 3, color: '#ff5ca2', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(255, 92, 162, 0.1)' } }}
+                    sx={{ mt: 3, color: '#ff5ca2', border: '1px solid #444', height: isMobile ? '48px' : 'auto', '&:hover': { bgcolor: 'rgba(255, 92, 162, 0.1)' } }}
                     onClick={async () => {
                         setCurrentConstellation(c);
                         setInvitesOpen(true);
@@ -185,7 +187,7 @@ const ConstellationHub = () => {
 
                 <Button
                     fullWidth
-                    sx={{ mt: 1, color: '#00f3ff', border: '1px solid #444', '&:hover': { bgcolor: 'rgba(0, 243, 255, 0.1)' } }}
+                    sx={{ mt: 1, color: '#00f3ff', border: '1px solid #444', height: isMobile ? '48px' : 'auto', '&:hover': { bgcolor: 'rgba(0, 243, 255, 0.1)' } }}
                     onClick={async () => {
                         setCurrentConstellation(c);
                         const token = await getAccessTokenSilently();
@@ -219,7 +221,7 @@ const ConstellationHub = () => {
       <Modal open={taskPoolOpen} onClose={() => setTaskPoolOpen(false)}>
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: '80%', maxWidth: 800, bgcolor: '#0a0a0a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff',
+          width: isMobile ? '95%' : '80%', maxWidth: 800, bgcolor: '#0a0a0a', border: '2px solid #ff5ca2', boxShadow: 24, p: isMobile ? 2 : 4, color: '#fff',
           maxHeight: '90vh', overflowY: 'auto'
         }}>
             <Typography variant="h4" sx={{ fontFamily: 'Orbitron', mb: 3, color: '#ff5ca2' }}>
@@ -265,12 +267,12 @@ const ConstellationHub = () => {
                     primaryTypographyProps={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
                     secondaryTypographyProps={{ color: 'gray' }}
                   />
-                  <Box display="flex" alignItems="center" gap={2}>
+                  <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} alignItems={isMobile ? 'stretch' : 'center'} gap={isMobile ? 1 : 2}>
                     <Chip label={(project.status ?? '').toUpperCase()} size="small" variant="outlined" sx={{ color: '#00f3ff', borderColor: '#00f3ff' }} />
                     <Button
                       variant="outlined"
                       size="small"
-                      sx={{ color: '#00f3ff', borderColor: '#00f3ff' }}
+                      sx={{ color: '#00f3ff', borderColor: '#00f3ff', height: isMobile ? '44px' : 'auto' }}
                       onClick={() => navigate(`/visualizer/${project.id}`)}
                     >
                       VIEW PROJECT
@@ -342,7 +344,7 @@ const ConstellationHub = () => {
       <Modal open={invitesOpen} onClose={() => setInvitesOpen(false)}>
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 400, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff'
+          width: isMobile ? '95%' : 400, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: isMobile ? 2 : 4, color: '#fff'
         }}>
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 3 }}>INVITE COMMUNITY TO ALLIANCE</Typography>
 
@@ -417,7 +419,8 @@ const ConstellationHub = () => {
       <Modal open={formModalOpen} onClose={() => setFormModalOpen(false)}>
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 500, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: 4, color: '#fff'
+          width: isMobile ? '95%' : 500, bgcolor: '#1a1a1a', border: '2px solid #ff5ca2', boxShadow: 24, p: isMobile ? 2 : 4, color: '#fff',
+          maxHeight: '90vh', overflowY: 'auto'
         }}>
           <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 3 }}>FORM NEW CONSTELLATION</Typography>
           <TextField

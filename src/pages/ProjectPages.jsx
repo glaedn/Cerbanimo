@@ -173,7 +173,7 @@ const ProjectPages = () => {
 
   return (
     <div className={`project-pages-container ${isMobile ? 'mobile-registry' : ''}`} style={{ pb: isMobile ? '80px' : '20px' }}>
-      <div className="search-bar-container" style={{ width: isMobile ? '100%' : '80%' }}>
+      <div className="search-bar-container" style={{ width: isMobile ? '100%' : '80%', marginBottom: isMobile ? '24px' : '40px' }}>
         <TextField
           variant="outlined"
           size="small"
@@ -181,13 +181,28 @@ const ProjectPages = () => {
           placeholder="Search Projects..."
           value={search}
           onChange={handleSearchChange}
-          sx={{ flexGrow: 1, marginRight: 1 }}
+          sx={{
+            flexGrow: 1,
+            marginRight: 1,
+            '& .MuiOutlinedInput-root': {
+              height: isMobile ? '56px' : '40px'
+            }
+          }}
         />
         <Button
           variant="contained"
           onClick={() => navigate('/projectcreation')}
           title="Add New Project"
-          sx={{ backgroundColor: 'primary.main', color: 'common.black', fontSize: '1.5rem', width: '40px', height: '40px', borderRadius: '50%', minWidth: '40px', padding: 0 }}
+          sx={{
+            backgroundColor: 'primary.main',
+            color: 'common.black',
+            fontSize: '1.5rem',
+            width: isMobile ? '56px' : '40px',
+            height: isMobile ? '56px' : '40px',
+            borderRadius: '50%',
+            minWidth: isMobile ? '56px' : '40px',
+            padding: 0
+          }}
         >
           +
         </Button>
@@ -215,7 +230,7 @@ const ProjectPages = () => {
                   variant="contained"
                   size="small"
                   fullWidth={isMobile}
-                  sx={{ backgroundColor: 'primary.main', color: 'common.black' }}
+                  sx={{ backgroundColor: 'primary.main', color: 'common.black', height: isMobile ? '48px' : 'auto' }}
                   onClick={() => {
                     setSelectedProject(project);
                     fetchTasks(project.id);
@@ -227,7 +242,7 @@ const ProjectPages = () => {
                   variant="outlined"
                   size="small"
                   fullWidth={isMobile}
-                  sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+                  sx={{ borderColor: 'primary.main', color: 'primary.main', height: isMobile ? '48px' : 'auto' }}
                   onClick={() => {
                     navigate(`/visualizer/${project.id}`);
                   }}
@@ -241,21 +256,21 @@ const ProjectPages = () => {
         </Grid>
       </div>
 
-      <div className="pagination-container" style={{ width: isMobile ? '100%' : '80%', justifyContent: 'center' }}>
+      <div className="pagination-container" style={{ width: isMobile ? '100%' : '80%', justifyContent: 'center', marginBottom: isMobile ? '40px' : '0' }}>
         <Button
           variant="contained"
-          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' } }}
+          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' }, height: isMobile ? '48px' : 'auto' }}
           onClick={handlePreviousPage}
           disabled={page === 1}
         >
           Previous
         </Button>
         <Typography className="page-text" sx={{ marginX: 2 }}>
-          Page {page} ({projects.length} projects{hasMorePages ? ', more available' : ''})
+          Page {page}
         </Typography>
         <Button
           variant="contained"
-          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' } }}
+          sx={{ backgroundColor: 'accentPurple.main', color: 'text.primary', '&:disabled': { backgroundColor: 'action.disabledBackground' }, height: isMobile ? '48px' : 'auto' }}
           onClick={handleNextPage}
           disabled={!hasMorePages}
         >
@@ -291,7 +306,7 @@ const ProjectPages = () => {
                         variant="contained"
                         size="small"
                         fullWidth={isMobile}
-                        sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black' }}
+                        sx={{ backgroundColor: isAssigned ? 'error.main' : 'primary.main', color: isAssigned ? 'common.white' : 'common.black', height: isMobile ? '48px' : 'auto' }}
                         onClick={() => handleTaskAction(task.id, isAssigned ? 'drop' : 'accept')}
                       >
                         {isAssigned ? 'Drop' : 'Accept'}
@@ -300,7 +315,7 @@ const ProjectPages = () => {
                         variant="outlined"
                         size="small"
                         fullWidth={isMobile}
-                        sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+                        sx={{ borderColor: 'primary.main', color: 'primary.main', height: isMobile ? '48px' : 'auto' }}
                         onClick={() => navigate(`/visualizer/${selectedProject.id}/${task.id}`)}
                       >
                         View Task
@@ -313,7 +328,7 @@ const ProjectPages = () => {
             <Button
               variant="contained"
               fullWidth={isMobile}
-              sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2 }}
+              sx={{ backgroundColor: 'error.main', color: 'common.white', marginTop: 2, height: isMobile ? '48px' : 'auto' }}
               onClick={() => setSelectedProject(null)}
             >
               Close

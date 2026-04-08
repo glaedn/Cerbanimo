@@ -10,9 +10,13 @@ import {
   InputLabel,
   Chip,
   Box,
+  Typography,
+  IconButton
 } from "@mui/material";
+import { X } from 'lucide-react';
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useIsMobile } from "../hooks/useIsMobile";
 import "./TaskEditor.css";
 
 const TaskEditor = ({
@@ -28,6 +32,7 @@ const TaskEditor = ({
   projectCreatorId,
   isReviewer,
 }) => {
+  const isMobile = useIsMobile();
   const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
   const isUrgent = statusParts[0] === "urgent";
   const isActive =
@@ -405,12 +410,28 @@ const TaskEditor = ({
   if (!open) return null;
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="cyber-modal">
+    <Modal
+        open={open}
+        onClose={onClose}
+        sx={{
+            display: 'flex',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'center'
+        }}
+    >
+      <div className={`cyber-modal ${isMobile ? 'full-screen-modal' : ''}`}>
         <div className="cyber-border">
           <div className="cyber-content">
+            {isMobile && (
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#00f3ff' }}>TASK PROTOCOL</Typography>
+                    <IconButton onClick={onClose} sx={{ color: '#ff5ca2' }}>
+                        <X size={24} />
+                    </IconButton>
+                </Box>
+            )}
             <h3 className="cyber-title">
-              TASK PROTOCOL {isEdit ? "EDITOR" : "VIEWER"}
+              {isEdit ? "EDITOR" : "VIEWER"}
             </h3>
 
             <div className="cyber-form">

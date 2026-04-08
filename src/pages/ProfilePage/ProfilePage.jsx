@@ -32,11 +32,11 @@ const ProfilePage = () => {
     backgroundColor: 'rgba(28, 28, 30, 0.85)', // theme.colors.backgroundPaper with transparency
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borders.borderRadiusLg,
-    padding: '5px',
+    padding: isMobile ? '16px' : '24px',
     marginBottom: theme.spacing.lg,
     boxShadow: theme.effects.glowSubtle(theme.colors.primary),
     width: '100%', 
-    maxWidth: '800px', 
+    maxWidth: isMobile ? '100%' : '800px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center', 
@@ -882,14 +882,17 @@ const ProfilePage = () => {
         className="profile-experience-container" 
         sx={{
           ...panelStyle,
-          borderColor: theme.colors.primary, 
+          borderColor: theme.colors.primary,
+          padding: isMobile ? '8px' : '16px',
         }}
       >
-        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1, pt: isMobile ? 2 : 0 }}>
           Mission Log
         </Typography>
-        {isMobile && <Box sx={{ width: '100%', mb: 2 }}><ChronicleTimeline stories={userChronicle} /></Box>}
-        <UserPortfolio userId={profileData.id}/>
+        {isMobile && <Box sx={{ width: '100%', mb: 2, px: 0 }}><ChronicleTimeline stories={userChronicle} /></Box>}
+        <Box sx={{ width: '100%' }}>
+            <UserPortfolio userId={profileData.id}/>
+        </Box>
       </Box>
       
       {/* Resources Panel */}
@@ -1081,8 +1084,8 @@ const ProfilePage = () => {
       </Box>
 
       {/* Command Module Panel */}
-      <Box sx={{ ...panelStyle, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', mb: isMobile ? 4 : theme.spacing.lg }}>
-        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+      <Box sx={{ ...panelStyle, flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', flexWrap: 'wrap', mb: isMobile ? 4 : theme.spacing.lg, gap: 2 }}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
           Command Module
         </Typography>
         <Button 
@@ -1095,6 +1098,7 @@ const ProfilePage = () => {
             fontFamily: theme.typography.fontFamilyAccent,
             boxShadow: theme.effects.glowSubtle(theme.colors.primary),
             borderRadius: theme.borders.borderRadiusMd,
+            minHeight: '44px',
             '&:hover': {
               backgroundColor: theme.colors.accentBlue,
               boxShadow: theme.effects.glowStrong(theme.colors.primary),
@@ -1106,12 +1110,14 @@ const ProfilePage = () => {
         <Button 
           variant="outlined" 
           onClick={goToDashboard}
+          fullWidth={isMobile}
           sx={{
             borderColor: theme.colors.secondary,
             color: theme.colors.secondary,
             fontFamily: theme.typography.fontFamilyAccent,
             boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
             borderRadius: theme.borders.borderRadiusMd,
+            minHeight: '44px',
             '&:hover': {
               borderColor: theme.colors.accentPink, 
               color: theme.colors.accentPink,
@@ -1125,12 +1131,14 @@ const ProfilePage = () => {
         <Button 
           variant="contained" 
           onClick={() => logout({ returnTo: window.location.origin })}
+          fullWidth={isMobile}
           sx={{ 
             backgroundColor: theme.colors.error, 
             color: theme.colors.textPrimary,
             fontFamily: theme.typography.fontFamilyAccent,
             boxShadow: theme.effects.glowSubtle(theme.colors.error),
             borderRadius: theme.borders.borderRadiusMd,
+            minHeight: '44px',
             '&:hover': { 
               backgroundColor: theme.colors.accentOrange, 
               boxShadow: theme.effects.glowStrong(theme.colors.error),

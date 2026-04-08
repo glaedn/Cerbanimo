@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Button, Chip, Divider, List, ListItem, ListItemText, CircularProgress, Snackbar, Alert } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import SubmissionModal from '../components/SubmissionModal';
@@ -36,17 +37,20 @@ const MobileTaskDetail = () => {
   const handleAction = async (action) => {
     try {
       setActionLoading(true);
+      if (window.navigator.vibrate) window.navigator.vibrate(50);
       const token = await getAccessTokenSilently();
       let res;
       if (action === 'accept') {
         res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        if (window.navigator.vibrate) window.navigator.vibrate([30, 30, 30]);
         setFeedback({ open: true, message: 'Mission accepted!', severity: 'success' });
       } else if (action === 'drop') {
         res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        if (window.navigator.vibrate) window.navigator.vibrate(20);
         setFeedback({ open: true, message: 'Mission dropped.', severity: 'info' });
       }
 
@@ -65,9 +69,11 @@ const MobileTaskDetail = () => {
   const handleSubmission = async (submissionData) => {
     try {
       const token = await getAccessTokenSilently();
+      if (window.navigator.vibrate) window.navigator.vibrate([50, 100, 50]);
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/submit`, submissionData, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 200]);
       setFeedback({ open: true, message: 'Mission submitted for review!', severity: 'success' });
 
       // Re-fetch task
@@ -124,40 +130,58 @@ const MobileTaskDetail = () => {
       </Box>
 
       {/* Sticky Bottom Actions */}
-      <Paper sx={{ position: 'fixed', bottom: 65, left: 0, right: 0, p: 2, backgroundColor: 'rgba(10, 10, 46, 0.95)', borderTop: '1px solid #00F3FF', zIndex: 1000 }} elevation={10}>
-        <Box display="flex" gap={2}>
-          {task.status === 'available' || task.status === 'active-unassigned' ? (
-            <Button
-                variant="contained"
-                fullWidth
-                onClick={() => handleAction('accept')}
-                disabled={actionLoading}
-                sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold' }}
-            >
-              {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'Accept Mission'}
-            </Button>
-          ) : task.status === 'active-assigned' || task.status === 'in_progress' ? (
-            <>
-              <Button variant="contained" fullWidth onClick={() => setIsSubmissionModalOpen(true)} sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold' }}>
-                Submit Mission
-              </Button>
+      <motion.div
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+        style={{ position: 'fixed', bottom: 65, left: 0, right: 0, zIndex: 1000 }}
+      >
+        <Paper sx={{ p: 2, backgroundColor: 'rgba(10, 10, 46, 0.98)', borderTop: '2px solid #00F3FF', backdropFilter: 'blur(10px)' }} elevation={10}>
+          <Box display="flex" gap={2}>
+            {task.status === 'available' || task.status === 'active-unassigned' ? (
               <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => handleAction('drop')}
-                disabled={actionLoading}
-                sx={{ color: '#FF4136', borderColor: '#FF4136' }}
+                  component={motion.button}
+                  whileTap={{ scale: 0.95 }}
+                  variant="contained"
+                  fullWidth
+                  onClick={() => handleAction('accept')}
+                  disabled={actionLoading}
+                  sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
               >
-                {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'Drop Mission'}
+                {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'ACCEPT MISSION'}
               </Button>
-            </>
-          ) : (
-            <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
-              {task.status.toUpperCase()}
-            </Button>
-          )}
-        </Box>
-      </Paper>
+            ) : task.status === 'active-assigned' || task.status === 'in_progress' ? (
+              <>
+                <Button
+                  component={motion.button}
+                  whileTap={{ scale: 0.95 }}
+                  variant="contained"
+                  fullWidth
+                  onClick={() => setIsSubmissionModalOpen(true)}
+                  sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
+                >
+                  SUBMIT MISSION
+                </Button>
+                <Button
+                  component={motion.button}
+                  whileTap={{ scale: 0.95 }}
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => handleAction('drop')}
+                  disabled={actionLoading}
+                  sx={{ color: '#FF4136', borderColor: '#FF4136', height: '56px' }}
+                >
+                  {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'DROP'}
+                </Button>
+              </>
+            ) : (
+              <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', height: '56px' }}>
+                {task.status.toUpperCase()}
+              </Button>
+            )}
+          </Box>
+        </Paper>
+      </motion.div>
 
       <SubmissionModal
         open={isSubmissionModalOpen}

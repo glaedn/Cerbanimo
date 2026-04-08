@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
+import { Box, Typography, TextField, Button, Grid, Chip, Paper, CircularProgress } from '@mui/material';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { motion, AnimatePresence } from 'framer-motion';
 import './Communities.css';
 
 const Communities = () => {
+  const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const [communities, setCommunities] = useState([]);
   const [search, setSearch] = useState('');
@@ -112,110 +116,157 @@ useEffect(() => {
 }, [communities]);
 
 return (
-    <div className="communities-container">
-        <h1 className="community-page-title">Discover Communities</h1>
+    <Box className={`communities-container ${isMobile ? 'mobile-registry' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>
+        <Typography variant={isMobile ? "h4" : "h2"} className="community-page-title" sx={{ textAlign: 'center', mb: 4, fontFamily: 'Orbitron', color: '#00f3ff' }}>
+            {isMobile ? 'REALMS' : 'Discover Communities'}
+        </Typography>
 
-        <div className="search-bar-container">
-            <input
-                className="search-input"
-                type="text"
-                placeholder="Search Communities..."
+        <Box className="search-bar-container" sx={{ width: isMobile ? '100%' : '80%', mb: 4 }}>
+            <TextField
+                fullWidth
+                variant="outlined"
+                size="small"
+                placeholder="Search Realms..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                sx={{
+                    mr: 1,
+                    '& .MuiOutlinedInput-root': {
+                        color: '#fff',
+                        '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.3)' },
+                        '&:hover fieldset': { borderColor: '#00f3ff' },
+                    }
+                }}
             />
-            <button
-                className="add-community-button"
-                onClick={() => window.location.href = '/communitycreation'}
-                title="Create New Community"
+            <Button
+                variant="contained"
+                onClick={() => navigate('/communitycreation')}
+                sx={{
+                    minWidth: isMobile ? '56px' : '50px',
+                    height: isMobile ? '56px' : '40px',
+                    borderRadius: '50%',
+                    bgcolor: '#00f3ff',
+                    color: '#000',
+                    fontSize: '1.5rem'
+                }}
             >
                 +
-            </button>
-        </div>
+            </Button>
+        </Box>
 
-        <div className="community-list-wrapper">
+        <Box className="community-list-wrapper" sx={{ width: isMobile ? '100%' : '80%' }}>
+            <Grid container spacing={2} component={motion.div} layout>
             {communities.length > 0 ? (
                 communities.map((community) => (
-                    <div key={community.id} className="community-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '15px' }}>
-                        <h2 className="community-title">{community.name}</h2>
-                        <p className="community-description">{community.description}</p>
-                        <div className="community-tags">
-                            {community.interest_tags && community.interest_tags.length > 0 ? (
-                                community.interest_tags.map((tag, index) => (
-                                    <span key={index} className="tag-chip">{tag}</span>
-                                ))
-                            ) : (
-                                <span className="no-tags">No tags</span>
-                            )}
-                        </div>
-                        <div className="community-stats">
-                            <span className="member-count">
-                                <i className="fas fa-users"></i> {Array.isArray(community.members) ? community.members.length : 0} members
-                            </span>
-                        </div>
-                        <div className="community-actions">
-                                <button
-                                  className="join-button"
-                                  onClick={() => navigate(`/communityhub/${community.id}`)}
-                                >
-                                  View Community
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
-                            <p>No communities found. Try adjusting your search or create a new community.</p>
-                          </div>
-                        )}
-                      </div>
+                    <Grid
+                        item xs={12} sm={6} md={4} key={community.id}
+                        component={motion.div}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                    >
+                        <Paper className="community-card" sx={{
+                            p: 2,
+                            bgcolor: 'rgba(10, 10, 46, 0.8)',
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '12px',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            <Typography variant="h5" className="community-title" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>
+                                {community.name}
+                            </Typography>
+                            <Typography variant="body2" className="community-description" sx={{ color: 'rgba(255,255,255,0.7)', mb: 2, flexGrow: 1 }}>
+                                {community.description}
+                            </Typography>
 
-                      <div className="pagination-container">
-                        <button
-                          className="pagination-button"
+                            <Box className="community-tags" sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {community.interest_tags && community.interest_tags.length > 0 ? (
+                                    community.interest_tags.map((tag, index) => (
+                                        <Chip key={index} label={tag} size="small" sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00f3ff', fontSize: '0.6rem' }} />
+                                    ))
+                                ) : (
+                                    <Typography variant="caption" sx={{ color: '#666' }}>No tags</Typography>
+                                )}
+                            </Box>
+
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
+                                <Typography variant="caption" sx={{ color: '#888', fontFamily: 'Orbitron' }}>
+                                    {Array.isArray(community.members) ? community.members.length : 0} POPULATION
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => navigate(`/communityhub/${community.id}`)}
+                                  sx={{ borderColor: '#00f3ff', color: '#00f3ff', height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}
+                                >
+                                  ENTER
+                                </Button>
+                            </Box>
+                        </Paper>
+                    </Grid>
+                  ))
+                ) : (
+                          <Grid item xs={12}>
+                            <Box className="no-communities-message" sx={{ padding: '20px', textAlign: 'center' }}>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No communities found. Try adjusting your search or create a new community.</Typography>
+                            </Box>
+                          </Grid>
+                        )}
+            </Grid>
+        </Box>
+
+                      <Box className="pagination-container" sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 4, mb: isMobile ? 4 : 0 }}>
+                        <Button
+                          variant="outlined"
                           onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                           disabled={page === 1}
+                          sx={{ color: '#00f3ff', borderColor: '#00f3ff', height: isMobile ? '48px' : 'auto' }}
                         >
                           Previous
-                        </button>
-                        <span className="page-text">Page {page}</span>
-                        <button
-                          className="pagination-button"
+                        </Button>
+                        <Typography className="page-text" sx={{ color: '#fff' }}>Page {page}</Typography>
+                        <Button
+                          variant="outlined"
                           onClick={() => setPage((prev) => prev + 1)}
+                          sx={{ color: '#00f3ff', borderColor: '#00f3ff', height: isMobile ? '48px' : 'auto' }}
                         >
                           Next
-                        </button>
-                      </div>
+                        </Button>
+                      </Box>
 
                       {selectedCommunity && (
-                        <div className="community-popup-overlay">
-                          <div className="community-popup">
-                            <h2>Projects in {selectedCommunity.name}</h2>
-                            <div className="community-projects-list">
+                        <Box className="community-popup-overlay">
+                          <Box className="community-popup">
+                            <Typography variant="h4">Projects in {selectedCommunity.name}</Typography>
+                            <Box className="community-projects-list">
                               {communityProjects.length > 0 ? communityProjects.map((project) => (
-                                <div key={project.id} className="project-card">
-                                  <h3>{project.name}</h3>
-                                  <p>{project.description}</p>
-                                  <button
-                                    className="open-project-button"
+                                <Paper key={project.id} className="project-card">
+                                  <Typography variant="h5">{project.name}</Typography>
+                                  <Typography variant="body2">{project.description}</Typography>
+                                  <Button
+                                    variant="contained"
                                     onClick={() => {
                                         navigate(`/visualizer/${project.id}`);
                                     }}
                                 >
                                     Open Project
-                                </button>
-                            </div>
-                        )) : <p>No projects in this community yet</p>}
-                    </div>
-                    <button
-                        className="close-popup-button"
+                                </Button>
+                            </Paper>
+                        )) : <Typography>No projects in this community yet</Typography>}
+                    </Box>
+                    <Button
+                        variant="outlined"
                         onClick={() => setSelectedCommunity(null)}
                     >
                         Close
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                </Box>
+            </Box>
         )}
-    </div>
+    </Box>
 );
 };
 

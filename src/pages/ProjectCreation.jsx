@@ -12,6 +12,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "../hooks/useIsMobile";
 import {
   blue,
   red,
@@ -26,6 +27,7 @@ import "./ProjectCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
 
 const ProjectCreation = () => {
+  const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -79,6 +81,7 @@ const ProjectCreation = () => {
   }, [getAccessTokenSilently]);
 
   const handleCreateProject = async () => {
+    if (window.navigator.vibrate) window.navigator.vibrate(50);
     setLoadingPopupMessages(["Creating your project..."]);
     setLoadingPopupOpen(true);
     try {
@@ -133,6 +136,7 @@ const ProjectCreation = () => {
           const result = await generateResponse.json();
 
           if (result.success) {
+          if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
             setLoadingPopupMessages(prevMessages => [...prevMessages, "Tasks generated successfully!"]);
           } else {
             setLoadingPopupMessages(prevMessages => [...prevMessages, "Task generation failed: " + result.error]);
@@ -152,8 +156,14 @@ const ProjectCreation = () => {
   return (
     <div className="project-creation-background">
     <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
-    <Box className="project-creation-container" sx={{ maxWidth: '800px', margin: '0 auto' }}>
-      <Typography variant="h4" className="form-title">
+    <Box className="project-creation-container" sx={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: isMobile ? '16px' : '20px',
+      paddingTop: isMobile ? '40px' : '80px',
+      pb: isMobile ? '100px' : '20px'
+    }}>
+      <Typography variant={isMobile ? "h5" : "h4"} className="form-title" sx={{ fontSize: isMobile ? '1.8rem' : '2.5rem' }}>
         Create a New Project
       </Typography>
       <TextField
@@ -231,7 +241,15 @@ const ProjectCreation = () => {
         variant="contained"
         color="primary"
         onClick={handleCreateProject}
-        sx={{ marginTop: 2, paddingY: '10px', paddingX: '20px', fontWeight: 'bold' }}
+        fullWidth={isMobile}
+        sx={{
+          marginTop: 2,
+          paddingY: '12px',
+          paddingX: '20px',
+          fontWeight: 'bold',
+          height: isMobile ? '56px' : 'auto',
+          fontSize: isMobile ? '1.1rem' : '1rem'
+        }}
       >
         Create Project
       </Button>

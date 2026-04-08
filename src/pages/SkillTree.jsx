@@ -3,8 +3,12 @@ import axios from 'axios';
 import * as d3 from 'd3';
 import './SkillTree.css';
 import { useAuth0 } from '@auth0/auth0-react';
+import { Box, Typography, List, ListItem, ListItemText, Paper, Chip, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const SkillTree = () => {
+  const isMobile = useIsMobile();
   const svgRef = useRef();
   const transformRef = useRef({ x: 0, y: 0, k: 1 });
   const [skills, setSkills] = useState([]);
@@ -569,29 +573,92 @@ const SkillTree = () => {
     setShowFullTree(!showFullTree);
   };
   
+  const renderMobileTree = () => {
+    const roots = skills.filter(s => s.parent_skill_id === null);
+
+    const renderNode = (skill, depth = 0) => {
+      const children = skills.filter(s => s.parent_skill_id === skill.id);
+      const isUnlocked = skill.unlocked;
+
+      if (!showFullTree && !isUnlocked && !children.some(c => c.unlocked)) return null;
+
+      return (
+        <Accordion
+          key={skill.id}
+          sx={{
+            bgcolor: 'transparent',
+            color: '#fff',
+            boxShadow: 'none',
+            '&:before': { display: 'none' },
+            borderLeft: depth > 0 ? '1px solid #333' : 'none',
+            ml: depth > 0 ? 2 : 0
+          }}
+        >
+          <AccordionSummary
+            expandIcon={children.length > 0 ? <ExpandMoreIcon sx={{ color: isUnlocked ? '#00f3ff' : '#666' }} /> : null}
+            sx={{ minHeight: '48px' }}
+          >
+            <Box display="flex" alignItems="center" gap={2}>
+              <Box
+                sx={{
+                  width: 12, height: 12, borderRadius: '50%',
+                  bgcolor: isUnlocked ? '#00f3ff' : '#444',
+                  boxShadow: isUnlocked ? '0 0 10px #00f3ff' : 'none'
+                }}
+              />
+              <Typography sx={{
+                fontFamily: 'Orbitron',
+                fontSize: '0.9rem',
+                color: isUnlocked ? '#fff' : '#888'
+              }}>
+                {skill.name} {isUnlocked && `(Lvl ${skill.userLevel})`}
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          {children.length > 0 && (
+            <AccordionDetails sx={{ p: 0 }}>
+              {children.map(child => renderNode(child, depth + 1))}
+            </AccordionDetails>
+          )}
+        </Accordion>
+      );
+    };
+
+    return (
+      <Box sx={{ mt: 2, pb: 10 }}>
+        {roots.map(root => renderNode(root))}
+      </Box>
+    );
+  };
+
   return (
-    <div className='treepage' style={{ width: '100%', height: '80vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Skill Tree</h2>
+    <div className='treepage' style={{ width: '100%', height: isMobile ? 'auto' : '80vh', padding: isMobile ? '16px' : '0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 0 }}>
+        <h2 style={{ fontFamily: 'Orbitron', color: '#00f3ff', margin: 0 }}>Skill Tree</h2>
         <button 
           onClick={toggleFullTree}
           style={{
-            marginRight: '60px',
+            marginRight: isMobile ? '0' : '60px',
             padding: '8px 16px',
             backgroundColor: showFullTree ? '#4CAF50' : '#f44336',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '14px'
+            fontSize: '14px',
+            width: isMobile ? '100%' : 'auto',
+            height: isMobile ? '48px' : 'auto'
           }}
         >
           {showFullTree ? 'Hide Full Tree' : 'Show Full Tree'}
         </button>
       </div>
-      <div style={{ width: '100%', height: 'calc(100% - 40px)' }}>
-        <svg ref={svgRef} style={{ width: '100%', height: '100%' }}></svg>
-      </div>
+
+      {isMobile ? renderMobileTree() : (
+        <div style={{ width: '100%', height: 'calc(100% - 40px)' }}>
+          <svg ref={svgRef} style={{ width: '100%', height: '100%' }}></svg>
+        </div>
+      )}
     </div>
   );
 };

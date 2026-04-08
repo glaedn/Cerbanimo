@@ -6,6 +6,11 @@
     overflow-y: auto;
 }
 
+.mobile-task-browser {
+    background: #000;
+    min-height: 100vh;
+}
+
 /* Custom Scrollbar - keeping as is per your request */
 .task-browser::-webkit-scrollbar,
 .task-list::-webkit-scrollbar {

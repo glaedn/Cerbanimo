@@ -34,8 +34,10 @@ import CommunityResourceManagement from '../components/CommunityResourceManageme
 import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const CommunityHub = () => {
+    const isMobile = useIsMobile();
     const { communityId } = useParams();
     const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
@@ -489,20 +491,24 @@ const CommunityHub = () => {
     }
 
     return (
-        <div className="community-hub community-hub-container">
-            <Typography variant="h4" className="hub-title">{community.name}</Typography>
+        <Box className={`community-hub community-hub-container ${isMobile ? 'mobile-hub' : ''}`} sx={{ pb: isMobile ? 12 : 5 }}>
+            <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit' }}>
+                {community.name}
+            </Typography>
             
             {/* Community Info Section */}
-            <div className="community-info">
-                <div className="impact-mini-atlas">
-                    <ImpactGraph realmId={communityId} height="300px" />
-                </div>
-                <Typography variant="body1" className="community-description">{community.description}</Typography>
-                <div className="tag-container">
+            <Box className="community-info" sx={{ p: isMobile ? 2 : 4, width: '100%' }}>
+                <Box className="impact-mini-atlas" sx={{ mb: 2 }}>
+                    <ImpactGraph realmId={communityId} height={isMobile ? "200px" : "300px"} />
+                </Box>
+                <Typography variant="body1" className="community-description" sx={{ fontSize: isMobile ? '0.9rem' : '1.1rem' }}>
+                    {community.description}
+                </Typography>
+                <Box className="tag-container" sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
                     {community.interest_tags && community.interest_tags.map((tag, index) => (
-                        <Chip key={index} label={tag} sx={{ /* className='interest-tag' removed, use sx if direct styling needed */ }} />
+                        <Chip key={index} label={tag} size={isMobile ? "small" : "medium"} />
                     ))}
-                </div>
+                </Box>
                 
                 {/* Join Request Button for non-members */}
                 {!isMember && (
@@ -530,6 +536,8 @@ const CommunityHub = () => {
                                         color="primary" 
                                         onClick={handleRequestJoin}
                                         startIcon={<PersonAddIcon />}
+                                        fullWidth={isMobile}
+                                        sx={{ height: isMobile ? '48px' : 'auto' }}
                                     >
                                         Request to Join
                                     </Button>
@@ -538,10 +546,10 @@ const CommunityHub = () => {
                         </Paper>
                     </Box>
                 )}
-            </div>
+            </Box>
             
             {/* Main Content Grid */}
-            <div className="hub-grid">
+            <Box className="hub-grid" sx={{ px: isMobile ? 0 : 2 }}>
                 {/* Members Card */}
                 <div className="hub-grid-item">
                     <Card className="hub-card members-card">
@@ -695,25 +703,36 @@ const CommunityHub = () => {
                                                         </Typography>
                                                     </div>
                                                     
-                                                    <div className="vote-actions">
+                                                    <Box className="vote-actions" sx={{
+                                                        display: 'flex',
+                                                        flexDirection: isMobile ? 'column' : 'row',
+                                                        gap: 1,
+                                                        alignItems: isMobile ? 'stretch' : 'center'
+                                                    }}>
                                                         <Button
                                                             size="small"
                                                             variant="outlined"
                                                             startIcon={<RocketLaunchIcon />}
                                                             onClick={() => navigate('/constellations', { state: { prefill: { communityId, project: proposal } } })}
-                                                            sx={{ mr: 1, color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                                                            sx={{
+                                                                color: '#ff5ca2',
+                                                                borderColor: '#ff5ca2',
+                                                                height: isMobile ? '48px' : 'auto',
+                                                                flexGrow: 1
+                                                            }}
                                                         >
                                                             REQUEST CONSTELLATION
                                                         </Button>
                                                         {proposal.isDirect && (
-                                                            <>
+                                                            <Box sx={{ display: 'flex', gap: 1, justifyContent: isMobile ? 'center' : 'flex-start' }}>
                                                                 <Tooltip title="Approve">
                                                                     <IconButton
                                                                         onClick={() => handleVoteProject(proposal.id, true)}
                                                                         sx={{
                                                                             color: 'var(--hud-success-color)',
+                                                                            minWidth: '44px', minHeight: '44px',
                                                                             '&:hover': {
-                                                                                backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)', // Define --hud-success-color-rgb or use static
+                                                                                backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)',
                                                                                 boxShadow: '0 0 8px var(--hud-success-color)',
                                                                             }
                                                                         }}
@@ -726,8 +745,9 @@ const CommunityHub = () => {
                                                                         onClick={() => handleVoteProject(proposal.id, false)}
                                                                         sx={{
                                                                             color: 'var(--hud-error-color)',
+                                                                            minWidth: '44px', minHeight: '44px',
                                                                             '&:hover': {
-                                                                                backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)', // Define --hud-error-color-rgb or use static
+                                                                                backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)',
                                                                                 boxShadow: '0 0 8px var(--hud-error-color)',
                                                                             }
                                                                         }}
@@ -735,9 +755,9 @@ const CommunityHub = () => {
                                                                         <CancelIcon />
                                                                     </IconButton>
                                                                 </Tooltip>
-                                                            </>
+                                                            </Box>
                                                         )}
-                                                    </div>
+                                                    </Box>
                                                 </div>
                                             </ListItem>
                                         ))}
@@ -764,14 +784,14 @@ const CommunityHub = () => {
                                                 primaryTypographyProps={{ color: '#ff5ca2' }}
                                                 secondaryTypographyProps={{ color: 'gray' }}
                                             />
-                                            <div className="vote-actions">
+                                            <Box className="vote-actions" sx={{ display: 'flex', gap: 1 }}>
                                                 <Tooltip title="Accept Alliance">
-                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, true)} sx={{ color: 'var(--hud-success-color)' }}><CheckCircleIcon /></IconButton>
+                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, true)} sx={{ color: 'var(--hud-success-color)', minWidth: 44, minHeight: 44 }}><CheckCircleIcon /></IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Reject Alliance">
-                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, false)} sx={{ color: 'var(--hud-error-color)' }}><CancelIcon /></IconButton>
+                                                    <IconButton onClick={() => handleVoteConstellation(invite.id, false)} sx={{ color: 'var(--hud-error-color)', minWidth: 44, minHeight: 44 }}><CancelIcon /></IconButton>
                                                 </Tooltip>
-                                            </div>
+                                            </Box>
                                         </ListItem>
                                     ))}
                                 </List>
@@ -824,12 +844,13 @@ const CommunityHub = () => {
                                                     secondary={`ID: ${request.user_id}`} 
                                                     secondaryTypographyProps={{ sx: { color: 'var(--hud-text-secondary)', fontSize: '0.8rem' } }}
                                                 />
-                                                <div className="vote-actions">
+                                                <Box className="vote-actions" sx={{ display: 'flex', gap: 1 }}>
                                                     <Tooltip title="Approve">
                                                         <IconButton 
                                                             onClick={() => handleVoteMember(request.user_id, true)}
                                                             sx={{ 
                                                                 color: 'var(--hud-success-color)', 
+                                                                minWidth: 44, minHeight: 44,
                                                                 '&:hover': { 
                                                                     backgroundColor: 'rgba(var(--hud-success-color-rgb, 46, 204, 64), 0.1)',
                                                                     boxShadow: '0 0 8px var(--hud-success-color)',
@@ -844,6 +865,7 @@ const CommunityHub = () => {
                                                             onClick={() => handleVoteMember(request.user_id, false)}
                                                             sx={{ 
                                                                 color: 'var(--hud-error-color)', 
+                                                                minWidth: 44, minHeight: 44,
                                                                 '&:hover': { 
                                                                     backgroundColor: 'rgba(var(--hud-error-color-rgb, 255, 65, 54), 0.1)',
                                                                     boxShadow: '0 0 8px var(--hud-error-color)',
@@ -853,7 +875,7 @@ const CommunityHub = () => {
                                                             <CancelIcon />
                                                         </IconButton>
                                                     </Tooltip>
-                                                </div>
+                                                </Box>
                                             </ListItem>
                                         ))}
                                     </List>
@@ -863,15 +885,15 @@ const CommunityHub = () => {
                     </div>
                 )}
                 {/* Active Projects Card - Visible to all */}
-                <div className={`hub-grid-item ${isMember ? 'wide-item' : 'full-width-item'}`}>
+                <div className={`hub-grid-item ${isMember && !isMobile ? 'wide-item' : 'full-width-item'}`}>
                     <Card className="hub-card projects-card">
-                        <CardContent>
+                        <CardContent sx={{ p: isMobile ? 1.5 : 3 }}>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Active Projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)', mb: 2 }}>Active Projects</Typography>
                             {approvedProjects.length === 0 ? (
                                 <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active projects</Typography>
                             ) : (
-                                <div className="projects-grid">
+                                <div className="projects-grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                                     {approvedProjects.map((project) => (
                                         <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
                                             <CardContent>
@@ -903,6 +925,7 @@ const CommunityHub = () => {
                                                         sx={{
                                                             color: 'var(--hud-primary-color)',
                                                             borderColor: 'var(--hud-primary-color)',
+                                                            height: isMobile ? '48px' : 'auto',
                                                             '&:hover': {
                                                                 backgroundColor: 'rgba(var(--hud-primary-color-rgb), 0.1)',
                                                                 borderColor: 'var(--hud-glow-color)',
@@ -916,7 +939,7 @@ const CommunityHub = () => {
                                                         variant="outlined"
                                                         startIcon={<RocketLaunchIcon />}
                                                         onClick={() => navigate('/constellations', { state: { prefill: { communityId, project } } })}
-                                                        sx={{ color: '#ff5ca2', borderColor: '#ff5ca2' }}
+                                                        sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', height: isMobile ? '48px' : 'auto' }}
                                                     >
                                                         REQUEST CONSTELLATION
                                                     </Button>
@@ -929,9 +952,13 @@ const CommunityHub = () => {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
-            <CommunityMarketplace communityId={communityId} />
-            <CommunityChronicle communityId={communityId} />
+            </Box>
+            <Box sx={{ width: '100%', mt: 4 }}>
+                <CommunityMarketplace communityId={communityId} />
+            </Box>
+            <Box sx={{ width: '100%', mt: 4 }}>
+                <CommunityChronicle communityId={communityId} />
+            </Box>
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 
@@ -952,7 +979,7 @@ const CommunityHub = () => {
                     {snackbarMessage}
                 </MuiAlert>
 </Snackbar>
-        </div>
+        </Box>
     );
 };
 
