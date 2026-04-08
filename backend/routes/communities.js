@@ -1,11 +1,7 @@
 import express from "express";
-import pg from "pg";
+import pool from "../db.js";
 
-const { Pool } = pg;
 const router = express.Router();
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
 
 import { calculateVoteWeight } from "../utils/voteWeight.js";
 

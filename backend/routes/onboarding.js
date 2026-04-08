@@ -1,14 +1,11 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import pg from 'pg';
+import pool from '../db.js';
 import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 
 const router = express.Router();
-const { Pool } = pg;
-// Configure PostgreSQL pool
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

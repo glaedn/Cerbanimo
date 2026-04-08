@@ -1,7 +1,7 @@
 // services/taskGenerator.js
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -64,16 +64,13 @@ export const generateProjectIdea = async (skills, interests) => {
   const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
-    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      // Pass the system instruction in the 'config' object
-      config: { systemInstruction: systemPrompt }, 
-      contents: userPrompt, // Pass the prompt content here
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: systemPrompt,
     });
-
-    // The text property is directly on the result object now
-    const responseText = result.text;
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const responseText = response.text();
 
     return parseLLMJsonResponse(responseText);
   } catch (error) {
@@ -630,16 +627,13 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
  const systemPrompt = "You are an expert project manager and task engineer.";
 
  try {
-    // 🎯 NEW, CORRECT PATTERN: Use genAI.models.generateContent directly.
-    // System instructions are passed inside the 'config' object.
- const result = await genAI.models.generateContent({
-     model: "gemini-2.5-flash",
-   config: { systemInstruction: systemPrompt }, // Pass system prompt here
-   contents: userPrompt, // Pass the user prompt as contents
-  });
-
-    // The text is now retrieved directly from the 'result' object.
-  const text = result.text;
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: systemPrompt,
+    });
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const text = response.text();
   console.log("LLM response:", text);
 
   // Attempt to safely parse JSON from LLM output
@@ -1158,16 +1152,13 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   const systemPrompt = "You are an expert Project Manager AI.";
 
   try {
-    // 🎯 NEW, CORRECT PATTERN: Call generateContent on genAI.models
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      // Pass the system instruction in the 'config' object
-      config: { systemInstruction: systemPrompt }, 
-      contents: userPrompt, // Pass the prompt content here
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: systemPrompt,
     });
-
-    // The text property is directly on the result object now
-    const responseText = result.text;
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const responseText = response.text();
 
     return parseLLMJsonResponse(responseText);
   } catch (error) {

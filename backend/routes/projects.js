@@ -1,15 +1,11 @@
 import express from 'express';
-import pg from 'pg';
+import pool from '../db.js';
 import { autoGenerateTasks } from '../services/taskGenerator.js';
 import ImpactGraphService from '../services/ImpactGraphService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
 
-const { Pool } = pg;
 
 const router = express.Router();
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
 
 router.get('/', async (req, res) => {
   try {

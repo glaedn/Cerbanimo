@@ -1,8 +1,5 @@
 import express from 'express';
-import pg from 'pg';
-
-const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+import pool from '../db.js';
 
 const router = express.Router();
 

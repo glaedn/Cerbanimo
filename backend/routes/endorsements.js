@@ -1,10 +1,7 @@
 // routes/endorsements.js
 import express from "express";
-import pg from "pg";
+import pool from "../db.js";
 import dayjs from "dayjs";
-
-const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
 const router = express.Router();
 

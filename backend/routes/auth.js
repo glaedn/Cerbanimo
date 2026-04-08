@@ -1,13 +1,9 @@
 import express from 'express';
-import pg from 'pg';
+import pool from '../db.js';
 
 
-const { Pool } = pg;
 // Create a router instance
 const router = express.Router();
-
-// PostgreSQL connection
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 // Save or Update User
 router.post('/save-user', async (req, res) => {
   const { sub, email, name } = req.body;
@@ -35,6 +31,5 @@ router.post('/save-user', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-console.log('Postgres URL:', process.env.POSTGRES_URL);
 
 export default router;
