@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import ListAltIcon from '@mui/icons-material/ListAlt';
+import LanguageIcon from '@mui/icons-material/Language';
 import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
 
@@ -14,8 +14,8 @@ const MobileBottomNav = () => {
   // Map routes to navigation indices
   const getIndexFromPath = (path) => {
     if (path === '/' || path === '/dashboard') return 0;
-    if (path.startsWith('/projects')) return 1;
-    if (path.startsWith('/tasks') || path.startsWith('/visualizer')) return 2; // Assuming tasks are related to visualizer/browser
+    if (path.startsWith('/projects') || path.startsWith('/tasks') || path.startsWith('/visualizer')) return 1;
+    if (path.startsWith('/communities')) return 2;
     if (path.startsWith('/guilds')) return 3;
     if (path.startsWith('/profile')) return 4;
     return 0;
@@ -29,10 +29,11 @@ const MobileBottomNav = () => {
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
+    if (window.navigator.vibrate) window.navigator.vibrate(10);
     switch (newValue) {
       case 0: navigate('/dashboard'); break;
       case 1: navigate('/projects'); break;
-      case 2: navigate('/tasks'); break;
+      case 2: navigate('/communities'); break;
       case 3: navigate('/guilds'); break;
       case 4: navigate('/profile'); break;
       default: navigate('/dashboard');
@@ -57,7 +58,7 @@ const MobileBottomNav = () => {
       >
         <BottomNavigationAction label="Home" icon={<HomeIcon />} />
         <BottomNavigationAction label="Projects" icon={<AccountTreeIcon />} />
-        <BottomNavigationAction label="Tasks" icon={<ListAltIcon />} />
+        <BottomNavigationAction label="Realms" icon={<LanguageIcon />} />
         <BottomNavigationAction label="Guilds" icon={<GroupIcon />} />
         <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
       </BottomNavigation>

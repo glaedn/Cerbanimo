@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DependencyListView = ({ tasks, projectId }) => {
   const navigate = useNavigate();
@@ -35,34 +36,48 @@ const DependencyListView = ({ tasks, projectId }) => {
   const hierarchy = buildHierarchy(tasks);
 
   const renderTaskNode = (node, depth = 0) => (
-    <Box key={node.id} sx={{ ml: depth * 2, borderLeft: depth > 0 ? '1px dashed rgba(0, 243, 255, 0.3)' : 'none', pl: depth > 0 ? 2 : 0, mb: 1 }}>
-      <Box
-        onClick={() => navigate(`/visualizer/${projectId}/${node.id}`)}
-        sx={{
-          p: 1.5,
-          backgroundColor: 'rgba(28, 28, 30, 0.6)',
-          borderRadius: '8px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          cursor: 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <Typography variant="body2" sx={{ color: '#fff' }}>{node.name}</Typography>
-        <Chip
-            label={node.status}
-            size="small"
-            sx={{
-                height: 20,
-                fontSize: '0.65rem',
-                backgroundColor: node.status === 'completed' ? 'success.main' : 'rgba(0, 243, 255, 0.1)',
-                color: '#fff'
-            }}
-        />
+    <motion.div
+      key={node.id}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: depth * 0.05 }}
+    >
+      <Box sx={{ ml: depth * 2, borderLeft: depth > 0 ? '1px dashed rgba(0, 243, 255, 0.3)' : 'none', pl: depth > 0 ? 2 : 0, mb: 1 }}>
+        <Box
+          component={motion.div}
+          whileTap={{ scale: 0.98, backgroundColor: 'rgba(28, 28, 30, 0.8)' }}
+          onClick={() => {
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+            navigate(`/visualizer/${projectId}/${node.id}`);
+          }}
+          sx={{
+            p: 1.5,
+            backgroundColor: 'rgba(28, 28, 30, 0.6)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            transition: 'border-color 0.2s',
+            '&:hover': { borderColor: '#00F3FF' }
+          }}
+        >
+          <Typography variant="body2" sx={{ color: '#fff' }}>{node.name}</Typography>
+          <Chip
+              label={node.status}
+              size="small"
+              sx={{
+                  height: 20,
+                  fontSize: '0.65rem',
+                  backgroundColor: node.status === 'completed' ? 'success.main' : 'rgba(0, 243, 255, 0.1)',
+                  color: '#fff'
+              }}
+          />
+        </Box>
+        {node.children && node.children.map(child => renderTaskNode(child, depth + 1))}
       </Box>
-      {node.children && node.children.map(child => renderTaskNode(child, depth + 1))}
-    </Box>
+    </motion.div>
   );
 
   return (

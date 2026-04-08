@@ -66,8 +66,9 @@
 /* Global Mobile Styles */
 @media (max-width: 600px) {
   .App {
-    padding-top: 60px; /* Reduced padding for mobile header */
-    padding-bottom: 70px; /* Space for bottom navigation */
+    padding-top: 20px; /* Reduced padding for mobile header */
+    padding-bottom: 80px; /* Space for bottom navigation */
+    background: radial-gradient(circle at top, #0a0a2e 0%, #000 100%);
   }
 
   .mobile-container {
@@ -78,11 +79,23 @@
     box-sizing: border-box;
   }
 
+  /* Standardized Typography for Mobile HUD */
+  h1, .MuiTypography-h1, h2, .MuiTypography-h2, h3, .MuiTypography-h3 {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Refined Glows for Readability */
+  .MuiPaper-root, .MuiCard-root {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    background-image: none !important; /* Remove MUI default overlays */
+  }
+
   /* Ensure tap targets are large enough */
   button,
   .MuiButton-root,
   .MuiBottomNavigationAction-root,
   .nav-link {
-    min-height: 44px;
+    min-height: 48px;
   }
 }

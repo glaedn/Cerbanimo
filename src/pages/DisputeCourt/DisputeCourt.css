@@ -4,19 +4,24 @@
   color: #00ffff;
   font-family: 'Space Mono', monospace;
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  padding-top: 80px;
+}
+
+.dispute-court-container.mobile-court {
+  padding-top: 0;
+  min-height: calc(100vh - 70px); /* Adjust for bottom nav if present */
 }
 
 .hud-header {
-  padding: 20px;
+  padding: 16px;
   border-bottom: 2px solid rgba(0, 255, 255, 0.3);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .hud-title {
@@ -29,8 +34,9 @@
 .court-main {
   flex-grow: 1;
   display: flex;
-  padding: 20px;
-  gap: 20px;
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
 }
 
 .dispute-list {
@@ -40,6 +46,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 20px;
 }
 
 .dispute-item {
@@ -107,9 +114,16 @@
 @media (max-width: 768px) {
   .court-main {
     flex-direction: column;
+    padding: 8px;
   }
   .dispute-list {
     width: 100%;
-    height: 200px;
+    height: auto;
+  }
+  .hud-header {
+    padding: 12px;
+  }
+  .dispute-detail {
+    padding: 16px;
   }
 }

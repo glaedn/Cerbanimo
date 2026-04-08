@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom';
 import TokenAndSkillSummary from '../components/TokenAndSkillSummary';
 // import FilterPanel from '../components/FilterPanel';
 import ChronicleTimeline from '../components/ChronicleTimeline';
+import { useIsMobile } from '../hooks/useIsMobile';
 import './UserPortfolio.css';
-import { Typography } from '@mui/material';
+import { Typography, Box } from '@mui/material';
 
 const UserPortfolio = ({ userId: propUserId }) => {
+  const isMobile = useIsMobile();
   const routeParams = useParams();
   const userId = propUserId || routeParams.userId;
 
@@ -96,34 +98,38 @@ const UserPortfolio = ({ userId: propUserId }) => {
   }
 
   return (
-    <div className="portfolio-page">
-      <div className="header-row">
-        <Typography variant="h4" color="primary">User Portfolio</Typography>
-      </div>
+    <Box className={`portfolio-page ${isMobile ? 'mobile-portfolio' : ''}`} sx={{ p: isMobile ? 2 : 3, pb: isMobile ? 10 : 3 }}>
+      <Box className="header-row" mb={isMobile ? 2 : 4}>
+        <Typography variant={isMobile ? "h5" : "h4"} color="primary" sx={{ fontFamily: 'Orbitron' }}>
+          {isMobile ? 'RECORD_OF_IMPACT' : 'User Portfolio'}
+        </Typography>
+      </Box>
 
-      <div className="portfolio-section-summary">
+      <Box className="portfolio-section-summary" mb={isMobile ? 3 : 6}>
         <TokenAndSkillSummary
           tokens={summaryData.total_tokens}
           skills={summaryData.skills}
         />
-      </div>
+      </Box>
 
-      <div className="portfolio-filters">
+      <Box className="portfolio-filters" mb={isMobile ? 2 : 4} sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2 }}>
         {/* <FilterPanel filters={filters} setFilters={setFilters} /> */}
-        <div className="story-stats">
-          <Typography variant="body1" color="secondary">
-           Total Stories: {storyStats.total}
+        <Box className="story-stats" sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, border: '1px solid rgba(0, 243, 255, 0.2)', width: isMobile ? '100%' : 'auto' }}>
+          <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>CHRONICLE STATS</Typography>
+          <Typography variant="body1" sx={{ color: '#00f3ff', fontFamily: 'Orbitron' }}>
+           TOTAL_STORIES: {storyStats.total}
           </Typography>
-          <Typography variant="body1" color="secondary">
-            Recent (30d): {storyStats.recent}
+          <Typography variant="body1" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}>
+            RECENT_30D: {storyStats.recent}
           </Typography>
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      <div className="portfolio-section-timeline">
+      <Box className="portfolio-section-timeline">
+        <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 2, fontSize: '1rem' }}>TIMELINE_FEED</Typography>
         <ChronicleTimeline stories={chronicleData} />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 

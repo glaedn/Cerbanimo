@@ -4,9 +4,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
+import { useIsMobile } from '../hooks/useIsMobile';
 import './CommunityCreation.css';
 
 const CommunityCreation = () => {
+  const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -69,6 +71,7 @@ const CommunityCreation = () => {
       }
     
       setIsLoading(true);
+      if (window.navigator.vibrate) window.navigator.vibrate(50);
       try {
         const token = await getAccessTokenSilently();
     
@@ -94,6 +97,7 @@ const CommunityCreation = () => {
         });
       
         if (response.status === 201) {
+          if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
           alert('Community created successfully!');
           navigate(`/communityhub/${response.data.communityId}`);
         }
@@ -106,8 +110,14 @@ const CommunityCreation = () => {
     };
 
   return (
-    <Box className="community-creation-container">
-      <Typography variant="h4" className="form-title">Create a New Community</Typography>
+    <Box className="community-creation-container" sx={{
+      padding: isMobile ? '16px' : '20px',
+      paddingTop: isMobile ? '40px' : '60px',
+      pb: isMobile ? '100px' : '20px'
+    }}>
+      <Typography variant={isMobile ? "h5" : "h4"} className="form-title" sx={{ fontSize: isMobile ? '1.8rem' : '2.5rem' }}>
+        Create a New Community
+      </Typography>
       
       <div className="cosmic-field-container">
         <TextField
@@ -171,7 +181,15 @@ const CommunityCreation = () => {
         color="primary"
         onClick={handleCreateCommunity}
         disabled={isLoading}
-        sx={{ marginTop: 3, paddingY: '12px', paddingX: '24px', fontWeight: 'bold' }}
+        fullWidth={isMobile}
+        sx={{
+          marginTop: 3,
+          paddingY: '12px',
+          paddingX: '24px',
+          fontWeight: 'bold',
+          height: isMobile ? '56px' : 'auto',
+          fontSize: isMobile ? '1.1rem' : '1rem'
+        }}
       >
         {isLoading ? 'Creating...' : 'Launch Community'}
       </Button>

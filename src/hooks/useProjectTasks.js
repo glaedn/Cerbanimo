@@ -84,6 +84,27 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   };
 
   const handleTaskAction = async (formData, action) => {
+    // Optimistic Update
+    const originalTasks = [...tasks];
+    const originalProject = project ? { ...project } : null;
+
+    if (action === 'accept' || action === 'drop') {
+      setTasks(prev => prev.map(t => {
+        if (t.id === formData.id) {
+          const currentAssignees = t.assigned_user_ids || [];
+          const userId = parseInt(profileData.id);
+          return {
+            ...t,
+            assigned_user_ids: action === 'accept'
+              ? [...new Set([...currentAssignees, userId])]
+              : currentAssignees.filter(id => parseInt(id) !== userId),
+            status: action === 'accept' ? 'active-assigned' : (currentAssignees.length <= 1 ? 'active-unassigned' : t.status)
+          };
+        }
+        return t;
+      }));
+    }
+
     try {
       setLoading(true);
       const token = await getToken();
@@ -118,9 +139,8 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         headers: { Authorization: `Bearer ${token}` }
       });
   
-      // Only refresh if successful
-      await fetchTasks();
-      await fetchProject();
+      // Refresh to ensure sync with server
+      await Promise.all([fetchTasks(), fetchProject()]);
       
       return {
         ...response.data,
@@ -128,6 +148,10 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       };
     } catch (error) {
       console.error('Task action failed:', error.response?.data || error.message);
+      // Rollback on error
+      setTasks(originalTasks);
+      setProject(originalProject);
+
       return {
         error: error.response?.data?.error || 'Failed to update task',
         success: false

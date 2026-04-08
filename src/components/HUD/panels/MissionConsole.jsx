@@ -4,10 +4,12 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useAssignedTasks from '../../../hooks/useAssignedTasks';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import '../HUDPanel.css';
 import './MissionConsole.css';
 
 const MissionConsole = () => {
+  const isMobile = useIsMobile();
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { assignedTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useAssignedTasks(profile?.id);
   const [recommendedMissions, setRecommendedMissions] = useState([]);
@@ -103,31 +105,34 @@ const MissionConsole = () => {
   };
 
   return (
-    <div className={`hud-panel mission-console ${isMinimized ? 'minimized' : ''}`}>
-      <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Mission Console</h4>
+    <div className={`hud-panel mission-console ${isMinimized ? 'minimized' : ''} ${isMobile ? 'mobile-mission-console' : ''}`}>
+      <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"} style={{ height: isMobile ? '48px' : 'auto' }}>
+        <h4>{isMobile ? 'MISSIONS' : 'Mission Console'}</h4>
         <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Mission Console" : "Minimize Mission Console"}>
           {isMinimized ? '+' : '-'}
         </button>
       </div>
       {!isMinimized && (
-        <div className="hud-panel-content">
+        <div className="hud-panel-content" style={{ p: isMobile ? 1 : 2 }}>
           <h5 className="section-subtitle">Assigned Tasks</h5>
           {assignedTasks.length > 0 ? (
             <ul className="task-list">
               {assignedTasks.map(task => (
-                <li key={task.id} className="task-item">
+                <li key={task.id} className="task-item" style={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 2 }}>
                   <div className="task-info">
-                    <span className="task-name" style={{ fontWeight: 'bold', color: '#00f3ff' }}>{task.name}</span> <br/> ({task.projectName})
+                    <span className="task-name" style={{ fontWeight: 'bold', color: '#00f3ff', fontSize: isMobile ? '0.85rem' : '1rem' }}>{task.name}</span> <br/>
+                    <span style={{ fontSize: '0.7rem', color: '#888' }}>({task.projectName})</span>
                     <div className="task-outcome-label" style={{ fontSize: '0.75rem', color: '#ff00ff', margin: '4px 0' }}>
                       WHY: {taskOutcomes[task.id] || 'TRACING IMPACT...'}
                     </div>
-                    Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
+                    <span style={{ fontSize: '0.75rem' }}>
+                      Status: <span style={{ color: getStatusColor(task.status), fontWeight: 'bold' }}>{task.status}</span>
+                    </span>
                   </div>
-                  <div className="task-actions">
-                    <button onClick={() => handleViewTask(task)}>View</button>
+                  <div className="task-actions" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
+                    <button onClick={() => handleViewTask(task)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>VIEW</button>
                     {!(task.status.toLowerCase().includes('submitted') || task.status.toLowerCase().includes('completed')) && (
-                      <button onClick={() => handleDropTask(task.id)}>Drop</button>
+                      <button onClick={() => handleDropTask(task.id)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>DROP</button>
                     )}
                   </div>
                 </li>
@@ -143,14 +148,15 @@ const MissionConsole = () => {
           ) : recommendedMissions.length > 0 ? (
             <ul className="task-list">
               {recommendedMissions.slice(0, 3).map(mission => (
-                <li key={mission.id} className="task-item recommended">
+                <li key={mission.id} className="task-item recommended" style={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 1 : 2 }}>
                   <div className="task-info">
-                    <span className="task-name" style={{ fontWeight: 'bold', color: '#ff5ca2' }}>{mission.name}</span> <br/> ({mission.project_name})
+                    <span className="task-name" style={{ fontWeight: 'bold', color: '#ff5ca2', fontSize: isMobile ? '0.85rem' : '1rem' }}>{mission.name}</span> <br/>
+                    <span style={{ fontSize: '0.7rem', color: '#888' }}>({mission.project_name})</span>
                     <br />
                     <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {mission.reward_tokens} Tokens</span>
                   </div>
-                  <div className="task-actions">
-                    <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)}>Accept</button>
+                  <div className="task-actions" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
+                    <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>ACCEPT</button>
                   </div>
                 </li>
               ))}

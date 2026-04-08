@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import MobileTaskCard from '../components/MobileTaskCard';
 import ChronicleTimeline from '../components/ChronicleTimeline';
+import { motion } from 'framer-motion';
 
 const MobileDashboard = () => {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -59,31 +60,45 @@ const MobileDashboard = () => {
   }, [user, getAccessTokenSilently]);
 
   const handleAcceptTask = async (taskId) => {
+    const originalSuggested = [...suggestedTasks];
+    const originalActive = [...activeTasks];
+
+    // Optimistically move task from suggested to active
+    const taskToMove = suggestedTasks.find(t => t.id === taskId);
+    if (taskToMove) {
+      setSuggestedTasks(prev => prev.filter(t => t.id !== taskId));
+      setActiveTasks(prev => [...prev, { ...taskToMove, status: 'active-assigned' }]);
+    }
+
     try {
       const token = await getAccessTokenSilently();
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {}, {
           headers: { Authorization: `Bearer ${token}` }
       });
-      // Refresh suggested tasks
+
+      // Background refresh to sync with server truth
       const userSkills = profile?.skills?.map(s => {
           try { return JSON.parse(s).name; } catch(e) { return s; }
       }) || [];
-      const suggestedRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
-          params: { skills: userSkills },
-          headers: { Authorization: `Bearer ${token}` }
-      });
-      setSuggestedTasks(suggestedRes.data.slice(0, 5));
 
-      // Refresh active tasks
-      if (profile?.id) {
-        const activeRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted`, {
+      const [suggestedRes, activeRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
+            params: { skills: userSkills },
+            headers: { Authorization: `Bearer ${token}` }
+        }),
+        profile?.id ? axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted`, {
             params: { userId: profile.id.toString() },
             headers: { Authorization: `Bearer ${token}` }
-        });
-        setActiveTasks(activeRes.data);
-      }
+        }) : Promise.resolve({ data: originalActive })
+      ]);
+
+      setSuggestedTasks(suggestedRes.data.slice(0, 5));
+      setActiveTasks(activeRes.data);
     } catch (err) {
       console.error('Error accepting task:', err);
+      // Rollback
+      setSuggestedTasks(originalSuggested);
+      setActiveTasks(originalActive);
     }
   };
 
@@ -92,10 +107,35 @@ const MobileDashboard = () => {
   const nextLevelXp = 100; // Assuming 100 for now
   const xpProgress = (xp / nextLevelXp) * 100;
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <Box className="mobile-container" sx={{ pb: 8, pt: 2 }}>
+    <Box
+      component={motion.div}
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="mobile-container"
+      sx={{ pb: 8, pt: 2 }}
+    >
       {/* 1. Greeting + Level */}
-      <Paper sx={{
+      <Paper
+        component={motion.div}
+        variants={itemVariants}
+        sx={{
         p: 2,
         mb: 3,
         backgroundColor: 'rgba(10, 10, 46, 0.8)',
@@ -132,10 +172,15 @@ const MobileDashboard = () => {
       </Paper>
 
       {/* 2. Active Tasks */}
-      <Typography variant="h6" sx={{ color: '#00F3FF', mb: 2, fontWeight: 'bold' }}>
-        Active Missions
-      </Typography>
-      <Box sx={{
+      <motion.div variants={itemVariants}>
+        <Typography variant="h6" sx={{ color: '#00F3FF', mb: 2, fontWeight: 'bold' }}>
+          Active Missions
+        </Typography>
+      </motion.div>
+      <Box
+        component={motion.div}
+        variants={itemVariants}
+        sx={{
         display: 'flex',
         overflowX: 'auto',
         gap: 2,
@@ -156,20 +201,29 @@ const MobileDashboard = () => {
       </Box>
 
       {/* 3. Suggested Tasks */}
-      <Typography variant="h6" sx={{ color: '#00F3FF', mt: 2, mb: 2, fontWeight: 'bold' }}>
-        Suggested for You
-      </Typography>
-      <List disablePadding>
-        {suggestedTasks.map(task => (
-          <MobileTaskCard key={task.id} task={{...task, status: 'available'}} onAccept={handleAcceptTask} />
-        ))}
-      </List>
+      <motion.div variants={itemVariants}>
+        <Typography variant="h6" sx={{ color: '#00F3FF', mt: 2, mb: 2, fontWeight: 'bold' }}>
+          Suggested for You
+        </Typography>
+      </motion.div>
+      <Box component={motion.div} variants={itemVariants}>
+        <List disablePadding>
+          {suggestedTasks.map(task => (
+            <MobileTaskCard key={task.id} task={{...task, status: 'available'}} onAccept={handleAcceptTask} />
+          ))}
+        </List>
+      </Box>
 
       {/* 4. Recent Stories */}
-      <Typography variant="h6" sx={{ color: '#00F3FF', mt: 3, mb: 2, fontWeight: 'bold' }}>
-        Recent Chronicle
-      </Typography>
-      <Paper sx={{
+      <motion.div variants={itemVariants}>
+        <Typography variant="h6" sx={{ color: '#00F3FF', mt: 3, mb: 2, fontWeight: 'bold' }}>
+          Recent Chronicle
+        </Typography>
+      </motion.div>
+      <Paper
+        component={motion.div}
+        variants={itemVariants}
+        sx={{
         p: 1,
         backgroundColor: 'rgba(28, 28, 30, 0.5)',
         borderRadius: '12px'

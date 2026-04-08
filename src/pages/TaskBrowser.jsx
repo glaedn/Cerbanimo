@@ -5,6 +5,7 @@ import { Box, Typography, List, ListItem, ListItemText, Link, Paper, Tabs, Tab }
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTaskCard from '../components/MobileTaskCard';
+import { motion, AnimatePresence } from 'framer-motion';
 import './TaskBrowser.css';
 
 const TaskBrowser = () => {
@@ -134,16 +135,28 @@ const TaskBrowser = () => {
   const renderTaskList = (taskList, type) => {
     if (isMobile) {
       return (
-        <Box className="mobile-container" sx={{ mt: 2 }}>
-          {taskList.length > 0 ? (
-            taskList.map(task => (
-              <MobileTaskCard
-                key={task.id}
-                task={{...task, status: type === 'available' ? 'available' : task.status}}
-                onAccept={(id) => console.log('Accepting task', id)} // Placeholder
-              />
-            ))
-          ) : <Typography className="no-tasks">No tasks found.</Typography>}
+        <Box
+          component={motion.div}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mobile-container"
+          sx={{ mt: 2 }}
+        >
+          <AnimatePresence mode="popLayout">
+            {taskList.length > 0 ? (
+              taskList.map(task => (
+                <MobileTaskCard
+                  key={task.id}
+                  task={{...task, status: type === 'available' ? 'available' : task.status}}
+                  onAccept={(id) => console.log('Accepting task', id)} // Placeholder
+                />
+              ))
+            ) : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <Typography className="no-tasks">No tasks found.</Typography>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Box>
       );
     }
@@ -202,9 +215,9 @@ const TaskBrowser = () => {
 
   if (isMobile) {
     return (
-      <Box className="task-browser mobile-task-browser" sx={{ pb: 8 }}>
-        <Typography variant="h5" sx={{ p: 2, color: '#00F3FF', fontWeight: 'bold', textAlign: 'center' }}>
-          Mission Command
+      <Box className="task-browser mobile-task-browser" sx={{ pb: 10 }}>
+        <Typography variant="h5" sx={{ p: 2, pt: 3, color: '#00F3FF', fontWeight: 'bold', textAlign: 'center', fontFamily: 'Orbitron' }}>
+          MISSION_COMMAND
         </Typography>
         <Tabs
           value={tabValue}
@@ -212,19 +225,27 @@ const TaskBrowser = () => {
           variant="fullWidth"
           sx={{
             borderBottom: 1,
-            borderColor: 'divider',
+            borderColor: 'rgba(0, 243, 255, 0.2)',
             '& .MuiTabs-indicator': { backgroundColor: '#00F3FF' },
-            '& .MuiTab-root': { color: 'rgba(255,255,255,0.5)', '&.Mui-selected': { color: '#00F3FF' } }
+            '& .MuiTab-root': {
+              color: 'rgba(255,255,255,0.5)',
+              minHeight: '48px',
+              fontFamily: 'Orbitron',
+              fontSize: '0.75rem',
+              '&.Mui-selected': { color: '#00F3FF' }
+            }
           }}
         >
-          <Tab label="Available" />
-          <Tab label="Active" />
-          <Tab label="Review" />
+          <Tab label="SCAN" />
+          <Tab label="ACTIVE" />
+          <Tab label="REVIEW" />
         </Tabs>
 
-        {tabValue === 0 && renderTaskList(tasks, 'available')}
-        {tabValue === 1 && renderTaskList(acceptedTasks, 'accepted')}
-        {tabValue === 2 && renderTaskList(approvalTasks, 'review')}
+        <Box sx={{ p: 2 }}>
+          {tabValue === 0 && renderTaskList(tasks, 'available')}
+          {tabValue === 1 && renderTaskList(acceptedTasks, 'accepted')}
+          {tabValue === 2 && renderTaskList(approvalTasks, 'review')}
+        </Box>
       </Box>
     );
   }

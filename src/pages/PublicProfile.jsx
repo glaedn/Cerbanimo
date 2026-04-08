@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Paper } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
+import { useIsMobile } from "../hooks/useIsMobile";
 import "./PublicProfile.css";
 
 const PublicProfile = () => {
   const { userId } = useParams();
+  const isMobile = useIsMobile();
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,79 +145,95 @@ const PublicProfile = () => {
   };
 
   return (
-    <div className="public-profile-container">
-      <Avatar 
-        src={profile.profile_picture ? profile.profile_picture : "/default-avatar.png"}
-        className="public-profile-avatar"
-        sx={{ width: 100, height: 100, marginBottom: 2 }}
-      />
-      
-      <Typography variant="h4" gutterBottom>
-        {profile.username}
-      </Typography>
+    <div className={`public-profile-container ${isMobile ? 'mobile-profile' : ''}`}>
+      <Box className="profile-id-card cyber-panel" sx={{ width: isMobile ? '100%' : '600px', p: 3, mb: 4, textAlign: 'center' }}>
+        <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 4, mb: 2, display: 'block' }}>OPERATIVE IDENTIFICATION</Typography>
+        <Avatar
+            src={profile.profile_picture ? profile.profile_picture : "/default-avatar.png"}
+            className="public-profile-avatar"
+            sx={{
+                width: 120,
+                height: 120,
+                margin: '0 auto 20px',
+                border: '2px solid #ff5ca2',
+                boxShadow: '0 0 15px rgba(255, 92, 162, 0.5)'
+            }}
+        />
 
-      {/* Contact Links Section */}
-      {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (
-        <Box sx={{ my: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Contact:
-          </Typography>
-          {profile.contact_links.filter(link => link && link.trim() !== '').map((link, index) => {
-            const href = (link.startsWith('http://') || link.startsWith('https://')) ? link : `http://${link}`;
-            return (
-              <Typography key={index} sx={{ mb: 0.5 }}>
-                <MuiLink href={href} target="_blank" rel="noopener noreferrer" sx={{ wordBreak: 'break-all' }}>
-                  {link}
-                </MuiLink>
-              </Typography>
-            );
-          })}
-        </Box>
-      )}
+        <Typography variant="h4" sx={{ fontFamily: 'Orbitron', color: '#00f3ff', textShadow: '0 0 10px #00f3ff', mb: 1 }}>
+            {profile.username.toUpperCase()}
+        </Typography>
 
-      <UserPortfolio userId={userId} />
-      <Typography variant="h6" gutterBottom>
-        Skills:
-      </Typography>
-      <div className="skills-container">
-        {renderChips(profile.skills)}
-      </div>
-      
-      <Typography variant="h6" gutterBottom>
-        Interests:
-      </Typography>
-      <div className="skills-container">
-        {renderChips(profile.interests)}
-      </div>
-      
-      <Typography variant="h6" gutterBottom>
-        Badges:
-      </Typography>
-      <div className="badges-container">
-        {badges.length > 0 ? (
-          badges.map((badge, index) => (
-            <div key={`badge-${badge.id || index}`} className="badge-item">
-              <Avatar 
-                src={badge.icon ? badge.icon : "/default-badge.png"}
-                alt={badge.name}
-                className="badge-avatar"
-                sx={{ width: 50, height: 50 }}
-                imgProps={{
-                  onError: (e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/default-badge.png";
-                  }
-                }}
-              />
-              <Typography variant="caption" display="block">
-                {badge.name}
-              </Typography>
-            </div>
-          ))
-        ) : (
-          <Typography variant="body2">No badges available</Typography>
+        {/* Contact Links Section */}
+        {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (
+            <Box sx={{ my: 2, p: 1, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 1 }}>
+            {profile.contact_links.filter(link => link && link.trim() !== '').map((link, index) => {
+                const href = (link.startsWith('http://') || link.startsWith('https://')) ? link : `http://${link}`;
+                return (
+                <Typography key={index} sx={{ mb: 0.5 }}>
+                    <MuiLink href={href} target="_blank" rel="noopener noreferrer" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', fontSize: '0.8rem', wordBreak: 'break-all' }}>
+                    {link.toUpperCase()}
+                    </MuiLink>
+                </Typography>
+                );
+            })}
+            </Box>
         )}
-      </div>
+
+        <Box sx={{ mt: 3, textAlign: 'left' }}>
+            <Typography variant="overline" sx={{ color: '#888', display: 'block', mb: 1 }}>SKILL SET</Typography>
+            <Box className="skills-container-hud" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {renderChips(profile.skills)}
+            </Box>
+        </Box>
+
+        <Box sx={{ mt: 3, textAlign: 'left' }}>
+            <Typography variant="overline" sx={{ color: '#888', display: 'block', mb: 1 }}>AREAS OF INTEREST</Typography>
+            <Box className="skills-container-hud" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {renderChips(profile.interests)}
+            </Box>
+        </Box>
+      </Box>
+
+      <Box sx={{ width: isMobile ? '100%' : '800px', mb: 4 }}>
+        <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#00f3ff', mb: 2, borderBottom: '1px solid #00f3ff', pb: 1 }}>CHRONICLE PORTFOLIO</Typography>
+        <UserPortfolio userId={userId} />
+      </Box>
+      
+      <Box sx={{ width: isMobile ? '100%' : '800px', mb: 4 }}>
+        <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#ff5ca2', mb: 2, borderBottom: '1px solid #ff5ca2', pb: 1 }}>ACQUIRED BADGES</Typography>
+        <div className="badges-container-hud" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+            {badges.length > 0 ? (
+            badges.map((badge, index) => (
+                <Box key={`badge-${badge.id || index}`} sx={{ textAlign: 'center', width: '80px' }}>
+                <Avatar
+                    src={badge.icon ? badge.icon : "/default-badge.png"}
+                    alt={badge.name}
+                    className="badge-avatar-hud"
+                    sx={{
+                        width: 60,
+                        height: 60,
+                        margin: '0 auto 8px',
+                        border: '1px solid #ff5ca2',
+                        bgcolor: 'rgba(255, 92, 162, 0.1)'
+                    }}
+                    imgProps={{
+                    onError: (e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/default-badge.png";
+                    }
+                    }}
+                />
+                <Typography variant="caption" sx={{ fontFamily: 'Orbitron', color: '#eee', fontSize: '0.6rem', display: 'block' }}>
+                    {badge.name.toUpperCase()}
+                </Typography>
+                </Box>
+            ))
+            ) : (
+            <Typography variant="body2" sx={{ color: '#888' }}>NO BADGES DETECTED</Typography>
+            )}
+        </div>
+      </Box>
     </div>
   );
 };
