@@ -7,9 +7,11 @@ import {
 import { Shield, TrendingUp, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import './GuildsDashboard.css';
 
 const GuildsDashboard = () => {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { getAccessTokenSilently, user } = useAuth0();
   const [guilds, setGuilds] = useState([]);
@@ -68,9 +70,9 @@ const GuildsDashboard = () => {
   if (loading) return <Box p={4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress sx={{ color: '#00f3ff' }} /></Box>;
 
   return (
-    <Box className="guilds-dashboard-container">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={6}>
-        <Typography variant="h3" className="guilds-title">GUILD INTELLIGENCE</Typography>
+    <Box className={`guilds-dashboard-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 10 : 2 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={isMobile ? 2 : 6}>
+        <Typography variant={isMobile ? "h5" : "h3"} className="guilds-title">GUILD INTELLIGENCE</Typography>
       </Box>
 
       {myMemberships.length > 0 && (

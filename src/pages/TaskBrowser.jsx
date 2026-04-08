@@ -1,11 +1,20 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, List, ListItem, ListItemText, Link, Paper } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, Link, Paper, Tabs, Tab } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileTaskCard from '../components/MobileTaskCard';
 import './TaskBrowser.css';
 
 const TaskBrowser = () => {
+  const isMobile = useIsMobile();
+  const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
   const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [tasks, setTasks] = useState([]);
   const [acceptedTasks, setAcceptedTasks] = useState([]);
@@ -122,101 +131,120 @@ const TaskBrowser = () => {
     }
   }, [isAuthenticated, getAccessTokenSilently, user, userId]);
 
+  const renderTaskList = (taskList, type) => {
+    if (isMobile) {
+      return (
+        <Box className="mobile-container" sx={{ mt: 2 }}>
+          {taskList.length > 0 ? (
+            taskList.map(task => (
+              <MobileTaskCard
+                key={task.id}
+                task={{...task, status: type === 'available' ? 'available' : task.status}}
+                onAccept={(id) => console.log('Accepting task', id)} // Placeholder
+              />
+            ))
+          ) : <Typography className="no-tasks">No tasks found.</Typography>}
+        </Box>
+      );
+    }
+
+    return (
+      <Paper elevation={5} className="task-list">
+        <List>
+          {taskList.length > 0 ? (
+            taskList.map((task) => (
+              <ListItem key={task.id} divider className="task-item">
+                <ListItemText
+                  primary={<span className="task-name">{task.name}</span>}
+                  secondary={
+                    <>
+                      <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
+                      <br />
+                      {type === 'available' && (
+                        <Typography component="span" variant="body2" className="task-tags">
+                          {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
+                        </Typography>
+                      )}
+                      {type === 'accepted' && (
+                        <Typography component="span" variant="body2" className="task-status">
+                          {task.status === 'submitted' && task.approvals?.length >= 2 ? `⏳ Awaiting PM Approval` :
+                          task.status === 'submitted' ? `✅ Submitted for Peer Review` :
+                          `⌛ In Progress`}
+                        </Typography>
+                      )}
+                      {type === 'review' && (
+                        <Typography component="span" variant="body2" className="task-status">
+                          {`📝 Needs Review (${task.approvals?.length || 0} approvals, ${task.rejections?.length || 0} rejections)`}
+                        </Typography>
+                      )}
+                      <br />
+                      {type === 'available' && (
+                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
+                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
+                        </Typography>
+                      )}
+                      {task.project_id && (
+                        <><br /><Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link></>
+                      )}
+                      {type === 'review' && task.project_id && task.id && (
+                        <><br /><Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>
+                      )}
+                    </>
+                  }
+                />
+              </ListItem>
+            ))
+          ) : <Typography className="no-tasks">No matching tasks found.</Typography>}
+        </List>
+      </Paper>
+    );
+  };
+
+  if (isMobile) {
+    return (
+      <Box className="task-browser mobile-task-browser" sx={{ pb: 8 }}>
+        <Typography variant="h5" sx={{ p: 2, color: '#00F3FF', fontWeight: 'bold', textAlign: 'center' }}>
+          Mission Command
+        </Typography>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant="fullWidth"
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTabs-indicator': { backgroundColor: '#00F3FF' },
+            '& .MuiTab-root': { color: 'rgba(255,255,255,0.5)', '&.Mui-selected': { color: '#00F3FF' } }
+          }}
+        >
+          <Tab label="Available" />
+          <Tab label="Active" />
+          <Tab label="Review" />
+        </Tabs>
+
+        {tabValue === 0 && renderTaskList(tasks, 'available')}
+        {tabValue === 1 && renderTaskList(acceptedTasks, 'accepted')}
+        {tabValue === 2 && renderTaskList(approvalTasks, 'review')}
+      </Box>
+    );
+  }
+
   return (
     <Box display="flex" flexDirection="row" className="task-browser">
       <Box className="task-browser-container" flex={1}>
         <Typography variant="h4" gutterBottom className="task-title">Available Tasks</Typography>
         {error && <Typography color="error">{error}</Typography>}
-        <Paper elevation={5} className="task-list">
-          <List>
-            {tasks.length > 0 ? (
-              tasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
-                  <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
-                        <br />
-                        <Typography component="span" variant="body2" className="task-tags">
-                          {task.sharedTagsCount > 0 ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}` : '⚠️ No shared interests'}
-                        </Typography>
-                        <br />
-                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
-                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
-                        </Typography>
-                        <br />
-                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
-                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
-                        </Typography>
-                        <br />
-                        {task.project_id && <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>}
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
-            ) : <Typography className="no-tasks">No matching tasks found.</Typography>}
-          </List>
-        </Paper>
+        {renderTaskList(tasks, 'available')}
       </Box>
       
       <Box flex={1} className="task-browser-container">
         <Typography variant="h4" gutterBottom className="task-title">Accepted Tasks</Typography>
-        <Paper elevation={5} className="task-list">
-          <List>
-            {acceptedTasks.length > 0 ? (
-              acceptedTasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
-                  <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
-                        <br />
-                        <Typography component="span" variant="body2" className="task-status">
-                          {task.status === 'submitted' && task.approvals?.length >= 2 ? `⏳ Awaiting PM Approval` :
-                           task.status === 'submitted' ? `✅ Submitted for Peer Review` :
-                           `⌛ In Progress`}
-                        </Typography>
-                        <br />
-                        <Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link>
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
-            ) : <Typography className="no-tasks">No accepted tasks yet.</Typography>}
-          </List>
-        </Paper>
+        {renderTaskList(acceptedTasks, 'accepted')}
       </Box>
       
       <Box flex={1} className="task-browser-container">
         <Typography variant="h4" gutterBottom className="task-title">Review Tasks</Typography>
-        <Paper elevation={5} className="task-list">
-          <List>
-            {approvalTasks.length > 0 ? (
-              approvalTasks.map((task) => (
-                <ListItem key={task.id} divider className="task-item">
-                  <ListItemText
-                    primary={<span className="task-name">{task.name}</span>}
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2" className="task-description">{task.description}</Typography>
-                        <br />
-                        <Typography component="span" variant="body2" className="task-status">
-                          {`📝 Needs Review (${task.approvals?.length || 0} approvals, ${task.rejections?.length || 0} rejections)`}
-                        </Typography>
-                        {task.project_id && <><br /><Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link></>}
-                        {task.project_id && task.id && <><br /><Link href={`/visualizer/${task.project_id}/${task.id}`} className="task-link">✏️ Review Task</Link></>}
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
-            ) : <Typography className="no-tasks">No tasks to review.</Typography>}
-          </List>
-        </Paper>
+        {renderTaskList(approvalTasks, 'review')}
       </Box>
     </Box>
   );

@@ -62,3 +62,27 @@
     transform: rotate(360deg);
   }
 }
+
+/* Global Mobile Styles */
+@media (max-width: 600px) {
+  .App {
+    padding-top: 60px; /* Reduced padding for mobile header */
+    padding-bottom: 70px; /* Space for bottom navigation */
+  }
+
+  .mobile-container {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
+  }
+
+  /* Ensure tap targets are large enough */
+  button,
+  .MuiButton-root,
+  .MuiBottomNavigationAction-root,
+  .nav-link {
+    min-height: 44px;
+  }
+}

@@ -9,8 +9,11 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
 import { Chip, Box, Typography } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
+import { useIsMobile } from "../hooks/useIsMobile";
+import DependencyListView from "../components/DependencyListView";
 
 const ProjectVisualizer = () => {
+  const isMobile = useIsMobile();
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { projectId, taskId } = useParams();
@@ -1162,6 +1165,42 @@ links.forEach(link => {
   }, [taskId, tasks, skills, popupLaunched, getAccessTokenSilently]);
 
   // Add these debug logs right before the TaskEditor component in the return statement
+
+  if (isMobile) {
+    return (
+      <Box className="skill-hierarchy-container" sx={{ pb: 8 }}>
+        <Typography variant="h5" sx={{ p: 2, color: '#00F3FF', fontWeight: 'bold' }}>
+           {project?.name}
+        </Typography>
+        <DependencyListView tasks={tasks} projectId={projectId} />
+
+        {/* Task Editor for creation/editing still needed maybe? */}
+        <TaskEditor
+            open={showTaskPopup}
+            onClose={() => {
+              setShowTaskPopup(false);
+              refreshTasks();
+            }}
+            projectId={projectId}
+            taskForm={taskForm}
+            setTaskForm={setTaskForm}
+            onSubmit={async (formData) => {
+              const action = formData.id ? 'update' : 'create';
+              const result = await handleTaskAction(formData, action);
+              if (!result.error) {
+                await refreshTasks();
+              }
+              return result;
+            }}
+            skills={skills}
+            isEdit={isEditMode}
+            currentUser={user}
+            projectCreatorId={project?.creator_id}
+            isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
+          />
+      </Box>
+    );
+  }
 
   return (
     <div

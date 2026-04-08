@@ -4,10 +4,12 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
-import { Chip, Autocomplete, TextField, Button, Box, Typography, Paper, Grid } from '@mui/material';
+import { Chip, Autocomplete, TextField, Button, Box, Typography, Paper, Grid, Accordion, AccordionSummary, AccordionDetails, LinearProgress } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNotifications } from "./NotificationProvider.jsx"; 
 import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
+import { useIsMobile } from '../hooks/useIsMobile';
 import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 
@@ -30,6 +32,7 @@ axios.interceptors.response.use(
 const Project = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const notificationContext = useNotifications();
   const setUnreadCount = notificationContext?.setUnreadCount;
@@ -251,7 +254,7 @@ const Project = () => {
   const [activeTab, setActiveTab] = useState('summary');
 
   return (
-    <div className="project-page-container">
+    <div className={`project-page-container ${isMobile ? 'mobile-container' : ''}`} style={{ paddingBottom: isMobile ? '80px' : '20px' }}>
       {project && (
       <Box className="project-hud-header" sx={{ width: '90%', mb: 4 }}>
         <Grid container spacing={3}>
@@ -385,6 +388,67 @@ const Project = () => {
       <div className="tasks-section">
       <h2 className="tasks-title">OPERATIONAL TASKS</h2>
       {isProjectCreator && <button className="add-task-button" onClick={() => handleTaskPopupOpen()}>+</button>}
+
+      {isMobile ? (
+        <Box sx={{ width: '100%', mt: 2 }}>
+          {tasks.map((task) => (
+            <Accordion key={task.id} sx={{ bgcolor: 'rgba(28, 28, 30, 0.8)', color: '#fff', mb: 1, border: '1px solid rgba(0, 243, 255, 0.2)' }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#00F3FF' }} />}>
+                <Box display="flex" justifyContent="space-between" width="100%" alignItems="center" pr={2}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{task.name}</Typography>
+                  <Chip
+                    label={task.active_ind ? 'Active' : 'Inactive'}
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.6rem', bgcolor: task.active_ind ? 'success.main' : 'grey.700' }}
+                  />
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{task.description}</Typography>
+                <Typography variant="caption" display="block">Skill: {task.skill_name}</Typography>
+                <Typography variant="caption" display="block">Reward: {task.reward_tokens} coTokens</Typography>
+
+                <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
+                  {task.submitted && isProjectCreator && task.active_ind && (
+                  <Button variant="outlined" size="small" sx={{ borderColor: '#00ff64', color: '#00ff64' }} onClick={() => handleTaskAction(task.id, 'approve')}>
+                      APPROVE
+                  </Button>
+                  )}
+                  {isProjectCreator && (
+                  <Button variant="outlined" size="small" sx={{ borderColor: '#00f3ff', color: '#00f3ff' }} onClick={() => handleTaskPopupOpen(task)}>
+                      EDIT
+                  </Button>
+                  )}
+                  {task.assigned_user_ids?.includes(parseInt(profileData.id)) && !task.submitted && task.active_ind && (
+                  <Button variant="outlined" size="small" sx={{ borderColor: '#ff5ca2', color: '#ff5ca2' }} onClick={() => handleTaskAction(task.id, 'submit')}>
+                      SUBMIT
+                  </Button>
+                  )}
+                  <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                          borderColor: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                          color: task.assigned_user_ids?.includes(parseInt(profileData.id)) ? '#ff003c' : '#00f3ff',
+                      }}
+                      onClick={() => handleTaskAction(
+                      task.id,
+                      task.assigned_user_ids?.includes(parseInt(profileData.id)) ? 'drop' : 'accept'
+                      )}
+                  >
+                      {task.assigned_user_ids?.includes(parseInt(profileData.id)) ? "DROP" : "ACCEPT"}
+                  </Button>
+                  {isProjectCreator && task.submitted && (
+                  <Button variant="outlined" size="small" sx={{ borderColor: '#ff003c', color: '#ff003c' }} onClick={() => handleTaskAction(task.id, 'reject')}>
+                      REJECT
+                  </Button>
+                  )}
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
+      ) : (
       <div className="tasks-list">
         {tasks.map((task) => (
         <div key={task.id} className="task-card">
@@ -434,6 +498,7 @@ const Project = () => {
         </div>
         ))}
       </div>
+      )}
       </div>
       <Box className="project-controls" sx={{ height: 'auto', mt: 4, display: 'flex', gap: 2 }}>
         <Button

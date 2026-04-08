@@ -34,6 +34,8 @@ import AuthWrapper from "./AuthWrapper.jsx";
 //import ManifestationSession from "./pages/ManifestationSession.jsx";
 //import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
 import Rezzler from "./mobile/Rezzler.jsx";
+import MobileDashboard from "./pages/MobileDashboard.jsx";
+import MobileTaskDetail from "./pages/MobileTaskDetail.jsx";
 import CommunityMarketplace from "./components/CommunityMarketplace/CommunityMarketplace.jsx";
 import ProjectVisualizer from "./pages/ProjectVisualizer.jsx";
 import CommunityCreation from "./pages/CommunityCreation.jsx";
@@ -45,12 +47,16 @@ import Project from "./pages/Project.jsx";
 import CoordinatorHUD from "./pages/CoordinatorHUD.jsx";
 import ImpactAtlas from "./pages/ImpactAtlas.jsx";
 import DisputeCourt from "./pages/DisputeCourt/DisputeCourt.jsx";
+import { useIsMobile } from "./hooks/useIsMobile";
+import MobileBottomNav from "./components/MobileBottomNav.jsx";
 
 const App = () => {
+  const isMobile = useIsMobile();
+
   return (
     <Router>
       <div className="App">
-        <SiteNav />
+        {isMobile ? <MobileBottomNav /> : <SiteNav />}
         <AuthWrapper>
           <Routes>
           {/* Public Routes */}
@@ -102,7 +108,7 @@ const App = () => {
             path="/dashboard"
             element={
               <PrivateRoute>
-                <Dashboard />
+                {isMobile ? <MobileDashboard /> : <Dashboard />}
               </PrivateRoute>
             }
           />
@@ -184,7 +190,7 @@ const App = () => {
             path="/Visualizer/:projectId/:taskId"
             element={
               <PrivateRoute>
-                <ProjectVisualizer />
+                {isMobile ? <MobileTaskDetail /> : <ProjectVisualizer />}
               </PrivateRoute>
             }
           />
