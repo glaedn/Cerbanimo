@@ -3,6 +3,7 @@ import pool from '../db.js';
 import { autoGenerateTasks } from '../services/taskGenerator.js';
 import ImpactGraphService from '../services/ImpactGraphService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
+import GuildService from '../services/GuildService.js';
 
 
 const router = express.Router();
@@ -353,9 +354,32 @@ router.post('/auto-generate', async (req, res) => {
     const llmToDbIdMap = {};
 
     for (const task of tasks) {
+      let skillId = null;
+      if (task.skill_name) {
+        // Resolve skill_name to skill_id
+        const skillResult = await pool.query('SELECT id FROM skills WHERE name = $1', [task.skill_name]);
+        if (skillResult.rows.length > 0) {
+          skillId = skillResult.rows[0].id;
+        } else {
+          // Create new skill
+          const newSkillResult = await pool.query(
+            'INSERT INTO skills (name) VALUES ($1) RETURNING id',
+            [task.skill_name]
+          );
+          skillId = newSkillResult.rows[0].id;
+
+          // Also auto-create a guild for this new skill
+          try {
+            await GuildService.autoCreateGuild(skillId, task.skill_name);
+          } catch (guildError) {
+            console.error('Failed to auto-create guild for new skill:', guildError);
+          }
+        }
+      }
+
       const result = await pool.query(
         'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens, resource_requirements) VALUES ($1, $2, $3, $4, $5, $6::int[], $7, $8) RETURNING id',
-        [projectId, task.name, task.description, task.skill_id, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
+        [projectId, task.name, task.description, skillId, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
       );
       const dbId = result.rows[0].id;
       llmToDbIdMap[task.id] = dbId;

@@ -1,4 +1,6 @@
 import pool from '../db.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseLLMJsonResponse } from "./taskGenerator.js";
 
 class GuildService {
   async autoCreateGuild(skillId, skillName, description = '') {
@@ -227,6 +229,88 @@ class GuildService {
     }
     console.log(`Membership synchronization complete. Added ${addedCount} new memberships.`);
     return addedCount;
+  }
+
+  async matchSkillsHierarchy() {
+    console.log('Running automated skill hierarchy matching...');
+    try {
+      // 1. Get "new" skills (no parent)
+      const newSkillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NULL');
+      const newSkills = newSkillsResult.rows;
+
+      if (newSkills.length === 0) {
+        console.log('No new skills to match.');
+        return;
+      }
+
+      // 2. Get "parent" skills (skills that have children)
+      const parentSkillsResult = await pool.query(`
+        SELECT DISTINCT p.id, p.name
+        FROM skills p
+        JOIN skills c ON c.parent_skill_id = p.id
+      `);
+      const parentSkills = parentSkillsResult.rows;
+
+      // 3. Query Gemini
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `
+        You are an expert in skill taxonomies and workforce development.
+        Your task is to organize a list of "new skills" into an existing hierarchy of "parent skills".
+
+        New Skills:
+        ${JSON.stringify(newSkills)}
+
+        Existing Parent Skills:
+        ${JSON.stringify(parentSkills)}
+
+        Instructions:
+        1. For each "new skill", find the most appropriate "parent skill" from the existing list.
+        2. If no existing parent skill is a good fit, you may suggest a "new parent skill" name that would be a better fit for the new skill (and potentially others).
+        3. Return a JSON array of objects with the following structure:
+           [
+             { "skill_id": 123, "parent_skill_id": 456, "suggested_parent_name": null },
+             { "skill_id": 789, "parent_skill_id": null, "suggested_parent_name": "New Category Name" }
+           ]
+        4. Focus on logical categorization (e.g., "React" -> "Web Development", "Logo Design" -> "Graphic Design").
+
+        ONLY return the JSON array.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      const mappings = parseLLMJsonResponse(text);
+
+      // 4. Update Database
+      for (const mapping of mappings) {
+        let parentId = mapping.parent_skill_id;
+
+        if (!parentId && mapping.suggested_parent_name) {
+          // Check if suggested parent already exists
+          const existingParent = await pool.query('SELECT id FROM skills WHERE name = $1', [mapping.suggested_parent_name]);
+          if (existingParent.rows.length > 0) {
+            parentId = existingParent.rows[0].id;
+          } else {
+            // Create new parent skill
+            const newParent = await pool.query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [mapping.suggested_parent_name]);
+            parentId = newParent.rows[0].id;
+            // Also create a guild for the new parent
+            await this.autoCreateGuild(parentId, mapping.suggested_parent_name);
+          }
+        }
+
+        if (parentId) {
+          await pool.query('UPDATE skills SET parent_skill_id = $1 WHERE id = $2', [parentId, mapping.skill_id]);
+          console.log(`Matched skill ${mapping.skill_id} to parent ${parentId}`);
+        }
+      }
+
+      console.log('Skill hierarchy matching complete.');
+    } catch (err) {
+      console.error('Error in matchSkillsHierarchy:', err);
+    }
   }
 }
 

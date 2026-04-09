@@ -1464,8 +1464,10 @@ const granularizeTasks = async (req, res) => {
 
     // Fetch all tasks in the project
     const taskResult = await client.query(
-      `SELECT id, project_id, name, description, skill_id, dependencies 
-       FROM tasks WHERE project_id = $1`,
+      `SELECT t.id, t.project_id, t.name, t.description, t.skill_id, t.dependencies, s.name as skill_name
+       FROM tasks t
+       LEFT JOIN skills s ON t.skill_id = s.id
+       WHERE t.project_id = $1`,
       [projectId]
     );
     const tasks = taskResult.rows;
@@ -1488,16 +1490,17 @@ const granularizeTasks = async (req, res) => {
     const inputs = tasks.map((task) => ({
       name: task.name,
       description: task.description,
-      skill_id: task.skill_id,
+      skill_name: task.skill_name,
     }));
 
-    const subtasks = await autoGenerateSubtasks(
+    const subtasksData = await autoGenerateSubtasks(
       inputs,
       project.name,
       project.description,
       project.tags || [],
       project.creator_id
     );
+    const subtasks = subtasksData.tasks;
 
     // Now we can call sanitizeSubtasks since it's defined and we have subtasks
     const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(
@@ -1511,12 +1514,35 @@ const granularizeTasks = async (req, res) => {
     // Step 1: Insert all subtasks without dependencies
     const subtaskMetadata = []; // store name + original dependencies + other info
 
-    sanitizedSubtasks.forEach((subtask) => {
+    for (const subtask of sanitizedSubtasks) {
+      let skillId = null;
+      if (subtask.skill_name) {
+        // Resolve skill_name to skill_id
+        const skillResult = await client.query('SELECT id FROM skills WHERE name = $1', [subtask.skill_name]);
+        if (skillResult.rows.length > 0) {
+          skillId = skillResult.rows[0].id;
+        } else {
+          // Create new skill
+          const newSkillResult = await client.query(
+            'INSERT INTO skills (name) VALUES ($1) RETURNING id',
+            [subtask.skill_name]
+          );
+          skillId = newSkillResult.rows[0].id;
+
+          // Also auto-create a guild for this new skill
+          try {
+            await GuildService.autoCreateGuild(skillId, subtask.skill_name);
+          } catch (guildError) {
+            console.error('Failed to auto-create guild for new skill:', guildError);
+          }
+        }
+      }
+
       subtaskMetadata.push({
         projectId: subtask.project_id,
         name: subtask.name,
         description: subtask.description,
-        skill_id: subtask.skill_id || null,
+        skill_id: skillId,
         reward_tokens: subtask.reward_tokens ?? 100,
         status: "inactive-unassigned",
         originalDependencies: subtask.dependencies || [],
@@ -1524,7 +1550,7 @@ const granularizeTasks = async (req, res) => {
           .map((id) => taskIdToName[id])
           .filter(Boolean),
       });
-    });
+    }
 
     // Insert subtasks (no dependencies yet)
     const insertPromises = subtaskMetadata.map((meta) =>
