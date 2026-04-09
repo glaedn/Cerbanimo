@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
-  Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress
+  Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
