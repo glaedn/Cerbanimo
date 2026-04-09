@@ -211,6 +211,16 @@ cron.schedule('*/15 * * * *', async () => {
   }
 });
 
+// Automated Skill Hierarchy Matching (Daily at midnight)
+cron.schedule('0 0 * * *', async () => {
+  console.log('Running daily skill hierarchy matching...');
+  try {
+    await GuildService.matchSkillsHierarchy();
+  } catch (err) {
+    console.error('Hierarchy matching worker failed:', err);
+  }
+});
+
 // Dynamic Reward & Decay Adjustment (Every 6 hours)
 cron.schedule('0 */6 * * *', async () => {
   console.log('Running dynamic reward and decay adjustment');
@@ -284,6 +294,7 @@ initializeDatabase().then(async () => {
   try {
     await GuildService.syncGuildsWithSkills();
     await GuildService.syncMembershipsWithSkills();
+    await GuildService.matchSkillsHierarchy();
 
     console.log('Performing initial intelligence scoring...');
     // Initial score all unassigned tasks

@@ -96,6 +96,7 @@ const ProjectCreation = () => {
           description: description,
           tags: selectedTags,
           auth0_id: user.sub,
+          outcomeStatement: outcome,
         },
         {
           headers: {
