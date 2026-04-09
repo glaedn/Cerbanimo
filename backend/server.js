@@ -269,6 +269,16 @@ cron.schedule('0 * * * *', async () => {
 // Start server
 const PORT = process.env.PORT || 4000;
 
+// Essential Environment Variable Check
+const requiredEnvVars = ['POSTGRES_URL', 'GEMINI_API_KEY', 'BACKEND_URL'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error('CRITICAL: Missing environment variables:', missingVars.join(', '));
+  console.error('Please ensure these are defined in your .env file.');
+} else {
+  console.log('Environment variables loaded successfully.');
+}
+
 // Initialize Database Tables
 async function initializeDatabase() {
   try {

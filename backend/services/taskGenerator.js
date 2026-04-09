@@ -1,6 +1,5 @@
 // services/taskGenerator.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import pool from "../db.js";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -97,17 +96,7 @@ Related Skill: ${task.skill_name || "None"}`;
     .join("\n\n");
 
   const userPrompt = `
-For each task below, return a **JSON array** of objects like this format:
-[
-  {
-    "name": "Subtask name",
-    "description": "Brief description",
-    "skill_name": "Exact skill name required",
-    "resource_requirements": [Optional array of strings like "Laptop", "Meeting Space"],
-    "dependencies": [Optional array of subtask names this subtask depends on]
-  },
-  ...
-]
+For each task below, return a **JSON object** containing deconstructed, granular subtasks.
 
 Tasks to granularize:
 
@@ -147,16 +136,15 @@ Expected Output Format:
   "tasks": [
     {
       "id": 1,
-      "name": "Task Name",
-      "description": "Task Desc",
+      "name": "Subtask Name",
+      "description": "Detailed description of subtask",
       "project_id": 1,
       "skill_name": "Skill Name",
       "resource_requirements": ["Equipment A", "Space B"],
       "dependencies": [],
       "reward_tokens": 80
     },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1], "reward_tokens": 120 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1,2], "reward_tokens": 60 }
+    { "id": 2, "name": "Another Subtask", "description": "Description", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1], "reward_tokens": 120 }
   ]
 }
 
@@ -180,11 +168,11 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
   console.log("LLM response:", text);
 
   // Attempt to safely parse JSON from LLM output
-  const tasks = parseLLMJsonResponse(text);
-  if (!Array.isArray(tasks)) {
-   throw new Error("LLM response is not a JSON array.");
+  const data = parseLLMJsonResponse(text);
+  if (!data.tasks || !Array.isArray(data.tasks)) {
+    throw new Error("Tasks array missing or invalid in LLM response");
   }
-  return tasks;
+  return data;
  } catch (err) {
   console.error("Failed to parse LLM response for subtasks:", text);
   throw new Error("Failed to parse tasks from LLM output for subtasks");
