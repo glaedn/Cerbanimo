@@ -32,6 +32,33 @@ class GuildService {
     return result.rows[0];
   }
 
+  async getOrCreateSkill(skillName) {
+    if (!skillName) return null;
+
+    // Case-insensitive search
+    const skillResult = await pool.query('SELECT id FROM skills WHERE LOWER(name) = LOWER($1)', [skillName]);
+
+    if (skillResult.rows.length > 0) {
+      return skillResult.rows[0].id;
+    }
+
+    // Create new skill
+    const newSkillResult = await pool.query(
+      'INSERT INTO skills (name) VALUES ($1) RETURNING id',
+      [skillName]
+    );
+    const skillId = newSkillResult.rows[0].id;
+
+    // Also auto-create a guild for this new skill
+    try {
+      await this.autoCreateGuild(skillId, skillName);
+    } catch (guildError) {
+      console.error(`Failed to auto-create guild for new skill "${skillName}":`, guildError);
+    }
+
+    return skillId;
+  }
+
   async requestNewSkill(requesterId, skillName, description) {
     const query = `
       INSERT INTO skill_requests (requester_id, skill_name, description)

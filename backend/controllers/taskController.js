@@ -1515,28 +1515,7 @@ const granularizeTasks = async (req, res) => {
     const subtaskMetadata = []; // store name + original dependencies + other info
 
     for (const subtask of sanitizedSubtasks) {
-      let skillId = null;
-      if (subtask.skill_name) {
-        // Resolve skill_name to skill_id
-        const skillResult = await client.query('SELECT id FROM skills WHERE name = $1', [subtask.skill_name]);
-        if (skillResult.rows.length > 0) {
-          skillId = skillResult.rows[0].id;
-        } else {
-          // Create new skill
-          const newSkillResult = await client.query(
-            'INSERT INTO skills (name) VALUES ($1) RETURNING id',
-            [subtask.skill_name]
-          );
-          skillId = newSkillResult.rows[0].id;
-
-          // Also auto-create a guild for this new skill
-          try {
-            await GuildService.autoCreateGuild(skillId, subtask.skill_name);
-          } catch (guildError) {
-            console.error('Failed to auto-create guild for new skill:', guildError);
-          }
-        }
-      }
+      const skillId = await GuildService.getOrCreateSkill(subtask.skill_name);
 
       subtaskMetadata.push({
         projectId: subtask.project_id,

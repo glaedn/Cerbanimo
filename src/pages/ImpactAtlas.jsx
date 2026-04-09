@@ -112,7 +112,7 @@ const ImpactAtlas = () => {
           <span className="legend-item task">TASK</span>
         </div>
       </div>
-    </div>
+    </Box>
   );
 };
 
