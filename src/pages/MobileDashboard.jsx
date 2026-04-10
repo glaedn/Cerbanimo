@@ -72,7 +72,9 @@ const MobileDashboard = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {}, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {
+          userId: profile.id
+      }, {
           headers: { Authorization: `Bearer ${token}` }
       });
 
