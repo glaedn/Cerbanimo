@@ -61,13 +61,13 @@ export const generateProjectIdea = async (skills, interests) => {
     Format your response as JSON with keys Name and Description.
   `;
 
-  const systemPrompt = "You are a helpful assistant that generates project ideas.";
+  //const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: systemPrompt,
-    }, { apiVersion: "v1" });
+      model: "gemma-3-27b-it",
+      //systemInstruction: systemPrompt,
+    });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const responseText = response.text();
@@ -155,13 +155,13 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. There can be multiple.
 Include "resource_requirements" (array of strings) for each task if labor alone is not sufficient.
 `;
- const systemPrompt = "You are an expert project manager and task engineer.";
+ //const systemPrompt = "You are an expert project manager and task engineer.";
 
  try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: systemPrompt,
-    }, { apiVersion: "v1" });
+      model: "gemma-3-27b-it",
+      //systemInstruction: systemPrompt,
+    });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const text = response.text();
@@ -232,13 +232,13 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. There can be multiple.
 `;
-  const systemPrompt = "You are an expert Project Manager AI.";
+  //const systemPrompt = "You are an expert Project Manager AI.";
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: systemPrompt,
-    }, { apiVersion: "v1" });
+      model: "gemma-3-27b-it",
+      //systemInstruction: systemPrompt,
+    });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const responseText = response.text();

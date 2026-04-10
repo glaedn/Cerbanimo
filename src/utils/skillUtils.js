@@ -133,7 +133,11 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   const skillsToConsiderForParents = Array.from(skillsToProcess.values());
   skillsToConsiderForParents.forEach(skill => {
     let current = skill;
-    while (current && current.parent_skill_id) {
+    while (
+      current &&
+      current.parent_skill_id &&
+      current.parent_skill_id !== current.id // 🚫 stop self-loop
+    ) {
       if (!skillsToProcess.has(current.parent_skill_id)) {
         const parentSkill = allSkillsMap.get(current.parent_skill_id);
         if (parentSkill) {
@@ -176,7 +180,11 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
   // Pass 1: Categorize Stars
   skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id === null || skillNode.parent_skill_id === undefined) {
+    if (
+      skillNode.parent_skill_id === null ||
+      skillNode.parent_skill_id === undefined ||
+      skillNode.parent_skill_id === skillNode.id // 🌟 self = root
+    ) {
       skillNode.category = 'star';
     }
   });

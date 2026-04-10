@@ -110,7 +110,9 @@ const SkillGalaxyPanel = () => {
         return {
           id: skill.id.toString(), // skill.id is non-null here
           name: skill.name || "Unnamed Skill", // Fallback for name
-          parent: skill.parent_skill_id ? skill.parent_skill_id.toString() : null,
+          parent: (skill.parent_skill_id && skill.parent_skill_id !== skill.id)
+            ? skill.parent_skill_id.toString()
+            : null,
           level: skill.userLevel,
           userLevel: skill.userLevel, // Ensure userLevel is present for level text display
           experience: skill.userExperience,
