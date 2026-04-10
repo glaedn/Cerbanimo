@@ -49,6 +49,7 @@ import { createStoryTables } from '../models/story_engine_v2.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createResourceLayerTables } from '../models/resource_layer_v2.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
+import { fixSequences } from './utils/dbFix.js';
 
 // Initialize app
 const app = express();
@@ -179,7 +180,7 @@ app.use('/resources', resourceRoutes);
 app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
-app.use('/impact', impactRoutes);
+app.use('/impact', jwtCheck, impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
 
 app.use('/impact_v2', impactRoutesV2);
@@ -291,6 +292,9 @@ async function initializeDatabase() {
     await createResourcesTable();
     await createResourceLayerTables();
     await alterExistingTables();
+
+    // Fix database sequences to prevent duplicate key errors (Phase 1)
+    await fixSequences(pool);
 
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {

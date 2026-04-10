@@ -37,7 +37,10 @@ const getRelevantTasks = async (userSkills) => {
   }
 
   const relevantTasksQuery = `
-    SELECT * FROM tasks WHERE skill_id = ANY($1)
+    SELECT * FROM tasks
+    WHERE skill_id = ANY($1)
+    AND (status::text LIKE '%unassigned' OR status = 'available')
+    ORDER BY id DESC
   `;
   const relevantTasks = await pool.query(relevantTasksQuery, [skillIds]);
 

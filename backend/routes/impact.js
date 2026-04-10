@@ -9,9 +9,10 @@ import ensureAuthenticated from '../middlewares/authenticate.js'; // Authenticat
 
 const router = express.Router();
 const authenticate = ensureAuthenticated; // Alias for clarity
+
 // GET overall platform impact summary
 // Path: /impact/summary (when mounted in server.js as app.use('/impact', impactRoutes))
-router.get('/summary', authenticate, async (req, res) => {
+router.get('/summary', async (req, res) => {
   try {
     const summary = await getOverallPlatformImpact(pool);
     res.json(summary);
@@ -21,7 +22,7 @@ router.get('/summary', authenticate, async (req, res) => {
   }
 });
 
-router.get('/project/:projectId/outcomes', authenticate, async (req, res) => {
+router.get('/project/:projectId/outcomes', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM outcomes WHERE project_id = $1', [req.params.projectId]);
     res.json(result.rows);
@@ -32,7 +33,7 @@ router.get('/project/:projectId/outcomes', authenticate, async (req, res) => {
 
 // GET impact summary for a specific community
 // Path: /impact/community/:communityId
-router.get('/community/:communityId', authenticate, async (req, res) => {
+router.get('/community/:communityId', async (req, res) => {
   const { communityId } = req.params;
   
   // Basic validation for communityId
