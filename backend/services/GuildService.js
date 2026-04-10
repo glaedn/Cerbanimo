@@ -280,7 +280,7 @@ class GuildService {
 
       // 3. Query Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: "v1" });
 
       const prompt = `
         You are an expert in skill taxonomies and workforce development.

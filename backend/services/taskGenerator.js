@@ -67,7 +67,7 @@ export const generateProjectIdea = async (skills, interests) => {
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
       systemInstruction: systemPrompt,
-    });
+    }, { apiVersion: "v1" });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const responseText = response.text();
@@ -161,7 +161,7 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
       systemInstruction: systemPrompt,
-    });
+    }, { apiVersion: "v1" });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const text = response.text();
@@ -238,7 +238,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
       systemInstruction: systemPrompt,
-    });
+    }, { apiVersion: "v1" });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     const responseText = response.text();
