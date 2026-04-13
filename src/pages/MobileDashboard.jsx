@@ -47,7 +47,7 @@ const MobileDashboard = () => {
           }
 
           // Fetch Chronicle
-          const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/story/user/${profileRes.data.id}/chronicle`, {
+          const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profileRes.data.id}/chronicle`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setUserChronicle(chronicleRes.data || []);
