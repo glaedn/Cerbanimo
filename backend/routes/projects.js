@@ -361,15 +361,23 @@ router.post('/auto-generate', async (req, res) => {
         [projectId, task.name, task.description, skillId, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
       );
       const dbId = result.rows[0].id;
-      llmToDbIdMap[task.id] = dbId;
+      task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues
+
+      // If LLM reused an ID, we prioritize the first one for dependency resolution
+      if (llmToDbIdMap[task.id] === undefined) {
+        llmToDbIdMap[task.id] = dbId;
+      }
     }
 
     // 4. Second pass: Update dependencies with resolved DB IDs
     const updatePromises = tasks.map(task => {
-      const resolvedDeps = (Array.isArray(task.dependencies) ? task.dependencies : []).map(depId => llmToDbIdMap[depId]);
+      const resolvedDeps = (Array.isArray(task.dependencies) ? task.dependencies : [])
+        .map(depId => llmToDbIdMap[depId])
+        .filter(id => id !== undefined);
+
       return pool.query(
         'UPDATE tasks SET dependencies = $1::int[] WHERE id = $2',
-        [resolvedDeps, llmToDbIdMap[task.id]]
+        [resolvedDeps, task.db_id_internal]
       );
     });
 
@@ -378,8 +386,10 @@ router.post('/auto-generate', async (req, res) => {
     // 5. Respond with success and DB task IDs
     const insertedTasks = tasks.map(task => ({
       ...task,
-      db_id: llmToDbIdMap[task.id], // Optional: return DB IDs alongside LLM task data
-      resolvedDependencies: (Array.isArray(task.dependencies) ? task.dependencies : []).map(depId => llmToDbIdMap[depId])
+      db_id: task.db_id_internal, // Use the actual DB ID for this specific task
+      resolvedDependencies: (Array.isArray(task.dependencies) ? task.dependencies : [])
+        .map(depId => llmToDbIdMap[depId])
+        .filter(id => id !== undefined)
     }));
 
     res.json({ success: true, tasks: insertedTasks });

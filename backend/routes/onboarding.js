@@ -181,12 +181,17 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
             [newProjectId, task.name, task.description, task.skill_id, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
           );
           const dbId = taskInsertResult.rows[0].id;
-          llmToDbIdMap[task.id] = dbId; // task.id is the LLM-generated ID
+          task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues
+
+          // If LLM reused an ID, we prioritize the first one for dependency resolution
+          if (llmToDbIdMap[task.id] === undefined) {
+            llmToDbIdMap[task.id] = dbId;
+          }
         }
 
         // Second pass: Update dependencies with resolved DB IDs
         for (const task of tasksToInsert) {
-          const dbId = llmToDbIdMap[task.id];
+          const dbId = task.db_id_internal; // Use the stored internal DB ID
           const resolvedDeps = (Array.isArray(task.dependencies) ? task.dependencies : [])
                                 .map(depLlmId => llmToDbIdMap[depLlmId])
                                 .filter(depDbId => depDbId != null); // Filter out any unresolved dependencies

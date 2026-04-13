@@ -72,10 +72,14 @@ export const generateProjectIdea = async (skills, interests) => {
     const response = await result.response;
     const responseText = response.text();
 
-    return parseLLMJsonResponse(responseText);
+    const data = parseLLMJsonResponse(responseText);
+    if (!data.Name || !data.Description) {
+      throw new Error("LLM response missing Name or Description for project idea.");
+    }
+    return data;
   } catch (error) {
-    console.error("Error generating subtasks:", error);
-    throw new Error(`Failed to generate subtasks: ${error.message}`);
+    console.error("Error generating project idea:", error);
+    throw new Error(`Failed to generate project idea: ${error.message}`);
   }
 };
 

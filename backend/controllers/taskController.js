@@ -1420,40 +1420,50 @@ const granularizeTasks = async (req, res) => {
   // Define sanitizeSubtasks first
   const sanitizeSubtasks = (tasks, projectId) => {
     let nextId = 1;
-    const taskIdToName = {};
-    const taskNameToTempId = {};
+    const llmIdToUniqueKey = new Map(); // LLM ID -> Array of unique keys
 
-    tasks.forEach((task) => {
-      if (!task.id) {
-        task.tempId = nextId++; // Store temp ID separately
-      } else {
-        task.tempId = task.id;
-        nextId = Math.max(nextId, task.id + 1);
+    const sanitizedTasks = tasks.map((task, index) => {
+      const uniqueKey = `task_at_index_${index}`;
+      const taskWithKey = { ...task, uniqueKey };
+
+      taskWithKey.project_id = projectId;
+      taskWithKey.reward_tokens = taskWithKey.reward_tokens ?? 100;
+      taskWithKey.skill_id = taskWithKey.skill_id ?? null;
+
+      // Map LLM ID to this unique key (might map to multiple if LLM reused IDs)
+      if (!llmIdToUniqueKey.has(task.id)) {
+        llmIdToUniqueKey.set(task.id, []);
       }
-      task.project_id = projectId;
-      task.reward_tokens = task.reward_tokens ?? 100;
-      task.skill_id = task.skill_id ?? null;
+      llmIdToUniqueKey.get(task.id).push(uniqueKey);
 
-      taskIdToName[task.tempId] = task.name;
-      taskNameToTempId[task.name] = task.tempId;
+      return taskWithKey;
     });
 
-    tasks.forEach((task) => {
+    sanitizedTasks.forEach((task) => {
       if (!Array.isArray(task.dependencies)) {
         task.dependencies = [];
       } else {
         task.dependencies = task.dependencies
           .map((dep) => {
-            if (typeof dep === "string") return taskNameToTempId[dep] || null;
-            return typeof dep === "number" ? dep : null;
+            if (typeof dep === "number") {
+                // If LLM used an ID, it likely refers to the first task it gave that ID to
+                const matches = llmIdToUniqueKey.get(dep);
+                return matches ? matches[0] : null;
+            }
+            if (typeof dep === "string") {
+                // Try finding task by name
+                const match = sanitizedTasks.find(t => t.name === dep);
+                return match ? match.uniqueKey : null;
+            }
+            return null;
           })
           .filter((dep) => dep !== null);
       }
     });
 
     return {
-      tasks,
-      taskIdToName,
+      tasks: sanitizedTasks,
+      llmIdToUniqueKey,
     };
   };
 
@@ -1506,7 +1516,7 @@ const granularizeTasks = async (req, res) => {
     const subtasks = subtasksData.tasks;
 
     // Now we can call sanitizeSubtasks since it's defined and we have subtasks
-    const { tasks: sanitizedSubtasks, taskIdToName } = sanitizeSubtasks(
+    const { tasks: sanitizedSubtasks, llmIdToUniqueKey } = sanitizeSubtasks(
       subtasks,
       projectId
     );
@@ -1515,75 +1525,35 @@ const granularizeTasks = async (req, res) => {
     await client.query("DELETE FROM tasks WHERE project_id = $1", [projectId]);
 
     // Step 1: Insert all subtasks without dependencies
-    const subtaskMetadata = []; // store name + original dependencies + other info
+    const uniqueKeyToRealId = {};
 
     for (const subtask of sanitizedSubtasks) {
       const skillId = await GuildService.getOrCreateSkill(subtask.skill_name);
 
-      subtaskMetadata.push({
-        projectId: subtask.project_id,
-        name: subtask.name,
-        description: subtask.description,
-        skill_id: skillId,
-        reward_tokens: subtask.reward_tokens ?? 100,
-        status: "inactive-unassigned",
-        originalDependencies: subtask.dependencies || [],
-        dependencyNames: subtask.dependencies
-          .map((id) => taskIdToName[id])
-          .filter(Boolean),
-      });
-    }
-
-    // Insert subtasks (no dependencies yet)
-    const insertPromises = subtaskMetadata.map((meta) =>
-      client.query(
+      const result = await client.query(
         `INSERT INTO tasks (project_id, name, description, skill_id, status, reward_tokens, dependencies)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id, name`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id`,
         [
-          meta.projectId,
-          meta.name,
-          meta.description,
-          meta.skill_id,
-          meta.status,
-          meta.reward_tokens,
+          subtask.project_id,
+          subtask.name,
+          subtask.description,
+          skillId,
+          "inactive-unassigned",
+          subtask.reward_tokens ?? 100,
           [], // empty dependencies for now
         ]
-      )
-    );
-
-    const insertedResults = await Promise.all(insertPromises);
-
-    const nameToRealId = {};
-    insertedResults.forEach((result) => {
-      const row = result.rows[0];
-      nameToRealId[row.name] = row.id;
-    });
-
-    // Debug: Log name to real ID mapping
-    console.log("Name to Real ID mapping:", nameToRealId);
-
-    const updatePromises = [];
-    subtaskMetadata.forEach((meta, index) => {
-      const realTaskId = insertedResults[index].rows[0].id;
-
-      // Convert temp IDs to names, then names to real IDs
-      const resolvedDeps = meta.originalDependencies
-        .map((tempId) => {
-          const depName = taskIdToName[tempId];
-          return nameToRealId[depName];
-        })
-        .filter((depId) => depId !== undefined);
-
-      console.log(
-        `Resolved dependencies for task "${meta.name}" (ID: ${realTaskId}):`,
-        resolvedDeps
       );
+      uniqueKeyToRealId[subtask.uniqueKey] = result.rows[0].id;
+    }
 
-      updatePromises.push(
-        client.query(
-          `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
-          [resolvedDeps, realTaskId]
-        )
+    // Step 2: Update dependencies using the unique keys
+    const updatePromises = sanitizedSubtasks.map((subtask) => {
+      const realTaskId = uniqueKeyToRealId[subtask.uniqueKey];
+      const resolvedDeps = subtask.dependencies.map(key => uniqueKeyToRealId[key]);
+
+      return client.query(
+        `UPDATE tasks SET dependencies = $1::int[] WHERE id = $2`,
+        [resolvedDeps, realTaskId]
       );
     });
 
