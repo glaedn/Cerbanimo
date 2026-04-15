@@ -115,10 +115,11 @@ const getTasksByProjectId = async (projectId) => {
   console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
 
   const query = `
-    SELECT t.*, o.statement as outcome_statement
+    SELECT DISTINCT ON (t.id) t.*, o.statement as outcome_statement
     FROM tasks t
     LEFT JOIN outcomes o ON t.project_id = o.project_id
     WHERE t.project_id = $1
+    ORDER BY t.id, o.id
   `;
   const { rows } = await pool.query(query, [parsedProjectId]);
   return rows;
@@ -1367,7 +1368,7 @@ const findById = async (taskId) => {
     }
 
     const query = `
-      SELECT 
+      SELECT DISTINCT ON (t.id)
         t.*,
         p.name as project_name,
         o.statement as outcome_statement
@@ -1375,6 +1376,7 @@ const findById = async (taskId) => {
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN outcomes o ON p.id = o.project_id
       WHERE t.id = $1
+      ORDER BY t.id, o.id
     `;
 
     const result = await client.query(query, [parsedTaskId]);
