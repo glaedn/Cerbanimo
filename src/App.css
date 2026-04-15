@@ -2,9 +2,11 @@
   text-align: center;
   padding-top: 80px;
   min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
   background-color: #000;
+  overflow-y: visible;
 }
 
 /* Custom Scrollbar */

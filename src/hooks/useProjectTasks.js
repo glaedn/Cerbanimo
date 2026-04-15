@@ -167,11 +167,11 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   }, [user]);
 
   useEffect(() => {
-    if (skills.length && projectId) {
+    if (projectId) {
       fetchProject();
       fetchTasks();
     }
-  }, [skills.length, projectId]);
+  }, [projectId, skills.length]);
 
   return {
     skills,
