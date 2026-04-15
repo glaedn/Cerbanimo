@@ -10,27 +10,34 @@ const DependencyListView = ({ tasks, projectId }) => {
   // Helper to build hierarchy
   const buildHierarchy = (taskList) => {
     const taskMap = {};
-    taskList.forEach(t => taskMap[t.id] = { ...t, children: [] });
-
-    const roots = [];
+    // First pass: create nodes
     taskList.forEach(t => {
-      if (t.dependencies && t.dependencies.length > 0) {
+      taskMap[t.id] = { ...t, children: [] };
+    });
+
+    // Second pass: link children
+    taskList.forEach(t => {
+      if (t.dependencies && Array.isArray(t.dependencies)) {
         t.dependencies.forEach(depId => {
           if (taskMap[depId]) {
+            // Task 't' depends on 'depId', so 't' is a child of 'depId'
             taskMap[depId].children.push(taskMap[t.id]);
           }
         });
-      } else {
-        roots.push(taskMap[t.id]);
       }
     });
 
-    // Deduplicate roots (a task might be a child of another, so only keep top-level)
-    const topLevel = roots.filter(r => {
-        return !taskList.some(t => t.dependencies && t.dependencies.includes(r.id));
-    });
+    // Third pass: identify roots
+    // A task is a root if it doesn't depend on any task currently in our map
+    const roots = taskList.filter(t => {
+      if (!t.dependencies || !Array.isArray(t.dependencies) || t.dependencies.length === 0) {
+        return true;
+      }
+      // If none of its dependencies are in our taskMap, it's effectively a root for this view
+      return !t.dependencies.some(depId => taskMap[depId]);
+    }).map(t => taskMap[t.id]);
 
-    return topLevel;
+    return roots;
   };
 
   const hierarchy = buildHierarchy(tasks);
