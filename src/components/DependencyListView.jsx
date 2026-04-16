@@ -60,7 +60,7 @@ const DependencyListView = ({ tasks, projectId }) => {
     return { border: '1px solid #00FF00', glow: 'rgba(0, 255, 0, 0.1)', bg: 'rgba(0, 255, 0, 0.1)', text: '#00FF00' };
   };
 
-  const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false, parentStatus = '') => {
+  const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false, parentStatus = '', isFirst = false) => {
     const status = (node.status || 'available').toLowerCase();
     const style = getStatusStyle(status);
     const hasChildren = node.children && node.children.length > 0;
@@ -95,12 +95,25 @@ const DependencyListView = ({ tasks, projectId }) => {
           {depth > 1 && !parentIsLast && (
             <Box sx={{
               position: 'absolute',
-              left: isWrapping ? -10 : -18,
+              left: isWrapping ? 38 : -18,
               top: -10,
               bottom: -10,
               width: '1px',
               borderLeft: `1px solid ${lineColor}`,
               opacity: 0.3,
+              zIndex: 0
+            }} />
+          )}
+
+          {/* Wrap bridge: connects to parent track when indentation resets */}
+          {isWrapping && isFirst && (
+            <Box sx={{
+              position: 'absolute',
+              left: -10,
+              top: -10,
+              width: 48,
+              height: '1px',
+              borderTop: `1px solid ${lineColor}`,
               zIndex: 0
             }} />
           )}
@@ -191,7 +204,7 @@ const DependencyListView = ({ tasks, projectId }) => {
           </Box>
           <Box sx={{ mt: 0.5 }}>
             {node.children && node.children.map((child, idx) =>
-              renderTaskNode(child, depth + 1, idx === node.children.length - 1, isLast, status)
+              renderTaskNode(child, depth + 1, idx === node.children.length - 1, isLast, status, idx === 0)
             )}
           </Box>
         </Box>
@@ -217,7 +230,7 @@ const DependencyListView = ({ tasks, projectId }) => {
 
       {hierarchy.length > 0 ? (
         <Box sx={{ mt: 1 }}>
-          {hierarchy.map((root, idx) => renderTaskNode(root, 0, idx === hierarchy.length - 1))}
+          {hierarchy.map((root, idx) => renderTaskNode(root, 0, idx === hierarchy.length - 1, true, '', idx === 0))}
         </Box>
       ) : (
         <Box sx={{ py: 4, textAlign: 'center', bgcolor: 'rgba(28, 28, 30, 0.4)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
