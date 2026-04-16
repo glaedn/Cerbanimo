@@ -51,25 +51,32 @@ const DependencyListView = ({ tasks, projectId }) => {
   const hierarchy = buildHierarchy(tasks);
 
   const getStatusStyle = (status) => {
-    if (status === 'completed') return { border: '1px solid #FF69B4', glow: 'rgba(255, 105, 180, 0.2)', bg: '#FF69B4', text: '#fff' };
-    if (status === 'submitted') return { border: '1px solid #FFA500', glow: 'rgba(255, 165, 0, 0.2)', bg: '#FFA500', text: '#fff' };
-    if (status.includes('assigned') || status === 'in_progress') return { border: '1px solid #00F3FF', glow: 'rgba(0, 243, 255, 0.2)', bg: '#00F3FF', text: '#000033' };
-    if (status.includes('urgent')) return { border: '1px solid #FF0000', glow: 'rgba(255, 0, 0, 0.2)', bg: '#FF0000', text: '#fff' };
-    return { border: '1px solid rgba(255,255,255,0.1)', glow: 'transparent', bg: 'rgba(0, 243, 255, 0.05)', text: '#00F3FF' };
+    const s = status.toLowerCase();
+    if (s.includes('completed')) return { border: '2px solid #FF69B4', glow: 'rgba(255, 105, 180, 0.4)', bg: '#FF69B4', text: '#fff' };
+    if (s.includes('submitted')) return { border: '2px solid #FFA500', glow: 'rgba(255, 165, 0, 0.4)', bg: '#FFA500', text: '#fff' };
+    if (s.includes('urgent')) return { border: '2px solid #FF0000', glow: 'rgba(255, 0, 0, 0.4)', bg: '#FF0000', text: '#fff' };
+    if (s.includes('assigned') || s === 'in_progress') return { border: '1px solid #00F3FF', glow: 'rgba(0, 243, 255, 0.2)', bg: '#00F3FF', text: '#000033' };
+    // Default to green for unassigned/available
+    return { border: '1px solid #00FF00', glow: 'rgba(0, 255, 0, 0.1)', bg: 'rgba(0, 255, 0, 0.1)', text: '#00FF00' };
   };
 
   const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false, parentStatus = '') => {
-    const status = node.status || 'available';
+    const status = (node.status || 'available').toLowerCase();
     const style = getStatusStyle(status);
     const hasChildren = node.children && node.children.length > 0;
 
     // Line color logic
     const getLineColor = (pStatus) => {
-      if (pStatus === 'completed') return '#FF69B4';
-      if (pStatus === 'submitted') return '#FFA500';
+      const ps = pStatus.toLowerCase();
+      if (ps.includes('completed')) return '#FF69B4';
+      if (ps.includes('submitted')) return '#FFA500';
       return 'rgba(0, 243, 255, 0.3)';
     };
     const lineColor = getLineColor(parentStatus);
+
+    // Wrapping logic: reset indentation every 5 levels
+    const isWrapping = depth > 0 && depth % 5 === 0;
+    const visualDepth = depth % 5;
 
     return (
       <motion.div
@@ -79,16 +86,16 @@ const DependencyListView = ({ tasks, projectId }) => {
         transition={{ delay: Math.min(depth * 0.03, 0.5) }}
       >
         <Box sx={{
-          ml: depth === 0 ? 0 : 2,
+          ml: depth === 0 ? 0 : (isWrapping ? -6 : 1),
           position: 'relative',
           mb: 0.5,
-          pt: 0
+          pt: isWrapping ? 2 : 0
         }}>
           {/* Vertical line from parent that passes through this level */}
           {depth > 1 && !parentIsLast && (
             <Box sx={{
               position: 'absolute',
-              left: -18,
+              left: isWrapping ? -10 : -18,
               top: -10,
               bottom: -10,
               width: '1px',
