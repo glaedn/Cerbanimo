@@ -104,7 +104,7 @@ const MobileTaskDetail = () => {
         </Typography>
 
         <Box display="flex" gap={1} mb={2}>
-          <Chip label={task.skill_type || 'General'} size="small" sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF' }} />
+          <Chip label={task.skill_name || 'General'} size="small" sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF' }} />
           <Chip label={`Lvl ${task.level || 1}`} size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.1)', color: '#FF5CA2' }} />
           <Chip label={task.status} size="small" color="info" />
         </Box>
@@ -176,7 +176,7 @@ const MobileTaskDetail = () => {
               </>
             ) : (
               <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', height: '56px' }}>
-                {task.status.toUpperCase()}
+                ACCEPT MISSION
               </Button>
             )}
           </Box>

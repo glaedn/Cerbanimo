@@ -115,9 +115,10 @@ const getTasksByProjectId = async (projectId) => {
   console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
 
   const query = `
-    SELECT DISTINCT ON (t.id) t.*, o.statement as outcome_statement
+    SELECT DISTINCT ON (t.id) t.*, o.statement as outcome_statement, s.name as skill_name
     FROM tasks t
     LEFT JOIN outcomes o ON t.project_id = o.project_id
+    LEFT JOIN skills s ON t.skill_id = s.id
     WHERE t.project_id = $1
     ORDER BY t.id, o.id
   `;
@@ -1371,10 +1372,12 @@ const findById = async (taskId) => {
       SELECT DISTINCT ON (t.id)
         t.*,
         p.name as project_name,
-        o.statement as outcome_statement
+        o.statement as outcome_statement,
+        s.name as skill_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN outcomes o ON p.id = o.project_id
+      LEFT JOIN skills s ON t.skill_id = s.id
       WHERE t.id = $1
       ORDER BY t.id, o.id
     `;
