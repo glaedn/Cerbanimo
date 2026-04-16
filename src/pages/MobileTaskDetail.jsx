@@ -106,7 +106,7 @@ const MobileTaskDetail = () => {
         <Box display="flex" gap={1} mb={2}>
           <Chip label={task.skill_name || 'General'} size="small" sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF' }} />
           <Chip label={`Lvl ${task.level || 1}`} size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.1)', color: '#FF5CA2' }} />
-          <Chip label={task.status} size="small" color="info" />
+          <Chip label={task.status} size="small" color="info" sx={{ textTransform: 'uppercase' }} />
         </Box>
 
         <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(28, 28, 30, 0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -138,8 +138,10 @@ const MobileTaskDetail = () => {
       >
         <Paper sx={{ p: 2, backgroundColor: 'rgba(10, 10, 46, 0.98)', borderTop: '2px solid #00F3FF', backdropFilter: 'blur(10px)' }} elevation={10}>
           <Box display="flex" gap={2}>
-            {task.status !== 'completed' && task.status !== 'submitted' && !(task.status === 'active-assigned' || task.status === 'in_progress') ? (
-              <Button
+            {(() => {
+              const s = task.status.toLowerCase();
+              if (s !== 'completed' && s !== 'submitted' && !(s === 'active-assigned' || s === 'in_progress')) {
+                return (
                   component={motion.button}
                   whileTap={{ scale: 0.95 }}
                   variant="contained"
@@ -147,10 +149,12 @@ const MobileTaskDetail = () => {
                   onClick={() => handleAction('accept')}
                   disabled={actionLoading}
                   sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
-              >
-                {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'ACCEPT MISSION'}
-              </Button>
-            ) : task.status === 'active-assigned' || task.status === 'in_progress' ? (
+                >
+                  {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'ACCEPT MISSION'}
+                </Button>
+                );
+              } else if (s === 'active-assigned' || s === 'in_progress') {
+                return (
               <>
                 <Button
                   component={motion.button}
@@ -174,11 +178,15 @@ const MobileTaskDetail = () => {
                   {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'DROP'}
                 </Button>
               </>
-            ) : (
+                );
+              } else {
+                return (
               <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', height: '56px' }}>
                 ACCEPT MISSION
               </Button>
-            )}
+                );
+              }
+            })()}
           </Box>
         </Paper>
       </motion.div>
