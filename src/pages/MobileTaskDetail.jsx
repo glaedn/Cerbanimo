@@ -10,29 +10,42 @@ import SubmissionModal from '../components/SubmissionModal';
 const MobileTaskDetail = () => {
   const { projectId, taskId } = useParams();
   const navigate = useNavigate();
-  const { getAccessTokenSilently } = useAuth0();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
   const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'info' });
+  const { user, getAccessTokenSilently } = useAuth0();
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    const fetchTask = async () => {
+    const fetchData = async () => {
       try {
         const token = await getAccessTokenSilently();
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setTask(response.data);
+
+        // Fetch Profile
+        const profileRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+          params: { sub: user.sub, email: user.email },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setProfile(profileRes.data);
       } catch (err) {
         console.error('Error fetching task:', err);
       } finally {
         setLoading(false);
       }
+
+
     };
-    fetchTask();
-  }, [taskId, getAccessTokenSilently]);
+    
+    fetchData();
+  }, [taskId, getAccessTokenSilently, user.email, user.sub]);
+
+  
 
   const handleAction = async (action) => {
     try {
@@ -41,13 +54,17 @@ const MobileTaskDetail = () => {
       const token = await getAccessTokenSilently();
       let res;
       if (action === 'accept') {
-        res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {}, {
+        await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/accept`, {
+          userId: profile.id.toString() 
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (window.navigator.vibrate) window.navigator.vibrate([30, 30, 30]);
         setFeedback({ open: true, message: 'Mission accepted!', severity: 'success' });
       } else if (action === 'drop') {
-        res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`, {}, {
+        await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}/drop`, {
+          userId: profile.id.toString() 
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (window.navigator.vibrate) window.navigator.vibrate(20);
@@ -140,50 +157,51 @@ const MobileTaskDetail = () => {
           <Box display="flex" gap={2}>
             {(() => {
               const s = task.status.toLowerCase();
-              if (s !== 'completed' && s !== 'submitted' && !(s === 'active-assigned' || s === 'in_progress')) {
+              if (s !== 'completed' && s !== 'submitted' && !(s === 'active-assigned' || s === 'in_progress' || s === 'inactive-assigned')) {
                 return (
-                  component={motion.button}
-                  whileTap={{ scale: 0.95 }}
-                  variant="contained"
-                  fullWidth
-                  onClick={() => handleAction('accept')}
-                  disabled={actionLoading}
-                  sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
-                >
-                  {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'ACCEPT MISSION'}
-                </Button>
+                  <Button
+                    component={motion.button}
+                    whileTap={{ scale: 0.95 }}
+                    variant="contained"
+                    fullWidth
+                    onClick={() => handleAction('accept')}
+                    disabled={actionLoading}
+                    sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
+                  >
+                    {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'ACCEPT MISSION'}
+                  </Button>
                 );
-              } else if (s === 'active-assigned' || s === 'in_progress') {
+              } else if (s === 'active-assigned' || s === 'in_progress' || s === 'inactive-assigned') {
                 return (
-              <>
-                <Button
-                  component={motion.button}
-                  whileTap={{ scale: 0.95 }}
-                  variant="contained"
-                  fullWidth
-                  onClick={() => setIsSubmissionModalOpen(true)}
-                  sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
-                >
-                  SUBMIT MISSION
-                </Button>
-                <Button
-                  component={motion.button}
-                  whileTap={{ scale: 0.95 }}
-                  variant="outlined"
-                  fullWidth
-                  onClick={() => handleAction('drop')}
-                  disabled={actionLoading}
-                  sx={{ color: '#FF4136', borderColor: '#FF4136', height: '56px' }}
-                >
-                  {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'DROP'}
-                </Button>
-              </>
+                  <>
+                  <Button
+                    component={motion.button}
+                    whileTap={{ scale: 0.95 }}
+                    variant="contained"
+                    fullWidth
+                    onClick={() => setIsSubmissionModalOpen(true)}
+                    sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 'bold', height: '56px' }}
+                  >
+                    SUBMIT MISSION
+                  </Button>
+                  <Button
+                    component={motion.button}
+                    whileTap={{ scale: 0.95 }}
+                    variant="outlined"
+                    fullWidth
+                    onClick={() => handleAction('drop')}
+                    disabled={actionLoading}
+                    sx={{ color: '#FF4136', borderColor: '#FF4136', height: '56px' }}
+                  >
+                    {actionLoading ? <CircularProgress size={24} color="inherit" /> : 'DROP'}
+                  </Button>
+                  </>
                 );
               } else {
                 return (
-              <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', height: '56px' }}>
-                ACCEPT MISSION
-              </Button>
+                  <Button variant="contained" fullWidth disabled sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', height: '56px' }}>
+                    ACCEPT MISSION
+                  </Button>
                 );
               }
             })()}
