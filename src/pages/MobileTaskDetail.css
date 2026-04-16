@@ -1,0 +1,255 @@
+.mobile-task-detail-container {
+    background-color: #000;
+    min-height: 100vh;
+    color: #00F3FF;
+    font-family: 'Inter', sans-serif;
+}
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+    background: rgba(0, 10, 20, 0.95);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    font-size: 1rem;
+    color: #00F3FF;
+}
+
+.task-name {
+    font-family: 'Orbitron', sans-serif;
+    color: #00F3FF;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.cyber-chip {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    border-radius: 4px;
+}
+
+.cyber-chip.skill {
+    background: rgba(0, 243, 255, 0.1);
+    color: #00F3FF;
+    border: 1px solid #00F3FF;
+}
+
+.cyber-chip.level {
+    background: rgba(255, 92, 162, 0.1);
+    color: #FF5CA2;
+    border: 1px solid #FF5CA2;
+}
+
+.cyber-chip.status {
+    background: rgba(0, 243, 255, 0.2);
+    color: #fff;
+    border: 1px solid #00F3FF;
+}
+
+.cyber-chip.status.completed {
+    background: rgba(255, 92, 162, 0.3);
+    border-color: #FF5CA2;
+    color: #FF5CA2;
+}
+
+.impact-goal-box {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-left: 3px solid #FF5CA2;
+    background: rgba(255, 92, 162, 0.05);
+}
+
+.impact-label {
+    color: #FF5CA2;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.impact-text {
+    color: #eee;
+    font-style: italic;
+}
+
+.content-paper {
+    background: rgba(10, 10, 46, 0.6) !important;
+    border: 1px solid rgba(0, 243, 255, 0.2) !important;
+    padding: 1rem;
+    color: #fff !important;
+}
+
+.content-paper.submission {
+    border-color: #FF5CA2 !important;
+    background: rgba(255, 92, 162, 0.05) !important;
+}
+
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    color: #00F3FF;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+}
+
+.section-title.pink {
+    color: #FF5CA2;
+}
+
+.description-text {
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.list-primary {
+    color: #00F3FF !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 0.75rem !important;
+}
+
+.list-secondary {
+    color: #fff !important;
+    font-size: 0.9rem !important;
+}
+
+.sub-label {
+    color: #FF5CA2;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+.proof-link {
+    color: #00F3FF;
+    text-decoration: underline;
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
+/* Edit Mode Styles */
+.cyber-edit-paper {
+    background: #000 !important;
+    border: 1px solid #00F3FF !important;
+    padding: 1.5rem;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+}
+
+.section-label {
+    font-family: 'Orbitron', sans-serif;
+    color: #00F3FF;
+    margin-bottom: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.cyber-input .MuiOutlinedInput-root {
+    color: #00F3FF !important;
+    background: rgba(0, 20, 40, 0.7);
+}
+
+.cyber-input .MuiOutlinedInput-notchedOutline {
+    border-color: #00F3FF !important;
+}
+
+.cyber-select .MuiOutlinedInput-root {
+    color: #00F3FF !important;
+    background: rgba(0, 20, 40, 0.7);
+}
+
+.cyber-select .MuiOutlinedInput-notchedOutline {
+    border-color: #00F3FF !important;
+}
+
+.cyber-select .MuiSvgIcon-root {
+    color: #00F3FF;
+}
+
+.cyber-save-button {
+    margin-top: 1rem !important;
+    background: transparent !important;
+    border: 1px solid #00F3FF !important;
+    color: #00F3FF !important;
+    font-family: 'Orbitron', sans-serif !important;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+/* Sticky Actions */
+.sticky-actions {
+    position: fixed;
+    bottom: 65px;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: rgba(0, 5, 15, 0.95);
+    border-top: 1px solid #00F3FF;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+}
+
+.cyber-btn {
+    font-family: 'Orbitron', sans-serif !important;
+    font-weight: bold !important;
+    height: 48px;
+    border-radius: 4px !important;
+}
+
+.cyber-btn.primary {
+    background: #00F3FF !important;
+    color: #000 !important;
+}
+
+.cyber-btn.secondary {
+    border: 1px solid #FF5CA2 !important;
+    color: #FF5CA2 !important;
+}
+
+.cyber-btn.approve {
+    border: 1px solid #00F3FF !important;
+    color: #00F3FF !important;
+}
+
+.cyber-btn.reject {
+    border: 1px solid #FF5CA2 !important;
+    color: #FF5CA2 !important;
+}
+
+.cyber-btn.dispute {
+    border: 1px solid #fff !important;
+    color: #fff !important;
+}
+
+.cyber-btn.pm-approve {
+    background: #00F3FF !important;
+    color: #000 !important;
+}
+
+.cyber-btn.pm-reject {
+    background: #FF5CA2 !important;
+    color: #000 !important;
+}
+
+.cyber-btn.pending {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.cyber-btn.completed {
+    background: rgba(255, 92, 162, 0.2) !important;
+    color: #FF5CA2 !important;
+    border: 1px solid #FF5CA2 !important;
+}
+
+.cyber-btn.neutral {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+}
