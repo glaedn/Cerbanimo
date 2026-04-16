@@ -138,7 +138,7 @@ const MobileTaskDetail = () => {
       >
         <Paper sx={{ p: 2, backgroundColor: 'rgba(10, 10, 46, 0.98)', borderTop: '2px solid #00F3FF', backdropFilter: 'blur(10px)' }} elevation={10}>
           <Box display="flex" gap={2}>
-            {task.status === 'available' || task.status === 'active-unassigned' ? (
+            {task.status !== 'completed' && task.status !== 'submitted' && !(task.status === 'active-assigned' || task.status === 'in_progress') ? (
               <Button
                   component={motion.button}
                   whileTap={{ scale: 0.95 }}
