@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -51,16 +52,21 @@ const DependencyListView = ({ tasks, projectId }) => {
   const hierarchy = buildHierarchy(tasks);
 
   const getStatusStyle = (status) => {
-    if (status === 'completed') return { border: '1px solid #FF69B4', glow: 'rgba(255, 105, 180, 0.2)' };
-    if (status.includes('active')) return { border: '1px solid #00FF00', glow: 'rgba(0, 255, 0, 0.1)' };
-    if (status.includes('urgent')) return { border: '1px solid #FF0000', glow: 'rgba(255, 0, 0, 0.1)' };
-    return { border: '1px solid rgba(255,255,255,0.1)', glow: 'transparent' };
+    if (status === 'completed') return { border: '1px solid #FF69B4', glow: 'rgba(255, 105, 180, 0.2)', bg: '#FF69B4', text: '#fff' };
+    if (status === 'submitted') return { border: '1px solid #FFA500', glow: 'rgba(255, 165, 0, 0.2)', bg: '#FFA500', text: '#fff' };
+    if (status.includes('assigned') || status === 'in_progress') return { border: '1px solid #00F3FF', glow: 'rgba(0, 243, 255, 0.2)', bg: '#00F3FF', text: '#000033' };
+    if (status.includes('urgent')) return { border: '1px solid #FF0000', glow: 'rgba(255, 0, 0, 0.2)', bg: '#FF0000', text: '#fff' };
+    return { border: '1px solid rgba(255,255,255,0.1)', glow: 'transparent', bg: 'rgba(0, 243, 255, 0.05)', text: '#00F3FF' };
   };
 
   const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false) => {
     const status = node.status || 'available';
     const style = getStatusStyle(status);
     const hasChildren = node.children && node.children.length > 0;
+
+    // Hierarchy wrapping logic
+    const visualDepth = depth % 6;
+    const isWrapping = depth > 0 && depth % 6 === 0;
 
     return (
       <motion.div
@@ -70,12 +76,31 @@ const DependencyListView = ({ tasks, projectId }) => {
         transition={{ delay: Math.min(depth * 0.03, 0.5) }}
       >
         <Box sx={{
-          ml: depth > 0 ? 2 : 0,
+          ml: depth === 0 ? 0 : (isWrapping ? -10 : 2),
           position: 'relative',
-          mb: 0.5
+          mb: 0.5,
+          pt: isWrapping ? 4 : 0
         }}>
+          {isWrapping && (
+            <Box sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              color: 'rgba(0, 243, 255, 0.5)',
+              mb: 1
+            }}>
+              <KeyboardDoubleArrowDownIcon sx={{ fontSize: '1rem' }} />
+              <Typography sx={{ fontSize: '0.65rem', fontFamily: 'Orbitron', letterSpacing: '1px' }}>
+                DEEPER STRATA
+              </Typography>
+            </Box>
+          )}
+
           {/* Vertical line from parent that passes through this level */}
-          {depth > 1 && !parentIsLast && (
+          {visualDepth > 1 && !parentIsLast && !isWrapping && (
             <Box sx={{
               position: 'absolute',
               left: -18,
@@ -88,7 +113,7 @@ const DependencyListView = ({ tasks, projectId }) => {
           )}
 
           {/* Vertical connection line for siblings/parent */}
-          {depth > 0 && (
+          {visualDepth > 0 && !isWrapping && (
             <Box sx={{
               position: 'absolute',
               left: -10,
@@ -101,7 +126,7 @@ const DependencyListView = ({ tasks, projectId }) => {
           )}
 
           {/* Horizontal connection line to parent */}
-          {depth > 0 && (
+          {visualDepth > 0 && !isWrapping && (
             <Box sx={{
               position: 'absolute',
               left: -10,
@@ -161,12 +186,13 @@ const DependencyListView = ({ tasks, projectId }) => {
                     height: 18,
                     fontSize: '0.55rem',
                     flexShrink: 0,
-                    backgroundColor: status === 'completed' ? 'success.main' : 'rgba(0, 243, 255, 0.05)',
-                    color: status === 'completed' ? '#fff' : '#00F3FF',
-                    border: status === 'completed' ? 'none' : '1px solid rgba(0, 243, 255, 0.3)',
+                    backgroundColor: style.bg,
+                    color: style.text,
+                    border: 'none',
                     textTransform: 'uppercase',
                     fontFamily: 'Orbitron',
-                    letterSpacing: '0.5px'
+                    letterSpacing: '0.5px',
+                    fontWeight: 'bold'
                 }}
             />
           </Box>
@@ -189,9 +215,10 @@ const DependencyListView = ({ tasks, projectId }) => {
 
         {/* Simple Legend for Mobile */}
         <Box display="flex" gap={1}>
-           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#FF69B4', alignSelf: 'center' }} />
-           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00FF00', alignSelf: 'center' }} />
-           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#FF0000', alignSelf: 'center' }} />
+           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: '#FF69B4', alignSelf: 'center' }} />
+           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: '#FFA500', alignSelf: 'center' }} />
+           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: '#00F3FF', alignSelf: 'center' }} />
+           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: '#FF0000', alignSelf: 'center' }} />
         </Box>
       </Box>
 
