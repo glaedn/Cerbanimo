@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -59,14 +58,18 @@ const DependencyListView = ({ tasks, projectId }) => {
     return { border: '1px solid rgba(255,255,255,0.1)', glow: 'transparent', bg: 'rgba(0, 243, 255, 0.05)', text: '#00F3FF' };
   };
 
-  const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false) => {
+  const renderTaskNode = (node, depth = 0, isLast = false, parentIsLast = false, parentStatus = '') => {
     const status = node.status || 'available';
     const style = getStatusStyle(status);
     const hasChildren = node.children && node.children.length > 0;
 
-    // Hierarchy wrapping logic
-    const visualDepth = depth % 6;
-    const isWrapping = depth > 0 && depth % 6 === 0;
+    // Line color logic
+    const getLineColor = (pStatus) => {
+      if (pStatus === 'completed') return '#FF69B4';
+      if (pStatus === 'submitted') return '#FFA500';
+      return 'rgba(0, 243, 255, 0.3)';
+    };
+    const lineColor = getLineColor(parentStatus);
 
     return (
       <motion.div
@@ -76,64 +79,47 @@ const DependencyListView = ({ tasks, projectId }) => {
         transition={{ delay: Math.min(depth * 0.03, 0.5) }}
       >
         <Box sx={{
-          ml: depth === 0 ? 0 : (isWrapping ? -10 : 2),
+          ml: depth === 0 ? 0 : 2,
           position: 'relative',
           mb: 0.5,
-          pt: isWrapping ? 4 : 0
+          pt: 0
         }}>
-          {isWrapping && (
-            <Box sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              color: 'rgba(0, 243, 255, 0.5)',
-              mb: 1
-            }}>
-              <KeyboardDoubleArrowDownIcon sx={{ fontSize: '1rem' }} />
-              <Typography sx={{ fontSize: '0.65rem', fontFamily: 'Orbitron', letterSpacing: '1px' }}>
-                DEEPER STRATA
-              </Typography>
-            </Box>
-          )}
-
           {/* Vertical line from parent that passes through this level */}
-          {visualDepth > 1 && !parentIsLast && !isWrapping && (
+          {depth > 1 && !parentIsLast && (
             <Box sx={{
               position: 'absolute',
               left: -18,
               top: -10,
               bottom: -10,
               width: '1px',
-              borderLeft: '1px solid rgba(0, 243, 255, 0.1)',
+              borderLeft: `1px solid ${lineColor}`,
+              opacity: 0.3,
               zIndex: 0
             }} />
           )}
 
           {/* Vertical connection line for siblings/parent */}
-          {visualDepth > 0 && !isWrapping && (
+          {depth > 0 && (
             <Box sx={{
               position: 'absolute',
               left: -10,
               top: -10,
               bottom: isLast ? 'calc(100% - 20px)' : -10,
               width: '1px',
-              borderLeft: '1px solid rgba(0, 243, 255, 0.3)',
+              borderLeft: `1px solid ${lineColor}`,
               zIndex: 0
             }} />
           )}
 
           {/* Horizontal connection line to parent */}
-          {visualDepth > 0 && !isWrapping && (
+          {depth > 0 && (
             <Box sx={{
               position: 'absolute',
               left: -10,
               top: 20,
               width: 10,
               height: '1px',
-              borderTop: '1px solid rgba(0, 243, 255, 0.3)',
+              borderTop: `1px solid ${lineColor}`,
               zIndex: 0
             }} />
           )}
@@ -198,7 +184,7 @@ const DependencyListView = ({ tasks, projectId }) => {
           </Box>
           <Box sx={{ mt: 0.5 }}>
             {node.children && node.children.map((child, idx) =>
-              renderTaskNode(child, depth + 1, idx === node.children.length - 1, isLast)
+              renderTaskNode(child, depth + 1, idx === node.children.length - 1, isLast, status)
             )}
           </Box>
         </Box>
