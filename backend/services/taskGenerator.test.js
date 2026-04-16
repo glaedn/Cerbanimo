@@ -1,17 +1,14 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateProjectIdea, parseLLMJsonResponse } from './taskGenerator';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Mock the @google/generative-ai library
-const mockGenerateContent = jest.fn();
-const mockGetGenerativeModel = jest.fn(() => ({
-  generateContent: mockGenerateContent,
-}));
+const mockGenerateContent = vi.fn();
 
-jest.mock('@google/generative-ai', () => {
+vi.mock('@google/generative-ai', () => {
   return {
-    GoogleGenerativeAI: jest.fn().mockImplementation(() => {
+    GoogleGenerativeAI: vi.fn().mockImplementation(() => {
       return {
-        getGenerativeModel: jest.fn(() => ({
+        getGenerativeModel: vi.fn(() => ({
           generateContent: mockGenerateContent,
         })),
       };
@@ -19,15 +16,12 @@ jest.mock('@google/generative-ai', () => {
   };
 });
 
-// Clear mocks before each test
-beforeEach(() => {
-  jest.clearAllMocks();
-  // Reset mockGenerateContent to a default successful response for generateProjectIdea tests
-  // You might need to access it via the imported mock from '@google/generative-ai' if not exported directly
-  // For simplicity, assuming it's available or we set it inside each generateProjectIdea test
-});
-
 describe('taskGenerator.js', () => {
+  // Clear mocks before each test
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('parseLLMJsonResponse', () => {
     it('should parse a valid JSON string', () => {
       const jsonString = '{"name": "Test", "value": 123}';
