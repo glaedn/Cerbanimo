@@ -49,19 +49,22 @@ const SubmissionModal = ({ open, onClose, onSubmit, taskName }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '100%',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              outline: 'none'
+              outline: 'none',
+              zIndex: 1300
             }}
           >
             <Paper sx={{
-              width: { xs: '90%', sm: '450px' },
-              maxHeight: '90vh',
+              width: '90%',
+              maxWidth: '450px',
+              maxHeight: '80vh',
               overflowY: 'auto',
               bgcolor: 'rgba(28, 28, 30, 0.95)',
               backdropFilter: 'blur(10px)',

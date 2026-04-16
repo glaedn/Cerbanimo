@@ -62,6 +62,13 @@
     color: #FF5CA2;
 }
 
+.cyber-chip.dependency {
+    background: rgba(0, 243, 255, 0.05);
+    color: #00F3FF;
+    border: 1px solid rgba(0, 243, 255, 0.5);
+    font-size: 0.65rem;
+}
+
 .impact-goal-box {
     margin-bottom: 1.5rem;
     padding: 1rem;
@@ -120,6 +127,11 @@
 .list-secondary {
     color: #fff !important;
     font-size: 0.9rem !important;
+}
+
+.cyber-select .MuiSelect-select {
+    padding-top: 12px;
+    padding-bottom: 12px;
 }
 
 .sub-label {

@@ -40,6 +40,7 @@ const MobileTaskDetail = () => {
   const [task, setTask] = useState(null);
   const [project, setProject] = useState(null);
   const [skills, setSkills] = useState([]);
+  const [projectTasks, setProjectTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
@@ -77,10 +78,16 @@ const MobileTaskDetail = () => {
         setProfile(profileRes.data);
 
         // Fetch Skills for Edit Mode
-        const skillsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills`, {
+        const skillsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSkills(skillsRes.data);
+
+        // Fetch all project tasks for dependency management
+        const projectTasksRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${taskRes.data.project_id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setProjectTasks(projectTasksRes.data);
 
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -160,7 +167,8 @@ const MobileTaskDetail = () => {
         projectId: task.project_id,
         skill_level: parseInt(editForm.skill_level || 0, 10),
         reward_tokens: parseInt(editForm.reward_tokens || 0, 10),
-        active: !editForm.status?.startsWith('inactive')
+        active: !editForm.status?.startsWith('inactive'),
+        dependencies: (editForm.dependencies || []).map(id => parseInt(id, 10))
       };
 
       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/tasks/update/${taskId}`, updatedData, {
@@ -348,6 +356,52 @@ const MobileTaskDetail = () => {
                 </Box>
 
                 <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" className="section-label">DEPENDENCIES</Typography>
+                  <FormControl fullWidth className="cyber-select" sx={{ mb: 1 }}>
+                    <Select
+                      value=""
+                      displayEmpty
+                      onChange={(e) => {
+                        const depId = parseInt(e.target.value, 10);
+                        if (depId && !editForm.dependencies?.includes(depId)) {
+                          setEditForm({
+                            ...editForm,
+                            dependencies: [...(editForm.dependencies || []), depId]
+                          });
+                        }
+                      }}
+                    >
+                      <MenuItem value="" disabled>ADD_DEPENDENCY</MenuItem>
+                      {projectTasks
+                        .filter(t => t.id !== parseInt(taskId, 10) && !editForm.dependencies?.includes(t.id))
+                        .map(t => (
+                          <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                        ))
+                      }
+                    </Select>
+                  </FormControl>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {editForm.dependencies?.map(depId => {
+                      const depTask = projectTasks.find(t => t.id === parseInt(depId, 10));
+                      return (
+                        <Chip
+                          key={depId}
+                          label={depTask ? depTask.name : `Task ${depId}`}
+                          onDelete={() => {
+                            setEditForm({
+                              ...editForm,
+                              dependencies: editForm.dependencies.filter(id => id !== depId)
+                            });
+                          }}
+                          className="cyber-chip dependency"
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" className="section-label">PROTOCOLS</Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <FormControlLabel
@@ -437,6 +491,26 @@ const MobileTaskDetail = () => {
               </Paper>
 
               <Divider sx={{ my: 2, bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
+
+              <Typography variant="subtitle2" className="section-title">DEPENDENCIES</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {task.dependencies?.length > 0 ? (
+                  task.dependencies.map(depId => {
+                    const depTask = projectTasks.find(t => t.id === parseInt(depId, 10));
+                    return (
+                      <Chip
+                        key={depId}
+                        label={depTask ? depTask.name : `Task ${depId}`}
+                        className="cyber-chip dependency"
+                        size="small"
+                        onClick={() => navigate(`/visualizer/${task.project_id}/${depId}`)}
+                      />
+                    );
+                  })
+                ) : (
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>No dependencies.</Typography>
+                )}
+              </Box>
 
               <Typography variant="subtitle2" className="section-title">RESOURCES & REWARDS</Typography>
               <List dense>
