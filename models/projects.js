@@ -15,6 +15,9 @@ const createProjectsTable = async () => {
       status VARCHAR(50) DEFAULT 'planning', -- e.g., 'planning', 'recruiting', 'active', 'completed', 'on_hold', 'cancelled'
       tags TEXT[] DEFAULT '{}',
       visibility VARCHAR(50) DEFAULT 'public', -- e.g., 'public', 'private', 'community_only'
+      is_service BOOLEAN DEFAULT false,
+      service_price INTEGER,
+      service_visibility TEXT[] DEFAULT '{}',
       start_date DATE,
       end_date DATE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
