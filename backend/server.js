@@ -25,6 +25,7 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import onboardingRoutes from './routes/onboarding.js';
+import servicesRoutes from './routes/services.js';
 
 import impactRoutesV2 from './routes/impact_v2.js';
 import verificationRoutesV2 from './routes/verification_v2.js';
@@ -182,6 +183,7 @@ app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', jwtCheck, impactRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
+app.use('/services', jwtCheck, servicesRoutes);
 
 app.use('/impact_v2', impactRoutesV2);
 app.use('/verification_v2', verificationRoutesV2);
