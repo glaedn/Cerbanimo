@@ -1,10 +1,11 @@
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails, Chip } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails, Chip, IconButton } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const DependencyListView = ({ tasks, projectId }) => {
+const DependencyListView = ({ tasks, projectId, isEditMode = false, onAddTask }) => {
   const navigate = useNavigate();
 
   // Helper to build hierarchy
@@ -172,19 +173,36 @@ const DependencyListView = ({ tasks, projectId }) => {
               }
             }}
           >
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                flexGrow: 1,
-                wordBreak: 'break-word',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              {node.name}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  wordBreak: 'break-word',
+                  fontFamily: 'Inter, sans-serif'
+                }}
+              >
+                {node.name}
+              </Typography>
+              {isEditMode && onAddTask && (
+                <IconButton
+                  size="small"
+                  sx={{
+                    color: '#FFA500',
+                    p: 0,
+                    '&:hover': { color: '#FF8C00' }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddTask(node.id);
+                  }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
             <Chip
                 label={status.replace(/-/g, ' ').split(' ').pop()}
                 size="small"
