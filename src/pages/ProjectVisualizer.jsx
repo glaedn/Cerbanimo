@@ -7,10 +7,14 @@ import "./ProjectVisualizer.css";
 import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
-import { Chip, Box, Typography } from "@mui/material";
+import { Chip, Box, Typography, IconButton, Button } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
 import DependencyListView from "../components/DependencyListView";
+import ProjectSettingsModal from "../components/ProjectSettingsModal";
+import SettingsIcon from '@mui/icons-material/Settings';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
 
 const ProjectVisualizer = () => {
   const isMobile = useIsMobile();
@@ -32,6 +36,7 @@ const ProjectVisualizer = () => {
     height: 600,
   });
   const [activeSkillId, setActiveSkillId] = useState(null);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -212,6 +217,19 @@ const ProjectVisualizer = () => {
       // No need to call fetchProject() since we've already updated the UI
     } catch (error) {
       console.error('Error updating tags:', error);
+    }
+  };
+
+  const handleUpdateProject = async (formData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      updateProject(formData);
+    } catch (error) {
+      console.error('Error updating project:', error);
+      alert('Failed to update project');
     }
   };
 
@@ -1167,12 +1185,67 @@ links.forEach(link => {
   // Add these debug logs right before the TaskEditor component in the return statement
 
   if (isMobile) {
+    const isProjectCreator = project?.creator_id === Number(userId);
+
     return (
       <Box className="skill-hierarchy-container" sx={{ pb: 8 }}>
-        <Typography variant="h5" sx={{ p: 2, color: '#00F3FF', fontWeight: 'bold' }}>
-           {project?.name}
-        </Typography>
-        <DependencyListView tasks={tasks} projectId={projectId} />
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+             {project?.name}
+          </Typography>
+          {isProjectCreator && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton
+                onClick={() => setIsEditMode(!isEditMode)}
+                sx={{ color: isEditMode ? '#ff5ca2' : '#00F3FF' }}
+              >
+                <EditIcon />
+              </IconButton>
+              {isEditMode && (
+                <IconButton
+                  onClick={() => setIsProjectSettingsOpen(true)}
+                  sx={{ color: '#00F3FF' }}
+                >
+                  <SettingsIcon />
+                </IconButton>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {isEditMode && isProjectCreator && (
+          <Box sx={{ px: 2, mb: 2 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleAddTask()}
+              sx={{
+                color: '#FFA500',
+                borderColor: '#FFA500',
+                fontFamily: 'Orbitron',
+                '&:hover': { borderColor: '#FF8C00', bgcolor: 'rgba(255, 165, 0, 0.1)' }
+              }}
+            >
+              NEW_TASK
+            </Button>
+          </Box>
+        )}
+
+        <DependencyListView
+          tasks={tasks}
+          projectId={projectId}
+          isEditMode={isEditMode && isProjectCreator}
+          onAddTask={handleAddTask}
+        />
+
+        <ProjectSettingsModal
+          open={isProjectSettingsOpen}
+          onClose={() => setIsProjectSettingsOpen(false)}
+          project={project}
+          onSave={handleUpdateProject}
+          interestsPool={interests}
+        />
 
         {/* Task Editor for creation/editing still needed maybe? */}
         <TaskEditor
