@@ -12,9 +12,11 @@ import { Autocomplete, TextField } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
 import DependencyListView from "../components/DependencyListView";
 import ProjectSettingsModal from "../components/ProjectSettingsModal";
+import ProjectServiceModal from "./ProjectServiceModal";
 import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import StoreIcon from '@mui/icons-material/Store';
 
 const ProjectVisualizer = () => {
   const isMobile = useIsMobile();
@@ -37,6 +39,7 @@ const ProjectVisualizer = () => {
   });
   const [activeSkillId, setActiveSkillId] = useState(null);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -82,7 +85,7 @@ const ProjectVisualizer = () => {
         scope: "openid profile email",
       });
   
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -95,8 +98,8 @@ const ProjectVisualizer = () => {
   
       const data = await response.json();
       
-      if (data && Array.isArray(data.communities)) {
-        setUserCommunities(data.communities);
+      if (data && Array.isArray(data)) {
+        setUserCommunities(data);
       } else {
         setUserCommunities([]);
       }
@@ -231,6 +234,11 @@ const ProjectVisualizer = () => {
       console.error('Error updating project:', error);
       alert('Failed to update project');
     }
+  };
+
+  const handleSaveService = async (formData) => {
+    await handleUpdateProject(formData);
+    setIsServiceModalOpen(false);
   };
 
 
@@ -1202,12 +1210,20 @@ links.forEach(link => {
                 <EditIcon />
               </IconButton>
               {isEditMode && (
-                <IconButton
-                  onClick={() => setIsProjectSettingsOpen(true)}
-                  sx={{ color: '#00F3FF' }}
-                >
-                  <SettingsIcon />
-                </IconButton>
+                <>
+                  <IconButton
+                    onClick={() => setIsServiceModalOpen(true)}
+                    sx={{ color: '#00F3FF' }}
+                  >
+                    <StoreIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setIsProjectSettingsOpen(true)}
+                    sx={{ color: '#00F3FF' }}
+                  >
+                    <SettingsIcon />
+                  </IconButton>
+                </>
               )}
             </Box>
           )}
@@ -1245,6 +1261,14 @@ links.forEach(link => {
           project={project}
           onSave={handleUpdateProject}
           interestsPool={interests}
+        />
+
+        <ProjectServiceModal
+          open={isServiceModalOpen}
+          onClose={() => setIsServiceModalOpen(false)}
+          project={project}
+          communities={userCommunities}
+          onSave={handleSaveService}
         />
 
         {/* Task Editor for creation/editing still needed maybe? */}
@@ -1394,6 +1418,16 @@ links.forEach(link => {
               </button>
             )}
 
+            {isEditMode && (
+              <button
+                className="new-task-button"
+                onClick={() => setIsServiceModalOpen(true)}
+                style={{ background: 'linear-gradient(45deg, #FF00FF, #00F3FF)', color: '#000' }}
+              >
+                Make a Service
+              </button>
+            )}
+
             <button
               className="edit-mode-button"
               onClick={() => setIsEditMode(!isEditMode)}
@@ -1518,7 +1552,7 @@ links.forEach(link => {
             </Typography>
             {outcomes.map(o => (
               <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>
-                "{o.statement}"
+                &quot;{o.statement}&quot;
               </Typography>
             ))}
           </Box>
