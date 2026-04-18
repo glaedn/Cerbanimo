@@ -978,7 +978,7 @@ const CommunityHub = () => {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </Box>
             {/* Community Services Marketplace */}
             <Box sx={{ mt: 4, mb: 4 }}>
                 <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)' }}>
