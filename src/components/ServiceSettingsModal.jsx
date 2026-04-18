@@ -15,7 +15,7 @@ import {
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const ServiceSettingsModal = ({ open, onClose, project, onUpdate }) => {
+const ServiceSettingsModal = ({ open, onClose, project, onUpdate, userId }) => {
   const { getAccessTokenSilently } = useAuth0();
   const [isService, setIsService] = useState(project?.is_service || false);
   const [price, setPrice] = useState(project?.service_price || 0);
@@ -34,18 +34,15 @@ const ServiceSettingsModal = ({ open, onClose, project, onUpdate }) => {
   }, [open, project]);
 
   const fetchUserCommunities = async () => {
+    if (!userId) return;
     try {
       const token = await getAccessTokenSilently({
         audience: import.meta.env.VITE_BACKEND_URL,
       });
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/userprojects`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // The endpoint might be different, but let's assume we can get user's communities
-      // Actually, based on previous exploration, there's /communities/user/:userId
-      // Let's use a more likely endpoint if available.
-      // For now, let's just fetch all communities or user-specific ones if we had the ID.
-      // Re-checking server.js: app.use('/communities', jwtCheck, communitiesRoutes);
+      setUserCommunities(response.data || []);
     } catch (err) {
       console.error('Failed to fetch communities', err);
     }
@@ -168,7 +165,19 @@ const ServiceSettingsModal = ({ open, onClose, project, onUpdate }) => {
                 }
                 label="Public Profile"
               />
-              {/* Note: We could map over userCommunities here if we fetched them successfully */}
+              {userCommunities.map((community) => (
+                <FormControlLabel
+                  key={community.id}
+                  control={
+                    <Checkbox
+                      checked={visibility.includes(community.id.toString())}
+                      onChange={() => handleVisibilityChange(community.id.toString())}
+                      sx={{ color: '#00f3ff', '&.Mui-checked': { color: '#00f3ff' } }}
+                    />
+                  }
+                  label={`Community: ${community.name}`}
+                />
+              ))}
             </FormGroup>
           </>
         )}
