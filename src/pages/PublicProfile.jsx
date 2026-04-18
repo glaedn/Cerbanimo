@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -10,6 +10,7 @@ const PublicProfile = () => {
   const { userId } = useParams();
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently } = useAuth0();
@@ -78,6 +79,13 @@ const PublicProfile = () => {
           });
           
           setBadges(badgesResponse.data.badges || []);
+
+          // Fetch services
+          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects`, {
+            params: { userId: userId }
+          });
+          const userServices = servicesResponse.data.filter(p => p.is_service && p.service_visibility?.includes('profile'));
+          setServices(userServices);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -109,6 +117,21 @@ const PublicProfile = () => {
   if (!profile) {
     return <Typography variant="h6">User not found</Typography>;
   }
+
+  const handlePurchaseService = async (serviceId) => {
+    try {
+      const token = await getToken();
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${serviceId}/purchase`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Service purchased successfully! New project created.');
+      // Optionally redirect to the new project
+      // window.location.href = `/project/${response.data.projectId}`;
+    } catch (err) {
+      console.error('Purchase failed:', err);
+      alert(err.response?.data?.message || 'Failed to purchase service');
+    }
+  };
 
   // Helper function to render chips with unique keys
   const renderChips = (items) => {
@@ -174,6 +197,43 @@ const PublicProfile = () => {
       )}
 
       <UserPortfolio userId={userId} />
+      {services.length > 0 && (
+        <Box sx={{ width: '100%', my: 4 }}>
+          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff' }}>
+            Services Offered:
+          </Typography>
+          <Grid container spacing={2}>
+            {services.map((service) => (
+              <Grid item xs={12} sm={6} key={service.id}>
+                <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: 'white' }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ color: '#00f3ff' }}>{service.name}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>{service.description}</Typography>
+                    <Typography variant="h6" sx={{ color: '#ff00ff' }}>
+                      {service.service_price} Credits
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handlePurchaseService(service.id)}
+                      sx={{
+                        background: 'linear-gradient(45deg, #ff00ff, #00f3ff)',
+                        color: 'black',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Purchase Service
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
       <Typography variant="h6" gutterBottom>
         Skills:
       </Typography>

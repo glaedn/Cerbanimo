@@ -16,6 +16,7 @@ import projectRoutes from './routes/projects.js';
 import rewardsRoutes from './routes/rewards.js';
 import notificationRoutes from './routes/notifications.js';
 import taskController from './controllers/taskController.js';
+import pool from './db.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
 import endorsementsRoutes from './routes/endorsements.js';
@@ -24,6 +25,7 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
+import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
 
 // Import database table creation functions
@@ -164,6 +166,7 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
+app.use('/services', servicesRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
 
 // Nightly task reset
@@ -196,6 +199,14 @@ async function initializeDatabase() {
     //await createNeedsUpdatedAtTrigger();
     //await createTaskUpdatedAtTrigger();
     // tokenTransactions table in this example does not have an updated_at trigger by default.
+
+    // Ensure projects table has service columns
+    await pool.query(`
+      ALTER TABLE projects
+      ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS service_price INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
+    `);
 
     console.log('Database tables checked/initialized successfully.');
   } catch (error) {
