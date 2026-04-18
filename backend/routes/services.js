@@ -1,201 +1,142 @@
 import express from 'express';
 import pool from '../db.js';
+import jwtCheck from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
-/**
- * POST /services/:projectId/purchase
- * Flow:
- * 1. Validate project is a service.
- * 2. Deduct service_price from buyer's community tokens in token_ledger.
- * 3. Create a new project instance for the buyer.
- * 4. Copy tasks from the service template to the new project.
- */
-router.post('/:projectId/purchase', async (req, res) => {
+// Purchase a service project
+router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
   const { projectId } = req.params;
-  const { userId } = req.body; // Internal user ID of the buyer
+  const auth0Id = req.auth?.payload?.sub;
 
-  if (!userId) {
-    return res.status(400).json({ message: 'User ID is required' });
+  if (!auth0Id) {
+    return res.status(401).json({ message: 'Unauthorized: No Auth0 ID found' });
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // 1. Fetch the service project details
-    const serviceQuery = 'SELECT * FROM projects WHERE id = $1';
-    const serviceResult = await client.query(serviceQuery, [projectId]);
+    // 1. Get the buyer's internal user ID
+    const userQuery = 'SELECT id, token_ledger FROM users WHERE auth0_id = $1';
+    const userResult = await client.query(userQuery, [auth0Id]);
+    const buyer = userResult.rows[0];
 
-    if (serviceResult.rows.length === 0) {
+    if (!buyer) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ message: 'Service project not found' });
+      return res.status(404).json({ message: 'Buyer not found' });
     }
 
-    const service = serviceResult.rows[0];
+    // 2. Get the service project details
+    const projectQuery = 'SELECT * FROM projects WHERE id = $1 AND is_service = TRUE';
+    const projectResult = await client.query(projectQuery, [projectId]);
+    const serviceProject = projectResult.rows[0];
 
-    if (!service.is_service) {
+    if (!serviceProject) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ message: 'This project is not designated as a service' });
+      return res.status(404).json({ message: 'Service project not found or not marked as a service' });
     }
 
-    const price = service.service_price || 0;
-    const communityId = service.community_id;
+    const price = serviceProject.service_price || 0;
 
-    if (!communityId) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: 'Service must be associated with a community' });
-    }
+    // 3. Simple token check/deduction (assuming Galactic Credits for now)
+    // In a real scenario, we might want to check community-specific tokens in token_ledger
+    // but the task description implies a more general purchase flow for now.
+    // Let's use cotokens as the currency.
 
-    // 2. Verify and deduct community tokens from buyer
-    const userQuery = 'SELECT token_ledger FROM users WHERE id = $1 FOR UPDATE';
-    const userResult = await client.query(userQuery, [userId]);
-
-    if (userResult.rows.length === 0) {
+    const buyerCotokens = await client.query('SELECT cotokens FROM users WHERE id = $1', [buyer.id]);
+    if (buyerCotokens.rows[0].cotokens < price) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(400).json({ message: 'Insufficient Galactic Credits' });
     }
 
-    const user = userResult.rows[0];
-    const ledger = user.token_ledger || [];
+    // Deduct from buyer
+    await client.query('UPDATE users SET cotokens = cotokens - $1 WHERE id = $2', [price, buyer.id]);
 
-    // Calculate current community balance
-    let communityBalance = 0;
-    ledger.forEach(entry => {
-        const record = typeof entry === 'string' ? JSON.parse(entry) : entry;
-        if (record.type === 'community' && record.id === communityId) {
-            communityBalance += record.tokens || 0;
-        }
-    });
+    // Add to seller (optional, but good practice)
+    await client.query('UPDATE users SET cotokens = cotokens + $1 WHERE id = $2', [price, serviceProject.creator_id]);
 
-    if (communityBalance < price) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ message: 'Insufficient community tokens' });
-    }
-
-    // Deduct price by appending to ledger
-    const deductionEntry = {
-      type: 'community',
-      id: communityId,
-      tokens: -price,
-      reason: `Purchase of service: ${service.name}`,
-      creationDate: new Date()
-    };
-
-    await client.query(
-      'UPDATE users SET token_ledger = array_append(token_ledger, $1::jsonb) WHERE id = $2',
-      [JSON.stringify(deductionEntry), userId]
-    );
-
-    // Also record in token_transactions if desired (optional based on schema)
-    const transactionQuery = `
-      INSERT INTO token_transactions (sender_id, receiver_id, amount, reason, transaction_date)
-      VALUES ($1, $2, $3, $4, NOW())
-    `;
-    // receiver_id could be the service creator or a community pool;
-    // the prompt says "Tokens go into: project token_pool" of the NEW instance.
-    await client.query(transactionQuery, [userId, service.creator_id, price, `Purchase service ${projectId}`]);
-
-    // 3. Create a new project instance for the buyer
-    const newProjectInsert = `
-      INSERT INTO projects (name, description, tags, creator_id, community_id, token_pool, is_service)
-      VALUES ($1, $2, $3, $4, $5, $6, false)
+    // 4. Create a new project instance for the buyer
+    const newProjectQuery = `
+      INSERT INTO projects (name, description, tags, creator_id, token_pool, used_tokens, reserved_tokens)
+      VALUES ($1, $2, $3, $4, $5, 0, 0)
       RETURNING id;
     `;
-    const newProjectResult = await client.query(newProjectInsert, [
-      service.name,
-      service.description,
-      service.tags,
-      userId,
-      communityId,
-      price // "Tokens go into: project token_pool"
+    const newProjectResult = await client.query(newProjectQuery, [
+      `Copy of ${serviceProject.name}`,
+      serviceProject.description,
+      serviceProject.tags,
+      buyer.id,
+      price // The price becomes the token pool for the new project
     ]);
     const newProjectId = newProjectResult.rows[0].id;
 
-    // 4. Copy tasks from the service template
+    // 5. Clone all tasks
     const tasksQuery = 'SELECT * FROM tasks WHERE project_id = $1';
     const tasksResult = await client.query(tasksQuery, [projectId]);
     const templateTasks = tasksResult.rows;
 
-    const taskIdMap = {}; // { templateTaskId: newTaskId }
+    const taskIdMap = {}; // { oldTaskId: newTaskId }
 
     // First pass: Create tasks without dependencies
-    for (const t of templateTasks) {
-      const taskInsert = `
-        INSERT INTO tasks (name, description, project_id, creator_id, skill_id, skill_level, reward_tokens, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'inactive-unassigned')
+    for (const task of templateTasks) {
+      const insertTaskQuery = `
+        INSERT INTO tasks (name, description, project_id, skill_id, status, reward_tokens, skill_level)
+        VALUES ($1, $2, $3, $4, 'inactive-unassigned', $5, $6)
         RETURNING id;
       `;
-      const newTaskResult = await client.query(taskInsert, [
-        t.name,
-        t.description,
+      const taskResult = await client.query(insertTaskQuery, [
+        task.name,
+        task.description,
         newProjectId,
-        userId,
-        t.skill_id,
-        t.skill_level,
-        t.reward_tokens,
+        task.skill_id,
+        task.reward_tokens,
+        task.skill_level
       ]);
-      taskIdMap[t.id] = newTaskResult.rows[0].id;
+      taskIdMap[task.id] = taskResult.rows[0].id;
     }
 
     // Second pass: Update dependencies
-    for (const t of templateTasks) {
-      if (t.dependencies && t.dependencies.length > 0) {
-        const newDeps = t.dependencies.map(oldId => taskIdMap[oldId]).filter(id => id !== undefined);
+    for (const task of templateTasks) {
+      if (task.dependencies && task.dependencies.length > 0) {
+        const newTaskId = taskIdMap[task.id];
+        const newDeps = task.dependencies
+          .map(oldDepId => taskIdMap[oldDepId])
+          .filter(Boolean);
+
         if (newDeps.length > 0) {
-          await client.query('UPDATE tasks SET dependencies = $1 WHERE id = $2', [newDeps, taskIdMap[t.id]]);
+          await client.query('UPDATE tasks SET dependencies = $1 WHERE id = $2', [newDeps, newTaskId]);
         }
       }
     }
 
-    await client.query('COMMIT');
-    res.status(201).json({
-      message: 'Service purchased successfully',
-      projectId: newProjectId
+    // 6. Record transaction in token_ledger for both
+    const buyerTransaction = JSON.stringify({
+      type: 'service_purchase',
+      projectId: newProjectId,
+      templateProjectId: projectId,
+      tokens: -price,
+      creationDate: new Date()
+    });
+    const sellerTransaction = JSON.stringify({
+      type: 'service_sale',
+      projectId: projectId,
+      buyerId: buyer.id,
+      tokens: price,
+      creationDate: new Date()
     });
 
+    await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [buyerTransaction, buyer.id]);
+    await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [sellerTransaction, serviceProject.creator_id]);
+
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Service purchased successfully', projectId: newProjectId });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error purchasing service:', error);
     res.status(500).json({ message: 'Failed to purchase service' });
   } finally {
     client.release();
-  }
-});
-
-/**
- * GET /services/community/:communityId
- * Returns services advertised to a specific community.
- */
-router.get('/community/:communityId', async (req, res) => {
-  try {
-    const { communityId } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM projects WHERE is_service = true AND $1 = ANY(service_visibility)',
-      [`community:${communityId}`]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching community services:', error);
-    res.status(500).json({ message: 'Failed to fetch community services' });
-  }
-});
-
-/**
- * GET /services/user/:userId
- * Returns services advertised on a user's profile.
- */
-router.get('/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const result = await pool.query(
-      'SELECT * FROM projects WHERE is_service = true AND creator_id = $1 AND \'profile\' = ANY(service_visibility)',
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching user services:', error);
-    res.status(500).json({ message: 'Failed to fetch user services' });
   }
 });
 

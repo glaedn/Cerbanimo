@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import axios from "axios";
 import TaskEditor from "./TaskEditor";
+import ServiceSettingsModal from "../components/ServiceSettingsModal";
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import "./ProjectVisualizer.css";
 import { useParams } from "react-router-dom";
@@ -35,6 +36,7 @@ const ProjectVisualizer = () => {
     width: 800,
     height: 600,
   });
+  const [showServiceModal, setShowServiceModal] = useState(false);
   const [activeSkillId, setActiveSkillId] = useState(null);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -1396,6 +1398,12 @@ links.forEach(link => {
 
             <button
               className="edit-mode-button"
+              onClick={() => setShowServiceModal(true)}
+            >
+              Make a Service
+            </button>
+            <button
+              className="edit-mode-button"
               onClick={() => setIsEditMode(!isEditMode)}
             >
               {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
@@ -1404,6 +1412,13 @@ links.forEach(link => {
         )}
 
       </div>
+
+      <ServiceSettingsModal
+        open={showServiceModal}
+        onClose={() => setShowServiceModal(false)}
+        project={project}
+        onUpdate={(updates) => updateProject(updates)}
+      />
 
       {hoveredNode && (
         <div
