@@ -27,6 +27,7 @@ import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
+import servicesRoutes from './routes/services.js';
 
 import impactRoutesV2 from './routes/impact_v2.js';
 import verificationRoutesV2 from './routes/verification_v2.js';
@@ -40,16 +41,18 @@ import ProjectHealthService from './services/ProjectHealthService.js';
 import GuildService from './services/GuildService.js';
 import GuildHealthService from './services/GuildHealthService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
+import pool from './db.js';
+
 // Import database table creation functions
-//import { createImpactTables } from '../models/impact_v2.js';
-//import { createVerificationTables } from '../models/verification.js';
-//import { createGuildTables } from '../models/guilds_v2.js';
-//import { createConstellationTables } from '../models/constellations_v2.js';
-//import { createStoryTables } from '../models/story_engine_v2.js';
-//import { createResourcesTable } from '../models/resources.js';
-//import { createResourceLayerTables } from '../models/resource_layer_v2.js';
-//import { alterExistingTables } from '../models/alter_tables_v2.js';
-//import { fixSequences } from './utils/dbFix.js';
+import { createImpactTables } from '../models/impact_v2.js';
+import { createVerificationTables } from '../models/verification.js';
+import { createGuildTables } from '../models/guilds_v2.js';
+import { createConstellationTables } from '../models/constellations_v2.js';
+import { createStoryTables } from '../models/story_engine_v2.js';
+import { createResourcesTable } from '../models/resources.js';
+import { createResourceLayerTables } from '../models/resource_layer_v2.js';
+import { alterExistingTables } from '../models/alter_tables_v2.js';
+import { fixSequences } from './utils/dbFix.js';
 
 // Initialize app
 const app = express();
