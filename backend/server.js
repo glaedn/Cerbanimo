@@ -27,7 +27,6 @@ import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
 import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
-import servicesRoutes from './routes/services.js';
 
 import impactRoutesV2 from './routes/impact_v2.js';
 import verificationRoutesV2 from './routes/verification_v2.js';
@@ -41,7 +40,6 @@ import ProjectHealthService from './services/ProjectHealthService.js';
 import GuildService from './services/GuildService.js';
 import GuildHealthService from './services/GuildHealthService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
-import pool from './db.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -184,9 +182,11 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
-app.use('/services', servicesRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
-app.use('/services', jwtCheck, servicesRoutes);
+app.use('/services', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, servicesRoutes);
 
 app.use('/impact_v2', impactRoutesV2);
 app.use('/verification_v2', verificationRoutesV2);

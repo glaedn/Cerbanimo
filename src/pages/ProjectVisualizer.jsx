@@ -16,6 +16,7 @@ import ProjectSettingsModal from "../components/ProjectSettingsModal";
 import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 const ProjectVisualizer = () => {
   const isMobile = useIsMobile();
@@ -1211,6 +1212,14 @@ links.forEach(link => {
                   <SettingsIcon />
                 </IconButton>
               )}
+              {isEditMode && (
+                <IconButton
+                  onClick={() => setShowServiceModal(true)}
+                  sx={{ color: '#00F3FF' }}
+                >
+                  <ShoppingCartIcon />
+                </IconButton>
+              )}
             </Box>
           )}
         </Box>
@@ -1418,6 +1427,7 @@ links.forEach(link => {
         onClose={() => setShowServiceModal(false)}
         project={project}
         onUpdate={(updates) => updateProject(updates)}
+        userId={userId}
       />
 
       {hoveredNode && (

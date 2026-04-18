@@ -4,6 +4,24 @@ import jwtCheck from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
+// Fetch services offered by a specific user that are visible on their profile
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const query = `
+      SELECT * FROM projects
+      WHERE creator_id = $1
+      AND is_service = TRUE
+      AND 'profile' = ANY(service_visibility)
+    `;
+    const result = await pool.query(query, [userId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user services:', error);
+    res.status(500).json({ message: 'Failed to fetch user services' });
+  }
+});
+
 // Purchase a service project
 router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
   const { projectId } = req.params;
