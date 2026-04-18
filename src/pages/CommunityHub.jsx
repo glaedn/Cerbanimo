@@ -24,6 +24,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import LoyaltyIcon from '@mui/icons-material/Loyalty';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -50,6 +52,7 @@ const CommunityHub = () => {
     const [constellationInvites, setConstellationInvites] = useState([]);
     const [proposals, setProposals] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
+    const [communityServices, setCommunityServices] = useState([]);
     const [userId, setUserId] = useState(null);
     const [voteDelegations, setVoteDelegations] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -140,94 +143,92 @@ const CommunityHub = () => {
                 const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
                 setMembers(validMembers);
 
-                // Fetch member scores
-                try {
-                    const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    setMemberScores(scoresResponse.data);
-                } catch (scoresError) {
-                    console.error('Failed to fetch member scores:', scoresError);
-                    setMemberScores([]);
-                }
-            } else {
-                setMembers([]);
-                setMemberScores([]);
-            }
-
-            // Fetch membership requests
-            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+    // Fetch member scores
+    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
+        try {
+            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
-            if (userId) {
-                setHasRequestedJoin(requestsResponse.data.some(request =>
-                    String(request.user_id) === String(userId)
-                ));
-            }
-
-            const requestUserPromises = requestsResponse.data.map(request =>
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                }).then(userResponse => ({
-                    ...request,
-                    userData: userResponse.data
-                })).catch(() => null)
-            );
-
-            const requestUsers = await Promise.all(requestUserPromises);
-            setMembershipRequests(requestUsers.filter(r => r !== null));
-
-            // Fetch constellation invites
-            const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setConstellationInvites(constellationInvitesRes.data);
-
-            // Fetch All Relevant Projects
-            const sharedIds = communityResponse.data.shared_project_ids || [];
-            const directProposalIds = communityResponse.data.proposals || [];
-            const directApprovedIds = communityResponse.data.approved_projects || [];
-
-            // Combine all unique IDs to fetch
-            const allUniqueIds = [...new Set([
-                ...sharedIds,
-                ...directProposalIds,
-                ...directApprovedIds
-            ])];
-
-            const projectPromises = allUniqueIds.map(id =>
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                }).catch(() => null)
-            );
-
-            const projectResults = await Promise.all(projectPromises);
-            const allProjects = projectResults
-                .filter(r => r !== null)
-                .map(r => {
-                    const project = r.data;
-                    return {
-                        ...project,
-                        isShared: sharedIds.map(id => String(id)).includes(String(project.id)),
-                        isDirect: directProposalIds.map(id => String(id)).includes(String(project.id)) ||
-                                  directApprovedIds.map(id => String(id)).includes(String(project.id))
-                    };
-                });
-
-            // Categorize primarily by status
-            // Note: If a project's status is 'active', it goes into approvedProjects.
-            // If it's 'planning', it goes into proposals.
-            setApprovedProjects(allProjects.filter(p => p.status === 'active'));
-            setProposals(allProjects.filter(p => p.status === 'planning'));
-
-        } catch (error) {
-            console.error('Failed to fetch community data:', error);
-            setError('Failed to load community data. Please try again later.');
-        } finally {
-            if (showLoading) setIsLoading(false);
+            console.log('Fetched member scores:', scoresResponse.data);
+            setMemberScores(scoresResponse.data);
+        } catch (scoresError) {
+            console.error('Failed to fetch member scores:', scoresError);
+            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
+            setMemberScores([]); 
         }
-    };
+    } else {
+        setMemberScores([]); // No members, so no scores
+    }
+
+} else {
+    console.log('No members in this community');
+    setMembers([]);
+    setMemberScores([]); // No members, so no scores
+}
+                
+                // Fetch membership requests
+                const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log('Membership Requests:', requestsResponse.data);
+                console.log('User ID:', userId);
+                // Check if current user has already requested to join
+                if (userId) {
+                    setHasRequestedJoin(requestsResponse.data.some(request => 
+                        String(request.user_id) === String(userId)
+                    ));
+                }
+                
+                // Fetch user data for each request
+                const requestUserPromises = requestsResponse.data.map(request => 
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }).then(userResponse => ({
+                        ...request,
+                        userData: userResponse.data
+                    }))
+                );
+                
+                const requestUsers = await Promise.all(requestUserPromises);
+                setMembershipRequests(requestUsers);
+                
+                // Fetch proposal details
+                if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
+                    const proposalPromises = communityResponse.data.proposals.map(projectId => 
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        })
+                    );
+                    
+                    const proposalResults = await Promise.all(proposalPromises);
+                    setProposals(proposalResults.map(result => result.data));
+                }
+                
+                // Fetch approved projects
+                if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
+                    const projectPromises = communityResponse.data.approved_projects.map(projectId => 
+                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        })
+                    );
+                    
+                    const projectResults = await Promise.all(projectPromises);
+                    setApprovedProjects(projectResults.map(result => result.data));
+                }
+
+                // Fetch community services
+                const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/community/${communityId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setCommunityServices(servicesResponse.data || []);
+                
+            } catch (error) {
+                console.error('Failed to fetch community data:', error);
+                setError('Failed to load community data. Please try again later.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
     useEffect(() => {
         fetchCommunityData();
@@ -475,6 +476,31 @@ const CommunityHub = () => {
         } catch (error) {
             console.error('Failed to revoke vote delegation:', error);
             alert('Failed to revoke your vote delegation. Please try again.');
+        }
+    };
+
+    const handlePurchaseService = async (service) => {
+        if (!userId) {
+            alert("Please log in to purchase services.");
+            return;
+        }
+
+        const confirm = window.confirm(`Purchase community service "${service.name}" for ${service.service_price} community tokens?`);
+        if (!confirm) return;
+
+        try {
+            const token = await getAccessTokenSilently();
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
+                userId: userId
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            showNotification("Service purchased successfully! Redirecting to your new project instance.");
+            navigate(`/visualizer/${response.data.projectId}`);
+        } catch (error) {
+            console.error("Purchase failed:", error);
+            alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
         }
     };
 
@@ -952,13 +978,51 @@ const CommunityHub = () => {
                         </CardContent>
                     </Card>
                 </div>
+            </div>
+            {/* Community Services Marketplace */}
+            <Box sx={{ mt: 4, mb: 4 }}>
+                <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)' }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <StorefrontIcon sx={{ color: '#00F3FF' }} />
+                            <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>Community Services</Typography>
+                        </Box>
+                        {communityServices.length === 0 ? (
+                            <Typography variant="body2" sx={{ color: '#CCC' }}>No services advertised in this community yet.</Typography>
+                        ) : (
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                                {communityServices.map(service => (
+                                    <Card key={service.id} sx={{ bgcolor: 'rgba(10, 10, 46, 0.6)', border: '1px solid rgba(0, 243, 255, 0.5)', color: 'white' }}>
+                                        <CardContent>
+                                            <Typography variant="h6" sx={{ color: '#00F3FF' }}>{service.name}</Typography>
+                                            <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
+                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="h6" sx={{ color: '#FF5CA2' }}>{service.service_price} Tokens</Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<ShoppingCartIcon />}
+                                                    onClick={() => handlePurchaseService(service)}
+                                                    sx={{
+                                                        background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
+                                                        color: 'black',
+                                                        '&:hover': { background: 'linear-gradient(45deg, #4DABF7, #00F3FF)' }
+                                                    }}
+                                                >
+                                                    Purchase
+                                                </Button>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
             </Box>
-            <Box sx={{ width: '100%', mt: 4 }}>
-                <CommunityMarketplace communityId={communityId} />
-            </Box>
-            <Box sx={{ width: '100%', mt: 4 }}>
-                <CommunityChronicle communityId={communityId} />
-            </Box>
+
+            <CommunityResourceManagement communityId={communityId} />
+            <CommunityChronicle communityId={communityId} />
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 
