@@ -24,6 +24,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import LoyaltyIcon from '@mui/icons-material/Loyalty';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -45,6 +47,7 @@ const CommunityHub = () => {
     const [membershipRequests, setMembershipRequests] = useState([]);
     const [proposals, setProposals] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
+    const [communityServices, setCommunityServices] = useState([]);
     const [userId, setUserId] = useState(null);
     const [voteDelegations, setVoteDelegations] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -219,6 +222,12 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     const projectResults = await Promise.all(projectPromises);
                     setApprovedProjects(projectResults.map(result => result.data));
                 }
+
+                // Fetch community services
+                const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/community/${communityId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setCommunityServices(servicesResponse.data || []);
                 
             } catch (error) {
                 console.error('Failed to fetch community data:', error);
@@ -478,6 +487,31 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
         } catch (error) {
             console.error('Failed to revoke vote delegation:', error);
             alert('Failed to revoke your vote delegation. Please try again.');
+        }
+    };
+
+    const handlePurchaseService = async (service) => {
+        if (!userId) {
+            alert("Please log in to purchase services.");
+            return;
+        }
+
+        const confirm = window.confirm(`Purchase community service "${service.name}" for ${service.service_price} community tokens?`);
+        if (!confirm) return;
+
+        try {
+            const token = await getAccessTokenSilently();
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
+                userId: userId
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            showNotification("Service purchased successfully! Redirecting to your new project instance.");
+            navigate(`/visualizer/${response.data.projectId}`);
+        } catch (error) {
+            console.error("Purchase failed:", error);
+            alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
         }
     };
 
@@ -872,6 +906,48 @@ if (communityResponse.data.members && communityResponse.data.members.length > 0)
                     </Card>
                 </div>
             </div>
+            {/* Community Services Marketplace */}
+            <Box sx={{ mt: 4, mb: 4 }}>
+                <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)' }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <StorefrontIcon sx={{ color: '#00F3FF' }} />
+                            <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>Community Services</Typography>
+                        </Box>
+                        {communityServices.length === 0 ? (
+                            <Typography variant="body2" sx={{ color: '#CCC' }}>No services advertised in this community yet.</Typography>
+                        ) : (
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                                {communityServices.map(service => (
+                                    <Card key={service.id} sx={{ bgcolor: 'rgba(10, 10, 46, 0.6)', border: '1px solid rgba(0, 243, 255, 0.5)', color: 'white' }}>
+                                        <CardContent>
+                                            <Typography variant="h6" sx={{ color: '#00F3FF' }}>{service.name}</Typography>
+                                            <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
+                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="h6" sx={{ color: '#FF5CA2' }}>{service.service_price} Tokens</Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<ShoppingCartIcon />}
+                                                    onClick={() => handlePurchaseService(service)}
+                                                    sx={{
+                                                        background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
+                                                        color: 'black',
+                                                        '&:hover': { background: 'linear-gradient(45deg, #4DABF7, #00F3FF)' }
+                                                    }}
+                                                >
+                                                    Purchase
+                                                </Button>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
+            </Box>
+
             <CommunityResourceManagement communityId={communityId} />
             <CommunityChronicle communityId={communityId} />
             <Snackbar 
