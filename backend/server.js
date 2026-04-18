@@ -16,6 +16,7 @@ import projectRoutes from './routes/projects.js';
 import rewardsRoutes from './routes/rewards.js';
 import notificationRoutes from './routes/notifications.js';
 import taskController from './controllers/taskController.js';
+import pool from './db.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
 import endorsementsRoutes from './routes/endorsements.js';
@@ -24,6 +25,7 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
+import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
 import servicesRoutes from './routes/services.js';
 
@@ -181,7 +183,8 @@ app.use('/resources', resourceRoutes);
 app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
-app.use('/impact', jwtCheck, impactRoutes);
+app.use('/impact', impactRoutes);
+app.use('/services', servicesRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
 app.use('/services', jwtCheck, servicesRoutes);
 
@@ -285,18 +288,27 @@ if (missingVars.length > 0) {
 // Initialize Database Tables
 async function initializeDatabase() {
   try {
-    // Create new tables and alter existing ones
-    await createImpactTables();
-    await createVerificationTables();
-    await createGuildTables();
-    await createConstellationTables();
-    await createStoryTables();
-    await createResourcesTable();
-    await createResourceLayerTables();
-    await alterExistingTables();
+    // Create tables first
+    //await createResourcesTable();
+    //await createNeedsTable();
+    //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
+    //await createTokenTransactionsTable();
+    
+    // Then create triggers that depend on these tables
+    // Ensure the trigger function (update_updated_at_column) is created once,
+    // which is handled within each of these trigger creation functions by using CREATE OR REPLACE.
+    //await createResourcesUpdatedAtTrigger();
+    //await createNeedsUpdatedAtTrigger();
+    //await createTaskUpdatedAtTrigger();
+    // tokenTransactions table in this example does not have an updated_at trigger by default.
 
-    // Fix database sequences to prevent duplicate key errors (Phase 1)
-    await fixSequences(pool);
+    // Ensure projects table has service columns
+    await pool.query(`
+      ALTER TABLE projects
+      ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS service_price INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
+    `);
 
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {

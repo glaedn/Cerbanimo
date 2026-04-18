@@ -172,15 +172,12 @@ router.put('/:projectId', async (req, res) => {
       // Use COALESCE to keep existing values if not provided in the request
       await pool.query(
           `UPDATE projects 
-          SET
-            name = $1,
-            description = $2,
-            tags = $3,
-            is_service = COALESCE($4, is_service),
-            service_price = COALESCE($5, service_price),
-            service_visibility = COALESCE($6, service_visibility)
-          WHERE id = $7`,
-          [name, description, tags, is_service, service_price, service_visibility, projectId]
+          SET name = $1, description = $2, tags = $3,
+              is_service = COALESCE($5, is_service),
+              service_price = COALESCE($6, service_price),
+              service_visibility = COALESCE($7, service_visibility)
+          WHERE id = $4`,
+          [name, description, tags, projectId, is_service, service_price, service_visibility]
       );
       res.status(200).json({ message: 'Project updated successfully' });
   } catch (error) {

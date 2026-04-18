@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Paper } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -99,6 +99,13 @@ const PublicProfile = () => {
           });
           
           setBadges(badgesResponse.data.badges || []);
+
+          // Fetch services
+          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects`, {
+            params: { userId: userId }
+          });
+          const userServices = servicesResponse.data.filter(p => p.is_service && p.service_visibility?.includes('profile'));
+          setServices(userServices);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -155,6 +162,21 @@ const PublicProfile = () => {
   if (!profile) {
     return <Typography variant="h6">User not found</Typography>;
   }
+
+  const handlePurchaseService = async (serviceId) => {
+    try {
+      const token = await getToken();
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${serviceId}/purchase`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Service purchased successfully! New project created.');
+      // Optionally redirect to the new project
+      // window.location.href = `/project/${response.data.projectId}`;
+    } catch (err) {
+      console.error('Purchase failed:', err);
+      alert(err.response?.data?.message || 'Failed to purchase service');
+    }
+  };
 
   // Helper function to render chips with unique keys
   const renderChips = (items) => {
@@ -225,33 +247,40 @@ const PublicProfile = () => {
         )}
 
       <UserPortfolio userId={userId} />
-
       {services.length > 0 && (
-        <Box sx={{ my: 4, width: '100%' }}>
-          <Typography variant="h5" sx={{ color: '#00F3FF', mb: 2, fontFamily: 'Orbitron' }}>
-            Services Offered
+        <Box sx={{ width: '100%', my: 4 }}>
+          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff' }}>
+            Services Offered:
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
-            {services.map(service => (
-              <Card key={service.id} sx={{ bgcolor: 'rgba(28, 28, 30, 0.7)', border: '1px solid #00F3FF', color: 'white' }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ color: '#00F3FF' }}>{service.name}</Typography>
-                  <Typography variant="body2" sx={{ color: '#CCC', mb: 2, minHeight: '3em' }}>{service.description}</Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ color: '#FF5CA2' }}>{service.service_price} Tokens</Typography>
-                    <MuiButton
-                        variant="contained"
-                        startIcon={<ShoppingCartIcon />}
-                        onClick={() => handlePurchaseService(service)}
-                        sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'black' }}
+          <Grid container spacing={2}>
+            {services.map((service) => (
+              <Grid item xs={12} sm={6} key={service.id}>
+                <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: 'white' }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ color: '#00f3ff' }}>{service.name}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>{service.description}</Typography>
+                    <Typography variant="h6" sx={{ color: '#ff00ff' }}>
+                      {service.service_price} Credits
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handlePurchaseService(service.id)}
+                      sx={{
+                        background: 'linear-gradient(45deg, #ff00ff, #00f3ff)',
+                        color: 'black',
+                        fontWeight: 'bold'
+                      }}
                     >
-                        Purchase
-                    </MuiButton>
-                  </Box>
-                </CardContent>
-              </Card>
+                      Purchase Service
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
             ))}
-          </Box>
+          </Grid>
         </Box>
       )}
 
