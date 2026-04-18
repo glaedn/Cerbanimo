@@ -158,7 +158,7 @@ router.post('/create', async (req, res) => {
 // Update an existing project
 router.put('/:projectId', async (req, res) => {
   const { projectId } = req.params;
-  const { name, description, tags } = req.body;
+  const { name, description, tags, is_service, service_price, service_visibility } = req.body;
 
   if (!name || !description) {
       return res.status(400).json({ error: 'Name and description are required' });
@@ -167,9 +167,12 @@ router.put('/:projectId', async (req, res) => {
   try {
       await pool.query(
           `UPDATE projects 
-          SET name = $1, description = $2, tags = $3 
+          SET name = $1, description = $2, tags = $3,
+              is_service = COALESCE($5, is_service),
+              service_price = COALESCE($6, service_price),
+              service_visibility = COALESCE($7, service_visibility)
           WHERE id = $4`,
-          [name, description, tags, projectId]
+          [name, description, tags, projectId, is_service, service_price, service_visibility]
       );
       res.status(200).json({ message: 'Project updated successfully' });
   } catch (error) {
