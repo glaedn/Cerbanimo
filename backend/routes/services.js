@@ -163,4 +163,40 @@ router.post('/:projectId/purchase', async (req, res) => {
   }
 });
 
+/**
+ * GET /services/community/:communityId
+ * Returns services advertised to a specific community.
+ */
+router.get('/community/:communityId', async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM projects WHERE is_service = true AND $1 = ANY(service_visibility)',
+      [`community:${communityId}`]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching community services:', error);
+    res.status(500).json({ message: 'Failed to fetch community services' });
+  }
+});
+
+/**
+ * GET /services/user/:userId
+ * Returns services advertised on a user's profile.
+ */
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM projects WHERE is_service = true AND creator_id = $1 AND \'profile\' = ANY(service_visibility)',
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user services:', error);
+    res.status(500).json({ message: 'Failed to fetch user services' });
+  }
+});
+
 export default router;

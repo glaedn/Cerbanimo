@@ -11,6 +11,7 @@ import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import { useIsMobile } from '../hooks/useIsMobile';
 import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
+import ProjectServiceModal from './ProjectServiceModal.jsx';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 
 // Updated axios interceptor to handle errors more comprehensively
@@ -50,6 +51,8 @@ const Project = () => {
   // Keep other state that's not managed by the hook
   const [interestsPool, setInterestsPool] = useState([]);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [userCommunities, setUserCommunities] = useState([]);
   const [isProjectCreator, setIsProjectCreator] = useState(false);
   const [profileData, setProfileData] = useState({
     username: '',
@@ -107,26 +110,40 @@ const Project = () => {
         },
       });
   
+      const userId = Number(profileResponse.data.id) || 0;
       setProfileData({
         username: profileResponse.data.username || '',
         skills: profileResponse.data.skills || [],
-        id: Number(profileResponse.data.id) || 0, // Convert to number
+        id: userId, // Convert to number
       });
+
+      // Fetch user's communities
+      if (userId) {
+        const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserCommunities(communitiesResponse.data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch skills and profile:', error);
     }
   };
 
   // Save project method
-  const saveProject = async () => {
+  const saveProject = async (serviceUpdates = null) => {
     try {
       const token = await getToken();
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, project, {
+      const payload = serviceUpdates ? { ...project, ...serviceUpdates } : project;
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      if (serviceUpdates) {
+          setShowServiceModal(false);
+          await fetchProject();
+      }
       alert('Project saved successfully!');
     } catch (error) {
       console.error('Failed to save project:', error);
@@ -256,135 +273,53 @@ const Project = () => {
   return (
     <div className={`project-page-container ${isMobile ? 'mobile-container' : ''}`} style={{ paddingBottom: isMobile ? '80px' : '20px' }}>
       {project && (
-      <Box className="project-hud-header" sx={{ width: isMobile ? '100%' : '90%', mb: 4 }}>
-        <Grid container spacing={isMobile ? 2 : 3}>
-          <Grid item xs={12} md={8}>
-            <Box className="cyber-panel">
-              <Typography variant={isMobile ? "h4" : "h3"} className="project-title-hud">{project.name.toUpperCase()}</Typography>
-
-              <Box mt={isMobile ? 2 : 3} display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2}>
-                <Button
-                  variant="outlined"
-                  className="cyber-button-hud primary"
-                  onClick={() => navigate(`/visualizer/${projectId}`)}
-                  fullWidth={isMobile}
-                >
-                  SYSTEM VISUALIZER
-                </Button>
-                {isProjectCreator && (
-                  <Button
-                    variant="outlined"
-                    className="cyber-button-hud secondary"
-                    onClick={saveProject}
-                    fullWidth={isMobile}
-                  >
-                    SYNC TO DATACORE
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Box className="cyber-panel status-panel">
-              <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 2 }}>PROJECT VITALS</Typography>
-              <Box mt={1}>
-                <Box display="flex" justifyContent="space-between" mb={0.5}>
-                  <Typography variant="caption" sx={{ color: '#888' }}>OPERATIONAL HEALTH</Typography>
-                  <Typography variant="caption" sx={{ color: '#00f3ff' }}>{(project.health_score * 100 || 0).toFixed(0)}%</Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={project.health_score * 100 || 0}
-                  className="hud-progress-bar"
-                />
-              </Box>
-
-              <Box mt={3}>
-                <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1 }}>TOKEN LEDGER</Typography>
-                <Grid container spacing={1}>
-                  <Grid item xs={6}>
-                    <Box className="mini-metric">
-                      <Typography className="metric-label">POOL</Typography>
-                      <Typography className="metric-value">{project.token_pool || 250}</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box className="mini-metric">
-                      <Typography className="metric-label">AVAIL</Typography>
-                      <Typography className="metric-value">{(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
-
-              {isProjectCreator && project.status !== 'closed' && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  className="cyber-button-hud danger"
-                  sx={{ mt: 2 }}
-                  onClick={handleCloseProject}
-                >
-                  TERMINATE PROJECT
-                </Button>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
-
-        <Box mt={3} className="cyber-panel">
-          <Box display="flex" gap={isMobile ? 2 : 4} mb={2} borderBottom="1px solid rgba(0,243,255,0.2)">
-            <Button
-                onClick={() => setActiveTab('summary')}
-                sx={{
-                    color: activeTab === 'summary' ? '#00f3ff' : '#888',
-                    fontFamily: 'Orbitron',
-                    borderBottom: activeTab === 'summary' ? '2px solid #00f3ff' : 'none',
-                    borderRadius: 0
-                }}
-            >
-                SUMMARY
-            </Button>
-            <Button
-                onClick={() => setActiveTab('impact')}
-                sx={{
-                    color: activeTab === 'impact' ? '#ff5ca2' : '#888',
-                    fontFamily: 'Orbitron',
-                    borderBottom: activeTab === 'impact' ? '2px solid #ff5ca2' : 'none',
-                    borderRadius: 0
-                }}
-            >
-                IMPACT ATLAS
-            </Button>
-          </Box>
-
-          {activeTab === 'summary' ? (
-             <Box sx={{ color: '#eee', fontFamily: 'Inter', minHeight: '150px' }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  variant="standard"
-                  value={project.description}
-                  onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
-                  InputProps={{
-                    readOnly: !isProjectCreator,
-                    disableUnderline: true,
-                    style: { color: '#ccc', fontFamily: 'Inter', fontSize: '1.1rem' }
-                  }}
-                />
-                <Box mt={2}>
-                    {project.tags?.map((tag, i) => <Chip key={i} label={tag} size="small" sx={{ mr: 1, bgcolor: 'rgba(0,243,255,0.1)', color: '#00f3ff', border: '1px solid #00f3ff' }} />)}
-                </Box>
-             </Box>
-          ) : (
-            <Box sx={{ height: '300px', width: '100%' }}>
-                <ImpactGraph projectId={projectId} height="100%" />
-            </Box>
+      <div className="project-header">
+        <h1 className="project-title">{project.name}</h1>
+        <textarea
+        className="project-description"
+        value={project.description}
+        onChange={(e) => isProjectCreator && setProject({ ...project, description: e.target.value })}
+        readOnly={!isProjectCreator}
+        />
+        {isProjectCreator && (
+        <div className="token-display">
+          <div><strong>Total Token Pool:</strong> {project.token_pool || 250}</div>
+          <div><strong>Tokens Allocated:</strong> {project.reserved_tokens}</div>
+          <div><strong>Tokens Spent:</strong> {project.used_tokens || 0}</div>
+          <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
+        </div>
+        )}
+        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
+        {isProjectCreator && (
+        <Autocomplete
+          multiple
+          options={interestsPool}
+          value={project.tags || []}
+          onChange={(event, newValue) => setProject({ ...project, tags: newValue })}
+          renderInput={(params) => (
+          <TextField
+            {...params}
+            variant="outlined"
+            label="Project Tags"
+            placeholder="Add tags"
+          />
           )}
-        </Box>
-      </Box>
+          renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...otherProps } = getTagProps({ index });
+            return (
+            <Chip
+              key={key}
+              label={option}
+              sx={{ margin: '2px' }}
+              {...otherProps}
+            />
+            );
+          })
+          }
+        />
+        )}
+      </div>
       )}
 
       <div className="tasks-section">
@@ -549,20 +484,18 @@ const Project = () => {
         </Button>
       </Box>
 
-      {showTaskPopup && (
-        <TaskEditor
-          open={showTaskPopup}
-          onClose={() => setShowTaskPopup(false)}
-          taskForm={taskForm}
-          setTaskForm={setTaskForm}
-          onSubmit={handleSubmitTask}
-          skills={skills}
-          isEdit={!!taskForm.id}
-          projectId={Number(projectId)}
-          currentUser={user}
-          projectCreatorId={Number(project?.creator_id)}
-        />
-      )}
+      <TaskEditor
+  open={showTaskPopup}
+  onClose={() => setShowTaskPopup(false)}
+  taskForm={taskForm}
+  setTaskForm={setTaskForm}
+  onSubmit={handleSubmitTask}
+  skills={skills}
+  isEdit={!!taskForm.id} // This should check if we're editing an existing task
+  projectId={Number(projectId)} // Convert to number
+  currentUser={user}
+  projectCreatorId={Number(project?.creator_id)} // Convert to number
+/>
     </div>
     );
 };
