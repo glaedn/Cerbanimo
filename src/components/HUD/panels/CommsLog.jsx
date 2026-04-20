@@ -21,6 +21,8 @@ const getNotificationIcon = (type) => {
       return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
     case 'task': // For generic tasks
       return <ListAltIcon style={{ marginRight: '8px' }} />;
+    case 'service_purchase':
+      return <NotificationsActiveIcon style={{ marginRight: '8px' }} />;
     default:
       return <InfoIcon style={{ marginRight: '8px' }} />;
   }
@@ -66,9 +68,9 @@ const CommsLog = () => {
                 return (
                   <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
                     {icon} {/* Render the icon */}
-                    {notification.projectId && notification.taskId ? (
+                    {notification.projectId ? (
                       <Link 
-                        to={`/visualizer/${notification.projectId}/${notification.taskId}`} 
+                        to={notification.taskId ? `/Visualizer/${notification.projectId}/${notification.taskId}` : `/Visualizer/${notification.projectId}`}
                         style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
                       >
                         {notification.messageText}

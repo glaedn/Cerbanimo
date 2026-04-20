@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
@@ -18,7 +19,6 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   // Centralized token retrieval method
   const getToken = async () => {
@@ -82,22 +82,12 @@ const PublicProfile = () => {
         // Fetch current user's profile to get their internal ID for purchasing
         if (isAuthenticated) {
             const token = await getToken();
-            const currentProfileRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+
+            // Fetch badges from rewards endpoint with auth token
+            const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setCurrentUserProfile(currentProfileRes.data);
-        }
-
-        // Fetch badges from rewards endpoint with auth token
-        const token = await getToken();
-        if (token) {
-          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          setBadges(badgesResponse.data.badges || []);
+            setBadges(badgesResponse.data.badges || []);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -111,7 +101,7 @@ const PublicProfile = () => {
   }, [userId, isAuthenticated]);
 
   const handlePurchaseService = async (service) => {
-    if (!currentUserProfile) {
+    if (!isAuthenticated) {
         alert("Please log in to purchase services.");
         return;
     }
@@ -121,14 +111,12 @@ const PublicProfile = () => {
 
     try {
         const token = await getToken();
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
-            userId: currentUserProfile.id
-        }, {
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
 
         alert("Service purchased successfully! Redirecting to your new project instance.");
-        navigate(`/visualizer/${response.data.projectId}`);
+        navigate(`/Visualizer/${response.data.projectId}`);
     } catch (error) {
         console.error("Purchase failed:", error);
         alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
