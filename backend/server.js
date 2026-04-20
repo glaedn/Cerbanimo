@@ -184,9 +184,11 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
-app.use('/services', servicesRoutes);
+app.use('/services', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, servicesRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
-app.use('/services', jwtCheck, servicesRoutes);
 
 app.use('/impact_v2', impactRoutesV2);
 app.use('/verification_v2', verificationRoutesV2);
