@@ -4,6 +4,22 @@ import jwtCheck from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
+// Get services for a user
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const query = `
+      SELECT * FROM projects
+      WHERE creator_id = $1 AND is_service = TRUE AND 'profile' = ANY(service_visibility)
+    `;
+    const result = await pool.query(query, [userId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user services:', error);
+    res.status(500).json({ message: 'Failed to fetch services' });
+  }
+});
+
 // Purchase a service project
 router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
   const { projectId } = req.params;
@@ -63,7 +79,7 @@ router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
       RETURNING id;
     `;
     const newProjectResult = await client.query(newProjectQuery, [
-      `Copy of ${serviceProject.name}`,
+      `_ ${serviceProject.name}`,
       serviceProject.description,
       serviceProject.tags,
       buyer.id,
@@ -128,6 +144,22 @@ router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
 
     await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [buyerTransaction, buyer.id]);
     await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [sellerTransaction, serviceProject.creator_id]);
+
+    // 7. Send notification to seller
+    const io = req.app.get('io');
+    const notificationMessage = JSON.stringify({
+      text: `Your service "${serviceProject.name}" was purchased by user ${buyer.id}!`,
+      projectId: newProjectId
+    });
+
+    const notificationResult = await client.query(
+      'INSERT INTO notifications (user_id, message, type, created_at, read) VALUES ($1, $2, $3, NOW(), false) RETURNING *',
+      [serviceProject.creator_id, notificationMessage, 'service_purchase']
+    );
+
+    if (io) {
+      io.to(`user_${serviceProject.creator_id}`).emit('notification', notificationResult.rows[0]);
+    }
 
     await client.query('COMMIT');
     res.status(201).json({ message: 'Service purchased successfully', projectId: newProjectId });
