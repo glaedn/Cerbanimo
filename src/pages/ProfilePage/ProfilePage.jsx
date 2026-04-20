@@ -58,6 +58,7 @@ const ProfilePage = () => {
 
   // State for Resources
   const [userResources, setUserResources] = useState([]);
+  const [services, setServices] = useState([]);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -266,8 +267,19 @@ const ProfilePage = () => {
   useEffect(() => {
     if (profileData.id) {
       fetchUserResources();
+      fetchUserServices();
     }
   }, [profileData.id, fetchUserResources]);
+
+  const fetchUserServices = async () => {
+    if (!profileData.id) return;
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${profileData.id}`);
+      setServices(response.data || []);
+    } catch (err) {
+      console.error('Error fetching user services:', err);
+    }
+  };
 
   // --- Badge Management Functions ---
   const fetchUserBadges = useCallback(async () => {
@@ -1009,6 +1021,58 @@ const ProfilePage = () => {
               </ListItem>
             ))}
           </List>
+        )}
+      </Box>
+
+      {/* Services Panel */}
+      <Box
+        className="profile-services-container"
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.primary,
+          boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+        }}
+      >
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            color: theme.colors.primary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          Services Offered
+        </Typography>
+
+        {services.length === 0 ? (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
+            You haven't designated any projects as services yet.
+          </Typography>
+        ) : (
+          <Box sx={{ width: '100%' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+              {services.map(service => (
+                <Box
+                  key={service.id}
+                  sx={{
+                    bgcolor: 'rgba(10, 10, 46, 0.6)',
+                    border: `1px solid ${theme.colors.primary}80`,
+                    p: 2,
+                    borderRadius: theme.borders.borderRadiusMd,
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) }
+                  }}
+                  onClick={() => navigate(`/Visualizer/${service.id}`)}
+                >
+                  <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: 'Orbitron', fontSize: '1rem' }}>{service.name}</Typography>
+                  <Typography variant="body2" sx={{ color: theme.colors.textSecondary, mb: 1, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
+                  <Typography variant="h6" sx={{ color: theme.colors.secondary, fontFamily: 'Orbitron', fontSize: '0.9rem' }}>{service.service_price} Credits</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
         )}
       </Box>
 

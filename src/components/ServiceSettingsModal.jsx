@@ -48,11 +48,12 @@ const ServiceSettingsModal = ({ open, onClose, project, onUpdate, userId }) => {
     }
   };
 
-  const handleVisibilityChange = (option) => {
-    if (visibility.includes(option)) {
-      setVisibility(visibility.filter(v => v !== option));
+  const handleVisibilityChange = (option, isCommunity = false) => {
+    const value = isCommunity ? `community:${option}` : option;
+    if (visibility.includes(value)) {
+      setVisibility(visibility.filter(v => v !== value));
     } else {
-      setVisibility([...visibility, option]);
+      setVisibility([...visibility, value]);
     }
   };
 
@@ -170,8 +171,8 @@ const ServiceSettingsModal = ({ open, onClose, project, onUpdate, userId }) => {
                   key={community.id}
                   control={
                     <Checkbox
-                      checked={visibility.includes(community.id.toString())}
-                      onChange={() => handleVisibilityChange(community.id.toString())}
+                      checked={visibility.includes(`community:${community.id}`)}
+                      onChange={() => handleVisibilityChange(community.id.toString(), true)}
                       sx={{ color: '#00f3ff', '&.Mui-checked': { color: '#00f3ff' } }}
                     />
                   }

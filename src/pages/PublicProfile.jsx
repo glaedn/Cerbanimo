@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useParams, useNavigate } from "react-router-dom";
 import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
@@ -217,11 +216,11 @@ const PublicProfile = () => {
         )}
       </Box>
 
-      {services && services.length > 0 && (
-        <Box sx={{ width: '100%', my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', px: isMobile ? 2 : 0 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff', mb: 3 }}>
-            SERVICES_OFFERED
-          </Typography>
+      <Box sx={{ width: '100%', my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', px: isMobile ? 2 : 0 }}>
+        <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff', mb: 3 }}>
+          SERVICES_OFFERED
+        </Typography>
+        {services && services.length > 0 ? (
           <Grid container spacing={2} sx={{ maxWidth: '800px' }}>
             {services.map((service) => (
               <Grid item xs={12} sm={6} key={service.id}>
@@ -240,7 +239,7 @@ const PublicProfile = () => {
                 }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>{service.name}</Typography>
-                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{service.description}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)', height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
                     <Typography variant="h6" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}>
                       {service.service_price} CREDITS
                     </Typography>
@@ -267,8 +266,12 @@ const PublicProfile = () => {
               </Grid>
             ))}
           </Grid>
-        </Box>
-      )}
+        ) : (
+          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Orbitron' }}>
+            NO_SERVICES_OFFERED_BY_THIS_OPERATIVE_YET
+          </Typography>
+        )}
+      </Box>
 
       <UserPortfolio userId={userId} />
 
