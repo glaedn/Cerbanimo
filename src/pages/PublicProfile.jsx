@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
@@ -7,7 +7,6 @@ import UserPortfolio from "./UserPortfolio.jsx";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "./PublicProfile.css";
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import { Card, CardContent, Button as MuiButton } from "@mui/material";
 
 const PublicProfile = () => {
   const { userId } = useParams();
@@ -19,7 +18,6 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
-  const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
   // Centralized token retrieval method
   const getToken = async () => {
@@ -83,29 +81,12 @@ const PublicProfile = () => {
         // Fetch current user's profile to get their internal ID for purchasing
         if (isAuthenticated) {
             const token = await getToken();
-            const currentProfileRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+
+            // Fetch badges from rewards endpoint with auth token
+            const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setCurrentUserProfile(currentProfileRes.data);
-        }
-
-        // Fetch badges from rewards endpoint with auth token
-        const token = await getToken();
-        if (token) {
-          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          setBadges(badgesResponse.data.badges || []);
-
-          // Fetch services
-          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects`, {
-            params: { userId: userId }
-          });
-          const userServices = servicesResponse.data.filter(p => p.is_service && p.service_visibility?.includes('profile'));
-          setServices(userServices);
+            setBadges(badgesResponse.data.badges || []);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -119,7 +100,7 @@ const PublicProfile = () => {
   }, [userId, isAuthenticated]);
 
   const handlePurchaseService = async (service) => {
-    if (!currentUserProfile) {
+    if (!isAuthenticated) {
         alert("Please log in to purchase services.");
         return;
     }
@@ -129,14 +110,12 @@ const PublicProfile = () => {
 
     try {
         const token = await getToken();
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
-            userId: currentUserProfile.id
-        }, {
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
 
         alert("Service purchased successfully! Redirecting to your new project instance.");
-        navigate(`/visualizer/${response.data.projectId}`);
+        navigate(`/Visualizer/${response.data.projectId}`);
     } catch (error) {
         console.error("Purchase failed:", error);
         alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
@@ -162,21 +141,6 @@ const PublicProfile = () => {
   if (!profile) {
     return <Typography variant="h6">User not found</Typography>;
   }
-
-  const handlePurchaseService = async (serviceId) => {
-    try {
-      const token = await getToken();
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${serviceId}/purchase`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Service purchased successfully! New project created.');
-      // Optionally redirect to the new project
-      // window.location.href = `/project/${response.data.projectId}`;
-    } catch (err) {
-      console.error('Purchase failed:', err);
-      alert(err.response?.data?.message || 'Failed to purchase service');
-    }
-  };
 
   // Helper function to render chips with unique keys
   const renderChips = (items) => {
@@ -267,7 +231,7 @@ const PublicProfile = () => {
                     <Button
                       size="small"
                       variant="contained"
-                      onClick={() => handlePurchaseService(service.id)}
+                      onClick={() => handlePurchaseService(service)}
                       sx={{
                         background: 'linear-gradient(45deg, #ff00ff, #00f3ff)',
                         color: 'black',
