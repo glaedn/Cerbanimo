@@ -603,7 +603,7 @@ useEffect(() => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!containerRef.current.contains(e.target)) {
+      if (!containerRef.current || !containerRef.current.contains(e.target)) {
         setHoveredNode(null);
       }
     };
