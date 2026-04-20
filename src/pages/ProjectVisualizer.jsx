@@ -603,7 +603,7 @@ useEffect(() => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!containerRef.current.contains(e.target)) {
+      if (!containerRef.current || !containerRef.current.contains(e.target)) {
         setHoveredNode(null);
       }
     };
@@ -1191,7 +1191,7 @@ links.forEach(link => {
     const isProjectCreator = project?.creator_id === Number(userId);
 
     return (
-      <Box className="skill-hierarchy-container" sx={{ pb: 8 }}>
+      <Box className="skill-hierarchy-container" sx={{ pb: 8 }} ref={containerRef}>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h5" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
              {project?.name}
@@ -1256,6 +1256,14 @@ links.forEach(link => {
           project={project}
           onSave={handleUpdateProject}
           interestsPool={interests}
+        />
+
+        <ServiceSettingsModal
+          open={showServiceModal}
+          onClose={() => setShowServiceModal(false)}
+          project={project}
+          onUpdate={(updates) => updateProject(updates)}
+          userId={userId}
         />
 
         {/* Task Editor for creation/editing still needed maybe? */}
