@@ -22,6 +22,23 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
+// Fetch services offered by a specific community
+router.get('/community/:communityId', async (req, res) => {
+  const { communityId } = req.params;
+  try {
+    const query = `
+      SELECT * FROM projects
+      WHERE is_service = TRUE
+      AND $1 = ANY(service_visibility)
+    `;
+    const result = await pool.query(query, [communityId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching community services:', error);
+    res.status(500).json({ message: 'Failed to fetch community services' });
+  }
+});
+
 // Purchase a service project
 router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
   const { projectId } = req.params;
