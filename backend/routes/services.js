@@ -40,7 +40,7 @@ router.get('/community/:communityId', async (req, res) => {
 });
 
 // Purchase a service project
-router.post('/:projectId/purchase', jwtCheck, async (req, res) => {
+router.post('/:projectId/purchase', async (req, res) => {
   const { projectId } = req.params;
   const auth0Id = req.auth?.payload?.sub;
 
