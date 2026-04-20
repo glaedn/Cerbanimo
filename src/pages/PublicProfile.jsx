@@ -75,8 +75,13 @@ const PublicProfile = () => {
         setProfile(parsedProfile);
 
         // Fetch advertised services
-        const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
-        setServices(servicesResponse.data || []);
+        try {
+          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
+          console.log("Services fetched:", servicesResponse.data);
+          setServices(servicesResponse.data || []);
+        } catch (sErr) {
+          console.error("Error fetching services:", sErr);
+        }
         
         // Fetch current user's profile to get their internal ID for purchasing
         if (isAuthenticated) {
@@ -209,36 +214,52 @@ const PublicProfile = () => {
             })}
             </Box>
         )}
+      </Box>
 
-      <UserPortfolio userId={userId} />
-      {services.length > 0 && (
-        <Box sx={{ width: '100%', my: 4 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff' }}>
-            Services Offered:
+      {services && services.length > 0 && (
+        <Box sx={{ width: '100%', my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', px: isMobile ? 2 : 0 }}>
+          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff', mb: 3 }}>
+            SERVICES_OFFERED
           </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ maxWidth: '800px' }}>
             {services.map((service) => (
               <Grid item xs={12} sm={6} key={service.id}>
-                <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: 'white' }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ color: '#00f3ff' }}>{service.name}</Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>{service.description}</Typography>
-                    <Typography variant="h6" sx={{ color: '#ff00ff' }}>
-                      {service.service_price} Credits
+                <Card sx={{
+                  bgcolor: 'rgba(28, 28, 30, 0.85)',
+                  border: '1px solid #00f3ff',
+                  color: 'white',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 0 15px rgba(0, 243, 255, 0.4)',
+                    borderColor: '#ff5ca2'
+                  }
+                }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>{service.name}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{service.description}</Typography>
+                    <Typography variant="h6" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}>
+                      {service.service_price} CREDITS
                     </Typography>
                   </CardContent>
-                  <CardActions>
+                  <CardActions sx={{ p: 2, pt: 0 }}>
                     <Button
-                      size="small"
+                      fullWidth
                       variant="contained"
                       onClick={() => handlePurchaseService(service)}
                       sx={{
-                        background: 'linear-gradient(45deg, #ff00ff, #00f3ff)',
+                        background: 'linear-gradient(45deg, #00f3ff, #ff5ca2)',
                         color: 'black',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        fontFamily: 'Orbitron',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #ff5ca2, #00f3ff)',
+                        }
                       }}
                     >
-                      Purchase Service
+                      PURCHASE
                     </Button>
                   </CardActions>
                 </Card>
@@ -247,6 +268,8 @@ const PublicProfile = () => {
           </Grid>
         </Box>
       )}
+
+      <UserPortfolio userId={userId} />
 
       <Typography variant="h6" gutterBottom>
         Skills:

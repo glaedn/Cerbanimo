@@ -116,18 +116,27 @@ const CommunityHub = () => {
     }, [isAuthenticated, user, getAccessTokenSilently]);
 
     const fetchCommunityData = async (showLoading = true) => {
-        if (!communityId || !userId) { if (showLoading) setIsLoading(false); return; }
+        if (!communityId) { if (showLoading) setIsLoading(false); return; }
 
         try {
             if (showLoading) setIsLoading(true);
-            const token = await getAccessTokenSilently({
-                audience: import.meta.env.VITE_BACKEND_URL,
-                scope: 'openid profile email',
-            });
+            let token = null;
+            if (isAuthenticated) {
+                try {
+                    token = await getAccessTokenSilently({
+                        audience: import.meta.env.VITE_BACKEND_URL,
+                        scope: 'openid profile email',
+                    });
+                } catch (tErr) {
+                    console.warn("Token fetch failed:", tErr);
+                }
+            }
+
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
             // Fetch community details
             const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: headers,
             });
             setCommunity(communityResponse.data);
 
@@ -135,7 +144,7 @@ const CommunityHub = () => {
             if (communityResponse.data.members && communityResponse.data.members.length > 0) {
                 const memberPromises = communityResponse.data.members.map(memberId => {
                     return axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${memberId}`, {
-                        headers: { Authorization: `Bearer ${token}` },
+                        headers: headers,
                     }).catch(() => null);
                 });
                 
@@ -147,7 +156,7 @@ const CommunityHub = () => {
     if (communityResponse.data.members && communityResponse.data.members.length > 0) {
         try {
             const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: headers,
             });
             console.log('Fetched member scores:', scoresResponse.data);
             setMemberScores(scoresResponse.data);
@@ -168,7 +177,7 @@ const CommunityHub = () => {
                 
                 // Fetch membership requests
                 const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: headers,
                 });
                 console.log('Membership Requests:', requestsResponse.data);
                 console.log('User ID:', userId);
@@ -182,7 +191,7 @@ const CommunityHub = () => {
                 // Fetch user data for each request
                 const requestUserPromises = requestsResponse.data.map(request => 
                     axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
-                        headers: { Authorization: `Bearer ${token}` },
+                        headers: headers,
                     }).then(userResponse => ({
                         ...request,
                         userData: userResponse.data
@@ -196,7 +205,7 @@ const CommunityHub = () => {
                 if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
                     const proposalPromises = communityResponse.data.proposals.map(projectId => 
                         axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: { Authorization: `Bearer ${token}` },
+                            headers: headers,
                         })
                     );
                     
@@ -208,7 +217,7 @@ const CommunityHub = () => {
                 if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
                     const projectPromises = communityResponse.data.approved_projects.map(projectId => 
                         axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: { Authorization: `Bearer ${token}` },
+                            headers: headers,
                         })
                     );
                     
@@ -218,7 +227,7 @@ const CommunityHub = () => {
 
                 // Fetch community services
                 const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/community/${communityId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: headers
                 });
                 setCommunityServices(servicesResponse.data || []);
                 
