@@ -187,7 +187,6 @@ app.use('/services', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, servicesRoutes);
 app.use('/onboarding', jwtCheck, onboardingRoutes);
-app.use('/services', jwtCheck, servicesRoutes);
 
 app.use('/impact_v2', impactRoutesV2);
 app.use('/verification_v2', verificationRoutesV2);

@@ -989,32 +989,35 @@ const CommunityHub = () => {
                 </div>
             </Box>
             {/* Community Services Marketplace */}
-            <Box sx={{ mt: 4, mb: 4 }}>
-                <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)' }}>
-                    <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Box sx={{ mt: 4, mb: 4, px: isMobile ? 0 : 2 }}>
+                <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)', borderRadius: isMobile ? 0 : 2 }}>
+                    <CardContent sx={{ p: isMobile ? 2 : 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                             <StorefrontIcon sx={{ color: '#00F3FF' }} />
-                            <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>Community Services</Typography>
+                            <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>Community Services</Typography>
                         </Box>
                         {communityServices.length === 0 ? (
-                            <Typography variant="body2" sx={{ color: '#CCC' }}>No services advertised in this community yet.</Typography>
+                            <Typography variant="body2" sx={{ color: '#CCC', textAlign: 'center', py: 4 }}>No services advertised in this community yet.</Typography>
                         ) : (
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
                                 {communityServices.map(service => (
                                     <Card key={service.id} sx={{ bgcolor: 'rgba(10, 10, 46, 0.6)', border: '1px solid rgba(0, 243, 255, 0.5)', color: 'white' }}>
-                                        <CardContent>
-                                            <Typography variant="h6" sx={{ color: '#00F3FF' }}>{service.name}</Typography>
+                                        <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                                            <Typography variant="h6" sx={{ color: '#00F3FF', fontSize: '1.1rem', mb: 1 }}>{service.name}</Typography>
                                             <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
-                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Typography variant="h6" sx={{ color: '#FF5CA2' }}>{service.service_price} Tokens</Typography>
+                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)', mt: 'auto' }} />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant="h6" sx={{ color: '#FF5CA2', fontSize: '1rem' }}>{service.service_price} Tokens</Typography>
                                                 <Button
                                                     variant="contained"
+                                                    size={isMobile ? "small" : "medium"}
                                                     startIcon={<ShoppingCartIcon />}
                                                     onClick={() => handlePurchaseService(service)}
                                                     sx={{
                                                         background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
                                                         color: 'black',
+                                                        fontWeight: 'bold',
+                                                        minHeight: '40px',
                                                         '&:hover': { background: 'linear-gradient(45deg, #4DABF7, #00F3FF)' }
                                                     }}
                                                 >
