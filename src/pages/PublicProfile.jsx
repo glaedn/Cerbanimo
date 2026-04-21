@@ -224,19 +224,23 @@ const PublicProfile = () => {
           <Grid container spacing={2} sx={{ maxWidth: '800px' }}>
             {services.map((service) => (
               <Grid item xs={12} sm={6} key={service.id}>
-                <Card sx={{
-                  bgcolor: 'rgba(28, 28, 30, 0.85)',
-                  border: '1px solid #00f3ff',
-                  color: 'white',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)',
-                  '&:hover': {
-                    boxShadow: '0 0 15px rgba(0, 243, 255, 0.4)',
-                    borderColor: '#ff5ca2'
-                  }
-                }}>
+                <Card
+                  onClick={() => handlePurchaseService(service)}
+                  sx={{
+                    bgcolor: 'rgba(28, 28, 30, 0.85)',
+                    border: '1px solid #00f3ff',
+                    color: 'white',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      boxShadow: '0 0 15px rgba(0, 243, 255, 0.4)',
+                      borderColor: '#ff5ca2'
+                    }
+                  }}
+                >
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>{service.name}</Typography>
                     <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)', height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
