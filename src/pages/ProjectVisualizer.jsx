@@ -8,7 +8,7 @@ import "./ProjectVisualizer.css";
 import { useParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useMemo } from "react";
-import { Chip, Box, Typography, IconButton, Button } from "@mui/material";
+import { Chip, Box, Typography, IconButton, Button, Modal } from "@mui/material";
 import { Autocomplete, TextField } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
 import DependencyListView from "../components/DependencyListView";
@@ -1278,54 +1278,56 @@ links.forEach(link => {
           userId={userId}
         />
 
-        {showCommunityProposalPopup && (
-          <div className="cyber-modal-overlay">
-            <div className="cyber-modal">
-              <div className="cyber-border">
-                <h3 className="cyber-title">Submit to Community</h3>
-                <div className="cyber-content">
-                  <p>Select a community to submit this project to:</p>
+        <Modal
+          open={showCommunityProposalPopup}
+          onClose={() => setShowCommunityProposalPopup(false)}
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div className={`cyber-modal ${isMobile ? 'full-screen-modal' : ''}`} style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none' }}>
+            <div className="cyber-border">
+              <h3 className="cyber-title">Submit to Community</h3>
+              <div className="cyber-content">
+                <p>Select a community to submit this project to:</p>
 
-                  <Autocomplete
-                    options={userCommunities}
-                    getOptionLabel={(option) => option.name}
-                    onChange={(event, newValue) => setSelectedCommunity(newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Select Community"
-                        variant="outlined"
-                        fullWidth
-                        className="cyber-input"
-                      />
-                    )}
-                    sx={{
-                      margin: '20px 0',
-                      '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
-                      '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
-                    }}
-                  />
+                <Autocomplete
+                  options={userCommunities}
+                  getOptionLabel={(option) => option.name}
+                  onChange={(event, newValue) => setSelectedCommunity(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Community"
+                      variant="outlined"
+                      fullWidth
+                      className="cyber-input"
+                    />
+                  )}
+                  sx={{
+                    margin: '20px 0',
+                    '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+                    '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
+                  }}
+                />
 
-                  <div className="cyber-button-group">
-                    <button
-                      onClick={() => setShowCommunityProposalPopup(false)}
-                      className="cyber-button cancel"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSubmitCommunityProposal}
-                      className="cyber-button"
-                      disabled={!selectedCommunity}
-                    >
-                      Submit Proposal
-                    </button>
-                  </div>
+                <div className="cyber-button-group">
+                  <button
+                    onClick={() => setShowCommunityProposalPopup(false)}
+                    className="cyber-button cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitCommunityProposal}
+                    className="cyber-button"
+                    disabled={!selectedCommunity}
+                  >
+                    Submit Proposal
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Task Editor for creation/editing still needed maybe? */}
         <TaskEditor
@@ -1811,54 +1813,56 @@ links.forEach(link => {
           Dashed circles indicate external dependencies
         </div>
       </div>
-      {showCommunityProposalPopup && (
-        <div className="cyber-modal-overlay">
-          <div className="cyber-modal">
-            <div className="cyber-border">
-              <h3 className="cyber-title">Submit to Community</h3>
-              <div className="cyber-content">
-                <p>Select a community to submit this project to:</p>
+      <Modal
+        open={showCommunityProposalPopup}
+        onClose={() => setShowCommunityProposalPopup(false)}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <div className="cyber-modal" style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none' }}>
+          <div className="cyber-border">
+            <h3 className="cyber-title">Submit to Community</h3>
+            <div className="cyber-content">
+              <p>Select a community to submit this project to:</p>
 
-                <Autocomplete
-                  options={userCommunities}
-                  getOptionLabel={(option) => option.name}
-                  onChange={(event, newValue) => setSelectedCommunity(newValue)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Select Community"
-                      variant="outlined"
-                      fullWidth
-                      className="cyber-input"
-                    />
-                  )}
-                  sx={{
-                    margin: '20px 0',
-                    '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
-                    '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
-                  }}
-                />
+              <Autocomplete
+                options={userCommunities}
+                getOptionLabel={(option) => option.name}
+                onChange={(event, newValue) => setSelectedCommunity(newValue)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Community"
+                    variant="outlined"
+                    fullWidth
+                    className="cyber-input"
+                  />
+                )}
+                sx={{
+                  margin: '20px 0',
+                  '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+                  '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
+                }}
+              />
 
-                <div className="cyber-button-group">
-                  <button
-                    onClick={() => setShowCommunityProposalPopup(false)}
-                    className="cyber-button cancel"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitCommunityProposal}
-                    className="cyber-button"
-                    disabled={!selectedCommunity}
-                  >
-                    Submit Proposal
-                  </button>
-                </div>
+              <div className="cyber-button-group">
+                <button
+                  onClick={() => setShowCommunityProposalPopup(false)}
+                  className="cyber-button cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitCommunityProposal}
+                  className="cyber-button"
+                  disabled={!selectedCommunity}
+                >
+                  Submit Proposal
+                </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
