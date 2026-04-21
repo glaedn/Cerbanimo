@@ -74,6 +74,8 @@ const SiteNav = () => {
         return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
       case "task":
         return <ListAltIcon style={{ marginRight: "8px" }} />;
+      case "service_purchase":
+        return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
       default:
         return <InfoIcon style={{ marginRight: "8px" }} />;
     }
@@ -231,35 +233,52 @@ const SiteNav = () => {
               recentNotifications.map((notif, index) => {
                 const icon = getSiteNavNotificationIcon(notif.type);
                 return (
-                    <MenuItem
-                        key={index}
-                        className="notification-menu"
-                        style={{
-                            whiteSpace: "normal",
+                  <MenuItem
+                    key={index}
+                    className="notification-menu"
+                    style={{
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
+                      maxWidth: 320,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {icon}
+                    <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
+                      {notif.type === 'service_purchase' && notif.buyerId && notif.buyerUsername ? (
+                        <>
+                          <Link
+                            to={`/profile/public/${notif.buyerId}`}
+                            style={{ textDecoration: 'underline', color: '#ff5ca2', fontWeight: 'bold' }}
+                          >
+                            {notif.buyerUsername}
+                          </Link>
+                          {' has purchased your service: '}
+                          <Link
+                            to={`/Visualizer/${notif.projectId}`}
+                            style={{ textDecoration: 'underline', color: '#00f3ff', fontWeight: 'bold' }}
+                          >
+                            {notif.serviceName || 'Project'}
+                          </Link>
+                          {'!'}
+                        </>
+                      ) : notif.projectId ? (
+                        <Link
+                          to={notif.taskId ? `/Visualizer/${notif.projectId}/${notif.taskId}` : `/Visualizer/${notif.projectId}`}
+                          style={{
+                            textDecoration: "underline",
+                            color: "#8db8ff",
                             wordBreak: "break-word",
-                            maxWidth: 320,
-                            lineHeight: 1.4,
-                        }}
-                    >
-                        {icon}
-                        <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
-                            {notif.projectId && notif.taskId ? (
-                                <Link
-                                    to={`/visualizer/${notif.projectId}/${notif.taskId}`}
-                                    style={{
-                                        textDecoration: "underline",
-                                        color: "#8db8ff",
-                                        wordBreak: "break-word",
-                                        whiteSpace: "normal",
-                                    }}
-                                >
-                                    {notif.messageText}
-                                </Link>
-                            ) : (
-                                notif.messageText
-                            )}
-                        </span>
-                    </MenuItem>
+                            whiteSpace: "normal",
+                          }}
+                        >
+                          {notif.messageText}
+                        </Link>
+                      ) : (
+                        notif.messageText
+                      )}
+                    </span>
+                  </MenuItem>
                 );
               })
             )}
