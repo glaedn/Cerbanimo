@@ -143,6 +143,8 @@ return (
                 onClick={() => navigate('/communitycreation')}
                 sx={{
                     minWidth: isMobile ? '56px' : '50px',
+                    width: isMobile ? '56px' : '50px',
+                    flexShrink: 0,
                     height: isMobile ? '56px' : '40px',
                     borderRadius: '50%',
                     bgcolor: '#00f3ff',

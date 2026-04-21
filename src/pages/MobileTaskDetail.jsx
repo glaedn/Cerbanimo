@@ -600,15 +600,27 @@ const MobileTaskDetail = () => {
 
               // Available for Pickup
               if (!isCompleted && !isSubmitted && (s.includes('unassigned') || (!s.includes('assigned') && s !== 'completed'))) {
+                const showViewProject = !document.referrer.includes(`/Visualizer/${projectId}`);
                 return (
-                  <Button
-                    fullWidth
-                    className="cyber-btn primary"
-                    onClick={() => handleAction('accept')}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? <CircularProgress size={24} /> : 'INITIALIZE_MISSION'}
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    <Button
+                      fullWidth
+                      className="cyber-btn primary"
+                      onClick={() => handleAction('accept')}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <CircularProgress size={24} /> : 'INITIALIZE_MISSION'}
+                    </Button>
+                    {showViewProject && (
+                      <Button
+                        fullWidth
+                        className="cyber-btn secondary"
+                        onClick={() => navigate(`/Visualizer/${projectId}`)}
+                      >
+                        VIEW_PROJECT
+                      </Button>
+                    )}
+                  </Box>
                 );
               }
 

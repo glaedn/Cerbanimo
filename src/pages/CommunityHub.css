@@ -24,7 +24,7 @@
     min-height: 100vh;
     align-items: center;
     padding: 40px 20px;
-    padding-top: 80px;
+    padding-top: 60px;
     background: radial-gradient(circle at center, #001219 0%, #000000 100%);
     color: var(--hud-text-color);
     margin-top: 0;
