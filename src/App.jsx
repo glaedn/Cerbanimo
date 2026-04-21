@@ -20,6 +20,7 @@ import { useIsMobile } from "./hooks/useIsMobile";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Toaster } from "react-hot-toast";
 
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage/ProfilePage.jsx"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard.jsx"));
@@ -68,6 +69,35 @@ const AppContent = () => {
 
   return (
     <div className="App">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#1C1C1E',
+            color: '#FFFFFF',
+            border: '1px solid #00F3FF',
+            fontFamily: 'Orbitron, sans-serif',
+            boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)',
+            fontSize: '0.9rem',
+          },
+          success: {
+            iconTheme: {
+              primary: '#00F3FF',
+              secondary: '#1C1C1E',
+            },
+          },
+          error: {
+            style: {
+              border: '1px solid #FF4136',
+              boxShadow: '0 0 15px rgba(255, 65, 54, 0.3)',
+            },
+            iconTheme: {
+              primary: '#FF4136',
+              secondary: '#FFFFFF',
+            },
+          },
+        }}
+      />
       {isMobile ? <MobileBottomNav /> : <SiteNav />}
       <AuthWrapper>
         <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f3ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>

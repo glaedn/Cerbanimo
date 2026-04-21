@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { ShoppingCart, Plus, Info, User, Tag } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { toast } from 'react-hot-toast';
 
 const CommunityMarketplace = ({ communityId }) => {
   const isMobile = useIsMobile();
@@ -52,7 +53,7 @@ const CommunityMarketplace = ({ communityId }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newGood.name || !newGood.price) {
-      alert('Please provide a name and a price.');
+      toast.error('Please provide a name and a price.');
       return;
     }
 
@@ -82,8 +83,9 @@ const CommunityMarketplace = ({ communityId }) => {
       });
       setGoods(goods.filter(g => g.id !== goodId));
       if (window.navigator.vibrate) window.navigator.vibrate([20, 50, 20]);
-      alert('Purchase initiated! The item is now in escrow.');
+      toast.success('Purchase initiated! The item is now in escrow.');
     } catch (err) {
+      toast.error('Purchase failed. Check balance or availability.');
       setError('Purchase failed. Check balance or availability.');
     }
   };

@@ -37,6 +37,7 @@ import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { toast } from 'react-hot-toast';
 
 const CommunityHub = () => {
     const isMobile = useIsMobile();
@@ -64,10 +65,14 @@ const CommunityHub = () => {
     const [memberScores, setMemberScores] = useState([]);
 
     const showNotification = (message, severity = 'success') => {
-        setSnackbarMessage(message);
-        setSnackbarSeverity(severity);
-        setSnackbarOpen(true);
-      };
+        if (severity === 'success') {
+            toast.success(message);
+        } else if (severity === 'error') {
+            toast.error(message);
+        } else {
+            toast(message);
+        }
+    };
 
     const handleCloseSnackbar = (event, reason) => {
         if (reason === 'clickaway') {
@@ -298,7 +303,7 @@ const CommunityHub = () => {
             
         } catch (error) {
             console.error('Failed to submit join request:', error);
-            alert('Failed to submit your join request. Please try again.');
+            toast.error('Failed to submit your join request. Please try again.');
         }
     };
 
@@ -346,7 +351,7 @@ const CommunityHub = () => {
             
         } catch (error) {
             console.error('Failed to vote on project:', error);
-            alert('Failed to submit your vote. Please try again.');
+            toast.error('Failed to submit your vote. Please try again.');
         }
     };
 
@@ -392,7 +397,7 @@ const CommunityHub = () => {
             
         } catch (error) {
             console.error('Failed to vote on membership:', error);
-            alert('Failed to submit your vote. Please try again.');
+            toast.error('Failed to submit your vote. Please try again.');
         }
     };
 
@@ -427,7 +432,7 @@ const CommunityHub = () => {
             
         } catch (error) {
             console.error('Failed to delegate vote:', error);
-            alert('Failed to delegate your vote. Please try again.');
+            toast.error('Failed to delegate your vote. Please try again.');
         }
     };
 
@@ -450,7 +455,7 @@ const CommunityHub = () => {
             setConstellationInvites(constellationInvitesRes.data);
         } catch (error) {
             console.error('Failed to vote on constellation invite:', error);
-            alert('Failed to submit your vote.');
+            toast.error('Failed to submit your vote.');
         }
     };
 
@@ -484,33 +489,68 @@ const CommunityHub = () => {
             
         } catch (error) {
             console.error('Failed to revoke vote delegation:', error);
-            alert('Failed to revoke your vote delegation. Please try again.');
+            toast.error('Failed to revoke your vote delegation. Please try again.');
         }
     };
 
-    const handlePurchaseService = async (service) => {
+    const handlePurchaseService = async (service, e) => {
+        if (e) e.stopPropagation();
         if (!userId) {
-            alert("Please log in to purchase services.");
+            toast.error("Please log in to purchase services.");
             return;
         }
 
-        const confirm = window.confirm(`Purchase community service "${service.name}" for ${service.service_price} community tokens?`);
-        if (!confirm) return;
+        toast((t) => (
+            <Box sx={{ p: 1 }}>
+                <Typography variant="body1" sx={{ mb: 2, fontFamily: 'Orbitron', color: 'white' }}>
+                    Purchase community service "{service.name}" for {service.service_price} tokens?
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                    <Button
+                        size="small"
+                        onClick={() => toast.dismiss(t.id)}
+                        sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                    >
+                        ABORT
+                    </Button>
+                    <Button
+                        size="small"
+                        variant="contained"
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            const loadingToast = toast.loading("Processing transaction...", {
+                                style: { border: '1px solid #00F3FF' }
+                            });
+                            try {
+                                const token = await getAccessTokenSilently();
+                                const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
+                                    userId: userId
+                                }, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
 
-        try {
-            const token = await getAccessTokenSilently();
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
-                userId: userId
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            showNotification("Service purchased successfully! Redirecting to your new project instance.");
-            navigate(`/visualizer/${response.data.projectId}`);
-        } catch (error) {
-            console.error("Purchase failed:", error);
-            alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
-        }
+                                toast.success("Service deployed! Syncing neural link...", { id: loadingToast });
+                                setTimeout(() => navigate(`/Visualizer/${response.data.projectId}`), 1500);
+                            } catch (error) {
+                                console.error("Purchase failed:", error);
+                                toast.error(`Purchase failed: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+                            }
+                        }}
+                        sx={{
+                            background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
+                            color: 'black',
+                            fontWeight: 'bold',
+                            fontFamily: 'Orbitron'
+                        }}
+                    >
+                        CONFIRM
+                    </Button>
+                </Box>
+            </Box>
+        ), {
+            duration: 6000,
+            style: { minWidth: '350px' }
+        });
     };
 
     if (isLoading) {
@@ -1003,7 +1043,7 @@ const CommunityHub = () => {
                                 {communityServices.map(service => (
                                     <Card
                                         key={service.id}
-                                        onClick={() => handlePurchaseService(service)}
+                                        onClick={(e) => handlePurchaseService(service, e)}
                                         sx={{
                                             bgcolor: 'rgba(10, 10, 46, 0.6)',
                                             border: '1px solid rgba(0, 243, 255, 0.5)',
@@ -1025,7 +1065,7 @@ const CommunityHub = () => {
                                                     variant="contained"
                                                     size={isMobile ? "small" : "medium"}
                                                     startIcon={<ShoppingCartIcon />}
-                                                    onClick={() => handlePurchaseService(service)}
+                                                    onClick={(e) => handlePurchaseService(service, e)}
                                                     sx={{
                                                         background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
                                                         color: 'black',
