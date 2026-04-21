@@ -7,6 +7,7 @@ import UserPortfolio from "./UserPortfolio.jsx";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "./PublicProfile.css";
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import { toast } from "react-hot-toast";
 
 const PublicProfile = () => {
   const { userId } = useParams();
@@ -104,27 +105,63 @@ const PublicProfile = () => {
     fetchData();
   }, [userId, isAuthenticated]);
 
-  const handlePurchaseService = async (service) => {
+  const handlePurchaseService = async (service, e) => {
+    if (e) e.stopPropagation();
+
     if (!isAuthenticated) {
-        alert("Please log in to purchase services.");
+        toast.error("Please log in to purchase services.");
         return;
     }
 
-    const confirm = window.confirm(`Purchase service "${service.name}" for ${service.service_price} community tokens?`);
-    if (!confirm) return;
+    toast((t) => (
+      <Box sx={{ p: 1 }}>
+        <Typography variant="body1" sx={{ mb: 2, fontFamily: 'Orbitron' }}>
+          Purchase service "{service.name}" for {service.service_price} community tokens?
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Button
+            size="small"
+            onClick={() => toast.dismiss(t.id)}
+            sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+          >
+            ABORT
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={async () => {
+              toast.dismiss(t.id);
+              const loadingToast = toast.loading("Initializing purchase...", {
+                style: { border: '1px solid #00f3ff' }
+              });
+              try {
+                const token = await getToken();
+                const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
-    try {
-        const token = await getToken();
-        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        alert("Service purchased successfully! Redirecting to your new project instance.");
-        navigate(`/Visualizer/${response.data.projectId}`);
-    } catch (error) {
-        console.error("Purchase failed:", error);
-        alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
-    }
+                toast.success("Service acquired! Redirecting...", { id: loadingToast });
+                setTimeout(() => navigate(`/Visualizer/${response.data.projectId}`), 1500);
+              } catch (error) {
+                console.error("Purchase failed:", error);
+                toast.error(`Purchase failed: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+              }
+            }}
+            sx={{
+              background: 'linear-gradient(45deg, #00f3ff, #4DABF7)',
+              color: 'black',
+              fontWeight: 'bold',
+              fontFamily: 'Orbitron'
+            }}
+          >
+            CONFIRM
+          </Button>
+        </Box>
+      </Box>
+    ), {
+      duration: 6000,
+      style: { minWidth: '350px' }
+    });
   };
 
   if (loading) {
@@ -225,7 +262,7 @@ const PublicProfile = () => {
             {services.map((service) => (
               <Grid item xs={12} sm={6} key={service.id}>
                 <Card
-                  onClick={() => handlePurchaseService(service)}
+                  onClick={(e) => handlePurchaseService(service, e)}
                   sx={{
                     bgcolor: 'rgba(28, 28, 30, 0.85)',
                     border: '1px solid #00f3ff',
@@ -252,7 +289,7 @@ const PublicProfile = () => {
                     <Button
                       fullWidth
                       variant="contained"
-                      onClick={() => handlePurchaseService(service)}
+                      onClick={(e) => handlePurchaseService(service, e)}
                       sx={{
                         background: 'linear-gradient(45deg, #00f3ff, #ff5ca2)',
                         color: 'black',
