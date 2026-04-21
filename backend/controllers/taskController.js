@@ -1536,13 +1536,14 @@ const granularizeTasks = async (req, res) => {
       const skillId = await GuildService.getOrCreateSkill(subtask.skill_name);
 
       const result = await client.query(
-        `INSERT INTO tasks (project_id, name, description, skill_id, status, reward_tokens, dependencies)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::int[]) RETURNING id`,
+        `INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, reward_tokens, dependencies)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::int[]) RETURNING id`,
         [
           subtask.project_id,
           subtask.name,
           subtask.description,
           skillId,
+          subtask.skill_level || 0,
           "inactive-unassigned",
           subtask.reward_tokens ?? 100,
           [], // empty dependencies for now

@@ -124,6 +124,15 @@ Example skills you can use or be inspired by:
 - Research
 - Conflict Resolution
 
+Skill Level Guidelines:
+The platform uses a skill level system where 10 XP equals 1 hour of labor.
+Examples of total labor required to reach a specific level:
+- Level 1: 0 hours (Start)
+- Level 10: 324 hours (approx. 3240 XP)
+- Level 20: 1444 hours (approx. 14440 XP)
+
+Assign a "skill_level" to each task based on the complexity and the expertise required. 0 is for entry-level tasks.
+
 Input:
 
 Projects
@@ -144,11 +153,12 @@ Expected Output Format:
       "description": "Detailed description of subtask",
       "project_id": 1,
       "skill_name": "Skill Name",
+      "skill_level": 1,
       "resource_requirements": ["Equipment A", "Space B"],
       "dependencies": [],
       "reward_tokens": 80
     },
-    { "id": 2, "name": "Another Subtask", "description": "Description", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1], "reward_tokens": 120 }
+    { "id": 2, "name": "Another Subtask", "description": "Description", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120 }
   ]
 }
 
@@ -210,6 +220,15 @@ Example skills you can use or be inspired by:
 - Research
 - Conflict Resolution
 
+Skill Level Guidelines:
+The platform uses a skill level system where 10 XP equals 1 hour of labor.
+Examples of total labor required to reach a specific level:
+- Level 1: 0 hours (Start)
+- Level 10: 324 hours (approx. 3240 XP)
+- Level 20: 1444 hours (approx. 14440 XP)
+
+Assign a "skill_level" to each task based on the complexity and the expertise required. 0 is for entry-level tasks.
+
 Input:
 
 Projects
@@ -224,9 +243,9 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id} } 
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "dependencies": [], "reward_tokens": 80 },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1], "reward_tokens": 120 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "dependencies": [1,2], "reward_tokens": 60 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80 },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120 },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60 }
   ]
 }
 

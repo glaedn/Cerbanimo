@@ -13,7 +13,7 @@ const ChronicleCard = ({ node }) => {
     <Card className={`chronicle-card ${visible ? 'show' : ''}`}>
       <CardContent>
         <Typography variant="h6">{node.name}</Typography>
-        <Typography variant="body2">{node.reflection}</Typography>
+        <Typography variant="body2" className="chronicle-reflection">{node.reflection}</Typography>
         <div style={{ marginTop: 8 }}>
           {node.tags?.map(tag => (
             <Chip key={tag} label={tag} size="small" style={{ margin: 2 }} />

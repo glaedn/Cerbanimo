@@ -79,6 +79,11 @@
     transform: scale(1.02); /* Existing transform kept */
     box-shadow: 0 0 15px #00F3FF;
   }
+
+  .chronicle-reflection {
+    max-height: 100px;
+    overflow-y: auto;
+  }
   
   /* Media query for smaller screens */
   @media (max-width: 600px) {

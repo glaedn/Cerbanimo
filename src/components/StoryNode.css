@@ -75,6 +75,8 @@
   margin-top: 1rem; /* Existing */
   text-align: left;
   font-family: 'Inter', sans-serif; /* theme.typography.fontFamilyBase for body text */
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .story-node-subheader {
