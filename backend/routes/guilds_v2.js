@@ -119,6 +119,15 @@ router.post('/requests/:requestId/vote', async (req, res) => {
   }
 });
 
+router.post('/memberships/:userId/sync-ranks', async (req, res) => {
+  try {
+    const results = await GuildService.syncUserRanks(req.params.userId);
+    res.json({ success: true, updates: results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/my-memberships/:userId', async (req, res) => {
   try {
     const query = `

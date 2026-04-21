@@ -141,6 +141,30 @@ class GuildService {
     return result.rows[0];
   }
 
+  async syncUserRanks(userId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const membershipsQuery = 'SELECT guild_id FROM guild_memberships WHERE user_id = $1';
+      const membershipsResult = await client.query(membershipsQuery, [userId]);
+
+      const results = [];
+      for (const row of membershipsResult.rows) {
+        const nextRole = await this.updateCareerProgression(userId, row.guild_id);
+        results.push({ guildId: row.guild_id, role: nextRole });
+      }
+
+      await client.query('COMMIT');
+      return results;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error syncing user ranks:', err);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   async updateCareerProgression(userId, guildId) {
     const client = await pool.connect();
     try {
@@ -168,23 +192,32 @@ class GuildService {
       let nextRole = currentRole;
 
       // Logic for Career Path Progression: Apprentice → Specialist → Architect → Mentor
-      // Progression is driven purely by story patterns (skill level handles XP)
 
-      if (currentRole === 'Apprentice') {
-        // Apprentice -> Specialist: Needs some 'Finisher' or 'Specialist' pattern
+      // XP-based progression (overrides pattern-based if higher)
+      if (xp >= 10000) nextRole = 'Mentor';
+      else if (xp >= 6000) nextRole = 'Architect';
+      else if (xp >= 3000) nextRole = 'Specialist';
+      else if (xp >= 1000) nextRole = 'Apprentice';
+
+      // Fallback/Legacy pattern-based progression
+      if (nextRole === 'Apprentice' || !nextRole) {
         if (patterns['Finisher'] > 0.3 || patterns['Specialist'] > 0.3) {
           nextRole = 'Specialist';
         }
-      } else if (currentRole === 'Specialist') {
-        // Specialist -> Architect: Needs strong 'Specialist' pattern
-        if (patterns['Specialist'] > 0.6) {
-          nextRole = 'Architect';
-        }
-      } else if (currentRole === 'Architect') {
-        // Architect -> Mentor: Needs 'Verifier' pattern (suggesting they can guide others)
-        if (patterns['Verifier'] > 0.5) {
-          nextRole = 'Mentor';
-        }
+      }
+
+      if (nextRole === 'Specialist' && patterns['Specialist'] > 0.6) {
+        nextRole = 'Architect';
+      }
+
+      if (nextRole === 'Architect' && patterns['Verifier'] > 0.5) {
+        nextRole = 'Mentor';
+      }
+
+      // Ensure we don't demote
+      const roleOrder = ['Apprentice', 'Specialist', 'Architect', 'Mentor'];
+      if (roleOrder.indexOf(nextRole) < roleOrder.indexOf(currentRole)) {
+        nextRole = currentRole;
       }
 
       if (nextRole !== currentRole) {

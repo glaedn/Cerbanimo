@@ -48,6 +48,13 @@ const GuildsDashboard = () => {
         const profileData = profileRes.data;
         setUserProfile(profileData);
 
+        // Sync ranks before fetching memberships
+        if (profileData.id) {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2/memberships/${profileData.id}/sync-ranks`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+
         const guildsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2`, {
             headers: { Authorization: `Bearer ${token}` }
         });
