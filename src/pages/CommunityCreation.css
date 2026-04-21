@@ -5,7 +5,7 @@
 }
 
 .community-creation-container {
-    padding: 20px;
+    padding-top: 50px;
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
@@ -16,7 +16,6 @@
     align-items: center;
     position: relative;
     overflow-y: auto;
-    padding-top: 60px;
 }
 
 /* Title Styling */

@@ -11,7 +11,7 @@ const MobileTaskCard = ({ task, onAccept }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const handleView = () => {
-    navigate(`/visualizer/${task.project_id}/${task.id}`);
+    navigate(`/Visualizer/${task.project_id}/${task.id}`);
   };
 
   const getStatusColor = (status) => {
@@ -99,8 +99,8 @@ const MobileTaskCard = ({ task, onAccept }) => {
                     <CheckCircleOutlineIcon />
                   </motion.div>
                 ) : (
-                  <motion.span key="label" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    Accept
+                  <motion.span key="label" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: '0.7rem' }}>
+                    INITIALIZE MISSION
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -111,9 +111,9 @@ const MobileTaskCard = ({ task, onAccept }) => {
             fullWidth
             size="small"
             onClick={handleView}
-            sx={{ borderColor: '#00F3FF', color: '#00F3FF' }}
+            sx={{ borderColor: '#00F3FF', color: '#00F3FF', fontSize: '0.7rem' }}
           >
-            View
+            VIEW PROJECT
           </Button>
         </Box>
         </CardContent>

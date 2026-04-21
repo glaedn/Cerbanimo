@@ -150,7 +150,7 @@ class GuildService {
 
       const results = [];
       for (const row of membershipsResult.rows) {
-        const nextRole = await this.updateCareerProgression(userId, row.guild_id);
+        const nextRole = await this.updateCareerProgression(userId, row.guild_id, client);
         results.push({ guildId: row.guild_id, role: nextRole });
       }
 
@@ -165,17 +165,25 @@ class GuildService {
     }
   }
 
-  async updateCareerProgression(userId, guildId) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+  async updateCareerProgression(userId, guildId, client = null) {
+    let internalClient = client;
+    let shouldRelease = false;
+    let shouldCommit = false;
 
+    if (!internalClient) {
+      internalClient = await pool.connect();
+      shouldRelease = true;
+      shouldCommit = true;
+      await internalClient.query('BEGIN');
+    }
+
+    try {
       // Get user's current membership
       const membershipQuery = 'SELECT role, xp FROM guild_memberships WHERE user_id = $1 AND guild_id = $2 FOR UPDATE';
-      const membershipResult = await client.query(membershipQuery, [userId, guildId]);
+      const membershipResult = await internalClient.query(membershipQuery, [userId, guildId]);
 
       if (membershipResult.rows.length === 0) {
-        await client.query('ROLLBACK');
+        if (shouldCommit) await internalClient.query('ROLLBACK');
         return null;
       }
 
@@ -186,7 +194,7 @@ class GuildService {
         SELECT pattern, strength FROM user_patterns
         WHERE user_id = $1 AND pattern IN ('Finisher', 'Specialist', 'Verifier')
       `;
-      const patternsResult = await client.query(patternsQuery, [userId]);
+      const patternsResult = await internalClient.query(patternsQuery, [userId]);
       const patterns = patternsResult.rows.reduce((acc, p) => ({ ...acc, [p.pattern]: parseFloat(p.strength) }), {});
 
       let nextRole = currentRole;
@@ -221,21 +229,21 @@ class GuildService {
       }
 
       if (nextRole !== currentRole) {
-        await client.query(
+        await internalClient.query(
           'UPDATE guild_memberships SET role = $1 WHERE user_id = $2 AND guild_id = $3',
           [nextRole, userId, guildId]
         );
         console.log(`User ${userId} promoted to ${nextRole} in guild ${guildId}`);
       }
 
-      await client.query('COMMIT');
+      if (shouldCommit) await internalClient.query('COMMIT');
       return nextRole;
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (shouldCommit) await internalClient.query('ROLLBACK');
       console.error('Error updating career progression:', err);
       throw err;
     } finally {
-      client.release();
+      if (shouldRelease) internalClient.release();
     }
   }
 

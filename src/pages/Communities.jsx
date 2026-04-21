@@ -142,15 +142,14 @@ return (
                 variant="contained"
                 onClick={() => navigate('/communitycreation')}
                 sx={{
-                    minWidth: isMobile ? '56px' : '48px',
-                    width: isMobile ? '56px' : '48px',
-                    height: isMobile ? '56px' : '48px',
+                    minWidth: isMobile ? '56px' : '50px',
+                    width: isMobile ? '56px' : '50px',
                     flexShrink: 0,
+                    height: isMobile ? '56px' : '40px',
                     borderRadius: '50%',
                     bgcolor: '#00f3ff',
                     color: '#000',
-                    fontSize: '1.5rem',
-                    padding: 0
+                    fontSize: '1.5rem'
                 }}
             >
                 +
