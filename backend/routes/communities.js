@@ -8,7 +8,6 @@ import { calculateVoteWeight } from "../utils/voteWeight.js";
 // Get all communities with optional search and pagination
 router.get("/", async (req, res) => {
   const { search, page = 1 } = req.query;
-  const client = await pool.connect();
   try {
     const limit = 10; // Number of communities per page
     const offset = (page - 1) * limit;
@@ -34,7 +33,7 @@ router.get("/", async (req, res) => {
       FROM community_data c
     `;
     const values = [search || null, limit, offset];
-    const result = await client.query(query, values);
+    const result = await pool.query(query, values);
 
     // Transform the results to replace interest_tags with interest_names
     const communities = result.rows.map((row) => ({
@@ -47,7 +46,7 @@ router.get("/", async (req, res) => {
       SELECT COUNT(*) FROM communities
       WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
     `;
-    const totalCountResult = await client.query(totalCountQuery, [
+    const totalCountResult = await pool.query(totalCountQuery, [
       search || null,
     ]);
     const totalCount = parseInt(totalCountResult.rows[0].count, 10);
@@ -61,18 +60,15 @@ router.get("/", async (req, res) => {
   } catch (err) {
     console.error("Error fetching communities:", err);
     res.status(500).json({ error: "Failed to fetch communities" });
-  } finally {
-    client.release();
   }
 });
 
 // Get community scores for all users
 router.get("/:communityId/scores", async (req, res) => {
   const { communityId } = req.params;
-  const client = await pool.connect();
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       "SELECT id, username, profile_picture, token_ledger FROM users"
     );
     const users = result.rows;
@@ -116,8 +112,6 @@ router.get("/:communityId/scores", async (req, res) => {
   } catch (err) {
     console.error("Error fetching user scores for community:", err);
     res.status(500).json({ error: "Failed to fetch user scores" });
-  } finally {
-    client.release();
   }
 });
 
@@ -125,7 +119,6 @@ router.get("/:communityId/scores", async (req, res) => {
 // (userId is passed in the request body)
 router.get("/user/:userId", async (req, res) => {
   const { userId } = req.params;
-  const client = await pool.connect();
   try {
     const query = `
         SELECT id, name, description, members, interest_tags, proposals,
@@ -135,23 +128,18 @@ router.get("/user/:userId", async (req, res) => {
         ORDER BY name
       `;
     const values = [userId];
-    const result = await client.query(query, values);
+    const result = await pool.query(query, values);
     res.json(result.rows); // This line was missing
   } catch (err) {
     console.error("Error fetching communities:", err);
     res.status(500).json({ error: "Failed to fetch communities" });
-  } finally {
-    client.release();
   }
 });
 
 //Create a new community
 router.post("/", async (req, res) => {
   const { name, id, description, tags = [] } = req.body;
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
     // Convert tags to array if it's not already
     const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
@@ -166,24 +154,19 @@ router.post("/", async (req, res) => {
       tagArray.length > 0 ? tagArray : null, // Use null if empty array
     ];
 
-    const result = await client.query(query, values);
+    const result = await pool.query(query, values);
     const communityId = result.rows[0].id;
 
-    await client.query("COMMIT");
     res.status(201).json({ message: "Community created", communityId });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Error creating community:", err);
     res.status(500).json({ error: "Failed to create community" });
-  } finally {
-    client.release();
   }
 });
 
 // Get a community by ID
 router.get("/:communityId", async (req, res) => {
   const { communityId } = req.params;
-  const client = await pool.connect();
   console.log("Fetching community with ID:", communityId); // Debug log
   try {
     const query = `
@@ -218,7 +201,7 @@ router.get("/:communityId", async (req, res) => {
               ) as shared_project_ids
           FROM community_data c
       `;
-    const result = await client.query(query, [communityId]);
+    const result = await pool.query(query, [communityId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Community not found" });
     }
@@ -235,26 +218,21 @@ router.get("/:communityId", async (req, res) => {
   } catch (err) {
     console.error("Error fetching community:", err);
     res.status(500).json({ error: "Failed to fetch community" });
-  } finally {
-    client.release();
   }
 });
 
 // Get the list of membership requests for a community
 router.get("/:communityId/membership-requests", async (req, res) => {
   const { communityId } = req.params;
-  const client = await pool.connect();
   try {
     const query = `
             SELECT user_id, votes FROM membership_requests WHERE community_id = $1
         `;
-    const result = await client.query(query, [communityId]);
+    const result = await pool.query(query, [communityId]);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching membership requests:", err);
     res.status(500).json({ error: "Failed to fetch membership requests" });
-  } finally {
-    client.release();
   }
 });
 
@@ -262,31 +240,24 @@ router.get("/:communityId/membership-requests", async (req, res) => {
 router.post("/:communityId/submit/:projectId", async (req, res) => {
   const { communityId, projectId } = req.params;
 
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
     // Set community_id and token_pool on project
-    await client.query(
+    await pool.query(
       `UPDATE projects SET community_id = $1, token_pool = 0 WHERE id = $2`,
       [communityId, projectId]
     );
 
     // Add to proposals array if not already there
-    await client.query(
+    await pool.query(
       `UPDATE communities SET proposals = array_append(proposals, $1)
        WHERE id = $2 AND NOT proposals @> ARRAY[$1]::integer[]`,
       [projectId, communityId]
     );
 
-    await client.query("COMMIT");
     res.status(200).json({ message: "Project submitted to community." });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Submit error:", err);
     res.status(500).json({ error: "Failed to submit project" });
-  } finally {
-    client.release();
   }
 });
 
@@ -452,15 +423,15 @@ router.post("/:communityId/delegate/:userId", async (req, res) => {
   const { communityId, userId } = req.params;
   const { delegateTo } = req.body;
 
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
     // Fetch members
-    const { rows } = await client.query(
+    const { rows } = await pool.query(
       `SELECT members FROM communities WHERE id = $1`,
       [communityId]
     );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Community not found" });
+    }
     const community = rows[0];
     const members = community.members || [];
 
@@ -471,7 +442,7 @@ router.post("/:communityId/delegate/:userId", async (req, res) => {
     }
 
     // Set delegation
-    await client.query(
+    await pool.query(
       `UPDATE communities SET vote_delegations = jsonb_set(
           COALESCE(vote_delegations, '{}'),
           $1::text[],
@@ -481,14 +452,10 @@ router.post("/:communityId/delegate/:userId", async (req, res) => {
       [[userId.toString()], delegateTo, communityId]
     );
 
-    await client.query("COMMIT");
     res.status(200).json({ message: "Vote delegation set." });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Delegation error:", err);
     res.status(500).json({ error: "Failed to set vote delegation" });
-  } finally {
-    client.release();
   }
 });
 
@@ -496,15 +463,15 @@ router.post("/:communityId/delegate/:userId", async (req, res) => {
 router.post("/:communityId/revoke/:userId", async (req, res) => {
   const { communityId, userId } = req.params;
 
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
     // Fetch members
-    const { rows } = await client.query(
+    const { rows } = await pool.query(
       `SELECT members FROM communities WHERE id = $1`,
       [communityId]
     );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Community not found" });
+    }
     const community = rows[0];
     const members = community.members || [];
 
@@ -515,20 +482,16 @@ router.post("/:communityId/revoke/:userId", async (req, res) => {
     }
 
     // Revoke delegation
-    await client.query(
+    await pool.query(
       `UPDATE communities SET vote_delegations = vote_delegations - $1
        WHERE id = $2`,
       [userId.toString(), communityId]
     );
 
-    await client.query("COMMIT");
     res.status(200).json({ message: "Vote delegation revoked." });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Revoke error:", err);
     res.status(500).json({ error: "Failed to revoke vote delegation" });
-  } finally {
-    client.release();
   }
 });
 
@@ -537,19 +500,15 @@ router.post("/:communityId/request", async (req, res) => {
   const { communityId } = req.params;
   const { userId } = req.body;
 
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
     // Check for existing request
     const checkQuery = `
       SELECT id FROM membership_requests 
       WHERE community_id = $1 AND user_id = $2
     `;
-    const checkResult = await client.query(checkQuery, [communityId, userId]);
+    const checkResult = await pool.query(checkQuery, [communityId, userId]);
 
     if (checkResult.rows.length > 0) {
-      await client.query("ROLLBACK");
       return res
         .status(400)
         .json({ error: "Membership request already exists" });
@@ -560,19 +519,15 @@ router.post("/:communityId/request", async (req, res) => {
       INSERT INTO membership_requests (community_id, user_id)
       VALUES ($1, $2) RETURNING id
     `;
-    const result = await client.query(insertQuery, [communityId, userId]);
+    const result = await pool.query(insertQuery, [communityId, userId]);
     const requestId = result.rows[0].id;
 
-    await client.query("COMMIT");
     res
       .status(201)
       .json({ message: "Membership request submitted", requestId });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("Error requesting membership:", err);
     res.status(500).json({ error: "Failed to request membership" });
-  } finally {
-    client.release();
   }
 });
 

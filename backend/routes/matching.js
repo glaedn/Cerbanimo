@@ -2,13 +2,11 @@ import express from 'express';
 import { findMatchesForNeed, findMatchesForResource } from '../services/matchingService.js'; 
 import TaskRoutingService from '../services/TaskRoutingService.js';
 import db from '../db.js'; // Database pool
-import ensureAuthenticated from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
-const authenticate = ensureAuthenticated; // Alias for clarity
 
 // Match resources for a given need
-router.get('/need/:needId', authenticate, async (req, res) => {
+router.get('/need/:needId', async (req, res) => {
   const { needId } = req.params;
   try {
     // First, check if the need itself exists and is matchable (e.g., 'open')
@@ -51,7 +49,7 @@ router.get('/need/:needId', authenticate, async (req, res) => {
 });
 
 // Match needs for a given resource
-router.get('/resource/:resourceId', authenticate, async (req, res) => {
+router.get('/resource/:resourceId', async (req, res) => {
   const { resourceId } = req.params;
   try {
     // Similar to the /need/:needId endpoint, `findMatchesForResource` handles

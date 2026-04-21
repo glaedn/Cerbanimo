@@ -26,8 +26,8 @@ const ImpactDisplay = ({ communityId, getAccessTokenSilently }) => {
     setImpactData(null); // Clear previous data
 
     const endpoint = communityId 
-      ? `http://localhost:4000/impact/community/${communityId}`
-      : 'http://localhost:4000/impact/summary';
+      ? `${import.meta.env.VITE_BACKEND_URL}/impact/community/${communityId}`
+      : `${import.meta.env.VITE_BACKEND_URL}/impact/summary`;
 
     try {
       const token = await getAccessTokenSilently();

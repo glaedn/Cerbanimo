@@ -2,14 +2,13 @@
 import express from 'express';
 import { initiateExchange } from '../services/resourceExchangeService.js';
 import db from '../db.js'; // Database pool
-import authenticate from '../middlewares/authenticate.js'; // Authentication middleware
 
 const router = express.Router();
 
 // POST /initiate - Initiate a resource exchange
-router.post('/initiate', authenticate, async (req, res) => {
+router.post('/initiate', async (req, res) => {
   const { needId, resourceId, notes } = req.body;
-  const loggedInUserId = req.user.id; // Provided by the authenticate middleware
+  const loggedInUserId = req.user.id; // Provided by the resolveUser middleware
 
   if (!needId || !resourceId) {
     return res.status(400).json({ message: 'needId and resourceId are required in the request body.' });

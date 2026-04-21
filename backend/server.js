@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import { auth } from 'express-oauth2-jwt-bearer';
+import rateLimit from 'express-rate-limit';
 import http from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
@@ -19,12 +20,11 @@ import taskController from './controllers/taskController.js';
 import pool from './db.js';
 import communitiesRoutes from './routes/communities.js';
 import storyChronicleRoutes from './routes/storyChronicles.js';
+import resolveUser from './middlewares/resolveUser.js';
 import endorsementsRoutes from './routes/endorsements.js';
-import resourceRoutes from './routes/resources.js';
 import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
-import impactRoutes from './routes/impact.js';
 import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
 
@@ -39,6 +39,7 @@ import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
 import GuildService from './services/GuildService.js';
 import GuildHealthService from './services/GuildHealthService.js';
+import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
 
 // Import database table creation functions
@@ -82,51 +83,7 @@ io.on('connection', (socket) => {
 
 app.set('io', io);
 
-// Function to send notifications
-export const sendNotification = async (userId, notification) => {
-  const { taskId, message } = notification;
-
-  // Check if notification for the same task already exists for the user
-  const checkQuery = `
-      SELECT * FROM notifications
-      WHERE user_id = $1 AND task_id = $2 AND read = false
-  `;
-
-  try {
-      const existingNotification = await pool.query(checkQuery, [userId, taskId]);
-
-      // If notification exists, skip sending
-      if (existingNotification.rows.length > 0) {
-          console.log(`Notification for task ${taskId} already exists for user ${userId}. Skipping.`);
-          return;  // Skip sending the notification
-      }
-
-      // Store notification in database
-      const notificationQuery = `
-          INSERT INTO notifications (user_id, task_id, message, type, created_at, read) 
-          VALUES ($1, $2, $3, $4, NOW(), false)
-          RETURNING *
-      `;
-      
-      const result = await pool.query(notificationQuery, [
-          userId,
-          taskId,
-          message,
-          notification.type || 'general'
-      ]);
-      
-      const storedNotification = result.rows[0];
-      
-      // Emit to specific user's room
-      io.to(`user_${userId}`).emit('notification', storedNotification);
-      console.log("Rooms:", io.sockets.adapter.rooms);
-      console.log(`Notification sent to user ${userId}`);
-      return storedNotification;
-  } catch (error) {
-      console.error('Error sending notification:', error);
-      throw error;
-  }
-};
+setIo(io);
 
 
 // JWT middleware for secured routes
@@ -140,6 +97,31 @@ const jwtCheck = auth({
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
+// Apply rate limiting to all routes
+app.use(limiter);
+
+// Stricter rate limiting for sensitive endpoints
+const sensitiveLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // Limit each IP to 20 requests per hour
+  message: 'Too many sensitive requests from this IP, please try again after an hour'
+});
+
+app.use('/auth/save-user', sensitiveLimiter);
+app.use('/needs', (req, res, next) => {
+  if (req.method === 'POST') return sensitiveLimiter(req, res, next);
+  next();
+});
 
 // Static file serving for uploads
 if (!fs.existsSync('uploads')) {
@@ -172,28 +154,59 @@ app.use('/communities', jwtCheck, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
-app.use('/storyChronicles', storyChronicleRoutes);
+app.use('/storyChronicles', jwtCheck, resolveUser, storyChronicleRoutes);
 
-app.use('/endorsements', jwtCheck, endorsementsRoutes);
+app.use('/endorsements', jwtCheck, resolveUser, endorsementsRoutes);
 
 // Mount new resource and need routes
-app.use('/resources', resourceRoutes);
-app.use('/needs', needRoutes);
-app.use('/matching', matchingRoutes);
-app.use('/exchange', exchangeRoutes);
-app.use('/impact', impactRoutes);
+app.use('/resources', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, resourceRoutesV2);
+
+app.use('/needs', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, needRoutes);
+
+app.use('/matching', jwtCheck, resolveUser, matchingRoutes);
+
+app.use('/exchange', jwtCheck, resolveUser, exchangeRoutes);
+
+app.use('/impact', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, impactRoutesV2);
+
 app.use('/services', (req, res, next) => {
   if (req.method === 'GET') return next();
   return jwtCheck(req, res, next);
 }, servicesRoutes);
-app.use('/onboarding', jwtCheck, onboardingRoutes);
 
-app.use('/impact_v2', impactRoutesV2);
-app.use('/verification_v2', verificationRoutesV2);
-app.use('/guilds_v2', guildRoutesV2);
-app.use('/constellations_v2', constellationRoutesV2);
-app.use('/resources_v2', resourceRoutesV2);
-app.use('/story_engine_v2', storyEngineRoutesV2);
+app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
+
+app.use('/impact_v2', jwtCheck, resolveUser, impactRoutesV2);
+app.use('/verification_v2', jwtCheck, resolveUser, verificationRoutesV2);
+app.use('/guilds_v2', jwtCheck, resolveUser, guildRoutesV2);
+app.use('/constellations_v2', jwtCheck, resolveUser, constellationRoutesV2);
+app.use('/resources_v2', jwtCheck, resolveUser, resourceRoutesV2);
+app.use('/story_engine_v2', jwtCheck, resolveUser, storyEngineRoutesV2);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err);
+
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+
+  res.status(status).json({
+    error: {
+      message,
+      status,
+      timestamp: new Date().toISOString()
+    }
+  });
+});
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {

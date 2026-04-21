@@ -1,6 +1,5 @@
 import express from 'express';
 import pool from '../db.js';
-import jwtCheck from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
