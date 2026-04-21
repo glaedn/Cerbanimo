@@ -229,12 +229,14 @@ const MobileDashboard = () => {
         pb: 2,
         '&::-webkit-scrollbar': { display: 'none' }
       }}>
-        {activeTasks.length > 0 ? (
-          activeTasks.map(task => (
-            <Box key={task.id} sx={{ minWidth: '280px' }}>
-              <MobileTaskCard task={task} onAccept={handleAcceptTask} />
-            </Box>
-          ))
+        {activeTasks.filter(task => !task.status?.toLowerCase().includes('completed')).length > 0 ? (
+          activeTasks
+            .filter(task => !task.status?.toLowerCase().includes('completed'))
+            .map(task => (
+              <Box key={task.id} sx={{ minWidth: '280px' }}>
+                <MobileTaskCard task={task} onAccept={handleAcceptTask} />
+              </Box>
+            ))
         ) : (
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
             No active missions.

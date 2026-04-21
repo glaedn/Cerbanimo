@@ -368,19 +368,24 @@
 
 /* Ensure disabled states are clear */
 .Mui-disabled {
-    opacity: 0.6;
+    opacity: 0.85; /* Increased from 0.6 for better readability */
     /* Pointer events should be default (none for disabled buttons) */
 }
 
 .cyber-input .Mui-disabled .MuiOutlinedInput-notchedOutline,
 .cyber-select .Mui-disabled .MuiOutlinedInput-notchedOutline {
-    border-color: rgba(0, 243, 255, 0.5) !important;
+    border-color: rgba(0, 243, 255, 0.6) !important;
     box-shadow: none !important;
+}
+
+.cyber-input .MuiInputBase-input.Mui-disabled {
+    -webkit-text-fill-color: #00F3FF !important; /* Keep the color bright */
+    opacity: 1 !important;
 }
 
 .cyber-input .MuiInputLabel-root.Mui-disabled,
 .cyber-select .MuiInputLabel-root.Mui-disabled {
-    color: rgba(0, 243, 255, 0.5) !important;
+    color: rgba(0, 243, 255, 0.8) !important; /* Increased from 0.5 */
 }
 
 .cyber-button.Mui-disabled {
