@@ -1318,7 +1318,7 @@ links.forEach(link => {
                   </button>
                   <button
                     onClick={handleSubmitCommunityProposal}
-                    className="cyber-button"
+                    className="community-proposal-button"
                     disabled={!selectedCommunity}
                   >
                     Submit Proposal
@@ -1853,7 +1853,7 @@ links.forEach(link => {
                 </button>
                 <button
                   onClick={handleSubmitCommunityProposal}
-                  className="cyber-button"
+                  className="community-proposal-button"
                   disabled={!selectedCommunity}
                 >
                   Submit Proposal
