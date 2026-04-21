@@ -17,6 +17,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import GroupIcon from '@mui/icons-material/Group';
 
 const ProjectVisualizer = () => {
   const isMobile = useIsMobile();
@@ -1220,6 +1221,17 @@ links.forEach(link => {
                   <ShoppingCartIcon />
                 </IconButton>
               )}
+              {isEditMode && project?.community_id === null && (
+                <IconButton
+                  onClick={() => {
+                    fetchUserCommunities();
+                    setShowCommunityProposalPopup(true);
+                  }}
+                  sx={{ color: '#ff00ff' }}
+                >
+                  <GroupIcon />
+                </IconButton>
+              )}
             </Box>
           )}
         </Box>
@@ -1265,6 +1277,55 @@ links.forEach(link => {
           onUpdate={(updates) => updateProject(updates)}
           userId={userId}
         />
+
+        {showCommunityProposalPopup && (
+          <div className="cyber-modal-overlay">
+            <div className="cyber-modal">
+              <div className="cyber-border">
+                <h3 className="cyber-title">Submit to Community</h3>
+                <div className="cyber-content">
+                  <p>Select a community to submit this project to:</p>
+
+                  <Autocomplete
+                    options={userCommunities}
+                    getOptionLabel={(option) => option.name}
+                    onChange={(event, newValue) => setSelectedCommunity(newValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Select Community"
+                        variant="outlined"
+                        fullWidth
+                        className="cyber-input"
+                      />
+                    )}
+                    sx={{
+                      margin: '20px 0',
+                      '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
+                      '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
+                    }}
+                  />
+
+                  <div className="cyber-button-group">
+                    <button
+                      onClick={() => setShowCommunityProposalPopup(false)}
+                      className="cyber-button cancel"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitCommunityProposal}
+                      className="cyber-button"
+                      disabled={!selectedCommunity}
+                    >
+                      Submit Proposal
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Task Editor for creation/editing still needed maybe? */}
         <TaskEditor

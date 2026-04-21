@@ -32,7 +32,7 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const SkillGalaxyPanel = () => {
+const SkillGalaxyPanel = ({ isFullPage = false }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { profile } = useUserProfile();
@@ -634,14 +634,18 @@ const SkillGalaxyPanel = () => {
   return (
     <div 
     ref={panelRef}
-    className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
-       <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
-        <h4>Skill Constellations</h4>
-        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}>
-          {isMinimized ? '+' : '-'}
-        </button>
-      </div>
-      <div style={{ width: '100%', height: '500px', minHeight: '400px' }}>
+    className={isFullPage ? "skill-galaxy-panel full-page" : `hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}
+    style={isFullPage ? { height: '100%', width: '100%', margin: 0, border: 'none', borderRadius: 0, backgroundColor: 'transparent' } : {}}
+    >
+       {!isFullPage && (
+         <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
+          <h4>Skill Constellations</h4>
+          <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Skill Constellations" : "Minimize Skill Constellations"}>
+            {isMinimized ? '+' : '-'}
+          </button>
+        </div>
+       )}
+      <div style={{ width: '100%', height: isFullPage ? '100%' : '500px', minHeight: isFullPage ? '100%' : '400px' }}>
         <svg 
           ref={svgRef} 
           className="skill-galaxy-svg" 
