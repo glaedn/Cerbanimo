@@ -14,20 +14,24 @@ class GuildService {
     return result.rows[0];
   }
 
-  async addMember(guildId, userId, role = 'Apprentice') {
+  async addMember(guildId, userId, role = 'Apprentice', xp = 0) {
     const query = `
-      INSERT INTO guild_memberships (guild_id, user_id, role)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (guild_id, user_id) DO UPDATE SET role = EXCLUDED.role
-      RETURNING *;
+      INSERT INTO guild_memberships (guild_id, user_id, role, xp)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (guild_id, user_id) DO UPDATE SET
+        role = EXCLUDED.role,
+        xp = GREATEST(guild_memberships.xp, EXCLUDED.xp)
+      RETURNING *, (xmax = 0) AS is_new;
     `;
-    const result = await pool.query(query, [guildId, userId, role]);
+    const result = await pool.query(query, [guildId, userId, role, xp]);
 
-    // Increment member count
-    await pool.query(
-      'UPDATE guilds SET member_count = member_count + 1 WHERE id = $1',
-      [guildId]
-    );
+    // Increment member count if it's a new membership
+    if (result.rows[0].is_new) {
+      await pool.query(
+        'UPDATE guilds SET member_count = member_count + 1 WHERE id = $1',
+        [guildId]
+      );
+    }
 
     return result.rows[0];
   }
@@ -223,6 +227,7 @@ class GuildService {
     const skillsResult = await pool.query(skillsQuery);
 
     let addedCount = 0;
+    let updatedCount = 0;
     for (const skill of skillsResult.rows) {
       if (!skill.unlocked_users || skill.unlocked_users.length === 0) continue;
 
@@ -245,17 +250,20 @@ class GuildService {
 
         if (!parsedEntry || !parsedEntry.user_id) continue;
 
-        const memberQuery = 'SELECT 1 FROM guild_memberships WHERE guild_id = $1 AND user_id = $2';
-        const memberRes = await pool.query(memberQuery, [guildId, parsedEntry.user_id]);
+        const xp = parsedEntry.exp || 0;
+        // In the future, we could determine role based on level here,
+        // but for now we'll stick with Apprentice and let updateCareerProgression handle it.
+        const member = await this.addMember(guildId, parsedEntry.user_id, 'Apprentice', xp);
 
-        if (memberRes.rows.length === 0) {
-          await this.addMember(guildId, parsedEntry.user_id);
+        if (member.is_new) {
           addedCount++;
+        } else {
+          updatedCount++;
         }
       }
     }
-    console.log(`Membership synchronization complete. Added ${addedCount} new memberships.`);
-    return addedCount;
+    console.log(`Membership synchronization complete. Added ${addedCount} new memberships, updated ${updatedCount}.`);
+    return { addedCount, updatedCount };
   }
 
   async matchSkillsHierarchy() {

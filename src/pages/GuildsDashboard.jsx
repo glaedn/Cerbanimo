@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   Box, Typography, Card, CardContent, Grid, Chip,
-  Button, LinearProgress, CircularProgress
+  Button, LinearProgress, CircularProgress, Pagination
 } from '@mui/material';
 import { Shield, TrendingUp, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,24 @@ const GuildsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [myMemberships, setMyMemberships] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const rankThresholds = {
+    'Apprentice': { next: 'Specialist', xp: 1000 },
+    'Specialist': { next: 'Architect', xp: 3000 },
+    'Architect': { next: 'Mentor', xp: 6000 },
+    'Mentor': { next: 'Master', xp: 10000 },
+    'Master': { next: null, xp: 0 }
+  };
+
+  const getRankProgress = (role, xp) => {
+    const current = rankThresholds[role];
+    if (!current || !current.next) return 100;
+    const prevXP = Object.values(rankThresholds).find(v => v.next === role)?.xp || 0;
+    const progress = ((xp - prevXP) / (current.xp - prevXP)) * 100;
+    return Math.min(Math.max(progress, 5), 100);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,7 +102,17 @@ const GuildsDashboard = () => {
                 <Card className="cyber-card membership-card">
                   <CardContent>
                     <Typography variant="h5" className="guild-name">{membership.guild_name}</Typography>
-                    <Typography variant="caption" sx={{ color: '#00f3ff' }}>RANK: {membership.role} | XP: {membership.xp}</Typography>
+                    <Box sx={{ mt: 1, mb: 2 }}>
+                        <Box display="flex" justifyContent="space-between" mb={0.5}>
+                            <Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}>{membership.role}</Typography>
+                            <Typography variant="caption" sx={{ color: '#00f3ff' }}>XP: {membership.xp} / {rankThresholds[membership.role]?.xp || 'MAX'}</Typography>
+                        </Box>
+                        <LinearProgress
+                            variant="determinate"
+                            value={getRankProgress(membership.role, membership.xp)}
+                            className="xp-progress-bar"
+                        />
+                    </Box>
                     <Button fullWidth className="cyber-button-guild" onClick={() => navigate(`/guilds/${membership.guild_id}`)}>ENTER HUB</Button>
                   </CardContent>
                 </Card>
@@ -96,7 +124,7 @@ const GuildsDashboard = () => {
 
       <Typography variant={isMobile ? "h6" : "h4"} className="section-title" sx={{ fontFamily: 'Orbitron', mb: 2 }}>GUILD REGISTRY</Typography>
       <Grid container spacing={isMobile ? 2 : 4}>
-        {guilds.map(guild => {
+        {guilds.slice((page - 1) * itemsPerPage, page * itemsPerPage).map(guild => {
           const isSelected = userProfile?.skills?.includes(guild.skill_name);
           const isMember = myMemberships.some(m => m.guild_id === guild.id);
           const highlightClass = isSelected ? 'selected-skill' : (isMember ? 'active-contribution' : '');
@@ -140,6 +168,35 @@ const GuildsDashboard = () => {
           );
         })}
       </Grid>
+
+      {guilds.length > itemsPerPage && (
+        <Box display="flex" justifyContent="center" mt={6} className="pagination-container">
+          <Pagination
+            count={Math.ceil(guilds.length / itemsPerPage)}
+            page={page}
+            onChange={(e, v) => {
+                setPage(v);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            color="primary"
+            sx={{
+                '& .MuiPaginationItem-root': {
+                    color: '#00f3ff',
+                    borderColor: 'rgba(0, 243, 255, 0.3)',
+                    fontFamily: 'Orbitron',
+                    '&:hover': {
+                        backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                    },
+                    '&.Mui-selected': {
+                        backgroundColor: 'rgba(0, 243, 255, 0.2)',
+                        textShadow: '0 0 8px #00f3ff',
+                        borderColor: '#00f3ff',
+                    }
+                }
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

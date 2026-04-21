@@ -130,6 +130,14 @@
   font-family: 'Orbitron', sans-serif !important;
 }
 
+.pagination-container .MuiPagination-ul {
+  gap: 8px;
+}
+
+.pagination-container .MuiPaginationItem-ellipsis {
+  color: #888 !important;
+}
+
 .membership-card {
   border-left: 4px solid #ff5ca2 !important;
   background: linear-gradient(135deg, rgba(255, 92, 162, 0.1), rgba(10, 10, 46, 0.9)) !important;
@@ -149,7 +157,8 @@
 .xp-progress-bar {
   height: 6px !important;
   border-radius: 3px !important;
-  background-color: #222 !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .xp-progress-bar .MuiLinearProgress-bar {
