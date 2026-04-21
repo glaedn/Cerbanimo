@@ -6,17 +6,21 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import LanguageIcon from '@mui/icons-material/Language';
 import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import { Badge } from '@mui/material';
+import { useNotifications } from '../pages/NotificationProvider';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount } = useNotifications();
 
   // Map routes to navigation indices
   const getIndexFromPath = (path) => {
     if (path === '/' || path === '/dashboard') return 0;
     if (path.startsWith('/projects') || path.startsWith('/tasks') || path.startsWith('/visualizer')) return 1;
     if (path.startsWith('/communities')) return 2;
-    if (path.startsWith('/guilds')) return 3;
+    if (path.startsWith('/notifications')) return 3;
     if (path.startsWith('/profile')) return 4;
     return 0;
   };
@@ -34,7 +38,7 @@ const MobileBottomNav = () => {
       case 0: navigate('/dashboard'); break;
       case 1: navigate('/projects'); break;
       case 2: navigate('/communities'); break;
-      case 3: navigate('/guilds'); break;
+      case 3: navigate('/notifications'); break;
       case 4: navigate('/profile'); break;
       default: navigate('/dashboard');
     }
@@ -59,7 +63,14 @@ const MobileBottomNav = () => {
         <BottomNavigationAction label="Home" icon={<HomeIcon />} />
         <BottomNavigationAction label="Projects" icon={<AccountTreeIcon />} />
         <BottomNavigationAction label="Realms" icon={<LanguageIcon />} />
-        <BottomNavigationAction label="Guilds" icon={<GroupIcon />} />
+        <BottomNavigationAction
+          label="Comms"
+          icon={
+            <Badge badgeContent={unreadCount} color="error">
+              <NotificationsIcon />
+            </Badge>
+          }
+        />
         <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
       </BottomNavigation>
     </Paper>

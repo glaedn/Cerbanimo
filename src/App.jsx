@@ -38,6 +38,7 @@ const OnboardingPage = React.lazy(() => import("./pages/OnboardingPage/Onboardin
 const WaitingListPage = React.lazy(() => import("./pages/WaitingListPage.jsx"));
 const Rezzler = React.lazy(() => import("./mobile/Rezzler.jsx"));
 const MobileDashboard = React.lazy(() => import("./pages/MobileDashboard.jsx"));
+const MobileNotifications = React.lazy(() => import("./pages/MobileNotifications.jsx"));
 const MobileTaskDetail = React.lazy(() => import("./pages/MobileTaskDetail.jsx"));
 const TaskBrowser = React.lazy(() => import("./pages/TaskBrowser.jsx"));
 const CommunityMarketplace = React.lazy(() => import("./components/CommunityMarketplace/CommunityMarketplace.jsx"));
@@ -114,6 +115,14 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><OnboardingPage /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <PrivateRoute>
+                <PageWrapper><MobileNotifications /></PageWrapper>
               </PrivateRoute>
             }
           />
