@@ -237,8 +237,8 @@ const ProfilePage = () => {
   const goToDashboard = () => {
     navigate('/dashboard'); // Ensure the `/profile` route is properly defined
   };
-  const goToSkillTree = () => {
-    navigate('/profile/skilltree');
+  const goToSkillConstellation = () => {
+    navigate('/profile/skill-constellation');
   };
 
   // --- Resource Management Functions ---
@@ -763,7 +763,7 @@ const ProfilePage = () => {
       />
         <Button 
           variant="outlined" 
-          onClick={goToSkillTree}
+          onClick={goToSkillConstellation}
           sx={{ 
             borderColor: theme.colors.accentGreen,
             color: theme.colors.accentGreen,
@@ -777,7 +777,7 @@ const ProfilePage = () => {
             }
           }}
         >
-          Skill Tree
+          Skill Constellation
         </Button>
         <Autocomplete
           multiple

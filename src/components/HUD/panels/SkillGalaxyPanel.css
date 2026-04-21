@@ -100,12 +100,12 @@
 }
 
 @media (max-width: 768px) {
-  .skill-galaxy-panel {
+  .skill-galaxy-panel:not(.full-page) {
     height: 400px !important; /* Fixed height on mobile */
     min-height: 400px;
   }
   
-  .skill-galaxy-svg {
+  .skill-galaxy-panel:not(.full-page) .skill-galaxy-svg {
     height: 350px !important;
   }
   

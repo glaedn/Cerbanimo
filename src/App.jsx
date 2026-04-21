@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage/ProfilePage.jsx"));
+const SkillConstellation = React.lazy(() => import("./pages/SkillConstellation.jsx"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard.jsx"));
 const PublicProfile = React.lazy(() => import("./pages/PublicProfile.jsx"));
 const BadgeCreation = React.lazy(() => import("./pages/BadgeCreation.jsx"));
@@ -113,6 +114,14 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><OnboardingPage /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile/skill-constellation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><SkillConstellation /></PageWrapper>
               </PrivateRoute>
             }
           />
