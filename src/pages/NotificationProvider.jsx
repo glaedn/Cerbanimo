@@ -32,6 +32,9 @@ const NotificationProvider = ({ children }) => {
         messageText: parsedJson.text,
         projectId: parsedJson.projectId,
         taskId: parsedJson.taskId,
+        buyerId: parsedJson.buyerId,
+        buyerUsername: parsedJson.buyerUsername,
+        serviceName: parsedJson.serviceName,
         originalMessage: originalMsg,
       };
     } else {

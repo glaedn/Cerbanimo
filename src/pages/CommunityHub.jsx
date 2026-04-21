@@ -1001,7 +1001,20 @@ const CommunityHub = () => {
                         ) : (
                             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
                                 {communityServices.map(service => (
-                                    <Card key={service.id} sx={{ bgcolor: 'rgba(10, 10, 46, 0.6)', border: '1px solid rgba(0, 243, 255, 0.5)', color: 'white' }}>
+                                    <Card
+                                        key={service.id}
+                                        onClick={() => handlePurchaseService(service)}
+                                        sx={{
+                                            bgcolor: 'rgba(10, 10, 46, 0.6)',
+                                            border: '1px solid rgba(0, 243, 255, 0.5)',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                borderColor: '#00F3FF',
+                                                boxShadow: '0 0 10px rgba(0, 243, 255, 0.4)'
+                                            }
+                                        }}
+                                    >
                                         <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                             <Typography variant="h6" sx={{ color: '#00F3FF', fontSize: '1.1rem', mb: 1 }}>{service.name}</Typography>
                                             <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>

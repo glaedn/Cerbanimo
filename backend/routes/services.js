@@ -49,8 +49,8 @@ router.post('/:projectId/purchase', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // 1. Get the buyer's internal user ID
-    const userQuery = 'SELECT id, token_ledger FROM users WHERE auth0_id = $1';
+    // 1. Get the buyer's internal user ID and username
+    const userQuery = 'SELECT id, username, token_ledger FROM users WHERE auth0_id = $1';
     const userResult = await client.query(userQuery, [auth0Id]);
     const buyer = userResult.rows[0];
 
@@ -95,7 +95,7 @@ router.post('/:projectId/purchase', async (req, res) => {
       RETURNING id;
     `;
     const newProjectResult = await client.query(newProjectQuery, [
-      serviceProject.name,
+      `${buyer.username}'s ${serviceProject.name}`,
       serviceProject.description,
       serviceProject.tags,
       buyer.id,
@@ -164,8 +164,11 @@ router.post('/:projectId/purchase', async (req, res) => {
     // 7. Send notification to seller
     const io = req.app.get('io');
     const notificationMessage = JSON.stringify({
-      text: `Your service "${serviceProject.name}" was purchased by user ${buyer.id}!`,
-      projectId: newProjectId
+      text: `${buyer.username} has purchased your service: ${serviceProject.name}!`,
+      projectId: newProjectId,
+      buyerId: buyer.id,
+      buyerUsername: buyer.username,
+      serviceName: serviceProject.name
     });
 
     const notificationResult = await client.query(

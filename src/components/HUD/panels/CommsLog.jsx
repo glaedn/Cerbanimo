@@ -68,7 +68,24 @@ const CommsLog = () => {
                 return (
                   <li key={notification.id} className="activity-item" style={{ display: 'flex', alignItems: 'center' }}>
                     {icon} {/* Render the icon */}
-                    {notification.projectId ? (
+                    {notification.type === 'service_purchase' && notification.buyerId && notification.buyerUsername ? (
+                      <span style={{ color: '#FFF' }}>
+                        <Link
+                          to={`/profile/public/${notification.buyerId}`}
+                          style={{ textDecoration: 'underline', color: '#ff5ca2', fontWeight: 'bold' }}
+                        >
+                          {notification.buyerUsername}
+                        </Link>
+                        {' has purchased your service: '}
+                        <Link
+                          to={`/Visualizer/${notification.projectId}`}
+                          style={{ textDecoration: 'underline', color: '#00f3ff', fontWeight: 'bold' }}
+                        >
+                          {notification.serviceName || 'Project'}
+                        </Link>
+                        {'!'}
+                      </span>
+                    ) : notification.projectId ? (
                       <Link 
                         to={notification.taskId ? `/Visualizer/${notification.projectId}/${notification.taskId}` : `/Visualizer/${notification.projectId}`}
                         style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
