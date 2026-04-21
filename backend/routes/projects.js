@@ -361,8 +361,8 @@ router.post('/auto-generate', async (req, res) => {
       const skillId = await GuildService.getOrCreateSkill(task.skill_name);
 
       const result = await pool.query(
-        'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens, resource_requirements) VALUES ($1, $2, $3, $4, $5, $6::int[], $7, $8) RETURNING id',
-        [projectId, task.name, task.description, skillId, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
+        'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, resource_requirements) VALUES ($1, $2, $3, $4, $5, $6, $7::int[], $8, $9) RETURNING id',
+        [projectId, task.name, task.description, skillId, task.skill_level || 0, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
       );
       const dbId = result.rows[0].id;
       task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues

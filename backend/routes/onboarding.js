@@ -177,8 +177,8 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
           const dependencies = task.dependencies || []; // Default to empty array
 
           const taskInsertResult = await client.query(
-            'INSERT INTO tasks (project_id, name, description, skill_id, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-            [newProjectId, task.name, task.description, task.skill_id, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
+            'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+            [newProjectId, task.name, task.description, task.skill_id, task.skill_level || 0, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
           );
           const dbId = taskInsertResult.rows[0].id;
           task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues
