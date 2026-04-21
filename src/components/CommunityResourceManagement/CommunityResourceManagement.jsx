@@ -77,7 +77,7 @@ const CommunityResourceManagement = ({ communityId }) => {
       if (editingResource) {
         // Ensure owner_community_id is maintained if present, or added if this is primarily a community resource
         payload.owner_community_id = payload.owner_community_id || communityId;
-        response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Resource updated successfully!', 'success');

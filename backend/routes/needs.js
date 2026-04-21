@@ -1,11 +1,10 @@
 import express from 'express';
 import pool from '../db.js'; // Assuming db.js is in the backend directory
-import authenticate from '../middlewares/authenticate.js'; // Assuming middleware is in backend/middleware
 
 const router = express.Router();
 
 // POST /needs - Declare a new need
-router.post('/', authenticate, async (req, res) => {
+router.post('/', async (req, res) => {
   let {
     name,
     description,
@@ -26,19 +25,11 @@ router.post('/', authenticate, async (req, res) => {
   if (!requestor_user_id && !requestor_community_id) {
     console.log('No requestor_user_id or requestor_community_id provided, using logged-in user id:', req.user.id);
     requestor_user_id = req.user.id;
-  } else if (!requestor_user_id && requestor_community_id) {
-    // It's a community request, user_id is implicitly the one making the request via authenticate
-    // but the primary requestor is the community. We can also store req.user.id if needed
-    // e.g. as 'created_by_user_id' if schema supported it. For now, requestor_user_id can be null.
-  //} else if (requestor_user_id && requestor_user_id !== req.user.id && !req.user.isAdmin) {
-    // A user is trying to post a need for another user and is not an admin
-    // This could be disallowed, or allowed based on specific rules (e.g. community admin)
-    // For now, let's assume if requestor_user_id is provided, it must match req.user.id unless it's a community request.
-    // This logic might need refinement based on product decisions.
-    // If it's a community request, requestor_user_id can be different or null.
-  //  if(!requestor_community_id) {
-  //      return res.status(403).json({ error: 'You can only declare needs for yourself unless it is a community need or you are an admin.' });
-  //  }
+  } else if (requestor_user_id && Number(requestor_user_id) !== Number(req.user.id)) {
+    // A user is trying to post a need for another user
+    if (!requestor_community_id) {
+      return res.status(403).json({ error: 'You can only declare needs for yourself unless it is a community need.' });
+    }
   }
 
 
@@ -143,7 +134,7 @@ router.get('/:needId', async (req, res) => {
 });
 
 // PUT /needs/:needId - Update an existing need
-router.put('/:needId', authenticate, async (req, res) => {
+router.put('/:needId', async (req, res) => {
   const { needId } = req.params;
   const currentUserId = req.user.id;
   const {
@@ -206,7 +197,7 @@ router.put('/:needId', authenticate, async (req, res) => {
 });
 
 // DELETE /needs/:needId - Delete a need
-router.delete('/:needId', authenticate, async (req, res) => {
+router.delete('/:needId', async (req, res) => {
   const { needId } = req.params;
   const currentUserId = req.user.id;
 
