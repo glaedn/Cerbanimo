@@ -584,17 +584,35 @@ const MobileTaskDetail = () => {
 
               // Operator Actions
               if (isAssigned) {
+                const showViewProject = !document.referrer.includes(`/Visualizer/${projectId}`);
                 if (s === 'submitted') {
-                  return <Button fullWidth disabled className="cyber-btn pending">AWAITING_VERIFICATION</Button>;
+                  return (
+                    <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                      <Button fullWidth disabled className="cyber-btn pending">AWAITING_VERIFICATION</Button>
+                      {showViewProject && (
+                        <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                      )}
+                    </Box>
+                  );
                 }
                 if (isCompleted) {
-                  return <Button fullWidth disabled className="cyber-btn completed">MISSION_COMPLETED</Button>;
+                  return (
+                    <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                      <Button fullWidth disabled className="cyber-btn completed">MISSION_COMPLETED</Button>
+                      {showViewProject && (
+                        <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                      )}
+                    </Box>
+                  );
                 }
                 return (
-                  <>
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
                     <Button fullWidth className="cyber-btn primary" onClick={() => setIsSubmissionModalOpen(true)}>SUBMIT_PROOF</Button>
                     <Button className="cyber-btn secondary" onClick={() => handleAction('drop')}>DROP</Button>
-                  </>
+                    {showViewProject && (
+                      <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                    )}
+                  </Box>
                 );
               }
 
