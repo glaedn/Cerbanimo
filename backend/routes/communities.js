@@ -139,7 +139,10 @@ router.get("/user/:userId", async (req, res) => {
 //Create a new community
 router.post("/", async (req, res) => {
   const { name, id, description, tags = [] } = req.body;
+  const client = await pool.connect();
   try {
+    await client.query("BEGIN");
+
     // Convert tags to array if it's not already
     const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
@@ -154,13 +157,17 @@ router.post("/", async (req, res) => {
       tagArray.length > 0 ? tagArray : null, // Use null if empty array
     ];
 
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     const communityId = result.rows[0].id;
 
+    await client.query("COMMIT");
     res.status(201).json({ message: "Community created", communityId });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Error creating community:", err);
     res.status(500).json({ error: "Failed to create community" });
+  } finally {
+    client.release();
   }
 });
 
@@ -240,24 +247,31 @@ router.get("/:communityId/membership-requests", async (req, res) => {
 router.post("/:communityId/submit/:projectId", async (req, res) => {
   const { communityId, projectId } = req.params;
 
+  const client = await pool.connect();
   try {
+    await client.query("BEGIN");
+
     // Set community_id and token_pool on project
-    await pool.query(
+    await client.query(
       `UPDATE projects SET community_id = $1, token_pool = 0 WHERE id = $2`,
       [communityId, projectId]
     );
 
     // Add to proposals array if not already there
-    await pool.query(
+    await client.query(
       `UPDATE communities SET proposals = array_append(proposals, $1)
        WHERE id = $2 AND NOT proposals @> ARRAY[$1]::integer[]`,
       [projectId, communityId]
     );
 
+    await client.query("COMMIT");
     res.status(200).json({ message: "Project submitted to community." });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Submit error:", err);
     res.status(500).json({ error: "Failed to submit project" });
+  } finally {
+    client.release();
   }
 });
 

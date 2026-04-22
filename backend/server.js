@@ -55,6 +55,7 @@ import { fixSequences } from './utils/dbFix.js';
 
 // Initialize app
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -101,7 +102,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  max: 1000, // Increased limit for SPA load and background polling
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   message: 'Too many requests from this IP, please try again after 15 minutes'
@@ -113,7 +114,7 @@ app.use(limiter);
 // Stricter rate limiting for sensitive endpoints
 const sensitiveLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // Limit each IP to 20 requests per hour
+  max: 100, // Increased for initial login/onboarding surges
   message: 'Too many sensitive requests from this IP, please try again after an hour'
 });
 

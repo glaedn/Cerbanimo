@@ -12,11 +12,9 @@ const resolveUser = async (req, res, next) => {
   try {
     const result = await pool.query('SELECT id, username FROM users WHERE auth0_id = $1', [auth0Id]);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found in database' });
+    if (result.rows.length > 0) {
+      req.user = result.rows[0];
     }
-
-    req.user = result.rows[0];
     next();
   } catch (error) {
     console.error('Error resolving user:', error);
