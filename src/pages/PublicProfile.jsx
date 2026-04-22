@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -18,8 +18,8 @@ const PublicProfile = () => {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
-
+  const { user, getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   // Centralized token retrieval method
   const getToken = async () => {
     try {
@@ -341,19 +341,29 @@ const PublicProfile = () => {
       <Typography variant="h6" gutterBottom>
         Realms:
       </Typography>
-      <div className="badges-container">
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
         {communities.length > 0 ? (
           communities.map((community) => (
-            <div key={`community-${community.id}`} className="badge-item">
-               <Typography variant="body2" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
-                  {community.name}
-               </Typography>
-            </div>
+            <Chip
+              key={`community-${community.id}`}
+              label={community.name}
+              onClick={() => navigate(`/communityhub/${community.id}`)}
+              sx={{
+                backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                color: '#00F3FF',
+                border: '1px solid #00F3FF',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 243, 255, 0.2)',
+                  boxShadow: '0 0 10px rgba(0, 243, 255, 0.5)'
+                },
+                fontFamily: 'Orbitron, sans-serif'
+              }}
+            />
           ))
         ) : (
-          <Typography variant="body2">No realms joined yet</Typography>
+          <Typography variant="body2" sx={{ color: '#888' }}>No realms joined yet</Typography>
         )}
-      </div>
+      </Box>
 
       <Typography variant="h6" gutterBottom>
         Badges:
