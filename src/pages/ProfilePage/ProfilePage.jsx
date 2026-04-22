@@ -58,7 +58,8 @@ const ProfilePage = () => {
 
   // State for Resources
   const [userResources, setUserResources] = useState([]);
-  const [services, setServices] = useState([]);
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [communitiesLoading, setCommunitiesLoading] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -310,21 +311,32 @@ const ProfilePage = () => {
   }, [profileData.id, fetchUserBadges]);
   // --- End Badge Management Functions ---
 
-  useEffect(() => {
-    const fetchChronicle = async () => {
-        if (!profileData.id) return;
-        try {
-            const token = await getAccessTokenSilently();
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/story/user/${profileData.id}/chronicle`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setUserChronicle(res.data || []);
-        } catch (err) {
-            console.error("Failed to fetch chronicle:", err);
-        }
-    };
-    fetchChronicle();
+  // --- Community Management Functions ---
+  const fetchUserCommunities = useCallback(async () => {
+    if (!profileData.id) return;
+    setCommunitiesLoading(true);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: import.meta.env.VITE_BACKEND_URL,
+        scope: 'openid profile email read:profile',
+      });
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserCommunities(response.data || []);
+    } catch (err) {
+      console.error('Error fetching user communities:', err);
+    } finally {
+      setCommunitiesLoading(false);
+    }
   }, [profileData.id, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (profileData.id) {
+      fetchUserCommunities();
+    }
+  }, [profileData.id, fetchUserCommunities]);
+  // --- End Community Management Functions ---
 
   const handleOpenResourceModal = (resource = null) => {
     setEditingResource(resource);
@@ -1024,13 +1036,13 @@ const ProfilePage = () => {
         )}
       </Box>
 
-      {/* Services Panel */}
+      {/* Communities Panel */}
       <Box
-        className="profile-services-container"
+        className="profile-communities-container"
         sx={{
           ...panelStyle,
-          borderColor: theme.colors.primary,
-          boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+          borderColor: theme.colors.accentBlue,
+          boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
         }}
       >
         <Typography
@@ -1043,35 +1055,47 @@ const ProfilePage = () => {
             textAlign: 'center',
           }}
         >
-          Services Offered
+          My Realms
         </Typography>
-
-        {services.length === 0 ? (
+        {communitiesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {!communitiesLoading && userCommunities.length === 0 && (
           <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
-            You haven't designated any projects as services yet.
+            You haven't joined any realms yet.
           </Typography>
-        ) : (
-          <Box sx={{ width: '100%' }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
-              {services.map(service => (
-                <Box
-                  key={service.id}
-                  sx={{
-                    bgcolor: 'rgba(10, 10, 46, 0.6)',
-                    border: `1px solid ${theme.colors.primary}80`,
-                    p: 2,
-                    borderRadius: theme.borders.borderRadiusMd,
-                    cursor: 'pointer',
-                    '&:hover': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) }
-                  }}
-                  onClick={() => navigate(`/Visualizer/${service.id}`)}
-                >
-                  <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: 'Orbitron', fontSize: '1rem' }}>{service.name}</Typography>
-                  <Typography variant="body2" sx={{ color: theme.colors.textSecondary, mb: 1, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
-                  <Typography variant="h6" sx={{ color: theme.colors.secondary, fontFamily: 'Orbitron', fontSize: '0.9rem' }}>{service.service_price} Credits</Typography>
-                </Box>
-              ))}
-            </Box>
+        )}
+        {!communitiesLoading && userCommunities.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.md, width: '100%' }}>
+            {userCommunities.map((community) => (
+              <Box
+                key={community.id}
+                onClick={() => navigate(`/communityhub/${community.id}`)}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  padding: theme.spacing.sm,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)',
+                  borderRadius: theme.borders.borderRadiusMd,
+                  border: `1px solid ${theme.colors.accentBlue}`,
+                  minWidth: '120px',
+                  cursor: 'pointer',
+                  transition: '0.3s',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                    boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                <Typography variant="body2" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}>
+                  {community.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
+                  {community.members ? community.members.length : 0} Members
+                </Typography>
+              </Box>
+            ))}
           </Box>
         )}
       </Box>

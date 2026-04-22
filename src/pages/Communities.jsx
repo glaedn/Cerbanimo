@@ -116,16 +116,13 @@ useEffect(() => {
 }, [communities]);
 
 return (
-    <Box className={`communities-container ${isMobile ? 'mobile-registry' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>
-        <Typography variant={isMobile ? "h4" : "h2"} className="community-page-title" sx={{ textAlign: 'center', mb: 4, fontFamily: 'Orbitron', color: '#00f3ff' }}>
-            {isMobile ? 'REALMS' : 'Discover Communities'}
-        </Typography>
+    <div className="communities-container">
+        <h1 className="community-page-title">DISCOVER COMMUNITIES</h1>
 
-        <Box className="search-bar-container" sx={{ width: isMobile ? '100%' : '80%', mb: 4 }}>
-            <TextField
-                fullWidth
-                variant="outlined"
-                size="small"
+        <div className="search-bar-container">
+            <input
+                className="search-input"
+                type="text"
                 placeholder="Search Realms..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -160,65 +157,38 @@ return (
             <Grid container spacing={2} component={motion.div} layout>
             {communities.length > 0 ? (
                 communities.map((community) => (
-                    <Grid
-                        item xs={12} sm={6} md={4} key={community.id}
-                        component={motion.div}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                    >
-                        <Paper className="community-card" sx={{
-                            p: 2,
-                            bgcolor: 'rgba(10, 10, 46, 0.8)',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '12px',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column'
-                        }}>
-                            <Typography variant="h5" className="community-title" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>
-                                {community.name}
-                            </Typography>
-                            <Typography variant="body2" className="community-description" sx={{ color: 'rgba(255,255,255,0.7)', mb: 2, flexGrow: 1 }}>
-                                {community.description}
-                            </Typography>
-
-                            <Box className="community-tags" sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {community.interest_tags && community.interest_tags.length > 0 ? (
-                                    community.interest_tags.map((tag, index) => (
-                                        <Chip key={index} label={tag} size="small" sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00f3ff', fontSize: '0.6rem' }} />
-                                    ))
-                                ) : (
-                                    <Typography variant="caption" sx={{ color: '#666' }}>No tags</Typography>
-                                )}
-                            </Box>
-
-                            <Box display="flex" justifyContent="space-between" alignItems="center">
-                                <Typography variant="caption" sx={{ color: '#888', fontFamily: 'Orbitron' }}>
-                                    {Array.isArray(community.members) ? community.members.length : 0} POPULATION
-                                </Typography>
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={() => navigate(`/communityhub/${community.id}`)}
-                                  sx={{ borderColor: '#00f3ff', color: '#00f3ff', height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}
-                                >
-                                  ENTER
-                                </Button>
-                            </Box>
-                        </Paper>
-                    </Grid>
-                  ))
-                ) : (
-                          <Grid item xs={12}>
-                            <Box className="no-communities-message" sx={{ padding: '20px', textAlign: 'center' }}>
-                              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No communities found. Try adjusting your search or create a new community.</Typography>
-                            </Box>
-                          </Grid>
+                    <div key={community.id} className="community-card">
+                        <h2 className="community-title">{community.name.toUpperCase()}</h2>
+                        <p className="community-description">{community.description}</p>
+                        <div className="community-tags">
+                            {community.interest_tags && community.interest_tags.length > 0 ? (
+                                community.interest_tags.map((tag, index) => (
+                                    <span key={index} className="tag-chip">{tag}</span>
+                                ))
+                            ) : (
+                                <span className="no-tags">No tags</span>
+                            )}
+                        </div>
+                        <div className="community-footer">
+                            <div className="community-stats">
+                                <span className="stat-number">{Array.isArray(community.members) ? community.members.length : 0}</span>
+                                <span className="stat-label">POPULATION</span>
+                            </div>
+                            <button
+                                className="join-button"
+                                onClick={() => navigate(`/communityhub/${community.id}`)}
+                            >
+                                ENTER
+                            </button>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                          <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
+                            <p>No communities found. Try adjusting your search or create a new community.</p>
+                          </div>
                         )}
-            </Grid>
-        </Box>
+                      </div>
 
                       <Box className="pagination-container" sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 4, mb: isMobile ? 4 : 0 }}>
                         <Button
