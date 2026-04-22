@@ -15,7 +15,7 @@ const PublicProfile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
-  const [services, setServices] = useState([]);
+  const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -74,25 +74,33 @@ const PublicProfile = () => {
         };
         
         setProfile(parsedProfile);
-
-        // Fetch advertised services
-        try {
-          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
-          console.log("Services fetched:", servicesResponse.data);
-          setServices(servicesResponse.data || []);
-        } catch (sErr) {
-          console.error("Error fetching services:", sErr);
-        }
         
-        // Fetch current user's profile to get their internal ID for purchasing
-        if (isAuthenticated) {
-            const token = await getToken();
+        // Fetch badges from rewards endpoint with auth token
+        const token = await getToken();
+        if (token) {
+          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          setBadges(badgesResponse.data.badges || []);
+        }
 
-            // Fetch badges from rewards endpoint with auth token
-            const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` }
+        // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
+        try {
+          const token = await getToken();
+          if (token) {
+            const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
             });
-            setBadges(badgesResponse.data.badges || []);
+            setCommunities(communitiesResponse.data || []);
+          }
+        } catch (commErr) {
+          console.error("Error fetching user communities:", commErr);
+          // Don't set global error, just leave communities empty
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -330,6 +338,23 @@ const PublicProfile = () => {
         {renderChips(profile.interests)}
       </div>
       
+      <Typography variant="h6" gutterBottom>
+        Realms:
+      </Typography>
+      <div className="badges-container">
+        {communities.length > 0 ? (
+          communities.map((community) => (
+            <div key={`community-${community.id}`} className="badge-item">
+               <Typography variant="body2" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+                  {community.name}
+               </Typography>
+            </div>
+          ))
+        ) : (
+          <Typography variant="body2">No realms joined yet</Typography>
+        )}
+      </div>
+
       <Typography variant="h6" gutterBottom>
         Badges:
       </Typography>
