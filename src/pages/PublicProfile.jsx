@@ -10,6 +10,7 @@ const PublicProfile = () => {
   const { userId } = useParams();
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
+  const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently } = useAuth0();
@@ -78,6 +79,22 @@ const PublicProfile = () => {
           });
           
           setBadges(badgesResponse.data.badges || []);
+        }
+
+        // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
+        try {
+          const token = await getToken();
+          if (token) {
+            const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            setCommunities(communitiesResponse.data || []);
+          }
+        } catch (commErr) {
+          console.error("Error fetching user communities:", commErr);
+          // Don't set global error, just leave communities empty
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -188,6 +205,23 @@ const PublicProfile = () => {
         {renderChips(profile.interests)}
       </div>
       
+      <Typography variant="h6" gutterBottom>
+        Realms:
+      </Typography>
+      <div className="badges-container">
+        {communities.length > 0 ? (
+          communities.map((community) => (
+            <div key={`community-${community.id}`} className="badge-item">
+               <Typography variant="body2" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+                  {community.name}
+               </Typography>
+            </div>
+          ))
+        ) : (
+          <Typography variant="body2">No realms joined yet</Typography>
+        )}
+      </div>
+
       <Typography variant="h6" gutterBottom>
         Badges:
       </Typography>

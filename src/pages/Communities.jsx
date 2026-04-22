@@ -113,13 +113,13 @@ useEffect(() => {
 
 return (
     <div className="communities-container">
-        <h1 className="community-page-title">Discover Communities</h1>
+        <h1 className="community-page-title">DISCOVER COMMUNITIES</h1>
 
         <div className="search-bar-container">
             <input
                 className="search-input"
                 type="text"
-                placeholder="Search Communities..."
+                placeholder="Search Realms..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
             />
@@ -135,8 +135,8 @@ return (
         <div className="community-list-wrapper">
             {communities.length > 0 ? (
                 communities.map((community) => (
-                    <div key={community.id} className="community-card" style={{ border: '1px solid #ccc', margin: '10px 0', padding: '15px' }}>
-                        <h2 className="community-title">{community.name}</h2>
+                    <div key={community.id} className="community-card">
+                        <h2 className="community-title">{community.name.toUpperCase()}</h2>
                         <p className="community-description">{community.description}</p>
                         <div className="community-tags">
                             {community.interest_tags && community.interest_tags.length > 0 ? (
@@ -147,22 +147,21 @@ return (
                                 <span className="no-tags">No tags</span>
                             )}
                         </div>
-                        <div className="community-stats">
-                            <span className="member-count">
-                                <i className="fas fa-users"></i> {Array.isArray(community.members) ? community.members.length : 0} members
-                            </span>
-                        </div>
-                        <div className="community-actions">
-                                <button
-                                  className="join-button"
-                                  onClick={() => navigate(`/communityhub/${community.id}`)}
-                                >
-                                  View Community
-                                </button>
-                              </div>
+                        <div className="community-footer">
+                            <div className="community-stats">
+                                <span className="stat-number">{Array.isArray(community.members) ? community.members.length : 0}</span>
+                                <span className="stat-label">POPULATION</span>
                             </div>
-                          ))
-                        ) : (
+                            <button
+                                className="join-button"
+                                onClick={() => navigate(`/communityhub/${community.id}`)}
+                            >
+                                ENTER
+                            </button>
+                        </div>
+                    </div>
+                ))
+            ) : (
                           <div className="no-communities-message" style={{ padding: '20px', textAlign: 'center' }}>
                             <p>No communities found. Try adjusting your search or create a new community.</p>
                           </div>
