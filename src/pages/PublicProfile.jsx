@@ -19,7 +19,6 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently } = useAuth0();
-  const navigate = useNavigate();
   // Centralized token retrieval method
   const getToken = async () => {
     try {
