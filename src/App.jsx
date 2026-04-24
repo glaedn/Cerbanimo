@@ -105,6 +105,24 @@ const AppContent = () => {
         <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f3ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
+          {/* Skill Constellation must be defined before /profile to avoid shadowing */}
+          <Route
+            path="/profile/skill-constellation/:userId"
+            element={
+              <PrivateRoute>
+                <PageWrapper><SkillConstellation /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile/skill-constellation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><SkillConstellation /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+
           {/* Public Routes */}
           <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
           <Route path="/waiting-list" element={<PageWrapper><WaitingListPage /></PageWrapper>} />
@@ -123,14 +141,6 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><MobileNotifications /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile/skill-constellation/:userId?"
-            element={
-              <PrivateRoute>
-                <PageWrapper><SkillConstellation /></PageWrapper>
               </PrivateRoute>
             }
           />
