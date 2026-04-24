@@ -292,6 +292,39 @@
   background: rgba(0,0,0,0.4);
 }
 
+.radial-ribbon {
+  position: relative;
+  height: 80px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ribbon-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+  translate: -50% -50%;
+
+  min-width: 140px;
+  text-align: center;
+  padding: 10px;
+
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00f3ff, #ff00ff);
+  color: black;
+
+  transition: all 0.3s ease;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 243, 255, 0.3);
+}
+
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   .edit-buttons {
