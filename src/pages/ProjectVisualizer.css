@@ -292,37 +292,38 @@
   background: rgba(0,0,0,0.4);
 }
 
-.radial-ribbon {
+.arc-carousel {
   position: relative;
-  height: 80px;
+  height: 120px;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  touch-action: pan-y;
   width: 100%;
 }
 
-.ribbon-item {
+.arc-item {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform-origin: center;
-  translate: -50% -50%;
+  top: 60%;
+  will-change: transform, opacity;
+  backdrop-filter: blur(2px);
 
   min-width: 140px;
   text-align: center;
-  padding: 10px;
+  padding: 10px 14px;
 
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #00f3ff, #ff00ff);
   color: black;
+  font-weight: 500;
 
-  transition: all 0.3s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease;
   cursor: pointer;
   white-space: nowrap;
-  font-weight: bold;
-  font-size: 14px;
-  box-shadow: 0 4px 15px rgba(0, 243, 255, 0.3);
+}
+
+.arc-item.active {
+  font-weight: 700;
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
 }
 
 /* Mobile Adjustments */
