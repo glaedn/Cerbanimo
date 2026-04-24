@@ -33,14 +33,27 @@ const ProjectVisualizer = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
+  const zoomTransformRef = useRef({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({
     width: 800,
     height: 600,
   });
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [activeSkillId, setActiveSkillId] = useState(null);
+  const [centerNodeId, setCenterNodeId] = useState(null);
+  const rotationRef = useRef(0);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!centerNodeId && tasks.length > 0) {
+      if (taskId) {
+        setCenterNodeId(parseInt(taskId, 10));
+      } else {
+        const root = tasks.find(t => t.dependencies.length === 0) || tasks[0];
+        if (root) setCenterNodeId(root.id);
+      }
+    }
+  }, [tasks, taskId, centerNodeId]);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -473,10 +486,10 @@ useEffect(() => {
   const MAX_EXTERNAL_DEPS = 3;
 
   // All tasks across all skills - used to find external dependencies
-  const allTasks = tasks.reduce((acc, task) => {
+  const allTasks = useMemo(() => tasks.reduce((acc, task) => {
     acc[task.id] = task;
     return acc;
-  }, {});
+  }, {}), [tasks]);
 
   const getNodeColor = (status) => {
     switch (status) {
@@ -530,9 +543,9 @@ useEffect(() => {
     return text.substring(0, maxLength) + "...";
   };
 
-  const usedSkills = skills.filter((skill) =>
+  const usedSkills = useMemo(() => skills.filter((skill) =>
     tasks.some((task) => task.skill_id === skill.id)
-  );
+  ), [skills, tasks]);
 
   // Handle mouse leave for the entire visualization container
   const handleMouseLeave = () => {
@@ -678,13 +691,10 @@ useEffect(() => {
     
     // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
-    const isMobileView = isMobile;
     // Exit early if no data
     if (data.length === 0) return;
 
     const { width, height } = svgDimensions;
-    const NODE_HORIZONTAL_SPACING = isMobileView ? 70 : 100;
-    const FIXED_LEVEL_HEIGHT = isMobileView ? 90 : 120;; // Fixed horizontal spacing between nodes
 
     d3.select(svgRef.current).selectAll("*").remove();
 
@@ -693,10 +703,13 @@ useEffect(() => {
       zoomRef.current = d3
         .zoom()
         .scaleExtent([0.3, 3])
-        .on("zoom", (event) => {
-          const { x, y, k } = event.transform;
-          setZoomTransform({ x, y, k });
-          mainGroup.attr("transform", event.transform);
+        .filter((event) => {
+          // On mobile, only allow zoom/pan if two or more fingers are used
+          // This leaves single-finger drag for rotation
+          if (isMobile && event.touches) {
+            return event.touches.length > 1;
+          }
+          return true;
         });
     }
 
@@ -705,24 +718,57 @@ useEffect(() => {
       .select(svgRef.current)
       .attr("width", width)
       .attr("height", height)
-      .call(zoomRef.current);
+      .call(zoomRef.current)
+      .style("touch-action", "none");
 
-    // Create a main group that will be transformed during zooming
-    const mainGroup = svg
-      .append("g")
-      .attr(
-        "transform",
-        `translate(${zoomTransform.x}, ${zoomTransform.y}) scale(${zoomTransform.k})`
-      );
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const RING_SPACING = isMobile ? 70 : 100;
+
+    // Create nested groups for zoom and rotation
+    const zoomGroup = svg.append("g").attr("class", "zoom-group");
+
+    const rotationGroup = zoomGroup.append("g")
+      .attr("class", "rotation-group")
+      .attr("transform", `translate(${centerX}, ${centerY}) rotate(${rotationRef.current * 57.3}) translate(${-centerX}, ${-centerY})`);
+
+    // Apply initial zoom transform
+    zoomGroup.attr("transform", `translate(${zoomTransformRef.current.x}, ${zoomTransformRef.current.y}) scale(${zoomTransformRef.current.k})`);
+
+    // Add rotation gesture
+    const drag = d3.drag()
+      .filter((event) => {
+        // On mobile, only allow rotation if a single finger is used
+        if (isMobile && event.touches) {
+          return event.touches.length === 1;
+        }
+        return true;
+      })
+      .on("drag", (event) => {
+        rotationRef.current += event.dx * 0.01;
+        rotationGroup.attr(
+          "transform",
+          `translate(${centerX}, ${centerY}) rotate(${rotationRef.current * 57.3}) translate(${-centerX}, ${-centerY})`
+        );
+      });
+
+    svg.call(drag);
 
     // Create separate groups for links and nodes to control layering
-    // Links should be drawn first (below nodes)
-    const linksGroup = mainGroup.append("g").attr("class", "links-group");
-    linksGroupRef.current = linksGroup; // Store the D3 selection
-    const nodesGroup = mainGroup.append("g").attr("class", "nodes-group");
-    const addButtonsGroup = mainGroup
+    const linksGroup = rotationGroup.append("g").attr("class", "links-group");
+    linksGroupRef.current = linksGroup;
+    const nodesGroup = rotationGroup.append("g").attr("class", "nodes-group");
+    const addButtonsGroup = rotationGroup
       .append("g")
       .attr("class", "add-buttons-group");
+
+    // Modify zoom behavior to target zoomGroup
+    if (zoomRef.current) {
+      zoomRef.current.on("zoom", (event) => {
+        zoomTransformRef.current = event.transform;
+        zoomGroup.attr("transform", event.transform);
+      });
+    }
 
     // Create a directed graph representation
     const graph = {};
@@ -760,48 +806,35 @@ useEffect(() => {
     })
     .map((node) => node.id);
 
-    // Perform topological sorting to assign levels
+    // BFS-based level assignment starting from centerNodeId
     const assignLevels = () => {
-      // Mark all root nodes as level 0
-      rootNodes.forEach((id) => {
-        graph[id].level = 0;
-      });
+      Object.values(graph).forEach(n => (n.level = -1));
 
-      let hasChanged = true;
+      const startNodeId = centerNodeId && graph[centerNodeId] ? centerNodeId : rootNodes[0];
+      if (!startNodeId) return;
 
-      // Continue until no more changes
-      while (hasChanged) {
-        hasChanged = false;
+      const root = graph[startNodeId];
+      root.level = 0;
+      let queue = [root];
 
-        // Check all nodes
-        Object.values(graph).forEach((node) => {
-          if (node.level === -1) {
-            // Check if all dependencies have levels assigned
-            const internalDeps = node.dependencies.filter(
-              (depId) => graph[depId]
-            );
-            const allDepsAssigned = internalDeps.every(
-              (depId) => graph[depId].level !== -1
-            );
+      while (queue.length > 0) {
+        const current = queue.shift();
 
-            if (allDepsAssigned) {
-              // Find maximum level of dependencies and add 1
-              const maxDepLevel = Math.max(
-                ...internalDeps.map((depId) => graph[depId].level),
-                -1
-              );
-              node.level = maxDepLevel + 1;
-              hasChanged = true;
-            }
+        // Combine dependencies and children for full traversal
+        const neighbors = [...current.dependencies, ...current.children];
+
+        neighbors.forEach(neighborId => {
+          const neighbor = graph[neighborId];
+          if (neighbor && neighbor.level === -1) {
+            neighbor.level = current.level + 1;
+            queue.push(neighbor);
           }
         });
       }
 
-      // Handle any remaining nodes (possible circular dependencies)
-      Object.values(graph).forEach((node) => {
-        if (node.level === -1) {
-          node.level = 0; // Assign to root level as fallback
-        }
+      // Fallback for disconnected nodes
+      Object.values(graph).forEach(node => {
+        if (node.level === -1) node.level = 2; // Default to outer ring
       });
     };
 
@@ -817,18 +850,15 @@ useEffect(() => {
       levels[i] = Object.values(graph).filter((node) => node.level === i);
     }
 
-    // Calculate positions with fixed level height
-    // For each level, calculate horizontal positions
+    // Position nodes radially
     levels.forEach((levelNodes, levelIndex) => {
-      // Calculate the total width of nodes in this level
-      const levelWidth = NODE_HORIZONTAL_SPACING * (levelNodes.length - 1);
+      const radius = RING_SPACING * levelIndex;
+      const angleStep = (2 * Math.PI) / levelNodes.length;
 
-      // Start X is based on centering just this level — starting from 0
-      const startX = 200 - levelWidth / 2;
-
-      levelNodes.forEach((node, nodeIndex) => {
-        node.x = startX + NODE_HORIZONTAL_SPACING * nodeIndex;
-        node.y = FIXED_LEVEL_HEIGHT * (levelIndex + 0.5);
+      levelNodes.forEach((node, i) => {
+        const angle = i * angleStep;
+        node.x = centerX + radius * Math.cos(angle);
+        node.y = centerY + radius * Math.sin(angle);
       });
     });
 
@@ -889,11 +919,10 @@ const linkElements = linksGroup
   .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
   .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
   .attr("d", (d) => {
-    return `M${d.source.x},${d.source.y} C${d.source.x},${
-      (d.source.y + d.target.y) / 2
-    } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
-      d.target.y
-    }`;
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+    return `M${d.source.x},${d.source.y} A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
   });
 
 // 3. Now go through and update the colors for completed tasks directly
@@ -1070,7 +1099,8 @@ links.forEach(link => {
       .on("mouseover", handleMouseOver)
       .on("mouseout", handleMouseOut)
       .on("click", function (event, d) {
-        event.stopPropagation(); // Prevent event bubbling
+        event.stopPropagation();
+        setCenterNodeId(d.id);
         if (isEditMode) {
           handleEditTask(d);
         } else {
@@ -1079,10 +1109,17 @@ links.forEach(link => {
       });
     nodeGroups
       .append("circle")
-      .attr("r", 15)
+      .attr("r", isMobile ? 18 : 15)
       .attr("fill", (d) => getNodeFill(d.status))
       .attr("stroke", (d) => getNodeStroke(d.status))
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
+      .on("touchstart", function () {
+        d3.select(this).transition().attr("r", 22);
+      })
+      .on("touchend", function () {
+        d3.select(this).transition().attr("r", isMobile ? 18 : 15);
+      });
 
     nodeGroups
       .append("text")
@@ -1143,9 +1180,9 @@ links.forEach(link => {
     allTasks,
     skills,
     isEditMode,
-    zoomTransform,
     svgDimensions,
     tasks,
+    centerNodeId
   ]);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
@@ -1195,10 +1232,6 @@ links.forEach(link => {
   if (isMobile) {
   const isProjectCreator = project?.creator_id === Number(userId);
 
-  const usedSkills = skills.filter((skill) =>
-    tasks.some((task) => task.skill_id === skill.id)
-  );
-
   const categories = ["All Tasks", ...usedSkills.map(s => s.name)];
 
   const currentCategory = categories[skillIndex] || "All Tasks";
@@ -1245,12 +1278,49 @@ links.forEach(link => {
       </Box>
 
       {/* GRAPH */}
-      <svg
-        ref={svgRef}
-        width="100%"
-        height="500"
-        className="mobile-graph"
-      />
+      <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000' }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height="100%"
+          className="mobile-graph"
+        />
+        {isProjectCreator && (
+          <Box sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <IconButton
+              sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
+              onClick={() => setIsEditMode(!isEditMode)}
+            >
+              <EditIcon />
+            </IconButton>
+            <IconButton
+              sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
+              onClick={() => setShowServiceModal(true)}
+            >
+              <ShoppingCartIcon />
+            </IconButton>
+            {project?.community_id === null && (
+              <IconButton
+                sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
+                onClick={() => {
+                  fetchUserCommunities();
+                  setShowCommunityProposalPopup(true);
+                }}
+              >
+                <GroupIcon />
+              </IconButton>
+            )}
+            {isEditMode && (
+              <IconButton
+                sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' } }}
+                onClick={() => handleAddTask()}
+              >
+                <AddIcon />
+              </IconButton>
+            )}
+          </Box>
+        )}
+      </Box>
 
     </Box>
   );
