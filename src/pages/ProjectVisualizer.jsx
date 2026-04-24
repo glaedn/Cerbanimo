@@ -58,6 +58,9 @@ const ProjectVisualizer = () => {
   const linksGroupRef = useRef(null);
   // Check if any task is active, completed, or urgent
   const [projectIsActive, setProjectIsActive] = useState(false);
+  const [communityIndex, setCommunityIndex] = useState(0);
+  const [projectIndex, setProjectIndex] = useState(0);
+  const [skillIndex, setSkillIndex] = useState(0);
 
   useEffect(() => {
     setProjectIsActive(
@@ -675,12 +678,13 @@ useEffect(() => {
     
     // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
-    
+    const isMobileView = isMobile;
     // Exit early if no data
     if (data.length === 0) return;
 
     const { width, height } = svgDimensions;
-    const NODE_HORIZONTAL_SPACING = 100; // Fixed horizontal spacing between nodes
+    const NODE_HORIZONTAL_SPACING = isMobileView ? 70 : 100;
+    const FIXED_LEVEL_HEIGHT = isMobileView ? 90 : 120;; // Fixed horizontal spacing between nodes
 
     d3.select(svgRef.current).selectAll("*").remove();
 
@@ -1189,173 +1193,68 @@ links.forEach(link => {
   // Add these debug logs right before the TaskEditor component in the return statement
 
   if (isMobile) {
-    const isProjectCreator = project?.creator_id === Number(userId);
+  const isProjectCreator = project?.creator_id === Number(userId);
 
-    return (
-      <Box className="skill-hierarchy-container" sx={{ pb: 8 }} ref={containerRef}>
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
-             {project?.name}
-          </Typography>
-          {isProjectCreator && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton
-                onClick={() => setIsEditMode(!isEditMode)}
-                sx={{ color: isEditMode ? '#ff5ca2' : '#00F3FF' }}
-              >
-                <EditIcon />
-              </IconButton>
-              {isEditMode && (
-                <IconButton
-                  onClick={() => setIsProjectSettingsOpen(true)}
-                  sx={{ color: '#00F3FF' }}
-                >
-                  <SettingsIcon />
-                </IconButton>
-              )}
-              {isEditMode && (
-                <IconButton
-                  onClick={() => setShowServiceModal(true)}
-                  sx={{ color: '#00F3FF' }}
-                >
-                  <ShoppingCartIcon />
-                </IconButton>
-              )}
-              {isEditMode && project?.community_id === null && (
-                <IconButton
-                  onClick={() => {
-                    fetchUserCommunities();
-                    setShowCommunityProposalPopup(true);
-                  }}
-                  sx={{ color: '#ff00ff' }}
-                >
-                  <GroupIcon />
-                </IconButton>
-              )}
-            </Box>
-          )}
-        </Box>
+  const usedSkills = skills.filter((skill) =>
+    tasks.some((task) => task.skill_id === skill.id)
+  );
 
-        {isEditMode && isProjectCreator && (
-          <Box sx={{ px: 2, mb: 2 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => handleAddTask()}
-              sx={{
-                color: '#FFA500',
-                borderColor: '#FFA500',
-                fontFamily: 'Orbitron',
-                '&:hover': { borderColor: '#FF8C00', bgcolor: 'rgba(255, 165, 0, 0.1)' }
-              }}
-            >
-              NEW_TASK
-            </Button>
-          </Box>
-        )}
+  const categories = ["All Tasks", ...usedSkills.map(s => s.name)];
 
-        <DependencyListView
-          tasks={tasks}
-          projectId={projectId}
-          isEditMode={isEditMode && isProjectCreator}
-          onAddTask={handleAddTask}
-        />
+  const currentCategory = categories[skillIndex] || "All Tasks";
 
-        <ProjectSettingsModal
-          open={isProjectSettingsOpen}
-          onClose={() => setIsProjectSettingsOpen(false)}
-          project={project}
-          onSave={handleUpdateProject}
-          interestsPool={interests}
-        />
+  const visibleTasks = categorizedTasks[currentCategory] || [];
 
-        <ServiceSettingsModal
-          open={showServiceModal}
-          onClose={() => setShowServiceModal(false)}
-          project={project}
-          onUpdate={(updates) => updateProject(updates)}
-          userId={userId}
-        />
-
-        <Modal
-          open={showCommunityProposalPopup}
-          onClose={() => setShowCommunityProposalPopup(false)}
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div className={`cyber-modal ${isMobile ? 'full-screen-modal' : ''}`} style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none' }}>
-            <div className="cyber-border">
-              <h3 className="cyber-title">Submit to Community</h3>
-              <div className="cyber-content">
-                <p>Select a community to submit this project to:</p>
-
-                <Autocomplete
-                  options={userCommunities}
-                  getOptionLabel={(option) => option.name}
-                  onChange={(event, newValue) => setSelectedCommunity(newValue)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Select Community"
-                      variant="outlined"
-                      fullWidth
-                      className="cyber-input"
-                    />
-                  )}
-                  sx={{
-                    margin: '20px 0',
-                    '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
-                    '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
-                  }}
-                />
-
-                <div className="cyber-button-group">
-                  <button
-                    onClick={() => setShowCommunityProposalPopup(false)}
-                    className="cyber-button cancel"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitCommunityProposal}
-                    className="community-proposal-button"
-                    disabled={!selectedCommunity}
-                  >
-                    Submit Proposal
-                  </button>
-                </div>
-              </div>
-            </div>
+  return (
+    <Box className="mobile-visualizer" ref={containerRef}>
+      
+      {/* COMMUNITY CYLINDER */}
+      <Box className="cylinder">
+        {userCommunities.map((c, i) => (
+          <div
+            key={c.id}
+            className={`cylinder-item ${i === communityIndex ? "active" : ""}`}
+            onClick={() => setCommunityIndex(i)}
+          >
+            {c.name}
           </div>
-        </Modal>
-
-        {/* Task Editor for creation/editing still needed maybe? */}
-        <TaskEditor
-            open={showTaskPopup}
-            onClose={() => {
-              setShowTaskPopup(false);
-              refreshTasks();
-            }}
-            projectId={projectId}
-            taskForm={taskForm}
-            setTaskForm={setTaskForm}
-            onSubmit={async (formData) => {
-              const action = formData.id ? 'update' : 'create';
-              const result = await handleTaskAction(formData, action);
-              if (!result.error) {
-                await refreshTasks();
-              }
-              return result;
-            }}
-            skills={skills}
-            isEdit={isEditMode}
-            currentUser={user}
-            projectCreatorId={project?.creator_id}
-            isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
-          />
+        ))}
       </Box>
-    );
-  }
+
+      {/* PROJECT CYLINDER */}
+      <Box className="cylinder">
+        <div className="cylinder-item">Project Z</div>
+        <div className="cylinder-item active">{project?.name}</div>
+        <div className="cylinder-item">Project B</div>
+      </Box>
+
+      {/* SKILL CYLINDER */}
+      <Box className="cylinder">
+        {categories.map((cat, i) => (
+          <div
+            key={cat}
+            className={`cylinder-item ${i === skillIndex ? "active" : ""}`}
+            onClick={() => {
+              setSkillIndex(i);
+              setActiveCategory(cat);
+            }}
+          >
+            {cat}
+          </div>
+        ))}
+      </Box>
+
+      {/* GRAPH */}
+      <svg
+        ref={svgRef}
+        width="100%"
+        height="500"
+        className="mobile-graph"
+      />
+
+    </Box>
+  );
+}
 
   return (
     <div
