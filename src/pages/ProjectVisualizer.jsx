@@ -24,8 +24,9 @@ const ArcCarousel = ({
   items,
   activeIndex,
   setActiveIndex,
-  radius = 140,
-  angleStep = 0.5,
+  radiusX = 160,
+  radiusY = 40,
+  angleStep = 0.45,
   visibleCount = 7,
   snapDuration = 220,
 }) => {
@@ -60,9 +61,15 @@ const ArcCarousel = ({
 
   const getWindow = () => {
     if (N === 0) return [];
+    if (isSingle) return [0];
     const center = Math.round(posRef.current);
     const arr = [];
-    for (let k = -half; k <= half; k++) {
+    // If N is small, we might want to show all items.
+    // If N is large, we show a window.
+    const count = Math.min(N, visibleCount);
+    const h = Math.floor(count / 2);
+
+    for (let k = -h; k <= h; k++) {
       arr.push(mod(center + k));
     }
     return arr;
@@ -161,48 +168,66 @@ const ArcCarousel = ({
   const windowIdx = getWindow();
 
   return (
-    <div
-      className="arc-carousel"
-      onMouseDown={onDown}
-      onMouseMove={onMove}
-      onMouseUp={onUp}
-      onMouseLeave={onUp}
-      onTouchStart={onDown}
-      onTouchMove={onMove}
-      onTouchEnd={onUp}
-      style={{
-        pointerEvents: isSingle ? "none" : "auto",
-        opacity: isSingle ? 0.5 : 1,
-      }}
-    >
-      {windowIdx.map((realIndex, i) => {
-        const offset = realIndex - posRef.current;
-        let o = offset;
-        if (o > N / 2) o -= N;
-        if (o < -N / 2) o += N;
-        const baseAngle = Math.PI / 2;
-        const angle = baseAngle + o * angleStep;
-        const x = radius * Math.cos(angle);
-        const y = radius * Math.sin(angle);
-        const scale = Math.max(0.6, Math.cos(angle));
-        const opacity = Math.max(0.25, Math.cos(angle));
-        const item = items[realIndex];
-
-        return (
-          <div
-            key={`${realIndex}-${i}`}
-            className={`arc-item ${Math.round(posRef.current) === realIndex ? "active" : ""}`}
-            style={{
-              transform: `translate(-50%, -50%) translateX(${x}px) translateY(${y}px) scale(${scale})`,
-              opacity,
-              zIndex: 100 - Math.abs(o),
-            }}
-            onClick={() => animateTo(realIndex)}
-          >
-            {item?.name || item}
+    <div className="arc-carousel-perspective">
+      <div
+        className="arc-carousel"
+        onMouseDown={onDown}
+        onMouseMove={onMove}
+        onMouseUp={onUp}
+        onMouseLeave={onUp}
+        onTouchStart={onDown}
+        onTouchMove={onMove}
+        onTouchEnd={onUp}
+        style={{
+          pointerEvents: isSingle ? "none" : "auto",
+          opacity: isSingle && N > 0 ? 0.7 : 1,
+        }}
+      >
+        {N === 0 && (
+          <div className="arc-item active" style={{ transform: 'translate(-50%, -50%)', opacity: 0.5 }}>
+            EMPTY_RING
           </div>
-        );
-      })}
+        )}
+        {windowIdx.map((realIndex, i) => {
+          // Robust shortest-path offset calculation
+          let o = 0;
+          if (N > 0) {
+            o = ((realIndex - posRef.current + N / 2) % N + N) % N - N / 2;
+          }
+
+          const baseAngle = Math.PI / 2;
+          const angle = baseAngle + o * angleStep;
+
+          // Tight oval geometry
+          const x = radiusX * Math.cos(angle);
+          const y = radiusY * Math.sin(angle);
+
+          // 3D Ribbon effect: scaling and opacity based on sine (Z-depth)
+          // Front is sin(angle) close to 1
+          const zDepth = Math.sin(angle);
+          const scale = 0.8 + (zDepth * 0.4);
+          const opacity = 0.3 + (zDepth * 0.7);
+          const rotateX = -10 + (zDepth * 15);
+
+          const item = items[realIndex];
+
+          return (
+            <div
+              key={`${realIndex}-${i}`}
+              className={`arc-item ${Math.round(posRef.current) === realIndex ? "active" : ""}`}
+              style={{
+                transform: `translate(-50%, -50%) translate3d(${x}px, ${y}px, 0) scale(${scale}) rotateX(${rotateX}deg)`,
+                opacity,
+                zIndex: Math.round(zDepth * 100) + 100,
+                pointerEvents: zDepth > 0 ? 'auto' : 'none',
+              }}
+              onClick={() => animateTo(realIndex)}
+            >
+              {item?.name || item}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -417,6 +442,13 @@ const ProjectVisualizer = () => {
     }
   }, [projectId, project, allProjects, userCommunities]);
 
+  // Reset skill index when project or category changes externally
+  useEffect(() => {
+    setSkillIndex(0);
+    setActiveCategory("All Tasks");
+    setActiveSkillId(null);
+  }, [projectId]);
+
   useEffect(() => {
     if (hoveredNode && tooltipRef.current) {
       const { width: tw, height: th } = tooltipRef.current.getBoundingClientRect();
@@ -481,7 +513,7 @@ const ProjectVisualizer = () => {
     assignLevels();
     const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
     for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
-    const hsp = isMobile ? 80 : 100, vsp = isMobile ? 100 : 120;
+    const hsp = isMobile ? 85 : 100, vsp = isMobile ? 110 : 120;
     lvls.forEach((lns, li) => {
       const y = li * vsp + 80, tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
       lns.forEach((n, i) => { n.x = sx + i * hsp; n.y = y; });
@@ -521,7 +553,7 @@ const ProjectVisualizer = () => {
       .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
       .on("touchstart", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 24 : 20); })
       .on("touchend", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 18 : 15); });
-    nGroups.append("text").attr("dy", isMobile ? 32 : 25).attr("text-anchor", "middle").text(d => truncateText(d.name, isMobile ? 10 : 13)).attr("font-size", isMobile ? "11px" : "10px").attr("font-weight", isMobile ? "600" : "400").style("fill", "#fff").style("text-shadow", "0 0 4px #000");
+    nGroups.append("text").attr("dy", isMobile ? 36 : 25).attr("text-anchor", "middle").text(d => truncateText(d.name, isMobile ? 11 : 13)).attr("font-size", isMobile ? "11px" : "10px").attr("font-weight", isMobile ? "600" : "400").style("fill", "#fff").style("text-shadow", "0 0 4px #000");
     nGroups.append("text").attr("dy", 4).attr("text-anchor", "middle").text(d => d.status === "completed" ? "✓" : (d.status.includes("urgent") ? "!" : (d.status.includes("unassigned") ? "+" : "")))
       .attr("font-size", "12px").attr("fill", d => d.status.includes("unassigned") ? "#000000" : "#FFFFFF");
     if (isEditMode) {
@@ -561,22 +593,22 @@ const ProjectVisualizer = () => {
 
   const skillOptions = useMemo(() => [
     { name: "All Tasks" },
-    ...usedSkills.map(s => ({ id: s.id, name: s.name }))
+    ...(usedSkills.length > 0 ? usedSkills.map(s => ({ id: s.id, name: s.name })) : [])
   ], [usedSkills]);
 
   return (
     <div className={isMobile ? "mobile-visualizer" : "skill-hierarchy-container"} ref={containerRef} onMouseLeave={handleMouseLeave}>
       {isMobile ? (
         <>
-          <ArcCarousel items={userCommunities.length > 0 ? userCommunities : [{ name: "General" }]} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
-          <ArcCarousel items={filteredProjects.length > 0 ? filteredProjects : [{ name: "No Projects Found" }]} activeIndex={projectIndex} setActiveIndex={idx => {
+          <ArcCarousel items={userCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
+          <ArcCarousel items={filteredProjects} activeIndex={projectIndex} setActiveIndex={idx => {
             const sel = filteredProjects[idx];
             if (sel && sel.id !== Number(projectId)) {
               setProjectIndex(idx);
               navigate(`/Visualizer/${sel.id}`);
             }
           }} />
-          <ArcCarousel items={skillOptions.length > 0 ? skillOptions : [{ name: "No Skills" }]} activeIndex={skillIndex} setActiveIndex={idx => {
+          <ArcCarousel items={skillOptions} activeIndex={skillIndex} setActiveIndex={idx => {
             setSkillIndex(idx);
             const cat = skillOptions[idx];
             if (cat) {
