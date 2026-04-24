@@ -69,6 +69,7 @@ const useUserProjects = (userId) => {
               return {
                 id: proj.id,
                 name: proj.name,
+                community_id: proj.community_id,
                 description: proj.description || '',
                 taskCount,
                 activeTasks,
@@ -82,6 +83,7 @@ const useUserProjects = (userId) => {
               return {
                 id: proj.id,
                 name: proj.name,
+                community_id: proj.community_id,
                 description: proj.description || '',
                 taskCount: 0, activeTasks: 0, completedTasks: 0, progress: 0, xpGained: 'N/A', errorFetchingTasks: true
               };
