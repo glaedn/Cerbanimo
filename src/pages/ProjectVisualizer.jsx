@@ -172,7 +172,7 @@ const ArcCarousel = ({
       onTouchEnd={onUp}
       style={{
         pointerEvents: isSingle ? "none" : "auto",
-        opacity: isSingle ? 0.6 : 1,
+        opacity: isSingle ? 0.5 : 1,
       }}
     >
       {windowIdx.map((realIndex, i) => {
@@ -180,9 +180,10 @@ const ArcCarousel = ({
         let o = offset;
         if (o > N / 2) o -= N;
         if (o < -N / 2) o += N;
-        const angle = o * angleStep;
-        const x = radius * Math.sin(angle);
-        const y = radius * (1 - Math.cos(angle));
+        const baseAngle = Math.PI / 2;
+        const angle = baseAngle + o * angleStep;
+        const x = radius * Math.cos(angle);
+        const y = radius * Math.sin(angle);
         const scale = Math.max(0.6, Math.cos(angle));
         const opacity = Math.max(0.25, Math.cos(angle));
         const item = items[realIndex];
@@ -405,6 +406,18 @@ const ProjectVisualizer = () => {
   useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [skills, tasks]);
 
   useEffect(() => {
+    if (project && allProjects.length > 0) {
+      const commIdx = userCommunities.findIndex(c => c.id === project.community_id);
+      if (commIdx !== -1) setCommunityIndex(commIdx);
+
+      const sc = userCommunities[commIdx] || { id: project.community_id };
+      const cp = allProjects.filter(p => p.community_id === sc.id);
+      const pIdx = cp.findIndex(p => p.id === Number(projectId));
+      if (pIdx !== -1) setProjectIndex(pIdx);
+    }
+  }, [projectId, project, allProjects, userCommunities]);
+
+  useEffect(() => {
     if (hoveredNode && tooltipRef.current) {
       const { width: tw, height: th } = tooltipRef.current.getBoundingClientRect();
       const sw = window.innerWidth, sh = window.innerHeight, off = 20;
@@ -468,9 +481,9 @@ const ProjectVisualizer = () => {
     assignLevels();
     const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
     for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
-    const hsp = isMobile ? 70 : 100, vsp = isMobile ? 90 : 120;
+    const hsp = isMobile ? 80 : 100, vsp = isMobile ? 100 : 120;
     lvls.forEach((lns, li) => {
-      const y = li * vsp + 60, tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
+      const y = li * vsp + 80, tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
       lns.forEach((n, i) => { n.x = sx + i * hsp; n.y = y; });
     });
     const lnks = []; let lid = 0;
@@ -500,12 +513,15 @@ const ProjectVisualizer = () => {
       });
     }
     const nGroups = nodesGroup.selectAll(".node").data(Object.values(graph)).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
-      .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => { e.stopPropagation(); navigate(`/tasks/${d.id}`); });
+      .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => {
+        e.stopPropagation();
+        navigate(`/tasks/${d.id}`);
+      });
     nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => getNodeFill(d.status)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
       .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
-      .on("touchstart", function() { d3.select(this).transition().attr("r", 22); })
-      .on("touchend", function() { d3.select(this).transition().attr("r", isMobile ? 18 : 15); });
-    nGroups.append("text").attr("dy", 25).attr("text-anchor", "middle").text(d => truncateText(d.name)).attr("font-size", "10px");
+      .on("touchstart", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 24 : 20); })
+      .on("touchend", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 18 : 15); });
+    nGroups.append("text").attr("dy", isMobile ? 32 : 25).attr("text-anchor", "middle").text(d => truncateText(d.name, isMobile ? 10 : 13)).attr("font-size", isMobile ? "11px" : "10px").attr("font-weight", isMobile ? "600" : "400").style("fill", "#fff").style("text-shadow", "0 0 4px #000");
     nGroups.append("text").attr("dy", 4).attr("text-anchor", "middle").text(d => d.status === "completed" ? "✓" : (d.status.includes("urgent") ? "!" : (d.status.includes("unassigned") ? "+" : "")))
       .attr("font-size", "12px").attr("fill", d => d.status.includes("unassigned") ? "#000000" : "#FFFFFF");
     if (isEditMode) {
@@ -536,22 +552,37 @@ const ProjectVisualizer = () => {
   const isProjectCreator = project?.creator_id === Number(userId);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
+  const filteredProjects = useMemo(() => {
+    const sc = userCommunities[communityIndex];
+    if (!sc) return project ? [project] : [];
+    const cp = allProjects.filter(p => p.community_id === sc.id);
+    return cp.length > 0 ? cp : (project ? [project] : []);
+  }, [userCommunities, communityIndex, allProjects, project]);
+
+  const skillOptions = useMemo(() => [
+    { name: "All Tasks" },
+    ...usedSkills.map(s => ({ id: s.id, name: s.name }))
+  ], [usedSkills]);
+
   return (
     <div className={isMobile ? "mobile-visualizer" : "skill-hierarchy-container"} ref={containerRef} onMouseLeave={handleMouseLeave}>
       {isMobile ? (
         <>
           <ArcCarousel items={userCommunities.length > 0 ? userCommunities : [{ name: "General" }]} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
-          <ArcCarousel items={(() => {
-            const sc = userCommunities[communityIndex];
-            const cp = allProjects.filter(p => p.community_id === sc?.id);
-            return cp.length > 0 ? cp : (project ? [project] : [{ name: "No Projects" }]);
-          })()} activeIndex={projectIndex} setActiveIndex={idx => {
-            const sc = userCommunities[communityIndex], cp = allProjects.filter(p => p.community_id === sc?.id), sel = cp[idx];
-            if (sel) { setProjectIndex(idx); navigate(`/Visualizer/${sel.id}`); }
+          <ArcCarousel items={filteredProjects.length > 0 ? filteredProjects : [{ name: "No Projects Found" }]} activeIndex={projectIndex} setActiveIndex={idx => {
+            const sel = filteredProjects[idx];
+            if (sel && sel.id !== Number(projectId)) {
+              setProjectIndex(idx);
+              navigate(`/Visualizer/${sel.id}`);
+            }
           }} />
-          <ArcCarousel items={[{ name: "All Tasks" }, ...usedSkills.map(s => ({ id: s.id, name: s.name }))]} activeIndex={skillIndex} setActiveIndex={idx => {
-            setSkillIndex(idx); const cats = [{ name: "All Tasks" }, ...usedSkills.map(s => ({ id: s.id, name: s.name }))], cat = cats[idx];
-            setActiveCategory(cat.name); setActiveSkillId(cat.id || null);
+          <ArcCarousel items={skillOptions.length > 0 ? skillOptions : [{ name: "No Skills" }]} activeIndex={skillIndex} setActiveIndex={idx => {
+            setSkillIndex(idx);
+            const cat = skillOptions[idx];
+            if (cat) {
+              setActiveCategory(cat.name);
+              setActiveSkillId(cat.id || null);
+            }
           }} />
           <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
             <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />

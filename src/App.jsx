@@ -115,6 +115,14 @@ const AppContent = () => {
             }
           />
           <Route
+            path="/tasks/:taskId"
+            element={
+              <PrivateRoute>
+                <PageWrapper>{isMobile ? <MobileTaskDetail /> : <TaskBrowser />}</PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/profile/skill-constellation"
             element={
               <PrivateRoute>

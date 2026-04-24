@@ -140,7 +140,7 @@ app.use('/profile', (req, res, next) => {
 }, profileRoutes);
 
 app.use('/tasks', (req, res, next) => {
-  if (req.path.match(/^\/\d+$/)) return next();
+  if (/^\/\d+\/?$/.test(req.path)) return next();
   return jwtCheck(req, res, next);
 }, taskRoutes);
 
