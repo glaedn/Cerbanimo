@@ -327,7 +327,7 @@ async function initializeDatabase() {
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {
     console.error('Error initializing roadmap database tables:', error);
-    process.exit(1); // Exit if essential tables can't be set up
+    throw error; // Rethrow so .catch handles it by starting in degraded mode
   }
 }
 
@@ -365,15 +365,17 @@ initializeDatabase().then(async () => {
     console.log('Initial intelligence scoring complete.');
 
   } catch (syncError) {
-    console.error('Failed to sync or perform initial scoring:', syncError);
+    console.warn('Post-initialization sync/scoring partially failed (likely DB connection):', syncError.message);
   }
 
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }).catch(error => {
-  // This catch is for errors during the initializeDatabase() promise itself,
-  // though process.exit(1) inside initializeDatabase should already terminate.
-  console.error('Failed to initialize database, server not started:', error);
-  process.exit(1);
+  console.error('CRITICAL: Database initialization failed. Starting server in degraded mode.');
+  console.error(error);
+  // Still start the server so the frontend doesn't get ERR_CONNECTION_REFUSED
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (DEGRADED MODE - DB UNREACHABLE)`);
+  });
 });

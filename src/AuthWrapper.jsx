@@ -15,6 +15,7 @@ const AuthWrapper = ({ children }) => {
 
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(null);
   const [initialSaveDone, setInitialSaveDone] = useState(false);
 
   useEffect(() => {
@@ -56,12 +57,15 @@ const AuthWrapper = ({ children }) => {
             setInitialSaveDone(true); // Mark as done
           } catch (error) {
             console.error("Error saving user to database:", error);
-            // Decide if this is critical. For now, we'll try to fetch profile anyway.
+          setProfileError(error);
+          setProfileLoading(false);
+          return;
           }
         }
 
         // 2. Fetch user profile for onboarding check
         setProfileLoading(true);
+        setProfileError(null);
         try {
           console.log("Fetching profile for onboarding check:", user.sub);
           const profileResponse = await axios.get(
@@ -82,6 +86,7 @@ const AuthWrapper = ({ children }) => {
           );
         } catch (error) {
           console.error("Error fetching profile for onboarding check:", error);
+          setProfileError(error);
           setProfileData(null); // Ensure profileData is null on error
         } finally {
           setProfileLoading(false);
@@ -127,7 +132,7 @@ const AuthWrapper = ({ children }) => {
     // 2. User is authenticated.
     // 3. Profile data has been fetched (even if it's null, means fetch attempt completed).
     // 4. Current path is not already '/onboarding'.
-    if (!auth0Loading && !profileLoading && isAuthenticated) {
+    if (!auth0Loading && !profileLoading && isAuthenticated && !profileError) {
       // Alpha check: If user is not alpha and not already on waiting list, redirect.
       if (profileData && profileData.alpha === false && location.pathname !== "/waiting-list") {
         console.log("User is not alpha. Redirecting to /waiting-list. Profile:", profileData);
