@@ -359,6 +359,7 @@ const ProjectVisualizer = () => {
 
   const handleMouseDown = (e) => { setIsDragging(true); setStartX(e.pageX - tabsContainerRef.current.offsetLeft); setScrollLeft(tabsContainerRef.current.scrollLeft); };
   const handleTabsLeave = () => setIsDragging(false);
+  const handleMouseLeave = () => { hoverIntentRef.current = setTimeout(() => { if (!tooltipRef.current?.matches(":hover")) setHoveredNode(null); }, 200); };
   const handleMouseUp = () => setIsDragging(false);
   const handleMouseOver = (event, d) => {
     clearTimeout(hoverIntentRef.current);
