@@ -75,35 +75,31 @@ const PublicProfile = () => {
         
         setProfile(parsedProfile);
         
-        // Fetch badges from rewards endpoint with auth token
-        const token = await getToken();
-        if (token) {
-          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
+        // Fetch badges and communities only if authenticated
+        if (isAuthenticated) {
+          try {
+            const token = await getToken();
+            if (token) {
+              const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              });
+              setBadges(badgesResponse.data.badges || []);
+
+              const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              });
+              setCommunities(communitiesResponse.data || []);
             }
-          });
-          
-          setBadges(badgesResponse.data.badges || []);
-        }
-
-        // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
-        try {
-          const token = await getToken();
-          if (token) {
-            const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            });
-            setCommunities(communitiesResponse.data || []);
+          } catch (authReqErr) {
+            console.error("Error fetching authenticated profile data:", authReqErr);
           }
-        } catch (commErr) {
-          console.error("Error fetching user communities:", commErr);
-          // Don't set global error, just leave communities empty
         }
 
-        // Fetch services offered by this user
+        // Fetch services offered by this user (publicly available)
         try {
           const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
           setServices(servicesResponse.data || []);
