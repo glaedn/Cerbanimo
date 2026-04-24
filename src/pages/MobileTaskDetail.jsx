@@ -596,7 +596,7 @@ const MobileTaskDetail = () => {
                   return (
                     <>
                       <Button fullWidth disabled className="cyber-btn completed">MISSION_COMPLETED</Button>
-                      <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                      <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${task.project_id}`)}>VIEW_PROJECT</Button>
                     </>
                   );
                 }
@@ -604,7 +604,7 @@ const MobileTaskDetail = () => {
                   <>
                     <Button fullWidth className="cyber-btn primary" onClick={() => setIsSubmissionModalOpen(true)}>SUBMIT_PROOF</Button>
                     <Button className="cyber-btn secondary" onClick={() => handleAction('drop')}>DROP</Button>
-                    <Button className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                    <Button className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${task.project_id}`)}>VIEW_PROJECT</Button>
                   </>
                 );
               }
@@ -624,7 +624,7 @@ const MobileTaskDetail = () => {
                     <Button
                       fullWidth
                       className="cyber-btn secondary"
-                      onClick={() => navigate(`/Visualizer/${projectId}`)}
+                      onClick={() => navigate(`/Visualizer/${task.project_id}`)}
                     >
                       VIEW_PROJECT
                     </Button>
@@ -635,7 +635,7 @@ const MobileTaskDetail = () => {
               return (
                 <Box display="flex" gap={1} width="100%">
                   <Button fullWidth disabled className="cyber-btn neutral">STATUS: {s.toUpperCase()}</Button>
-                  <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${projectId}`)}>VIEW_PROJECT</Button>
+                  <Button fullWidth className="cyber-btn secondary" onClick={() => navigate(`/Visualizer/${task.project_id}`)}>VIEW_PROJECT</Button>
                 </Box>
               );
             })()}

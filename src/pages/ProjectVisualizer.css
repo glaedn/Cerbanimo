@@ -290,6 +290,7 @@
 .mobile-graph {
   border-radius: 12px;
   background: rgba(0,0,0,0.4);
+  z-index: 1;
 }
 
 .arc-carousel {
@@ -298,6 +299,20 @@
   overflow: hidden;
   touch-action: pan-y;
   width: 100%;
+  z-index: 10;
+}
+
+.arc-carousel::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  pointer-events: none;
 }
 
 .arc-item {
