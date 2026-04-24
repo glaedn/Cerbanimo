@@ -256,8 +256,10 @@
 .mobile-visualizer {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px;
+  gap: 4px; /* Tighter gap to shift rings up */
+  padding: 4px 12px;
+  padding-top: 0; /* Remove top padding to move everything up */
+  margin-top: -30px; /* Force upward shift */
 }
 
 .cylinder {
@@ -296,11 +298,13 @@
 .arc-carousel-perspective {
   perspective: 1000px;
   width: 100%;
-  height: 85px;
+  height: 80px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: -15px;
+  margin-bottom: -25px; /* Overlap slightly more to crunch up */
+  position: relative;
+  z-index: 20; /* Ensure carousels are in front of graph */
 }
 
 .arc-carousel {
@@ -309,8 +313,20 @@
   width: 100%;
   transform-style: preserve-3d;
   touch-action: pan-y;
-  z-index: 10;
   user-select: none;
+}
+
+.arc-carousel::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 280px;
+  height: 60px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  pointer-events: none;
 }
 
 .arc-item {

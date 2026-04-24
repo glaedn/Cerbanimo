@@ -616,17 +616,50 @@ const ProjectVisualizer = () => {
               setActiveSkillId(cat.id || null);
             }
           }} />
-          <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
+          <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', mb: 2, zIndex: 1 }}>
             <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />
-            {isProjectCreator && (
-              <Box sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <IconButton sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => setIsEditMode(!isEditMode)}><EditIcon /></IconButton>
-                <IconButton sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => setShowServiceModal(true)}><ShoppingCartIcon /></IconButton>
-                {project?.community_id === null && <IconButton sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}><GroupIcon /></IconButton>}
-                {isEditMode && <IconButton sx={{ bgcolor: '#FFA500', color: '#fff' }} onClick={() => handleAddTask()}><AddIcon /></IconButton>}
-              </Box>
-            )}
           </Box>
+
+          {isProjectCreator && (
+            <Box sx={{
+              position: 'fixed',
+              bottom: 80, // Above bottom nav
+              right: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              zIndex: 1000 // Always on top
+            }}>
+              <IconButton
+                sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                <EditIcon />
+              </IconButton>
+              <IconButton
+                sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                onClick={() => setShowServiceModal(true)}
+              >
+                <ShoppingCartIcon />
+              </IconButton>
+              {project?.community_id === null && (
+                <IconButton
+                  sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                  onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}
+                >
+                  <GroupIcon />
+                </IconButton>
+              )}
+              {isEditMode && (
+                <IconButton
+                  sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' } }}
+                  onClick={() => handleAddTask()}
+                >
+                  <AddIcon />
+                </IconButton>
+              )}
+            </Box>
+          )}
         </>
       ) : (
         <div className="tabs-container-wrapper" style={{ position: "relative" }}>
