@@ -293,47 +293,49 @@
   z-index: 1;
 }
 
-.arc-carousel {
-  position: relative;
-  height: 120px;
-  overflow: hidden;
-  touch-action: pan-y;
+.arc-carousel-perspective {
+  perspective: 1000px;
   width: 100%;
-  z-index: 10;
+  height: 110px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: -10px;
 }
 
-.arc-carousel::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  width: 280px;
-  height: 280px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  border: 1px solid rgba(0, 243, 255, 0.15);
-  pointer-events: none;
+.arc-carousel {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  transform-style: preserve-3d;
+  touch-action: pan-y;
+  z-index: 10;
 }
 
 .arc-item {
   position: absolute;
   left: 50%;
-  top: 60%;
+  top: 50%;
   will-change: transform, opacity;
   backdrop-filter: blur(2px);
 
-  min-width: 140px;
+  min-width: 120px;
   text-align: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
 
-  border-radius: 16px;
-  background: linear-gradient(135deg, #00f3ff, #ff00ff);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #00f3ff, #9d00ff);
   color: black;
   font-weight: 500;
+  font-size: 13px;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
 
   transition: transform 0.25s ease, opacity 0.25s ease;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .arc-item.active {
