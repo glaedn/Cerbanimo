@@ -1,12 +1,13 @@
 import React from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import SkillGalaxyPanel from '../components/HUD/panels/SkillGalaxyPanel';
 import theme from '../styles/theme';
 
 const SkillConstellation = () => {
   const navigate = useNavigate();
+  const { userId } = useParams();
 
   return (
     <Box
@@ -51,7 +52,7 @@ const SkillConstellation = () => {
         </Typography>
       </Box>
       <Box sx={{ flex: 1, position: 'relative' }}>
-        <SkillGalaxyPanel isFullPage={true} />
+        <SkillGalaxyPanel isFullPage={true} userId={userId} />
       </Box>
     </Box>
   );

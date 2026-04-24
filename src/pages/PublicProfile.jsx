@@ -18,7 +18,7 @@ const PublicProfile = () => {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user, getAccessTokenSilently } = useAuth0();
+  const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
   // Centralized token retrieval method
   const getToken = async () => {
     try {
@@ -242,6 +242,27 @@ const PublicProfile = () => {
         <Typography variant="h4" sx={{ fontFamily: 'Orbitron', color: '#00f3ff', textShadow: '0 0 10px #00f3ff', mb: 1 }}>
             {profile.username.toUpperCase()}
         </Typography>
+
+        <Button
+          variant="outlined"
+          onClick={() => navigate(`/profile/skill-constellation/${userId}`)}
+          sx={{
+            borderColor: '#00D787',
+            color: '#00D787',
+            fontFamily: 'Orbitron',
+            mt: 2,
+            mb: 1,
+            boxShadow: '0 0 10px rgba(0, 215, 135, 0.3)',
+            '&:hover': {
+              borderColor: '#00f3ff',
+              color: '#00f3ff',
+              backgroundColor: 'rgba(0, 215, 135, 0.1)',
+              boxShadow: '0 0 15px rgba(0, 215, 135, 0.5)',
+            }
+          }}
+        >
+          SKILL_CONSTELLATION
+        </Button>
 
         {/* Contact Links Section */}
         {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (

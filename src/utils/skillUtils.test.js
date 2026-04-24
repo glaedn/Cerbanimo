@@ -1,4 +1,5 @@
 // src/utils/skillUtils.test.js
+import { describe, it, expect } from 'vitest';
 import { processSkillDataForGalaxy, calculateExperienceNeeded } from './skillUtils';
 
 describe('skillUtils', () => {
@@ -77,6 +78,28 @@ describe('skillUtils', () => {
       // Star3's levelForColor = sum of its children unlocked by user (p3 level 3)
       // + its own level IF it were unlocked by user (which is 0 here). So, just p3's level.
       expect(star3?.levelForColor).toBe(3); 
+    });
+
+    it('handles self-referencing parent skills correctly', () => {
+      const selfRefSkills = [
+        { id: 's1', name: 'Self-Ref Star', parent_skill_id: 's1', unlocked_users: `[{"user_id":"${mockUserId}","level":5,"exp":100}]` },
+        { id: 'p1', name: 'Child of Self-Ref', parent_skill_id: 's1', unlocked_users: `[{"user_id":"${mockUserId}","level":3,"exp":50}]` },
+      ];
+      const processed = processSkillDataForGalaxy(selfRefSkills, mockUserId);
+
+      const star1 = processed.find(s => s.id === 's1');
+      const planet1 = processed.find(s => s.id === 'p1');
+
+      expect(star1).toBeDefined();
+      expect(star1?.category).toBe('star');
+      expect(star1?.userLevel).toBe(5);
+
+      expect(planet1).toBeDefined();
+      expect(planet1?.category).toBe('planet');
+      expect(planet1?.userLevel).toBe(3);
+
+      // Star1 levelForColor = s1(5) + p1(3) = 8
+      expect(star1?.levelForColor).toBe(8);
     });
   });
 

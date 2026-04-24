@@ -167,7 +167,7 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
   // Build children arrays first
   skillHierarchy.forEach(skillNode => {
-    if (skillNode.parent_skill_id) {
+    if (skillNode.parent_skill_id && skillNode.parent_skill_id !== skillNode.id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode) {
         parentNode.children.push(skillNode);
@@ -191,6 +191,7 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
   // Pass 2: Categorize Planets
   skillHierarchy.forEach(skillNode => {
+    if (skillNode.category !== 'unknown') return;
     if (skillNode.parent_skill_id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode && parentNode.category === 'star') {
@@ -201,6 +202,7 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
   // Pass 3: Categorize Moons
   skillHierarchy.forEach(skillNode => {
+    if (skillNode.category !== 'unknown') return;
     if (skillNode.parent_skill_id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode && parentNode.category === 'planet') {
@@ -211,6 +213,7 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
 
   // ADD THIS NEW PASS: Categorize Satellites (children of Moons)
   skillHierarchy.forEach(skillNode => {
+    if (skillNode.category !== 'unknown') return;
     if (skillNode.parent_skill_id) {
       const parentNode = skillHierarchy.get(skillNode.parent_skill_id);
       if (parentNode && parentNode.category === 'moon') {

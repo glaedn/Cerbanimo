@@ -32,7 +32,7 @@ const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
   return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
 };
 
-const SkillGalaxyPanel = ({ isFullPage = false }) => {
+const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { profile } = useUserProfile();
@@ -78,8 +78,13 @@ const SkillGalaxyPanel = ({ isFullPage = false }) => {
 
   useEffect(() => {
 
-    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && user?.sub) {
-      const userId = profile?.id || user.sub; // Fallback to user.sub if profile.id not available
+    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated) {
+      const userId = propUserId || profile?.id || user?.sub;
+
+      if (!userId) {
+        console.warn('[SkillGalaxyPanel] No userId available for processing');
+        return;
+      }
 
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
       // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
@@ -153,7 +158,7 @@ const SkillGalaxyPanel = ({ isFullPage = false }) => {
       if (d3Links.length > 0) setD3Links([]);
       if (processedSkills.length > 0) setProcessedSkills([]);
     }
-  }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate]); // Removed activeStar from dependencies
+  }, [allSkills, skillsLoading, isAuthenticated, user, profile, forceDataUpdate, propUserId]); // Removed activeStar from dependencies
 
   useEffect(() => {
 
