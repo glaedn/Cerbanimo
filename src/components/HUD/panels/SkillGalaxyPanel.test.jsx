@@ -1,4 +1,5 @@
 // src/components/HUD/panels/SkillGalaxyPanel.test.jsx
+import { describe, it, expect } from 'vitest';
 import React from 'react';
 
 const mockTheme = {

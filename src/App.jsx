@@ -127,7 +127,7 @@ const AppContent = () => {
             }
           />
           <Route
-            path="/profile/skill-constellation"
+            path="/profile/skill-constellation/:userId?"
             element={
               <PrivateRoute>
                 <PageWrapper><SkillConstellation /></PageWrapper>

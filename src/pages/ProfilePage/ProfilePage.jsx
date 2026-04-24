@@ -239,7 +239,7 @@ const ProfilePage = () => {
     navigate('/dashboard'); // Ensure the `/profile` route is properly defined
   };
   const goToSkillConstellation = () => {
-    navigate('/profile/skill-constellation');
+    navigate(`/profile/skill-constellation/${profileData.id}`);
   };
 
   // --- Resource Management Functions ---
