@@ -296,11 +296,11 @@
 .arc-carousel-perspective {
   perspective: 1000px;
   width: 100%;
-  height: 110px;
+  height: 85px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: -10px;
+  margin-bottom: -15px;
 }
 
 .arc-carousel {
@@ -310,6 +310,7 @@
   transform-style: preserve-3d;
   touch-action: pan-y;
   z-index: 10;
+  user-select: none;
 }
 
 .arc-item {
@@ -321,26 +322,29 @@
 
   min-width: 120px;
   text-align: center;
-  padding: 8px 12px;
+  padding: 6px 10px;
 
   border-radius: 20px;
-  background: linear-gradient(135deg, #00f3ff, #9d00ff);
-  color: black;
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.6), rgba(157, 0, 255, 0.6));
+  color: #ffffff;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   font-family: 'Space Mono', monospace;
   text-transform: uppercase;
 
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease, background 0.3s ease;
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .arc-item.active {
+  background: #00f3ff;
+  color: #000;
   font-weight: 700;
-  box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+  box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
+  border: 1px solid #ffffff;
 }
 
 /* Mobile Adjustments */
