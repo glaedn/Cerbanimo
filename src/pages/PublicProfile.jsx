@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Button, Grid, Card, CardContent, CardActions } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -16,6 +16,7 @@ const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [communities, setCommunities] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -100,6 +101,14 @@ const PublicProfile = () => {
         } catch (commErr) {
           console.error("Error fetching user communities:", commErr);
           // Don't set global error, just leave communities empty
+        }
+
+        // Fetch services offered by this user
+        try {
+          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
+          setServices(servicesResponse.data || []);
+        } catch (servErr) {
+          console.error("Error fetching user services:", servErr);
         }
       } catch (err) {
         console.error("Error fetching data:", err);
