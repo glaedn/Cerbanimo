@@ -253,6 +253,45 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.mobile-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+}
+
+.cylinder {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 20px;
+  background: rgba(0, 243, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.cylinder-item {
+  min-width: 120px;
+  text-align: center;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: #00f3ff;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.cylinder-item.active {
+  background: linear-gradient(135deg, #00f3ff, #ff00ff);
+  color: #000;
+  font-weight: bold;
+}
+
+.mobile-graph {
+  border-radius: 12px;
+  background: rgba(0,0,0,0.4);
+}
+
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   .edit-buttons {
