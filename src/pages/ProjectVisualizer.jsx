@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import axios from "axios";
 import TaskEditor from "./TaskEditor";
@@ -8,9 +8,7 @@ import useUserProjects from "../hooks/useUserProjects";
 import "./ProjectVisualizer.css";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useMemo } from "react";
-import { Chip, Box, Typography, IconButton, Button, Modal } from "@mui/material";
-import { Autocomplete, TextField } from "@mui/material";
+import { Chip, Box, Typography, IconButton, Button, Modal, Autocomplete, TextField } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
 import DependencyListView from "../components/DependencyListView";
 import ProjectSettingsModal from "../components/ProjectSettingsModal";
@@ -20,33 +18,191 @@ import AddIcon from '@mui/icons-material/Add';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import GroupIcon from '@mui/icons-material/Group';
 
-const RadialRibbon = ({ items, activeIndex, setActiveIndex }) => {
-  return (
-    <Box className="radial-ribbon">
-      {items.map((item, i) => {
-        const offset = i - activeIndex;
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-        const scale = 1 - Math.abs(offset) * 0.2;
-        const opacity = 1 - Math.abs(offset) * 0.3;
-        const translateX = offset * 120;
+const ArcCarousel = ({
+  items,
+  activeIndex,
+  setActiveIndex,
+  radius = 140,
+  angleStep = 0.5,
+  visibleCount = 7,
+  snapDuration = 220,
+}) => {
+  const N = items.length;
+  const isSingle = N <= 1;
+
+  const [pos, setPos] = useState(activeIndex || 0);
+  const posRef = useRef(pos);
+  const rafRef = useRef(null);
+
+  const drag = useRef({
+    down: false,
+    startX: 0,
+    lastX: 0,
+    lastT: 0,
+    velocity: 0,
+  });
+
+  useEffect(() => {
+    if (Math.round(posRef.current) !== activeIndex) {
+      setPos(activeIndex || 0);
+      posRef.current = activeIndex || 0;
+    }
+  }, [activeIndex]);
+
+  const mod = (i) => {
+    if (N === 0) return 0;
+    return ((i % N) + N) % N;
+  };
+
+  const half = Math.floor(visibleCount / 2);
+
+  const getWindow = () => {
+    if (N === 0) return [];
+    const center = Math.round(posRef.current);
+    const arr = [];
+    for (let k = -half; k <= half; k++) {
+      arr.push(mod(center + k));
+    }
+    return arr;
+  };
+
+  const stopRAF = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  };
+
+  const animateTo = (target) => {
+    stopRAF();
+    const start = posRef.current;
+    const startTime = performance.now();
+
+    const tick = (t) => {
+      const p = clamp((t - startTime) / snapDuration, 0, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      const next = start + (target - start) * e;
+
+      posRef.current = next;
+      setPos(next);
+
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        posRef.current = target;
+        setPos(target);
+        setActiveIndex(mod(Math.round(target)));
+        stopRAF();
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  const startMomentum = () => {
+    if (isSingle) return;
+    const friction = 0.0025;
+    const threshold = 0.02;
+    let v = drag.current.velocity;
+    stopRAF();
+
+    const tick = (t) => {
+      const pxPerItem = 120;
+      const dt = 16;
+      const dv = v * dt;
+      const next = posRef.current - dv / pxPerItem;
+      posRef.current = next;
+      setPos(next);
+      const sign = Math.sign(v);
+      v -= sign * friction * dt;
+      if (Math.abs(v) > threshold) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        const snapped = Math.round(posRef.current);
+        animateTo(snapped);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  const onDown = (e) => {
+    if (isSingle) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    drag.current.down = true;
+    drag.current.startX = x;
+    drag.current.lastX = x;
+    drag.current.lastT = performance.now();
+    drag.current.velocity = 0;
+    stopRAF();
+  };
+
+  const onMove = (e) => {
+    if (!drag.current.down || isSingle) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const now = performance.now();
+    const dx = x - drag.current.lastX;
+    const dt = now - drag.current.lastT || 16;
+    drag.current.velocity = dx / dt;
+    const pxPerItem = 120;
+    const deltaIndex = dx / pxPerItem;
+    const next = posRef.current - deltaIndex;
+    posRef.current = next;
+    setPos(next);
+    drag.current.lastX = x;
+    drag.current.lastT = now;
+  };
+
+  const onUp = () => {
+    if (!drag.current.down) return;
+    drag.current.down = false;
+    startMomentum();
+  };
+
+  const windowIdx = getWindow();
+
+  return (
+    <div
+      className="arc-carousel"
+      onMouseDown={onDown}
+      onMouseMove={onMove}
+      onMouseUp={onUp}
+      onMouseLeave={onUp}
+      onTouchStart={onDown}
+      onTouchMove={onMove}
+      onTouchEnd={onUp}
+      style={{
+        pointerEvents: isSingle ? "none" : "auto",
+        opacity: isSingle ? 0.6 : 1,
+      }}
+    >
+      {windowIdx.map((realIndex, i) => {
+        const offset = realIndex - posRef.current;
+        let o = offset;
+        if (o > N / 2) o -= N;
+        if (o < -N / 2) o += N;
+        const angle = o * angleStep;
+        const x = radius * Math.sin(angle);
+        const y = radius * (1 - Math.cos(angle));
+        const scale = Math.max(0.6, Math.cos(angle));
+        const opacity = Math.max(0.25, Math.cos(angle));
+        const item = items[realIndex];
 
         return (
           <div
-            key={item.id || item.name || item}
-            className="ribbon-item"
+            key={`${realIndex}-${i}`}
+            className={`arc-item ${Math.round(posRef.current) === realIndex ? "active" : ""}`}
             style={{
-              transform: `translateX(${translateX}px) scale(${scale})`,
+              transform: `translate(-50%, -50%) translateX(${x}px) translateY(${y}px) scale(${scale})`,
               opacity,
-              zIndex: 100 - Math.abs(offset),
-              visibility: opacity <= 0 ? 'hidden' : 'visible'
+              zIndex: 100 - Math.abs(o),
             }}
-            onClick={() => setActiveIndex(i)}
+            onClick={() => animateTo(realIndex)}
           >
-            {item.name || item}
+            {item?.name || item}
           </div>
         );
       })}
-    </Box>
+    </div>
   );
 };
 
@@ -56,29 +212,22 @@ const ProjectVisualizer = () => {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const { projectId, taskId } = useParams();
-  const { getAccessTokenSilently } = useAuth0();
-  const { user } = useAuth0();
+  const { getAccessTokenSilently, user } = useAuth0();
   const [userId, setUserId] = useState(null);
-  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } =
-    useProjectTasks(projectId, user);
+  const { tasks, skills, project, handleTaskAction, fetchTasks, updateProject } = useProjectTasks(projectId, user);
   const { projects: allProjects } = useUserProjects(userId);
-  const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
+  const [activeCategory, setActiveCategory] = useState("All Tasks");
   const [isEditMode, setIsEditMode] = useState(false);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const zoomTransformRef = useRef({ k: 1, x: 0, y: 0 });
-  const [svgDimensions, setSvgDimensions] = useState({
-    width: 800,
-    height: 600,
-  });
+  const [svgDimensions, setSvgDimensions] = useState({ width: 800, height: 600 });
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [activeSkillId, setActiveSkillId] = useState(null);
-  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const tabsContainerRef = useRef(null);
-  const hoverTimeout = useRef(null);
   const hoverIntentRef = useRef(null);
   const tooltipRef = useRef(null);
   const [showCommunityProposalPopup, setShowCommunityProposalPopup] = useState(false);
@@ -89,1759 +238,391 @@ const ProjectVisualizer = () => {
   const [outcomes, setOutcomes] = useState([]);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
-  // Check if any task is active, completed, or urgent
   const [projectIsActive, setProjectIsActive] = useState(false);
   const [communityIndex, setCommunityIndex] = useState(0);
   const [projectIndex, setProjectIndex] = useState(0);
   const [skillIndex, setSkillIndex] = useState(0);
 
   useEffect(() => {
-    setProjectIsActive(
-      tasks.some(
-        (task) =>
-          task.status === "completed" ||
-          task.status === "active-assigned" ||
-          task.status === "active-unassigned" ||
-          task.status === "urgent-unassigned" ||
-          task.status === "urgent-assigned" ||
-          task.status === "submitted"
-      )
-    );
+    setProjectIsActive(tasks.some(t => ["completed", "active-assigned", "active-unassigned", "urgent-unassigned", "urgent-assigned", "submitted"].includes(t.status)));
   }, [tasks]);
 
-
   const fetchUserCommunities = async () => {
-    if (!userId) {
-      console.log('No userId available');
-      return;
-    }
-    
+    if (!userId) return;
     try {
-      const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}`,
-        scope: "openid profile email",
-      });
-  
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch communities: ${errorText}`);
-      }
-  
+      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error(`Failed to fetch communities`);
       const data = await response.json();
-      
-      if (data && Array.isArray(data.communities)) {
-        setUserCommunities(data.communities);
-      } else {
-        setUserCommunities([]);
-      }
-    } catch (error) {
-      setUserCommunities([]);
-    }
+      if (data && Array.isArray(data.communities)) setUserCommunities(data.communities);
+    } catch (error) { setUserCommunities([]); }
   };
 
-  // Function to handle granularization of tasks
-  const handleGranularizeTasks = async (projectId) => {
-    const confirm = window.confirm('Are you sure? This will delete and replace ALL tasks in the project.');
-    if (!confirm) return;
-
+  const handleGranularizeTasks = async (pid) => {
+    if (!window.confirm('Are you sure? This will delete and replace ALL tasks in the project.')) return;
     setLoading(true);
     try {
-      const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}`,
-        scope: "openid profile email",
-      });
-
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
+      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${pid}/granularize`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ projectId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ projectId: pid }),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to granularize task: ${errorText}`);
-      }
-      
+      if (!response.ok) throw new Error(`Failed to granularize tasks`);
       const data = await response.json();
-
-      if (data.success) {
-        // Refresh tasks after successful granularization
-        await fetchTasks();
-        alert('Task granularization successful!');
-      } else {
-        alert('Task granularization failed: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error granularizing task:', error);
-      alert('Error granularizing task: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  
+      if (data.success) { await fetchTasks(); alert('Task granularization successful!'); }
+      else alert('Task granularization failed: ' + data.error);
+    } catch (error) { alert('Error granularizing task: ' + error.message); }
+    finally { setLoading(false); }
   };
 
-
-  // Add useEffect to handle initial communities fetch
-  useEffect(() => {
-    if (userId) {
-      fetchUserCommunities();
-    }
-  }, [userId]);
+  useEffect(() => { if (userId) fetchUserCommunities(); }, [userId]);
 
   const handleSubmitCommunityProposal = async () => {
     if (!selectedCommunity) return;
-  
     try {
-      const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}`,
-        scope: "openid profile email",
+      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
       });
-  
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-  
-      if (!response.ok) {
-        throw new Error('Failed to submit proposal');
-      }
-  
-      // Update the project to mark it as a community project
+      if (!response.ok) throw new Error('Failed to submit proposal');
       updateProject({ community_id: selectedCommunity.id });
-      
-      // Close the popup and navigate to the community hub
       setShowCommunityProposalPopup(false);
       window.location.href = `/communityhub/${selectedCommunity.id}`;
-    } catch (error) {
-      console.error('Error submitting proposal:', error);
-    }
+    } catch (error) { console.error('Error submitting proposal:', error); }
   };
 
   const handleUpdateTags = async (newTags) => {
     try {
-      const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}`,
-        scope: "openid profile email",
-      });// Use the token for authorized request
-
+      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tags: newTags }),
       });
-  
-      if (!response.ok) {
-        throw new Error('Failed to update tags');
-      }
-  
-      // Update the UI immediately without waiting for a refresh
+      if (!response.ok) throw new Error('Failed to update tags');
       updateProject({ tags: newTags });
-      
-      // No need to call fetchProject() since we've already updated the UI
-    } catch (error) {
-      console.error('Error updating tags:', error);
-    }
+    } catch (error) { console.error('Error updating tags:', error); }
   };
-
-  const handleUpdateProject = async (formData) => {
-    try {
-      const token = await getAccessTokenSilently();
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      updateProject(formData);
-    } catch (error) {
-      console.error('Error updating project:', error);
-      alert('Failed to update project');
-    }
-  };
-
 
   useEffect(() => {
     const fetchInterests = async () => {
       try {
-        const token = await getAccessTokenSilently({
-          audience: `${import.meta.env.VITE_BACKEND_URL}`,
-          scope: "openid profile email",
-        });
-
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text(); // Get text if not ok
-          console.error('Failed to fetch interests. Status:', response.status, 'Response:', errorText);
-          throw new Error(`Failed to fetch interests: ${response.status}`);
-        }
-
+        const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await response.json();
         setInterests(data.interestsPool || []);
-      } catch (error) {
-        console.error('Error fetching interests:', error.message);
-        // If the error object was augmented with responseText, it could be logged here too.
-        // For this change, the primary log is before throwing.
-      }
+      } catch (error) { console.error('Error fetching interests:', error.message); }
     };
-
     fetchInterests();
-    
   }, [getAccessTokenSilently]);
 
   useEffect(() => {
     const fetchOutcomes = async () => {
         try {
             const token = await getAccessTokenSilently();
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact/project/${projectId}/outcomes`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact/project/${projectId}/outcomes`, { headers: { Authorization: `Bearer ${token}` } });
             setOutcomes(res.data || []);
-        } catch (err) {
-            console.error("Failed to fetch outcomes:", err);
-        }
+        } catch (err) { console.error("Failed to fetch outcomes:", err); }
     };
     if (projectId) fetchOutcomes();
   }, [projectId, getAccessTokenSilently]);
 
-  
-  // Modify your fetchTasks call to preserve the category
-const refreshTasks = async () => {
-  console.log("Refreshing tasks...");
-  const currentCategory = activeCategory; // Save before refresh
-  const currentSkillId = activeSkillId;
-  
-  const updatedTasks = await fetchTasks();
-  console.log("Refreshed tasks data:", updatedTasks);
-  
-  // Restore the active category after refresh
-  if (currentCategory) {
-    setActiveCategory(currentCategory);
-    setActiveSkillId(currentSkillId);
-  }
-};
-
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}`,
-        scope: "openid profile email",
-      });
-
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text(); // Get text if not ok
-        console.error('Failed to fetch profile. Status:', response.status, 'Response:', errorText);
-        throw new Error(`Failed to fetch profile: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setUserId(data.id);
-      
-    } catch (error) {
-      console.error('Error fetching profile:', error.message);
-      // If the error object was augmented with responseText, it could be logged here too.
-    }
+  const refreshTasks = async () => {
+    const cat = activeCategory;
+    const sid = activeSkillId;
+    await fetchTasks();
+    if (cat) { setActiveCategory(cat); setActiveSkillId(sid); }
   };
 
-  if (user) {
-    fetchProfile();
-  }
-}, [user, getAccessTokenSilently]);
-
-
-
   useEffect(() => {
-    return () => {
-      // Clean up timeout on unmount
-      if (hoverTimeout.current) {
-        clearTimeout(hoverTimeout.current);
-      }
+    const fetchProfile = async () => {
+      try {
+        const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
+        const data = await response.json();
+        setUserId(data.id);
+      } catch (error) { console.error('Error fetching profile:', error.message); }
     };
-  }, []);
+    if (user) fetchProfile();
+  }, [user, getAccessTokenSilently]);
 
   const categorizedTasks = useMemo(() => {
-    // First create the all-tasks entry
-    const taskMap = {
-      "All Tasks": [...tasks] // Include all tasks
-    };
-  
-    // Then add the skill-specific categories
-    const filteredSkills = skills.filter((skill) =>
-      tasks.some((task) => task.skill_id === skill.id)
-    );
-  
-    filteredSkills.forEach((skill) => {
-      taskMap[skill.name] = tasks.filter((task) => task.skill_id === skill.id);
-    });
-  
+    const taskMap = { "All Tasks": [...tasks] };
+    const filteredSkills = skills.filter(s => tasks.some(t => t.skill_id === s.id));
+    filteredSkills.forEach(s => { taskMap[s.name] = tasks.filter(t => t.skill_id === s.id); });
     return taskMap;
   }, [tasks, skills]);
 
-  const initialForm = {
-    id: null,
-    name: "",
-    description: "",
-    status: "inactive-unassigned",
-    dependencies: [],
-    skill_id: 0,
-    project_id: projectId,
-    reward_tokens: 10
-  };
-
-  // local modal control here
+  const initialForm = { id: null, name: "", description: "", status: "inactive-unassigned", dependencies: [], skill_id: 0, project_id: projectId, reward_tokens: 10 };
   const [taskForm, setTaskForm] = useState(initialForm);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
 
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setStartX(e.pageX - tabsContainerRef.current.offsetLeft);
-    setScrollLeft(tabsContainerRef.current.scrollLeft);
-  };
-
-  const handleTabsLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
+  const handleMouseDown = (e) => { setIsDragging(true); setStartX(e.pageX - tabsContainerRef.current.offsetLeft); setScrollLeft(tabsContainerRef.current.scrollLeft); };
+  const handleTabsLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
   const handleMouseOver = (event, d) => {
     clearTimeout(hoverIntentRef.current);
     if (hoveredNode?.id === d.id) return;
-    setHoveredNode({
-      ...d,
-      rawX: event.clientX,
-      rawY: event.clientY,
-      element: event.currentTarget,
-    });
+    setHoveredNode({ ...d, rawX: event.clientX, rawY: event.clientY, element: event.currentTarget });
   };
-
-  const handleMouseOut = () => {
-    hoverIntentRef.current = setTimeout(() => {
-      if (!tooltipRef.current?.matches(":hover")) {
-        setHoveredNode(null);
-      }
-    }, 200);
-  };
-
+  const handleMouseOut = () => { hoverIntentRef.current = setTimeout(() => { if (!tooltipRef.current?.matches(":hover")) setHoveredNode(null); }, 200); };
   const handleMouseMove = (e) => {
     if (!isDragging) return;
     e.preventDefault();
     const x = e.pageX - tabsContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 2; // Adjust scroll speed
-    tabsContainerRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  const handleEditTask = (task) => {
-    setTaskForm(task); // Fill in form with task values
-    setShowTaskPopup(true); // Show the TaskEditor modal
-  };
-
-  const handleViewTask = async (task) => {
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/tasks/${task.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setTaskForm(response.data);
-      setShowTaskPopup(true);
-    } catch (error) {
-      console.error("Error fetching full task details:", error);
-      setTaskForm(task);
-      setShowTaskPopup(true);
-    }
+    tabsContainerRef.current.scrollLeft = scrollLeft - (x - startX) * 2;
   };
 
   const handleAddTask = (dependencyId = null) => {
-    const currentSkill = skills.find((s) => s.name === activeCategory);
-    const form = {
-      ...initialForm,
-      project_id: projectId,
-      skill_id: currentSkill?.id || "",
-    };
-    
-    // If dependencyId exists, create both the numeric dependencies array
-    // and the named version needed for display
+    const currentSkill = skills.find(s => s.name === activeCategory);
+    const form = { ...initialForm, project_id: projectId, skill_id: currentSkill?.id || "" };
     if (dependencyId) {
       const depTask = allTasks[dependencyId];
       form.dependencies = [parseInt(dependencyId, 10)];
-      form.dependenciesWithNames = depTask ? [
-        { id: parseInt(dependencyId, 10), name: depTask.name }
-      ] : [];
+      form.dependenciesWithNames = depTask ? [{ id: parseInt(dependencyId, 10), name: depTask.name }] : [];
     }
-    
-    setTaskForm(form);
-    setShowTaskPopup(true);
+    setTaskForm(form); setShowTaskPopup(true);
   };
 
-  const FIXED_LEVEL_HEIGHT = 120;
-  const MAX_EXTERNAL_DEPS = 3;
-
-  // All tasks across all skills - used to find external dependencies
-  const allTasks = useMemo(() => tasks.reduce((acc, task) => {
-    acc[task.id] = task;
-    return acc;
-  }, {}), [tasks]);
-
-  const getNodeColor = (status) => {
-    switch (status) {
-      case "completed":
-        return "#FF69B4";
-      case "submitted":
-        return "#FFA500";
-      case "urgent-unassigned":
-        return "#888888";
-      case "urgent-assigned":
-        return "#32CD32";
-      case "inactive-unassigned":
-        return "#87CEFA";
-      case "inactive-assigned":
-        return "#4682B4";
-      case "active-assigned":
-        return "#32CD32";
-      case "active-unassigned":
-        return "#00FF00";
-      default:
-        return "#CCCCCC";
-    }
+  const allTasks = useMemo(() => tasks.reduce((acc, t) => { acc[t.id] = t; return acc; }, {}), [tasks]);
+  const getNodeColor = (s) => {
+    switch (s) { case "completed": return "#FF69B4"; case "submitted": return "#FFA500"; case "urgent-unassigned": return "#888888"; case "urgent-assigned": return "#32CD32"; case "inactive-unassigned": return "#87CEFA"; case "inactive-assigned": return "#4682B4"; case "active-assigned": return "#32CD32"; case "active-unassigned": return "#00FF00"; default: return "#CCCCCC"; }
   };
-
-  const updateLinkColors = () => {
-    if (linksGroupRef.current) {
-      linksGroupRef.current
-        .selectAll(".link")
-        .attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999");
-    }
-  }
-
-  const getNodeStroke = (status) => {
-    if (status === "active-unassigned" || status === "active-assigned")
-      return "#32CD32";
-    if (status === "inactive-unassigned" || status === "inactive-assigned")
-      return "#4682B4";
-    if (status === "urgent-unassigned" || status === "urgent-assigned")
-      return "#FF0000";
-    if (status === "completed") return "#FF69B4";
+  const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999"); };
+  const getNodeStroke = (s) => {
+    if (s === "active-unassigned" || s === "active-assigned") return "#32CD32";
+    if (s === "inactive-unassigned" || s === "inactive-assigned") return "#4682B4";
+    if (s === "urgent-unassigned" || s === "urgent-assigned") return "#FF0000";
+    if (s === "completed") return "#FF69B4";
     return "#CCCCCC";
   };
-
-  const getNodeFill = (status) => {
-    if (status.includes("unassigned")) return "#888888";
-    return getNodeColor(status);
-  };
-
-  const truncateText = (text, maxLength = 13) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
-
-  const usedSkills = useMemo(() => skills.filter((skill) =>
-    tasks.some((task) => task.skill_id === skill.id)
-  ), [skills, tasks]);
-
-  // Handle mouse leave for the entire visualization container
-  const handleMouseLeave = () => {
-    setHoveredNode(null);
-  };
-
-  // Store the zoom object in a ref to maintain it across renders
+  const getNodeFill = (s) => s.includes("unassigned") ? "#888888" : getNodeColor(s);
+  const truncateText = (t, m = 13) => t.length <= m ? t : t.substring(0, m) + "...";
+  const usedSkills = useMemo(() => skills.filter(s => tasks.some(t => t.skill_id === s.id)), [skills, tasks]);
   const zoomRef = useRef(null);
 
-// Modify this useEffect to only set initial values when there are no current values
-useEffect(() => {
-  // Only set initial values if both activeCategory and activeSkillId are not set
-  if (!activeCategory) {
-    setActiveCategory("All Tasks");
-    setActiveSkillId(null);
-  }
-}, [skills, tasks]); // Dependencies remain the same
-
-useEffect(() => {
-  if (hoveredNode && tooltipRef.current) {
-    const { width: tooltipWidth, height: tooltipHeight } = tooltipRef.current.getBoundingClientRect();
-    const screenWidth = window.innerWidth; // Renamed for clarity from prompt
-    const screenHeight = window.innerHeight; // Renamed for clarity from prompt
-    const offset = 20;
-
-    let finalX = hoveredNode.rawX - tooltipWidth / 2; // Default: bottom-center X
-    let finalY = hoveredNode.rawY + offset;          // Default: bottom-center Y
-
-    const nearTop = hoveredNode.rawY < tooltipHeight + offset * 1.5; 
-    const nearBottom = hoveredNode.rawY + tooltipHeight + offset * 1.5 > screenHeight;
-    const nearLeft = hoveredNode.rawX < tooltipWidth / 2 + offset; 
-    const nearRight = hoveredNode.rawX + tooltipWidth / 2 + offset > screenWidth;
-
-    // Corner conditions first
-    if (nearTop && nearLeft) { // Top-left corner => position bottom-right of cursor
-      finalX = hoveredNode.rawX + offset;
-      finalY = hoveredNode.rawY + offset;
-    } else if (nearTop && nearRight) { // Top-right corner => position bottom-left of cursor
-      finalX = hoveredNode.rawX - tooltipWidth - offset;
-      finalY = hoveredNode.rawY + offset;
-    } else if (nearBottom && nearLeft) { // Bottom-left corner => position top-right of cursor
-      finalX = hoveredNode.rawX + offset;
-      finalY = hoveredNode.rawY - tooltipHeight - offset;
-    } else if (nearBottom && nearRight) { // Bottom-right corner => position top-left of cursor
-      finalX = hoveredNode.rawX - tooltipWidth - offset;
-      finalY = hoveredNode.rawY - tooltipHeight - offset;
-    }
-    // Edge conditions (if not a corner)
-    else if (nearTop) { // Near top edge => position top-centered (which means tooltip bottom is above cursor)
-      finalY = hoveredNode.rawY - tooltipHeight - offset;
-      // X is already default (centered relative to cursor)
-    } else if (nearBottom) { // Near bottom edge => position top-centered
-      finalY = hoveredNode.rawY - tooltipHeight - offset;
-      // X is already default (centered relative to cursor)
-    } else if (nearLeft) { // Near left edge => position right-centered from cursor
-        finalX = hoveredNode.rawX + offset;
-        // Y is already default (bottom of cursor)
-    } else if (nearRight) { // Near right edge => position left-centered from cursor
-        finalX = hoveredNode.rawX - tooltipWidth - offset;
-        // Y is already default (bottom of cursor)
-    }
-
-    // Boundary checks
-    if (finalX < 0) finalX = 0;
-    if (finalX + tooltipWidth > screenWidth) finalX = screenWidth - tooltipWidth;
-    if (finalY < 0) finalY = 0;
-    if (finalY + tooltipHeight > screenHeight) finalY = screenHeight - tooltipHeight;
-
-    setTooltipPosition({ x: finalX, y: finalY });
-  }
-}, [hoveredNode]);
+  useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [skills, tasks]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!containerRef.current || !containerRef.current.contains(e.target)) {
-        setHoveredNode(null);
-      }
-    };
+    if (hoveredNode && tooltipRef.current) {
+      const { width: tw, height: th } = tooltipRef.current.getBoundingClientRect();
+      const sw = window.innerWidth, sh = window.innerHeight, off = 20;
+      let fx = hoveredNode.rawX - tw / 2, fy = hoveredNode.rawY + off;
+      if (hoveredNode.rawY < th + off * 1.5) fy = hoveredNode.rawY - th - off;
+      else if (hoveredNode.rawY + th + off * 1.5 > sh) fy = hoveredNode.rawY - th - off;
+      if (fx < 0) fx = 0; if (fx + tw > sw) fx = sw - tw; if (fy < 0) fy = 0; if (fy + th > sh) fy = sh - th;
+      setTooltipPosition({ x: fx, y: fy });
+    }
+  }, [hoveredNode]);
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  // Effect for updating SVG dimensions to match container
   useEffect(() => {
-    if (!containerRef.current) return;
-
     const updateDimensions = () => {
       if (!containerRef.current) return;
-      const containerWidth = containerRef.current.clientWidth;
-      const containerHeight = containerRef.current.clientHeight;
-
-      // Update the visualization size based on container
-      if (containerWidth > 0 && containerHeight > 0) {
-        // Make sure we have some reasonable minimum dimensions
-        const width = Math.max(containerWidth - 30, 800);
-        const height = 600;
-
-        setSvgDimensions({ width, height });
-      }
+      const cw = containerRef.current.clientWidth;
+      if (cw > 0) setSvgDimensions({ width: Math.max(cw - 30, 800), height: 600 });
     };
-
-    // Initial update
     updateDimensions();
-
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-    };
+    const ro = new ResizeObserver(updateDimensions);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
   }, []);
-
-  useEffect(() => {
-    const container = tabsContainerRef.current;
-    if (!container) return;
-
-    const leftShadow = document.querySelector(".left-shadow");
-    const rightShadow = document.querySelector(".right-shadow");
-
-    const updateShadows = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = container;
-      const showLeft = scrollLeft > 10;
-      const showRight = scrollLeft < scrollWidth - clientWidth - 10;
-
-      leftShadow.style.opacity = showLeft ? "1" : "0";
-      rightShadow.style.opacity = showRight ? "1" : "0";
-    };
-
-    updateShadows();
-    container.addEventListener("scroll", updateShadows);
-
-    return () => {
-      container.removeEventListener("scroll", updateShadows);
-    };
-  }, [usedSkills]);
 
   useEffect(() => {
     if (!svgRef.current) return;
-    
-    // Get tasks for the current category
     const data = categorizedTasks[activeCategory] || [];
-    // Exit early if no data
     if (data.length === 0) return;
-
     const { width, height } = svgDimensions;
-
     d3.select(svgRef.current).selectAll("*").remove();
-
-    // Create zoom behavior that will be maintained across renders
-    if (!zoomRef.current) {
-      zoomRef.current = d3
-        .zoom()
-        .scaleExtent([0.3, 3])
-        .filter((event) => {
-          // On mobile, only allow zoom/pan if two or more fingers are used
-          // This leaves single-finger drag for rotation
-          if (isMobile && event.touches) {
-            return event.touches.length > 1;
-          }
-          return true;
-        });
-    }
-
-    // Create main SVG with zoom capabilities
-    const svg = d3
-      .select(svgRef.current)
-      .attr("width", width)
-      .attr("height", height)
-      .call(zoomRef.current)
-      .style("touch-action", "none");
-
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const RING_SPACING = isMobile ? 70 : 100;
-
-    // Create main group for zoom
-    const mainGroup = svg.append("g")
-      .attr("class", "main-group")
-      .attr("transform", `translate(${zoomTransformRef.current.x}, ${zoomTransformRef.current.y}) scale(${zoomTransformRef.current.k})`);
-
-    // Create separate groups for links and nodes to control layering
-    const linksGroup = mainGroup.append("g").attr("class", "links-group");
-    linksGroupRef.current = linksGroup;
-    const nodesGroup = mainGroup.append("g").attr("class", "nodes-group");
-    const addButtonsGroup = mainGroup
-      .append("g")
-      .attr("class", "add-buttons-group");
-
-    // Modify zoom behavior to target mainGroup
-    if (zoomRef.current) {
-      zoomRef.current.on("zoom", (event) => {
-        zoomTransformRef.current = event.transform;
-        mainGroup.attr("transform", event.transform);
-      });
-    }
-
-    // Create a directed graph representation
-    const graph = {};
-    data.forEach((node) => {
-      graph[node.id] = {
-        ...node,
-        children: [],
-        level: -1, // Will be assigned later
-      };
-    });
-
-    // Populate children arrays
-    data.forEach((node) => {
-      node.dependencies.forEach((depId) => {
-        if (graph[depId]) {
-          graph[depId].children.push(node.id);
-        }
-      });
-    });
-
-    // Find root nodes - different logic for All Tasks view vs skill-specific views
-    const rootNodes = data
-    .filter((node) => {
-      if (activeCategory === "All Tasks") {
-        // For All Tasks view, a root node has no dependencies at all
-        return node.dependencies.length === 0;
-      } else {
-        // For skill-specific views
-        const internalDeps = node.dependencies.filter((depId) => {
-          const depTask = allTasks[depId];
-          return depTask && depTask.skill_id === activeSkillId;
-        });
-        return internalDeps.length === 0;
-      }
-    })
-    .map((node) => node.id);
-
-    // Perform topological sorting to assign levels
+    if (!zoomRef.current) zoomRef.current = d3.zoom().scaleExtent([0.3, 3]).filter(e => isMobile && e.touches ? e.touches.length > 1 : true);
+    const svg = d3.select(svgRef.current).attr("width", width).attr("height", height).call(zoomRef.current).style("touch-action", "none");
+    const mainGroup = svg.append("g").attr("transform", `translate(${zoomTransformRef.current.x}, ${zoomTransformRef.current.y}) scale(${zoomTransformRef.current.k})`);
+    const linksGroup = mainGroup.append("g"); linksGroupRef.current = linksGroup;
+    const nodesGroup = mainGroup.append("g");
+    const addButtonsGroup = mainGroup.append("g");
+    zoomRef.current.on("zoom", e => { zoomTransformRef.current = e.transform; mainGroup.attr("transform", e.transform); });
+    const graph = {}; data.forEach(n => graph[n.id] = { ...n, children: [], level: -1 });
+    data.forEach(n => n.dependencies.forEach(did => { if (graph[did]) graph[did].children.push(n.id); }));
+    const rootNodes = data.filter(n => {
+      if (activeCategory === "All Tasks") return n.dependencies.length === 0;
+      const idps = n.dependencies.filter(did => allTasks[did] && allTasks[did].skill_id === activeSkillId);
+      return idps.length === 0;
+    }).map(n => n.id);
     const assignLevels = () => {
-      // Mark all root nodes as level 0
-      rootNodes.forEach((id) => {
-        graph[id].level = 0;
-      });
-
-      let hasChanged = true;
-
-      // Continue until no more changes
-      while (hasChanged) {
-        hasChanged = false;
-
-        // Check all nodes
-        Object.values(graph).forEach((node) => {
-          if (node.level === -1) {
-            // Check if all dependencies have levels assigned
-            const internalDeps = node.dependencies.filter(
-              (depId) => graph[depId]
-            );
-            const allDepsAssigned = internalDeps.every(
-              (depId) => graph[depId].level !== -1
-            );
-
-            if (allDepsAssigned) {
-              // Find maximum level of dependencies and add 1
-              const maxDepLevel = Math.max(
-                ...internalDeps.map((depId) => graph[depId].level),
-                -1
-              );
-              node.level = maxDepLevel + 1;
-              hasChanged = true;
+      rootNodes.forEach(id => graph[id].level = 0);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        Object.values(graph).forEach(n => {
+          if (n.level === -1) {
+            const idps = n.dependencies.filter(did => graph[did]);
+            if (idps.every(did => graph[did].level !== -1)) {
+              n.level = Math.max(...idps.map(did => graph[did].level), -1) + 1;
+              changed = true;
             }
           }
         });
       }
-
-      // Handle any remaining nodes (possible circular dependencies)
-      Object.values(graph).forEach((node) => {
-        if (node.level === -1) {
-          node.level = 0; // Assign to root level as fallback
-        }
-      });
+      Object.values(graph).forEach(n => { if (n.level === -1) n.level = 0; });
     };
-
     assignLevels();
-
-    // Group nodes by level
-    const levels = [];
-    const maxLevel = Math.max(
-      ...Object.values(graph).map((node) => node.level)
-    );
-
-    for (let i = 0; i <= maxLevel; i++) {
-      levels[i] = Object.values(graph).filter((node) => node.level === i);
-    }
-
-    const NODE_HORIZONTAL_SPACING = isMobile ? 70 : 100;
-    const FIXED_LEVEL_HEIGHT = isMobile ? 90 : 120;
-
-    levels.forEach((levelNodes, levelIndex) => {
-      const y = levelIndex * FIXED_LEVEL_HEIGHT + 60;
-      const totalWidth = (levelNodes.length - 1) * NODE_HORIZONTAL_SPACING;
-      const startX = (width - totalWidth) / 2;
-
-      levelNodes.forEach((node, i) => {
-        node.x = startX + i * NODE_HORIZONTAL_SPACING;
-        node.y = y;
+    const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
+    for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
+    const hsp = isMobile ? 70 : 100, vsp = isMobile ? 90 : 120;
+    lvls.forEach((lns, li) => {
+      const y = li * vsp + 60, tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
+      lns.forEach((n, i) => { n.x = sx + i * hsp; n.y = y; });
+    });
+    const lnks = []; let lid = 0;
+    data.forEach(s => {
+      s.dependencies.forEach(did => {
+        const t = graph[did];
+        if (t && (activeCategory === "All Tasks" || (allTasks[did] && allTasks[did].skill_id === activeSkillId)))
+          lnks.push({ id: `link-${lid++}`, source: graph[s.id], target: t, targetStatus: t.status });
       });
     });
-
-    // 1. First create your links array with IDs for reference
-const links = [];
-let linkId = 0; // Give each link a unique ID
-
-data.forEach((source) => {
-  const sourceNode = graph[source.id];
-  if (!sourceNode) return;
-
-  // For All Tasks view, include all dependencies
-  if (activeCategory === "All Tasks") {
-    source.dependencies.forEach((depId) => {
-      const targetNode = graph[depId];
-      if (targetNode) {
-        links.push({
-          id: `link-${linkId++}`, // Unique ID for reference
-          source: sourceNode,
-          target: targetNode,
-          type: "internal",
-          targetStatus: targetNode.status // Store the actual status string
-        });
-      }
-    });
-  } else {
-    // For skill-specific views
-    const internalDeps = source.dependencies.filter((depId) => {
-      const depTask = allTasks[depId];
-      return depTask && depTask.skill_id === activeSkillId;
-    });
-
-    internalDeps.forEach((depId) => {
-      const targetNode = graph[depId];
-      if (targetNode) {
-        links.push({
-          id: `link-${linkId++}`, // Unique ID for reference  
-          source: sourceNode,
-          target: targetNode,
-          type: "internal",
-          targetStatus: targetNode.status // Store the actual status string
-        });
-      }
-    });
-  }
-});
-
-// 2. Now create the link elements
-const linkElements = linksGroup
-  .selectAll(".link")
-  .data(links)
-  .enter()
-  .append("path")
-  .attr("id", d => d.id) // Set the unique ID
-  .attr("class", "link")
-  .attr("fill", "none")
-  .attr("stroke", "#999") // Default color - we'll update specific ones in the next step
-  .attr("stroke-width", (d) => (d.type === "internal" ? 1 : 1.5))
-  .attr("stroke-dasharray", (d) => (d.type === "internal" ? "none" : "5,5"))
-  .attr("d", (d) => {
-    return `M${d.source.x},${d.source.y} C${d.source.x},${
-      (d.source.y + d.target.y) / 2
-    } ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${
-      d.target.y
-    }`;
-  });
-
-// 3. Now go through and update the colors for completed tasks directly
-links.forEach(link => {
-  if (link.targetStatus === "completed") {
-    d3.select(`#${link.id}`).attr("stroke", "#FF69B4");
-  }
-});
-
-
-    // Only process external dependencies if we're not in All Tasks view
+    linksGroup.selectAll(".link").data(lnks).enter().append("path").attr("id", d => d.id).attr("class", "link")
+      .attr("fill", "none").attr("stroke", "#999").attr("stroke-width", 1)
+      .attr("d", d => `M${d.source.x},${d.source.y} C${d.source.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${d.target.y}`);
+    lnks.forEach(l => { if (l.targetStatus === "completed") d3.select(`#${l.id}`).attr("stroke", "#FF69B4"); });
     if (activeCategory !== "All Tasks") {
-      Object.values(graph).forEach((node) => {
-        // Get external dependencies (things this node depends on)
-        const externalDeps = node.dependencies
-          .filter((depId) => {
-            const depTask = allTasks[depId];
-            return depTask && depTask.skill_id !== activeSkillId;
-          })
-          .map((depId) => ({
-            id: depId,
-            sourceNode: node,
-            type: "depends-on",
-            taskInfo: allTasks[depId],
-          }));
-    
-        // Get external dependents (things that depend on this node)
-        const externalDependents = Object.values(allTasks)
-          .filter(
-            (task) =>
-              task.skill_id !== activeSkillId &&
-              task.dependencies.includes(node.id)
-          )
-          .map((task) => ({
-            id: task.id,
-            sourceNode: node,
-            type: "depended-by",
-            taskInfo: task,
-          }));
-    
-        // Limit to MAX_EXTERNAL_DEPS dependencies of each type
-        const limitedDeps = externalDeps.slice(0, MAX_EXTERNAL_DEPS);
-        const limitedDependents = externalDependents.slice(0, MAX_EXTERNAL_DEPS);
-        
-        // Draw external dependency links first (under nodes)
-        // Position external dependencies in a row above the node
-        limitedDeps.forEach((dep, index) => {
-          const totalDeps = limitedDeps.length;
-          const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
-
-          const x2 = node.x + offset;
-          const y2 = node.y - 30; // Fixed distance above
-
-          // Draw link
-          linksGroup
-            .append("line")
-            .attr("class", "external-link")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "2,2")
-            .attr("x1", node.x)
-            .attr("y1", node.y)
-            .attr("x2", x2)
-            .attr("y2", y2);
-
-          // Draw external node
-          const externalNodeGroup = nodesGroup
-            .append("g")
-            .attr("class", "external-node")
-            .attr("transform", `translate(${x2}, ${y2})`)
-            .style("pointer-events", "visible")
-            .on("mouseover", (event) => {
-              if (dep.taskInfo) {
-                setHoveredNode({
-                  id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
-                  type: dep.type,
-                  rawX: event.clientX,
-                  rawY: event.clientY,
-                  element: event.currentTarget,
-                });
-              }
-            })
-            .on("mouseout", handleMouseOut)
-            .on("mouseleave", handleMouseOut) 
-            .on("click", () => navigate(`/tasks/${dep.taskInfo.id}`));
-
-          externalNodeGroup
-            .append("circle")
-            .attr("r", 7)
-            .attr(
-              "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
-            )
-            .attr(
-              "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
-            )
-            .attr("stroke-width", 1.5)
-            .attr("stroke-dasharray", "2,1");
-        });
-
-        // Position external dependents in a row below the node
-        limitedDependents.forEach((dep, index) => {
-          const totalDeps = limitedDependents.length;
-          const offset = (index - (totalDeps - 1) / 2) * 30; // Distribute horizontally
-
-          const x2 = node.x + offset;
-          const y2 = node.y + 40; // Fixed distance below
-
-          // Draw link
-          linksGroup
-            .append("line")
-            .attr("class", "external-link")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "2,2")
-            .attr("x1", node.x)
-            .attr("y1", node.y)
-            .attr("x2", x2)
-            .attr("y2", y2);
-
-          // Draw external node
-          const externalNodeGroup = nodesGroup
-            .append("g")
-            .attr("class", "external-node")
-            .attr("transform", `translate(${x2}, ${y2})`)
-            .on("mouseover", (event) => {
-              const [x, y] = d3.pointer(event); // Get coordinates relative to SVG
-              if (dep.taskInfo) {
-                setHoveredNode({
-                  id: dep.id,
-                  name: dep.taskInfo.name,
-                  status: dep.taskInfo.status,
-                  category: dep.taskInfo.category,
-                  type: dep.type,
-                  rawX: event.clientX,
-                  rawY: event.clientY,
-                  element: event.currentTarget,
-                });
-              }
-            })
-            .on("mouseout", handleMouseOut)
-            .on("mouseleave", handleMouseOut);
-
-          externalNodeGroup
-            .append("circle")
-            .attr("r", 7)
-            .attr(
-              "fill",
-              dep.taskInfo ? getNodeFill(dep.taskInfo.status) : "#CCCCCC"
-            )
-            .attr(
-              "stroke",
-              dep.taskInfo ? getNodeStroke(dep.taskInfo.status) : "#999999"
-            )
-            .attr("stroke-width", 1.5)
-            .attr("stroke-dasharray", "2,1");
+      Object.values(graph).forEach(n => {
+        const edps = n.dependencies.filter(did => allTasks[did] && allTasks[did].skill_id !== activeSkillId).map(did => ({ id: did, sourceNode: n, type: "depends-on", taskInfo: allTasks[did] }));
+        const edpts = Object.values(allTasks).filter(t => t.skill_id !== activeSkillId && t.dependencies.includes(n.id)).map(t => ({ id: t.id, sourceNode: n, type: "depended-by", taskInfo: t }));
+        [...edps.slice(0, 3), ...edpts.slice(0, 3)].forEach((dep, idx) => {
+          const isDep = dep.type === "depends-on", x2 = n.x + (idx - 1) * 30, y2 = n.y + (isDep ? -30 : 40);
+          linksGroup.append("line").attr("stroke", "#666").attr("stroke-dasharray", "2,2").attr("x1", n.x).attr("y1", n.y).attr("x2", x2).attr("y2", y2);
+          const enode = nodesGroup.append("g").attr("transform", `translate(${x2}, ${y2})`)
+            .on("mouseover", (e) => { if (dep.taskInfo) setHoveredNode({ ...dep.taskInfo, type: dep.type, rawX: e.clientX, rawY: e.clientY, element: e.currentTarget }); })
+            .on("mouseout", handleMouseOut).on("click", () => navigate(`/tasks/${dep.taskInfo.id}`));
+          enode.append("circle").attr("r", 7).attr("fill", getNodeFill(dep.taskInfo.status)).attr("stroke", getNodeStroke(dep.taskInfo.status)).attr("stroke-dasharray", "2,1");
         });
       });
     }
-
-    // Draw the main nodes last (on top)
-    const nodeGroups = nodesGroup
-      .selectAll(".node")
-      .data(Object.values(graph))
-      .enter()
-      .append("g")
-      .attr("class", "node")
-      .attr("transform", (d) => `translate(${d.x}, ${d.y})`)
-      .style("pointer-events", "all")
-      .on("mouseover", handleMouseOver)
-      .on("mouseout", handleMouseOut)
-      .on("click", function (event, d) {
-        event.stopPropagation();
-        navigate(`/tasks/${d.id}`);
-      });
-    nodeGroups
-      .append("circle")
-      .attr("r", isMobile ? 18 : 15)
-      .attr("fill", (d) => getNodeFill(d.status))
-      .attr("stroke", (d) => getNodeStroke(d.status))
-      .attr("stroke-width", 2)
+    const nGroups = nodesGroup.selectAll(".node").data(Object.values(graph)).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
+      .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => { e.stopPropagation(); navigate(`/tasks/${d.id}`); });
+    nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => getNodeFill(d.status)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
       .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
-      .on("touchstart", function () {
-        d3.select(this).transition().attr("r", 22);
-      })
-      .on("touchend", function () {
-        d3.select(this).transition().attr("r", isMobile ? 18 : 15);
-      });
-
-    nodeGroups
-      .append("text")
-      .attr("dy", 25)
-      .attr("text-anchor", "middle")
-      .text((d) => truncateText(d.name))
-      .attr("font-size", "10px");
-
-    nodeGroups
-      .append("text")
-      .attr("dy", 4)
-      .attr("text-anchor", "middle")
-      .text((d) => {
-        if (d.status === "completed") return "✓";
-        if (d.status.includes("urgent")) return "!";
-        if (d.status.includes("unassigned")) return "+";
-        return "";
-      })
-      .attr("font-size", "12px")
-      .attr("fill", (d) =>
-        d.status.includes("unassigned") ? "#000000" : "#FFFFFF"
-      );
-    
-
-    // Add the orange "+" nodes in edit mode
+      .on("touchstart", function() { d3.select(this).transition().attr("r", 22); })
+      .on("touchend", function() { d3.select(this).transition().attr("r", isMobile ? 18 : 15); });
+    nGroups.append("text").attr("dy", 25).attr("text-anchor", "middle").text(d => truncateText(d.name)).attr("font-size", "10px");
+    nGroups.append("text").attr("dy", 4).attr("text-anchor", "middle").text(d => d.status === "completed" ? "✓" : (d.status.includes("urgent") ? "!" : (d.status.includes("unassigned") ? "+" : "")))
+      .attr("font-size", "12px").attr("fill", d => d.status.includes("unassigned") ? "#000000" : "#FFFFFF");
     if (isEditMode) {
-      Object.values(graph).forEach((node) => {
-        const addButtonGroup = addButtonsGroup
-          .append("g")
-          .attr("class", "add-button")
-          .attr("transform", `translate(${node.x + 35}, ${node.y})`)
-          .style("pointer-events", "all") // Add this line
-          .style("cursor", "pointer")
-          .on("click", function (event) {
-            // Move click handler here
-            event.stopPropagation();
-            handleAddTask(node.id);
-          });
-
-        addButtonGroup
-          .append("circle")
-          .attr("r", 10)
-          .attr("fill", "#FFA500")
-          .attr("stroke", "#FF8C00")
-          .attr("stroke-width", 1.5);
-
-        addButtonGroup
-          .append("text")
-          .attr("dy", 4)
-          .attr("text-anchor", "middle")
-          .text("+")
-          .attr("font-size", "14px")
-          .attr("fill", "#FFFFFF"); // Prevent pointer events on the text
+      Object.values(graph).forEach(n => {
+        const ab = addButtonsGroup.append("g").attr("transform", `translate(${n.x + 35}, ${n.y})`).style("cursor", "pointer").on("click", (e) => { e.stopPropagation(); handleAddTask(n.id); });
+        ab.append("circle").attr("r", 10).attr("fill", "#FFA500").attr("stroke", "#FF8C00");
+        ab.append("text").attr("dy", 4).attr("text-anchor", "middle").text("+").attr("font-size", "14px").attr("fill", "#FFFFFF");
       });
     }
-  }, [
-    activeCategory,
-    allTasks,
-    skills,
-    isEditMode,
-    svgDimensions,
-    tasks
-  ]);
-  const colorClasses = ["pink", "green", "blue", "orange"];
+  }, [activeCategory, allTasks, skills, isEditMode, svgDimensions, tasks, isMobile]);
 
-
-    useEffect(() => {
+  useEffect(() => {
     const fetchFullTask = async () => {
       if (taskId && !popupLaunched) {
         try {
-          const token = await getAccessTokenSilently();
-          const response = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const task = response.data;
-          if (task) {
-            setTaskForm(task);
-            setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
-            if (skill) {
-              setActiveCategory(skill.name);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching full task details for deep link:", error);
-          // Fallback to tasks array
-          const task = tasks.find(t => t.id === parseInt(taskId, 10));
-          if (task) {
-            setTaskForm(task);
-            setPopupLaunched(true);
-            setActiveSkillId(task.skill_id);
-            setShowTaskPopup(true);
-            const skill = skills.find(s => s.id === task.skill_id);
-            if (skill) {
-              setActiveCategory(skill.name);
-            }
-          }
+          const tkn = await getAccessTokenSilently();
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, { headers: { Authorization: `Bearer ${tkn}` } });
+          const t = res.data; if (t) { setTaskForm(t); setPopupLaunched(true); setActiveSkillId(t.skill_id); setShowTaskPopup(true); const s = skills.find(sk => sk.id === t.skill_id); if (s) setActiveCategory(s.name); }
+        } catch (e) {
+          const t = tasks.find(tk => tk.id === parseInt(taskId, 10));
+          if (t) { setTaskForm(t); setPopupLaunched(true); setActiveSkillId(t.skill_id); setShowTaskPopup(true); const s = skills.find(sk => sk.id === t.skill_id); if (s) setActiveCategory(s.name); }
         }
       }
     };
     fetchFullTask();
   }, [taskId, tasks, skills, popupLaunched, getAccessTokenSilently]);
 
-  // Add these debug logs right before the TaskEditor component in the return statement
-
-  if (isMobile) {
   const isProjectCreator = project?.creator_id === Number(userId);
-
-  const selectedCommunity = userCommunities[communityIndex];
-  const communityProjects = allProjects.filter(p => p.community_id === selectedCommunity?.id);
-  const isSingleProject = communityProjects.length <= 1;
-
-  const categories = [
-    { name: "All Tasks" },
-    ...usedSkills.map(s => ({ id: s.id, name: s.name }))
-  ];
+  const colorClasses = ["pink", "green", "blue", "orange"];
 
   return (
-    <Box className="mobile-visualizer" ref={containerRef}>
-      
-      {/* COMMUNITY RIBBON */}
-      <RadialRibbon
-        items={userCommunities.length > 0 ? userCommunities : [{ name: "General" }]}
-        activeIndex={communityIndex}
-        setActiveIndex={setCommunityIndex}
-      />
-
-      {/* PROJECT RIBBON */}
-      <Box sx={{
-        pointerEvents: isSingleProject ? "none" : "auto",
-        opacity: isSingleProject ? 0.6 : 1,
-        transition: 'opacity 0.3s ease'
-      }}>
-        <RadialRibbon
-          items={communityProjects.length > 0 ? communityProjects : (project ? [project] : [{ name: "No Projects" }])}
-          activeIndex={projectIndex}
-          setActiveIndex={(index) => {
-            const selected = communityProjects[index];
-            if (selected) {
-              setProjectIndex(index);
-              navigate(`/Visualizer/${selected.id}`);
-            }
-          }}
-        />
-      </Box>
-
-      {/* SKILL RIBBON */}
-      <RadialRibbon
-        items={categories}
-        activeIndex={skillIndex}
-        setActiveIndex={(index) => {
-          setSkillIndex(index);
-          const cat = categories[index];
-          setActiveCategory(cat.name);
-          setActiveSkillId(cat.id || null);
-        }}
-      />
-
-      {/* GRAPH */}
-      <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000' }}>
-        <svg
-          ref={svgRef}
-          width="100%"
-          height="100%"
-          className="mobile-graph"
-        />
-        {isProjectCreator && (
-          <Box sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <IconButton
-              sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
-              onClick={() => setIsEditMode(!isEditMode)}
-            >
-              <EditIcon />
-            </IconButton>
-            <IconButton
-              sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
-              onClick={() => setShowServiceModal(true)}
-            >
-              <ShoppingCartIcon />
-            </IconButton>
-            {project?.community_id === null && (
-              <IconButton
-                sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
-                onClick={() => {
-                  fetchUserCommunities();
-                  setShowCommunityProposalPopup(true);
-                }}
-              >
-                <GroupIcon />
-              </IconButton>
-            )}
-            {isEditMode && (
-              <IconButton
-                sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' } }}
-                onClick={() => handleAddTask()}
-              >
-                <AddIcon />
-              </IconButton>
+    <div className={isMobile ? "mobile-visualizer" : "skill-hierarchy-container"} ref={containerRef} onMouseLeave={handleMouseLeave}>
+      {isMobile ? (
+        <>
+          <ArcCarousel items={userCommunities.length > 0 ? userCommunities : [{ name: "General" }]} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
+          <ArcCarousel items={(() => {
+            const sc = userCommunities[communityIndex];
+            const cp = allProjects.filter(p => p.community_id === sc?.id);
+            return cp.length > 0 ? cp : (project ? [project] : [{ name: "No Projects" }]);
+          })()} activeIndex={projectIndex} setActiveIndex={idx => {
+            const sc = userCommunities[communityIndex], cp = allProjects.filter(p => p.community_id === sc?.id), sel = cp[idx];
+            if (sel) { setProjectIndex(idx); navigate(`/Visualizer/${sel.id}`); }
+          }} />
+          <ArcCarousel items={[{ name: "All Tasks" }, ...usedSkills.map(s => ({ id: s.id, name: s.name }))]} activeIndex={skillIndex} setActiveIndex={idx => {
+            setSkillIndex(idx); const cats = [{ name: "All Tasks" }, ...usedSkills.map(s => ({ id: s.id, name: s.name }))], cat = cats[idx];
+            setActiveCategory(cat.name); setActiveSkillId(cat.id || null);
+          }} />
+          <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', mb: 2 }}>
+            <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />
+            {isProjectCreator && (
+              <Box sx={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <IconButton sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => setIsEditMode(!isEditMode)}><EditIcon /></IconButton>
+                <IconButton sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => setShowServiceModal(true)}><ShoppingCartIcon /></IconButton>
+                {project?.community_id === null && <IconButton sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: '#fff' }} onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}><GroupIcon /></IconButton>}
+                {isEditMode && <IconButton sx={{ bgcolor: '#FFA500', color: '#fff' }} onClick={() => handleAddTask()}><AddIcon /></IconButton>}
+              </Box>
             )}
           </Box>
-        )}
-      </Box>
-
-    </Box>
-  );
-}
-
-  return (
-    <div
-      className="skill-hierarchy-container"
-      ref={containerRef}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="tabs-container-wrapper" style={{ position: "relative" }}>
-        {/* Left shadow - fixed position */}
-        <div className="scroll-shadow left-shadow" />
-        <div
-          ref={tabsContainerRef}
-          className="category-tabs"
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleTabsLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-        >
-          {/* Add the All Tasks tab first */}
-          <button
-            key="all-tasks"
-            className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`}
-            onClick={() => {
-              setActiveCategory("All Tasks");
-              setActiveSkillId(null); // No specific skill for All Tasks view
-            }}
-            style={{ flex: "0 0 auto" }}
-          >
-            All Tasks
-            {activeCategory === "All Tasks" && (
-              <span className="active-indicator" />
-            )}
-          </button>
-
-          {usedSkills.map((category, index) => {
-            const colorClass = colorClasses[index % colorClasses.length];
-            return (
-              <button
-                key={category.id}
-                className={`tab ${colorClass} ${
-                  activeCategory === category.name ? "active" : ""
-                }`}
-                onClick={() => {
-                  const skillId = skills.find(s => s.name === category.name)?.id;
-                  setActiveCategory(category.name);
-                  setActiveSkillId(skillId);
-                }}
-                style={{ flex: "0 0 auto" }}
-              >
-                {category.name}
-                {activeCategory === category.name && (
-                  <span className="active-indicator" />
-                )}
-              </button>
-            );
-          })}
-          {isEditMode && (
-            <button
-              className="tab new-skill-tab"
-              onClick={() => {
-                setTaskForm({
-                  ...initialForm,
-                  project_id: projectId,
-                  skill_id: "" // No skill pre-selected
-                });
-                setShowTaskPopup(true);
-              }}
-              style={{ flex: "0 0 auto" }}
-            >
-              + New Skill
-            </button>
-          )}
-        </div>
-        <div className="scroll-shadow right-shadow" />
-      </div>
-
-      <div
-        className="visualization-container"
-        style={{ width: "100%", overflow: "hidden" }}
-      >
-        <svg
-          ref={svgRef}
-          width={svgDimensions.width}
-          height={svgDimensions.height}
-        ></svg>
-        {project?.creator_id === Number(userId) && (
-          <div className="edit-buttons">
-            {isEditMode && (
-              <button
-                className="new-task-button"
-                onClick={() => {
-                  handleAddTask();
-                }}
-              >
-                + New Task
-              </button>
-            )}
-            {!projectIsActive && (
-            <button
-              className={`new-task-button ${loading ? 'disabled' : ''}`}
-              onClick={() => {
-                handleGranularizeTasks(projectId);
-              }}
-              disabled={loading}
-            >
-              {loading ? 'Granularizing...' : 'Granularize all project tasks'}
-            </button>
-            )}
-            {project?.community_id === null && (
-              <button
-                className="community-proposal-button"
-                onClick={() => {
-                  fetchUserCommunities();
-                  setShowCommunityProposalPopup(true);
-                }}
-              >
-                Propose to Community
-              </button>
-            )}
-
-            <button
-              className="edit-mode-button"
-              onClick={() => setShowServiceModal(true)}
-            >
-              Make a Service
-            </button>
-            <button
-              className="edit-mode-button"
-              onClick={() => setIsEditMode(!isEditMode)}
-            >
-              {isEditMode ? "Exit Edit Mode" : "Edit Mode"}
-            </button>
+        </>
+      ) : (
+        <div className="tabs-container-wrapper" style={{ position: "relative" }}>
+          <div className="scroll-shadow left-shadow" />
+          <div ref={tabsContainerRef} className="category-tabs" onMouseDown={handleMouseDown} onMouseLeave={handleTabsLeave} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}>
+            <button className={`tab all-tasks ${activeCategory === "All Tasks" ? "active" : ""}`} onClick={() => { setActiveCategory("All Tasks"); setActiveSkillId(null); }}>All Tasks</button>
+            {usedSkills.map((c, i) => (
+              <button key={c.id} className={`tab ${colorClasses[i % 4]} ${activeCategory === c.name ? "active" : ""}`} onClick={() => { setActiveCategory(c.name); setActiveSkillId(c.id); }}>{c.name}</button>
+            ))}
+            {isEditMode && <button className="tab new-skill-tab" onClick={() => { setTaskForm({ ...initialForm, project_id: projectId, skill_id: "" }); setShowTaskPopup(true); }}>+ New Skill</button>}
           </div>
-        )}
-
-      </div>
-
-      <ServiceSettingsModal
-        open={showServiceModal}
-        onClose={() => setShowServiceModal(false)}
-        project={project}
-        onUpdate={(updates) => updateProject(updates)}
-        userId={userId}
-      />
-
-      {hoveredNode && (
-        <div
-          ref={tooltipRef}
-          className="tooltip-container"
-          style={{
-            position: 'fixed',
-            left: tooltipPosition.x,
-            top: tooltipPosition.y,
-            opacity: hoveredNode ? 1 : 0,
-          }}
-          onMouseEnter={() => clearTimeout(hoverIntentRef.current)}
-          onMouseLeave={() => {
-            clearTimeout(hoverIntentRef.current); // Clear any pending show
-            setHoveredNode(null); // Hide tooltip
-          }}
-        >
-          <div className="node-tooltip">
-            <h4>{hoveredNode.name}</h4>
-            {hoveredNode.isAddButton ? (
-              <p>
-                Creates a new task connected to node{" "}
-                {hoveredNode.connectedToNodeId}
-              </p>
-            ) : (
-              <>
-                {hoveredNode.category &&
-                  hoveredNode.category !== activeCategory && (
-                    <p>Category: {hoveredNode.category}</p>
-                  )}
-                {hoveredNode.status && <p>Status: {hoveredNode.status}</p>}
-                {hoveredNode.type && (
-                  <p>
-                    Relationship:{" "}
-                    {hoveredNode.type === "depends-on"
-                      ? "Current task depends on this"
-                      : "This depends on current task"}
-                  </p>
-                )}
-                {hoveredNode.dependencies &&
-                  hoveredNode.dependencies.length > 0 && (
-                    <div>
-                      <p>Depends on:</p>
-                      <ul>
-                        {hoveredNode.dependencies
-                          .map((depId) => allTasks[depId]) // Resolve ID to task object
-                          .filter(Boolean) // Remove undefined (invalid dependencies)
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
-                                ? `(${
-                                    skills.find((s) => s.id === task.skill_id)
-                                      ?.name || "external"
-                                  })`
-                                : ""}
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
-
-                {hoveredNode.dependents &&
-                  hoveredNode.dependents.length > 0 && (
-                    <div>
-                      <p>Required by:</p>
-                      <ul>
-                        {Object.values(allTasks)
-                          .filter((task) =>
-                            task.dependencies.includes(hoveredNode.id)
-                          )
-                          .map((task) => (
-                            <li key={task.id}>
-                              {task.name}{" "}
-                              {task.skill_id !== activeSkillId
-                                ? `(${
-                                    skills.find((s) => s.id === task.skill_id)
-                                      ?.name || "external"
-                                  })`
-                                : ""}
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
-
-                {/* Reviewer info for this specific task */}
-                {allTasks[hoveredNode.id]?.reviewer_ids && (
-                  <div>
-                    <p>Reviewers:</p>
-                    <ul>
-                      {allTasks[hoveredNode.id].reviewer_ids.map((rid, idx) => (
-                        <li key={idx}>{rid}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
+          <div className="scroll-shadow right-shadow" />
+          <div className="visualization-container" style={{ width: "100%", overflow: "hidden" }}>
+            <svg ref={svgRef} width={svgDimensions.width} height={svgDimensions.height}></svg>
+            {isProjectCreator && (
+              <div className="edit-buttons">
+                {isEditMode && <button className="new-task-button" onClick={() => handleAddTask()}>+ New Task</button>}
+                {!projectIsActive && <button className={`new-task-button ${loading ? 'disabled' : ''}`} onClick={() => handleGranularizeTasks(projectId)} disabled={loading}>{loading ? 'Granularizing...' : 'Granularize all project tasks'}</button>}
+                {project?.community_id === null && <button className="community-proposal-button" onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}>Propose to Community</button>}
+                <button className="edit-mode-button" onClick={() => setShowServiceModal(true)}>Make a Service</button>
+                <button className="edit-mode-button" onClick={() => setIsEditMode(!isEditMode)}>{isEditMode ? "Exit Edit Mode" : "Edit Mode"}</button>
+              </div>
             )}
           </div>
         </div>
       )}
-
+      <ServiceSettingsModal open={showServiceModal} onClose={() => setShowServiceModal(false)} project={project} onUpdate={u => updateProject(u)} userId={userId} />
+      {hoveredNode && (
+        <div ref={tooltipRef} className="tooltip-container" style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, opacity: 1, zIndex: 9999 }}>
+          <div className="node-tooltip">
+            <h4>{hoveredNode.name}</h4>
+            {hoveredNode.category && <p>Category: {hoveredNode.category}</p>}
+            <p>Status: {hoveredNode.status}</p>
+            {hoveredNode.dependencies?.length > 0 && <div><p>Depends on:</p><ul>{hoveredNode.dependencies.map(did => allTasks[did]).filter(Boolean).map(t => <li key={t.id}>{t.name}</li>)}</ul></div>}
+          </div>
+        </div>
+      )}
       <div className="project-info">
-        <h3>{project?.name}</h3>
-        <p className="project-description">{project?.description}</p>
-
-        {outcomes.length > 0 && (
-          <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}>
-            <Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>
-              INTENDED REAL-WORLD EFFECT
-            </Typography>
-            {outcomes.map(o => (
-              <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>
-                "{o.statement}"
-              </Typography>
-            ))}
-          </Box>
-        )}
-
-        <br />
-        <p className="token-pool-label">Token Pool:</p>
+        <h3>{project?.name}</h3><p className="project-description">{project?.description}</p>
+        {outcomes.length > 0 && <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}><Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>INTENDED REAL-WORLD EFFECT</Typography>{outcomes.map(o => <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>"{o.statement}"</Typography>)}</Box>}
         <div className="token-pool">
-          <div className="token-metric">
-            <span className="token-label">Allocated:</span>
-            <span className="token-value">{project?.reserved_tokens}</span>
-          </div>
-          <div className="token-metric">
-            <span className="token-label">DIstributed:</span>
-            <span className="token-value">{project?.used_tokens}</span>
-          </div>
-          <div className="token-metric">
-            <span className="token-label">Available:</span>
-            <span className="token-value">
-              {Number(project?.token_pool || 0) -
-                Number(project?.used_tokens || 0) -
-                Number(project?.reserved_tokens || 0)}
-            </span>
-          </div>
+          <div className="token-metric"><span className="token-label">Allocated:</span><span className="token-value">{project?.reserved_tokens}</span></div>
+          <div className="token-metric"><span className="token-label">Distributed:</span><span className="token-value">{project?.used_tokens}</span></div>
+          <div className="token-metric"><span className="token-label">Available:</span><span className="token-value">{Number(project?.token_pool || 0) - Number(project?.used_tokens || 0) - Number(project?.reserved_tokens || 0)}</span></div>
         </div>
         <div className="vproject-tags">
-          {isEditMode ? (
-            <Autocomplete
-              multiple
-              freeSolo
-              options={interests || []}
-              value={project?.tags || []}
-              onChange={(event, newValue) => {
-                handleUpdateTags(newValue);
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={index}
-                    label={option}
-                    className="tag-chip"
-                    variant="outlined"
-                    style={{
-                      backgroundColor: "#000000",
-                      color: "#FFF",
-                      margin: "2px",
-                      fontSize: "12px",
-                      borderRadius: "4px",
-                      padding: "5px 10px",
-                    }}
-                    onDelete={() => {
-                      const newTags = [...(project?.tags || [])];
-                      newTags.splice(index, 1);
-                      handleUpdateTags(newTags);
-                    }}
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="outlined"
-                  placeholder="Add tags..."
-                  size="small"
-                  InputProps={{
-                    ...params.InputProps,
-                    style: {
-                      color: 'white',
-                      backgroundColor: '#222',
-                      borderRadius: '4px',
-                      padding: '4px',
-                    },
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': {
-                        borderColor: 'transparent',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: '#555',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#4dabf7',
-                      },
-                    },
-                  }}
-                />
-              )}
-              sx={{
-                '& .MuiAutocomplete-popupIndicator': { color: 'white' },
-                '& .MuiAutocomplete-clearIndicator': { color: 'white' },
-              }}
-              componentsProps={{
-                paper: {
-                  sx: {
-                    backgroundColor: '#222',
-                    color: 'white',
-                    '& .MuiAutocomplete-option': {
-                      '&[aria-selected="true"]': {
-                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
-                      },
-                      '&[aria-selected="true"].Mui-focused': {
-                        backgroundColor: 'rgba(77, 171, 247, 0.3)',
-                      },
-                    },
-                  },
-                },
-              }}
-            />
-          ) : (
-            project?.tags?.map((tag, index) => (
-              <Chip
-                key={index}
-                label={tag}
-                className="tag-chip"
-                variant="outlined"
-                style={{
-                  backgroundColor: "#000000",
-                  color: "#FFF",
-                  margin: "2px",
-                  fontSize: "12px",
-                  borderRadius: "4px",
-                  padding: "5px 10px",
-                }}
-              />
-            ))
-          )}
+          {isEditMode ? <Autocomplete multiple freeSolo options={interests || []} value={project?.tags || []} onChange={(e, nv) => handleUpdateTags(nv)} renderTags={(v, gtp) => v.map((o, i) => <Chip {...gtp({ i })} key={i} label={o} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)} renderInput={p => <TextField {...p} variant="outlined" placeholder="Add tags..." size="small" />} /> : project?.tags?.map((t, i) => <Chip key={i} label={t} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)}
         </div>
       </div>
-
-      <TaskEditor
-        open={showTaskPopup}
-        onClose={() => {
-          setShowTaskPopup(false);
-          refreshTasks();
-        }}
-        projectId={projectId}
-        taskForm={taskForm}
-        setTaskForm={setTaskForm}
-        onSubmit={async (formData) => {
-          const action = formData.id ? 'update' : 'create'; 
-          const result = await handleTaskAction(formData, action);
-          if (!result.error) {
-            await refreshTasks();
-            updateLinkColors();
-          }
-          return result;
-        }}
-        skills={skills}
-        isEdit={isEditMode}
-        currentUser={user}
-        projectCreatorId={project?.creator_id}
-        isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))}
-      />
-
+      <TaskEditor open={showTaskPopup} onClose={() => { setShowTaskPopup(false); refreshTasks(); }} projectId={projectId} taskForm={taskForm} setTaskForm={setTaskForm} onSubmit={async f => { const r = await handleTaskAction(f, f.id ? 'update' : 'create'); if (!r.error) { await refreshTasks(); updateLinkColors(); } return r; }} skills={skills} isEdit={isEditMode} currentUser={user} projectCreatorId={project?.creator_id} isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))} />
       <div className="legend">
-        <div>
-          <span style={{ color: "#FF69B4" }}>● </span>Pink indicates a completed
-          task
-        </div>
-        <div>
-          <span style={{ color: "#FF0000" }}>● </span>Red circle indicates
-          urgent
-        </div>
-        <div>
-          <span style={{ color: "#87CEFA" }}>○ </span>Blue circle indicates
-          inactive vacancy
-        </div>
-        <div>
-          <span style={{ color: "#4682B4" }}>● </span>Filled blue indicates
-          inactive assigned
-        </div>
-        <div>
-          <span style={{ color: "#32CD32" }}>● </span>Green filled indicates
-          active assigned
-        </div>
-        <div>
-          <span style={{ color: "#00FF00" }}>○ </span>Green circle with gray
-          interior indicates active unassigned
-        </div>
-        <div>
-          <span style={{ color: "#FFA500" }}>● </span>Orange filled indicates
-          submitted
-        </div>
-        <div>
-          <span
-            style={{
-              border: "1px dashed #666",
-              borderRadius: "50%",
-              display: "inline-block",
-              width: "10px",
-              height: "10px",
-            }}
-          ></span>{" "}
-          Dashed circles indicate external dependencies
-        </div>
+        <div><span style={{ color: "#FF69B4" }}>● </span>Pink: Completed</div>
+        <div><span style={{ color: "#FF0000" }}>● </span>Red: Urgent</div>
+        <div><span style={{ color: "#87CEFA" }}>○ </span>Blue: Vacancy</div>
+        <div><span style={{ color: "#4682B4" }}>● </span>Filled Blue: Assigned</div>
+        <div><span style={{ color: "#32CD32" }}>● </span>Green: Active</div>
+        <div><span style={{ border: "1px dashed #666", borderRadius: "50%", display: "inline-block", width: "10px", height: "10px" }}></span> External</div>
       </div>
-      <Modal
-        open={showCommunityProposalPopup}
-        onClose={() => setShowCommunityProposalPopup(false)}
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <div className="cyber-modal" style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none' }}>
-          <div className="cyber-border">
-            <h3 className="cyber-title">Submit to Community</h3>
-            <div className="cyber-content">
-              <p>Select a community to submit this project to:</p>
-
-              <Autocomplete
-                options={userCommunities}
-                getOptionLabel={(option) => option.name}
-                onChange={(event, newValue) => setSelectedCommunity(newValue)}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Select Community"
-                    variant="outlined"
-                    fullWidth
-                    className="cyber-input"
-                  />
-                )}
-                sx={{
-                  margin: '20px 0',
-                  '& .MuiAutocomplete-popupIndicator': { color: '#00f3ff' },
-                  '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
-                }}
-              />
-
-              <div className="cyber-button-group">
-                <button
-                  onClick={() => setShowCommunityProposalPopup(false)}
-                  className="cyber-button cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitCommunityProposal}
-                  className="community-proposal-button"
-                  disabled={!selectedCommunity}
-                >
-                  Submit Proposal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <Modal open={showCommunityProposalPopup} onClose={() => setShowCommunityProposalPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="cyber-modal"><div className="cyber-border"><h3 className="cyber-title">Submit to Community</h3><div className="cyber-content"><Autocomplete options={userCommunities} getOptionLabel={o => o.name} onChange={(e, v) => setSelectedCommunity(v)} renderInput={p => <TextField {...p} label="Select Community" variant="outlined" fullWidth />} /><div className="cyber-button-group"><button onClick={() => setShowCommunityProposalPopup(false)} className="cyber-button cancel">Cancel</button><button onClick={handleSubmitCommunityProposal} className="community-proposal-button" disabled={!selectedCommunity}>Submit Proposal</button></div></div></div></div>
       </Modal>
     </div>
   );
