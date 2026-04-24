@@ -24,7 +24,7 @@ const ArcCarousel = ({
   items,
   activeIndex,
   setActiveIndex,
-  radiusX = 160,
+  radiusX = 200,
   radiusY = 40,
   angleStep = 0.45,
   visibleCount = 7,
@@ -117,7 +117,7 @@ const ArcCarousel = ({
       const pxPerItem = 120;
       const dt = 16;
       const dv = v * dt;
-      const next = posRef.current - dv / pxPerItem;
+      const next = posRef.current + dv / pxPerItem;
       posRef.current = next;
       setPos(next);
       const sign = Math.sign(v);
@@ -152,7 +152,7 @@ const ArcCarousel = ({
     drag.current.velocity = dx / dt;
     const pxPerItem = 120;
     const deltaIndex = dx / pxPerItem;
-    const next = posRef.current - deltaIndex;
+    const next = posRef.current + deltaIndex;
     posRef.current = next;
     setPos(next);
     drag.current.lastX = x;
@@ -216,7 +216,7 @@ const ArcCarousel = ({
               key={`${realIndex}-${i}`}
               className={`arc-item ${Math.round(posRef.current) === realIndex ? "active" : ""}`}
               style={{
-                transform: `translate(-50%, -50%) translate3d(${x}px, ${y}px, 0) scale(${scale}) rotateX(${rotateX}deg)`,
+                transform: `translate(-50%, -50%) translate3d(${x}px, ${y}px, ${zDepth * 50}px) scale(${scale}) rotateX(${rotateX}deg)`,
                 opacity,
                 zIndex: Math.round(zDepth * 100) + 100,
                 pointerEvents: zDepth > 0 ? 'auto' : 'none',
