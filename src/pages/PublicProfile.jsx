@@ -4,6 +4,7 @@ import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Butto
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
+import UserSearch from "../components/UserSearch.jsx";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "./PublicProfile.css";
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -77,40 +78,48 @@ const PublicProfile = () => {
         setProfile(parsedProfile);
         
         // Fetch badges from rewards endpoint with auth token
-        const token = await getToken();
-        if (token) {
-          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-
-          setBadges(badgesResponse.data.badges || []);
-
-          // Fetch services offered by this user
+        if (isAuthenticated) {
           try {
-            const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`, {
-              headers: {
-                Authorization: `Bearer ${token}`
+            const token = await getToken();
+            if (token) {
+              const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              });
+
+              setBadges(badgesResponse.data.badges || []);
+
+              // Fetch services offered by this user
+              try {
+                const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`, {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
+                });
+                setServices(servicesResponse.data.services || []);
+              } catch (servicesErr) {
+                console.error("Error fetching user services:", servicesErr);
+                setServices([]);
               }
-            });
-            setServices(servicesResponse.data.services || []);
-          } catch (servicesErr) {
-            console.error("Error fetching user services:", servicesErr);
-            setServices([]);
+            }
+          } catch (err) {
+            console.error("Error fetching authenticated data:", err);
           }
         }
 
         // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
         try {
-          const token = await getToken();
-          if (token) {
-            const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            });
-            setCommunities(communitiesResponse.data || []);
+          if (isAuthenticated) {
+            const token = await getToken();
+            if (token) {
+              const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              });
+              setCommunities(communitiesResponse.data || []);
+            }
           }
         } catch (commErr) {
           console.error("Error fetching user communities:", commErr);
@@ -255,6 +264,9 @@ const PublicProfile = () => {
 
   return (
     <div className={`public-profile-container ${isMobile ? 'mobile-profile' : ''}`}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mb: 2, pt: 2 }}>
+        <UserSearch />
+      </Box>
       <Box className="profile-id-card cyber-panel" sx={{ width: isMobile ? '100%' : '600px', p: 3, mb: 4, textAlign: 'center' }}>
         <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 4, mb: 2, display: 'block' }}>OPERATIVE IDENTIFICATION</Typography>
         <Avatar
