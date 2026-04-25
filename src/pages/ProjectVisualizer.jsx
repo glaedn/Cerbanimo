@@ -20,6 +20,68 @@ import GroupIcon from '@mui/icons-material/Group';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+const ArcCarouselItem = ({
+  realIndex,
+  pos,
+  item,
+  N,
+  angleStep,
+  radiusX,
+  radiusY,
+  onClick
+}) => {
+  const active = Math.round(pos) === realIndex;
+  const textRef = useRef(null);
+  const [overflow, setOverflow] = useState(0);
+
+  let o = 0;
+  if (N > 0) {
+    o = ((realIndex - pos + N / 2) % N + N) % N - N / 2;
+  }
+
+  const baseAngle = Math.PI / 2;
+  const angle = baseAngle + o * angleStep;
+
+  const x = radiusX * Math.cos(angle);
+  const y = radiusY * Math.sin(angle);
+
+  const zDepth = Math.sin(angle);
+  const scale = 0.8 + (zDepth * 0.4);
+  const opacity = 0.3 + (zDepth * 0.7);
+  const rotateX = -10 + (zDepth * 15);
+
+  useEffect(() => {
+    if (active && textRef.current) {
+      const el = textRef.current;
+      if (el.scrollWidth > el.clientWidth) {
+        setOverflow(el.scrollWidth - el.clientWidth);
+      } else {
+        setOverflow(0);
+      }
+    } else {
+      setOverflow(0);
+    }
+  }, [active, item]); // pos removed to prevent jank during animation
+
+  return (
+    <div
+      className={`arc-item ${active ? "active" : ""} ${overflow > 0 ? "marquee" : ""}`}
+      style={{
+        transform: `translate(-50%, -50%) translate3d(${x}px, ${y}px, ${zDepth * 50}px) scale(${scale}) rotateX(${rotateX}deg)`,
+        opacity,
+        zIndex: Math.round(zDepth * 100) + 100,
+        pointerEvents: zDepth > 0 ? 'auto' : 'none',
+        "--overflow-dist": `-${overflow}px`
+      }}
+      onClick={onClick}
+    >
+      <span ref={textRef} className="arc-text">
+        {item?.name || item}
+      </span>
+    </div>
+  );
+};
+
 const ArcCarousel = ({
   items,
   activeIndex,
@@ -189,45 +251,19 @@ const ArcCarousel = ({
             EMPTY_RING
           </div>
         )}
-        {windowIdx.map((realIndex, i) => {
-          // Robust shortest-path offset calculation
-          let o = 0;
-          if (N > 0) {
-            o = ((realIndex - posRef.current + N / 2) % N + N) % N - N / 2;
-          }
-
-          const baseAngle = Math.PI / 2;
-          const angle = baseAngle + o * angleStep;
-
-          // Tight oval geometry
-          const x = radiusX * Math.cos(angle);
-          const y = radiusY * Math.sin(angle);
-
-          // 3D Ribbon effect: scaling and opacity based on sine (Z-depth)
-          // Front is sin(angle) close to 1
-          const zDepth = Math.sin(angle);
-          const scale = 0.8 + (zDepth * 0.4);
-          const opacity = 0.3 + (zDepth * 0.7);
-          const rotateX = -10 + (zDepth * 15);
-
-          const item = items[realIndex];
-
-          return (
-            <div
-              key={`${realIndex}-${i}`}
-              className={`arc-item ${Math.round(posRef.current) === realIndex ? "active" : ""}`}
-              style={{
-                transform: `translate(-50%, -50%) translate3d(${x}px, ${y}px, ${zDepth * 50}px) scale(${scale}) rotateX(${rotateX}deg)`,
-                opacity,
-                zIndex: Math.round(zDepth * 100) + 100,
-                pointerEvents: zDepth > 0 ? 'auto' : 'none',
-              }}
-              onClick={() => animateTo(realIndex)}
-            >
-              {item?.name || item}
-            </div>
-          );
-        })}
+        {windowIdx.map((realIndex, i) => (
+          <ArcCarouselItem
+            key={`${realIndex}-${i}`}
+            realIndex={realIndex}
+            pos={pos}
+            item={items[realIndex]}
+            N={N}
+            angleStep={angleStep}
+            radiusX={radiusX}
+            radiusY={radiusY}
+            onClick={() => animateTo(realIndex)}
+          />
+        ))}
       </div>
     </div>
   );
@@ -269,6 +305,23 @@ const ProjectVisualizer = () => {
   const [communityIndex, setCommunityIndex] = useState(0);
   const [projectIndex, setProjectIndex] = useState(0);
   const [skillIndex, setSkillIndex] = useState(0);
+
+  const displayCommunities = useMemo(() => {
+    const list = [...userCommunities];
+    // Ensure project's own community is present even if not in userCommunities (rare)
+    if (project?.community_id && !list.find(c => c.id === project.community_id)) {
+      list.push({ id: project.community_id, name: project.community_name || "Current Community" });
+    }
+    const nc = { id: null, name: "No Community" };
+    const currentCommIdx = list.findIndex(c => c.id === project?.community_id);
+    if (currentCommIdx !== -1) {
+      // To appear to the left, it needs a higher index in our coordinate system
+      list.splice(currentCommIdx + 1, 0, nc);
+    } else {
+      list.push(nc);
+    }
+    return list;
+  }, [userCommunities, project?.community_id, project?.community_name]);
 
   useEffect(() => {
     setProjectIsActive(tasks.some(t => ["completed", "active-assigned", "active-unassigned", "urgent-unassigned", "urgent-assigned", "submitted"].includes(t.status)));
@@ -432,16 +485,16 @@ const ProjectVisualizer = () => {
   useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [skills, tasks]);
 
   useEffect(() => {
-    if (project && allProjects.length > 0) {
-      const commIdx = userCommunities.findIndex(c => c.id === project.community_id);
+    if (project && allProjects.length > 0 && displayCommunities.length > 0) {
+      const commIdx = displayCommunities.findIndex(c => c.id === project.community_id);
       if (commIdx !== -1) setCommunityIndex(commIdx);
 
-      const sc = userCommunities[commIdx] || { id: project.community_id };
+      const sc = displayCommunities[commIdx] || { id: project.community_id };
       const cp = allProjects.filter(p => p.community_id === sc.id);
       const pIdx = cp.findIndex(p => p.id === Number(projectId));
       if (pIdx !== -1) setProjectIndex(pIdx);
     }
-  }, [projectId, project, allProjects, userCommunities]);
+  }, [projectId, project, allProjects, displayCommunities]);
 
   // Reset skill index when project or category changes externally
   useEffect(() => {
@@ -591,11 +644,11 @@ const ProjectVisualizer = () => {
   const colorClasses = ["pink", "green", "blue", "orange"];
 
   const filteredProjects = useMemo(() => {
-    const sc = userCommunities[communityIndex];
+    const sc = displayCommunities[communityIndex];
     if (!sc) return project ? [project] : [];
     const cp = allProjects.filter(p => p.community_id === sc.id);
     return cp.length > 0 ? cp : (project ? [project] : []);
-  }, [userCommunities, communityIndex, allProjects, project]);
+  }, [displayCommunities, communityIndex, allProjects, project]);
 
   const skillOptions = useMemo(() => [
     { name: "All Tasks" },
@@ -607,7 +660,7 @@ const ProjectVisualizer = () => {
       {isMobile ? (
         <>
           <Box sx={{ zIndex: 40, position: 'relative' }}>
-            <ArcCarousel items={userCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
+            <ArcCarousel items={displayCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
           </Box>
           <Box sx={{ zIndex: 35, position: 'relative' }}>
             <ArcCarousel items={filteredProjects} activeIndex={projectIndex} setActiveIndex={idx => {
