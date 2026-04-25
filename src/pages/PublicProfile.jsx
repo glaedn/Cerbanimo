@@ -16,9 +16,11 @@ const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [communities, setCommunities] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const [portfolioToken, setPortfolioToken] = useState(null);
   // Centralized token retrieval method
   const getToken = async () => {
     try {
@@ -84,6 +86,19 @@ const PublicProfile = () => {
           });
 
           setBadges(badgesResponse.data.badges || []);
+
+          // Fetch services offered by this user
+          try {
+            const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            setServices(servicesResponse.data.services || []);
+          } catch (servicesErr) {
+            console.error("Error fetching user services:", servicesErr);
+            setServices([]);
+          }
         }
 
         // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
@@ -111,6 +126,21 @@ const PublicProfile = () => {
 
     fetchData();
   }, [userId, isAuthenticated]);
+
+  // Fetch portfolio token for UserPortfolio
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPortfolioToken = async () => {
+      try {
+        const token = await getToken();
+        if (isMounted) setPortfolioToken(token);
+      } catch {
+        if (isMounted) setPortfolioToken(null);
+      }
+    };
+    fetchPortfolioToken();
+    return () => { isMounted = false; };
+  }, [userId, isAuthenticated, getToken]);
 
   const handlePurchaseService = async (service, e) => {
     if (e) e.stopPropagation();
@@ -337,12 +367,12 @@ const PublicProfile = () => {
           </Grid>
         ) : (
           <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Orbitron' }}>
-            NO_SERVICES_OFFERED_BY_THIS_OPERATIVE_YET
+            No Services Listed
           </Typography>
         )}
       </Box>
 
-      <UserPortfolio userId={userId} />
+      <UserPortfolio userId={userId} accessToken={portfolioToken} />
 
       <Typography variant="h6" gutterBottom>
         Skills:
