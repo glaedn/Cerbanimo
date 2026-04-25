@@ -88,6 +88,9 @@ setIo(io);
 
 
 // JWT middleware for secured routes
+if (!process.env.BACKEND_URL) {
+  throw new Error("Environment variable BACKEND_URL is not defined. Please set it in your .env file.");
+}
 const jwtCheck = auth({
   audience: process.env.BACKEND_URL,
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
