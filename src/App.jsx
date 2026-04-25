@@ -41,6 +41,7 @@ const MobileDashboard = React.lazy(() => import("./pages/MobileDashboard.jsx"));
 const MobileNotifications = React.lazy(() => import("./pages/MobileNotifications.jsx"));
 const MobileTaskDetail = React.lazy(() => import("./pages/MobileTaskDetail.jsx"));
 const TaskBrowser = React.lazy(() => import("./pages/TaskBrowser.jsx"));
+const TaskViewer = React.lazy(() => import("./components/TaskViewer.jsx"));
 const CommunityMarketplace = React.lazy(() => import("./components/CommunityMarketplace/CommunityMarketplace.jsx"));
 const ProjectVisualizer = React.lazy(() => import("./pages/ProjectVisualizer.jsx"));
 const CommunityCreation = React.lazy(() => import("./pages/CommunityCreation.jsx"));
@@ -118,7 +119,7 @@ const AppContent = () => {
             path="/tasks/:taskId"
             element={
               <PrivateRoute>
-                <PageWrapper>{isMobile ? <MobileTaskDetail /> : <TaskBrowser />}</PageWrapper>
+                <PageWrapper><TaskViewer /></PageWrapper>
               </PrivateRoute>
             }
           />
