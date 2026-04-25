@@ -40,6 +40,7 @@ const Dashboard = () => {
             sub: user.sub, // Auth0 user ID
             email: user.email,
             name: user.name,
+            picture: user.picture,
           }, {
             headers: {
               Authorization: `Bearer ${token}`,

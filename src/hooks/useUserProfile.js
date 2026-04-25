@@ -11,6 +11,7 @@ const useUserProfile = () => {
     skills: [],
     tokens: 0, // Placeholder initially, will be updated
     contact_links: [],
+    profile_picture: '',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -84,6 +85,7 @@ const useUserProfile = () => {
           // Check for token balance, if not found, use placeholder
           tokens: profileData.cotokens !== undefined ? profileData.cotokens : 100, // Placeholder 100 if not present
           contact_links: profileData.contact_links || [],
+          profile_picture: profileData.profile_picture || '',
         });
 
       } catch (err) {

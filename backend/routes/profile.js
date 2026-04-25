@@ -36,7 +36,7 @@ router.get("/public/:userId",
       }
       const profile = result.rows[0];
       profile.contact_links = profile.contact_links || [];
-      if (profile.profile_picture) {
+      if (profile.profile_picture && !profile.profile_picture.startsWith('http')) {
         try {
           const signedUrl = await generatePrivateDownloadUrl(profile.profile_picture);
           profile.profile_picture = signedUrl;
@@ -79,6 +79,41 @@ router.get('/options', async (req, res) => {
   } catch (err) {
     console.error('Error fetching skills and interests:', err);
     res.status(500).json({ message: 'Failed to fetch skills and interests', error: err.message });
+  }
+});
+
+// Endpoint to search for users by username
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) {
+      return res.json([]);
+    }
+
+    const query = `
+      SELECT id, username, profile_picture
+      FROM users
+      WHERE username ILIKE $1
+      LIMIT 10;
+    `;
+    const result = await pool.query(query, [`%${q}%`]);
+
+    // Process profile pictures if needed
+    const users = await Promise.all(result.rows.map(async (u) => {
+      if (u.profile_picture && !u.profile_picture.startsWith('http')) {
+        try {
+          u.profile_picture = await generatePrivateDownloadUrl(u.profile_picture);
+        } catch (err) {
+          console.error('Error generating signed URL for search result:', err);
+        }
+      }
+      return u;
+    }));
+
+    res.json(users);
+  } catch (err) {
+    console.error('Error searching users:', err);
+    res.status(500).json({ message: 'Failed to search users' });
   }
 });
 
@@ -133,7 +168,7 @@ router.get('/', async (req, res) => {
       : profile.interests || [];
     profile.contact_links = profile.contact_links || [];
 
-    if (profile.profile_picture) {
+    if (profile.profile_picture && !profile.profile_picture.startsWith('http')) {
       try {
         const signedUrl = await generatePrivateDownloadUrl(profile.profile_picture);
         profile.profile_picture = signedUrl;

@@ -22,6 +22,11 @@ const UserPortfolio = ({ userId: propUserId }) => {
     const fetchData = async () => {
       try {
         const chronicleRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`);
+        if (chronicleRes.status === 401) {
+            console.warn("Unauthorized to fetch chronicle data (Public view might be restricted)");
+            setChronicleData([]);
+            return;
+        }
         const chronicleData = await chronicleRes.json();
 
         if (!Array.isArray(chronicleData)) {

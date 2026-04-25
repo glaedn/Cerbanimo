@@ -16,8 +16,11 @@ import ChronicleTimeline from '../../components/ChronicleTimeline';
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
+import ShareIcon from '@mui/icons-material/Share';
+import { toast } from 'react-hot-toast';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
 import UserPortfolio from '../UserPortfolio.jsx';
+import UserSearch from '../../components/UserSearch.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 const ProfilePage = () => {
@@ -237,6 +240,16 @@ const ProfilePage = () => {
 
   const goToDashboard = () => {
     navigate('/dashboard'); // Ensure the `/profile` route is properly defined
+  };
+
+  const handleShareProfile = () => {
+    const publicProfileUrl = `${window.location.origin}/profile/public/${profileData.id}`;
+    navigator.clipboard.writeText(publicProfileUrl).then(() => {
+      toast.success('Public profile link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy profile link:', err);
+      toast.error('Failed to copy profile link');
+    });
   };
   const goToSkillConstellation = () => {
     navigate(`/profile/skill-constellation/${profileData.id}`);
@@ -477,6 +490,9 @@ const ProfilePage = () => {
       >
         Your Profile
       </Typography>
+      <Box sx={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-end', mb: 2 }}>
+        <UserSearch />
+      </Box>
       {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
         <Box sx={{
           ...panelStyle,
@@ -507,7 +523,7 @@ const ProfilePage = () => {
           <Box display="flex" flexDirection="column" alignItems="center">
             <Avatar
                 alt="Profile Picture"
-                src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
+                src={newProfilePicture || profileData.profile_picture || (user && user.picture ? user.picture : '/default-avatar.png')}
                 sx={{
                 width: isMobile ? 80 : 120,
                 height: isMobile ? 80 : 120,
@@ -1194,6 +1210,28 @@ const ProfilePage = () => {
           }}
         >
           Save Profile
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={handleShareProfile}
+          fullWidth={isMobile}
+          startIcon={<ShareIcon />}
+          sx={{
+            borderColor: theme.colors.primary,
+            color: theme.colors.primary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            borderRadius: theme.borders.borderRadiusMd,
+            minHeight: '44px',
+            '&:hover': {
+              borderColor: theme.colors.accentBlue,
+              color: theme.colors.accentBlue,
+              backgroundColor: 'rgba(0, 243, 255, 0.1)',
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+            }
+          }}
+        >
+          Share Public Profile
         </Button>
         <Button 
           variant="outlined" 

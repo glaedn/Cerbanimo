@@ -138,7 +138,7 @@ app.use('/auth', authRoutes);
 app.use('/notifications', jwtCheck, notificationRoutes);
 
 app.use('/profile', (req, res, next) => {
-  if (req.path.startsWith('/public/')) return next();
+  if (req.path.startsWith('/public/') || req.path === '/search') return next();
   return jwtCheck(req, res, next);
 }, profileRoutes);
 
@@ -158,7 +158,10 @@ app.use('/communities', jwtCheck, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
-app.use('/storyChronicles', jwtCheck, resolveUser, storyChronicleRoutes);
+app.use('/storyChronicles', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, storyChronicleRoutes);
 
 app.use('/endorsements', jwtCheck, resolveUser, endorsementsRoutes);
 
