@@ -78,13 +78,8 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
   useEffect(() => {
 
-    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated) {
-      const userId = propUserId || profile?.id || user?.sub;
-
-      if (!userId) {
-        console.warn('[SkillGalaxyPanel] No userId available for processing');
-        return;
-      }
+    if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && (user?.sub || propUserId)) {
+      const userId = propUserId || profile?.id || user?.sub; // Fallback to user.sub if profile.id not available
 
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
       // setProcessedSkills(skillsForGalaxy); // Not strictly needed as state if d3Nodes is derived correctly
