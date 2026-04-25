@@ -278,13 +278,11 @@ const AppContent = () => {
           <Route
             path="/userportfolio/:userId"
             element={
-              <PrivateRoute>
                 <PageWrapper>
                   <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <UserPortfolio />
                   </LocalizationProvider>
                 </PageWrapper>
-              </PrivateRoute>
             }
           />
           {/* New Route for Galactic Activity Map */}
