@@ -298,13 +298,13 @@
 .arc-carousel-perspective {
   perspective: 1000px;
   width: 100%;
-  height: 80px;
+  height: 70px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: -25px; /* Overlap slightly more to crunch up */
+  margin-bottom: -30px; /* Overlap for tighter stack */
   position: relative;
-  z-index: 20; /* Ensure carousels are in front of graph */
+  z-index: 20;
 }
 
 .arc-carousel {
@@ -314,6 +314,7 @@
   transform-style: preserve-3d;
   touch-action: pan-y;
   user-select: none;
+  pointer-events: none; /* Allow clicks to pass through to underlying rings */
 }
 
 .arc-carousel::after {
@@ -353,6 +354,7 @@
   white-space: nowrap;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: auto; /* Reactivate pointer events for the items themselves */
 }
 
 .arc-item.active {
