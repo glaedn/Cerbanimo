@@ -431,17 +431,6 @@ const ProjectVisualizer = () => {
 
   useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [skills, tasks]);
 
-  useEffect(() => {
-    if (project && allProjects.length > 0) {
-      const commIdx = userCommunities.findIndex(c => c.id === project.community_id);
-      if (commIdx !== -1) setCommunityIndex(commIdx);
-
-      const sc = userCommunities[commIdx] || { id: project.community_id };
-      const cp = allProjects.filter(p => p.community_id === sc.id);
-      const pIdx = cp.findIndex(p => p.id === Number(projectId));
-      if (pIdx !== -1) setProjectIndex(pIdx);
-    }
-  }, [projectId, project, allProjects, userCommunities]);
 
   // Reset skill index when project or category changes externally
   useEffect(() => {
@@ -545,7 +534,7 @@ const ProjectVisualizer = () => {
           linksGroup.append("line").attr("stroke", "#666").attr("stroke-dasharray", "2,2").attr("x1", n.x).attr("y1", n.y).attr("x2", x2).attr("y2", y2);
           const enode = nodesGroup.append("g").attr("transform", `translate(${x2}, ${y2})`)
             .on("mouseover", (e) => { if (dep.taskInfo) setHoveredNode({ ...dep.taskInfo, type: dep.type, rawX: e.clientX, rawY: e.clientY, element: e.currentTarget }); })
-            .on("mouseout", handleMouseOut).on("click", () => navigate(`/tasks/${dep.taskInfo.id}`));
+            .on("mouseout", handleMouseOut).on("click", () => navigate(`/Visualizer/${dep.taskInfo.project_id}/${dep.taskInfo.id}`));
           enode.append("circle").attr("r", 7).attr("fill", getNodeFill(dep.taskInfo.status)).attr("stroke", getNodeStroke(dep.taskInfo.status)).attr("stroke-dasharray", "2,1");
         });
       });
@@ -553,7 +542,7 @@ const ProjectVisualizer = () => {
     const nGroups = nodesGroup.selectAll(".node").data(Object.values(graph)).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
       .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => {
         e.stopPropagation();
-        navigate(`/tasks/${d.id}`);
+        navigate(`/Visualizer/${projectId}/${d.id}`);
       });
     nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => getNodeFill(d.status)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
       .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
@@ -590,12 +579,50 @@ const ProjectVisualizer = () => {
   const isProjectCreator = project?.creator_id === Number(userId);
   const colorClasses = ["pink", "green", "blue", "orange"];
 
+  const displayCommunities = useMemo(() => {
+    const noComm = { id: null, name: "No Community" };
+    if (!project) return [noComm, ...userCommunities];
+
+    const commIdx = userCommunities.findIndex(c => c.id === project.community_id);
+    if (commIdx === -1) {
+      // If project has no community, put "No Community" at the start
+      return [noComm, ...userCommunities];
+    } else {
+      // Put "No Community" to the immediate left (smaller index) of current community
+      const copy = [...userCommunities];
+      copy.splice(commIdx, 0, noComm);
+      return copy;
+    }
+  }, [userCommunities, project]);
+
   const filteredProjects = useMemo(() => {
-    const sc = userCommunities[communityIndex];
+    const sc = displayCommunities[communityIndex];
     if (!sc) return project ? [project] : [];
+
     const cp = allProjects.filter(p => p.community_id === sc.id);
-    return cp.length > 0 ? cp : (project ? [project] : []);
-  }, [userCommunities, communityIndex, allProjects, project]);
+    if (sc.id === null) {
+      return cp.length > 0 ? cp : (project?.community_id === null ? [project] : []);
+    }
+
+    return cp.length > 0 ? cp : (project && project.community_id === sc.id ? [project] : []);
+  }, [displayCommunities, communityIndex, allProjects, project]);
+
+  useEffect(() => {
+    if (project && allProjects.length > 0 && displayCommunities.length > 0) {
+      const commIdx = displayCommunities.findIndex(c => c.id === project.community_id);
+      if (commIdx !== -1) setCommunityIndex(commIdx);
+
+      const sc = displayCommunities[commIdx];
+      if (sc) {
+        const cp = allProjects.filter(p => p.community_id === sc.id);
+        const currentInFiltered = (sc.id === null && project.community_id === null) || (sc.id !== null && project.community_id === sc.id);
+
+        const finalProjects = cp.length > 0 ? cp : (currentInFiltered ? [project] : []);
+        const pIdx = finalProjects.findIndex(p => p.id === Number(projectId));
+        if (pIdx !== -1) setProjectIndex(pIdx);
+      }
+    }
+  }, [projectId, project, allProjects, displayCommunities]);
 
   const skillOptions = useMemo(() => [
     { name: "All Tasks" },
@@ -607,7 +634,7 @@ const ProjectVisualizer = () => {
       {isMobile ? (
         <>
           <Box sx={{ zIndex: 40, position: 'relative' }}>
-            <ArcCarousel items={userCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
+            <ArcCarousel items={displayCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
           </Box>
           <Box sx={{ zIndex: 35, position: 'relative' }}>
             <ArcCarousel items={filteredProjects} activeIndex={projectIndex} setActiveIndex={idx => {

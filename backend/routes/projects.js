@@ -56,16 +56,17 @@ router.get('/personal', async (req, res) => {
     }
   });
 
-// Fetch only user-created projects
+// Fetch user projects (creator or assignee)
 router.get('/userprojects', async (req, res) => {
   try {
     const { userId = '', page = 1, pageSize = 10 } = req.query;
     const offset = (page - 1) * pageSize;
 
     const query = `
-      SELECT * FROM projects
-      WHERE creator_id = $1
-      ORDER BY id ASC
+      SELECT DISTINCT p.* FROM projects p
+      LEFT JOIN tasks t ON p.id = t.project_id
+      WHERE p.creator_id = $1 OR $1 = ANY(t.assigned_user_ids)
+      ORDER BY p.id ASC
       LIMIT $2 OFFSET $3
     `;
     const values = [userId, pageSize, offset];
