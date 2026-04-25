@@ -25,7 +25,7 @@ const ArcCarousel = ({
   activeIndex,
   setActiveIndex,
   radiusX = 200,
-  radiusY = 40,
+  radiusY = 30, // Tighter Y for better targeting
   angleStep = 0.45,
   visibleCount = 7,
   snapDuration = 220,
@@ -181,6 +181,7 @@ const ArcCarousel = ({
         style={{
           pointerEvents: isSingle ? "none" : "auto",
           opacity: isSingle && N > 0 ? 0.7 : 1,
+          zIndex: 1,
         }}
       >
         {N === 0 && (
@@ -600,66 +601,86 @@ const ProjectVisualizer = () => {
     <div className={isMobile ? "mobile-visualizer" : "skill-hierarchy-container"} ref={containerRef} onMouseLeave={handleMouseLeave}>
       {isMobile ? (
         <>
-          <ArcCarousel items={userCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
-          <ArcCarousel items={filteredProjects} activeIndex={projectIndex} setActiveIndex={idx => {
-            const sel = filteredProjects[idx];
-            if (sel && sel.id !== Number(projectId)) {
-              setProjectIndex(idx);
-              navigate(`/Visualizer/${sel.id}`);
-            }
-          }} />
-          <ArcCarousel items={skillOptions} activeIndex={skillIndex} setActiveIndex={idx => {
-            setSkillIndex(idx);
-            const cat = skillOptions[idx];
-            if (cat) {
-              setActiveCategory(cat.name);
-              setActiveSkillId(cat.id || null);
-            }
-          }} />
-          <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', mb: 2, zIndex: 1 }}>
-            <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />
+          <Box sx={{ zIndex: 40, position: 'relative' }}>
+            <ArcCarousel items={userCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
+          </Box>
+          <Box sx={{ zIndex: 35, position: 'relative' }}>
+            <ArcCarousel items={filteredProjects} activeIndex={projectIndex} setActiveIndex={idx => {
+              const sel = filteredProjects[idx];
+              if (sel && sel.id !== Number(projectId)) {
+                setProjectIndex(idx);
+                navigate(`/Visualizer/${sel.id}`);
+              }
+            }} />
+          </Box>
+          <Box sx={{ zIndex: 30, position: 'relative' }}>
+            <ArcCarousel items={skillOptions} activeIndex={skillIndex} setActiveIndex={idx => {
+              setSkillIndex(idx);
+              const cat = skillOptions[idx];
+              if (cat) {
+                setActiveCategory(cat.name);
+                setActiveSkillId(cat.id || null);
+              }
+            }} />
           </Box>
 
-          {isProjectCreator && (
-            <Box sx={{
-              position: 'fixed',
-              bottom: 80, // Above bottom nav
-              right: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              zIndex: 1000 // Always on top
-            }}>
-              <IconButton
-                sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' } }}
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                <EditIcon />
-              </IconButton>
-              <IconButton
-                sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-                onClick={() => setShowServiceModal(true)}
-              >
-                <ShoppingCartIcon />
-              </IconButton>
-              {project?.community_id === null && (
-                <IconButton
-                  sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-                  onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}
-                >
-                  <GroupIcon />
-                </IconButton>
-              )}
-              {isEditMode && (
-                <IconButton
-                  sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' } }}
-                  onClick={() => handleAddTask()}
-                >
-                  <AddIcon />
-                </IconButton>
-              )}
+          <Box className="mobile-graph-wrapper" sx={{ position: 'relative', width: '100%', mb: 2 }}>
+            <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', zIndex: 1 }}>
+              <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />
             </Box>
-          )}
+
+            {isProjectCreator && (
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: '60px',
+                pointerEvents: 'none',
+                zIndex: 1000
+              }}>
+                <Box sx={{
+                  position: 'sticky',
+                  top: 'auto',
+                  bottom: 80, // Sticky above bottom nav
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  pointerEvents: 'auto'
+                }}>
+                  <IconButton
+                    sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
+                    onClick={() => setIsEditMode(!isEditMode)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
+                    onClick={() => setShowServiceModal(true)}
+                  >
+                    <ShoppingCartIcon />
+                  </IconButton>
+                  {project?.community_id === null && (
+                    <IconButton
+                      sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
+                      onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}
+                    >
+                      <GroupIcon />
+                    </IconButton>
+                  )}
+                  {isEditMode && (
+                    <IconButton
+                      sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
+                      onClick={() => handleAddTask()}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Box>
         </>
       ) : (
         <div className="tabs-container-wrapper" style={{ position: "relative" }}>
