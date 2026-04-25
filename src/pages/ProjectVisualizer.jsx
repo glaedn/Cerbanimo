@@ -465,8 +465,7 @@ const ProjectVisualizer = () => {
   useEffect(() => {
     const updateDimensions = () => {
       if (!containerRef.current) return;
-      const cw = containerRef.current.clientWidth;
-      if (cw > 0) setSvgDimensions({ width: Math.max(cw - 30, 800), height: 600 });
+      setSvgDimensions({ width: 800, height: 600 });
     };
     updateDimensions();
     const ro = new ResizeObserver(updateDimensions);
@@ -481,7 +480,13 @@ const ProjectVisualizer = () => {
     const { width, height } = svgDimensions;
     d3.select(svgRef.current).selectAll("*").remove();
     if (!zoomRef.current) zoomRef.current = d3.zoom().scaleExtent([0.3, 3]).filter(e => isMobile && e.touches ? e.touches.length > 1 : true);
-    const svg = d3.select(svgRef.current).attr("width", width).attr("height", height).call(zoomRef.current).style("touch-action", "none");
+    const svg = d3.select(svgRef.current)
+      .attr("width", "100%")
+      .attr("height", "100%")
+      .attr("viewBox", "0 0 800 600")
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .call(zoomRef.current)
+      .style("touch-action", "none");
     const mainGroup = svg.append("g").attr("transform", `translate(${zoomTransformRef.current.x}, ${zoomTransformRef.current.y}) scale(${zoomTransformRef.current.k})`);
     const linksGroup = mainGroup.append("g"); linksGroupRef.current = linksGroup;
     const nodesGroup = mainGroup.append("g");
@@ -624,60 +629,85 @@ const ProjectVisualizer = () => {
             }} />
           </Box>
 
-          <Box className="mobile-graph-wrapper" sx={{ position: 'relative', width: '100%', mb: 2 }}>
-            <Box sx={{ position: 'relative', width: '100%', height: '500px', bgcolor: '#000', borderRadius: '12px', overflow: 'hidden', zIndex: 1 }}>
-              <svg ref={svgRef} width="100%" height="100%" className="mobile-graph" />
-            </Box>
+          <Box className="mobile-graph-wrapper" sx={{
+            position: 'relative',
+            width: '100%',
+            height: '500px',
+            bgcolor: '#000',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            mb: 2,
+            zIndex: 1
+          }}>
+            <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet" className="mobile-graph" />
 
             {isProjectCreator && (
               <Box sx={{
                 position: 'absolute',
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: '60px',
-                pointerEvents: 'none',
-                zIndex: 1000
+                bottom: 16,
+                right: 16,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                zIndex: 1000,
+                pointerEvents: 'auto'
               }}>
-                <Box sx={{
-                  position: 'sticky',
-                  top: 'auto',
-                  bottom: 80, // Sticky above bottom nav
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1.5,
-                  pointerEvents: 'auto'
-                }}>
+                <IconButton
+                  sx={{
+                    width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
+                    borderRadius: '50%', padding: 0,
+                    bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.9)',
+                    color: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
+                    border: '1.5px solid rgba(0,243,255,0.3)',
+                    '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
+                  }}
+                  onClick={() => setIsEditMode(!isEditMode)}
+                >
+                  <EditIcon />
+                </IconButton>
+                <IconButton
+                  sx={{
+                    width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
+                    borderRadius: '50%', padding: 0,
+                    bgcolor: 'rgba(0,0,0,0.9)', color: '#fff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
+                    border: '1.5px solid rgba(0,243,255,0.3)',
+                    '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
+                  }}
+                  onClick={() => setShowServiceModal(true)}
+                >
+                  <ShoppingCartIcon />
+                </IconButton>
+                {project?.community_id === null && (
                   <IconButton
-                    sx={{ bgcolor: isEditMode ? 'primary.main' : 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
-                    onClick={() => setIsEditMode(!isEditMode)}
+                    sx={{
+                      width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
+                      borderRadius: '50%', padding: 0,
+                      bgcolor: 'rgba(0,0,0,0.9)', color: '#fff',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
+                      border: '1.5px solid rgba(0,243,255,0.3)',
+                      '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
+                    }}
+                    onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}
                   >
-                    <EditIcon />
+                    <GroupIcon />
                   </IconButton>
+                )}
+                {isEditMode && (
                   <IconButton
-                    sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
-                    onClick={() => setShowServiceModal(true)}
+                    sx={{
+                      width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
+                      borderRadius: '50%', padding: 0,
+                      bgcolor: '#FFA500', color: '#fff',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
+                      border: '1.5px solid rgba(255,255,255,0.3)',
+                      '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
+                    }}
+                    onClick={() => handleAddTask()}
                   >
-                    <ShoppingCartIcon />
+                    <AddIcon />
                   </IconButton>
-                  {project?.community_id === null && (
-                    <IconButton
-                      sx={{ bgcolor: 'rgba(0,0,0,0.8)', color: '#fff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
-                      onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}
-                    >
-                      <GroupIcon />
-                    </IconButton>
-                  )}
-                  {isEditMode && (
-                    <IconButton
-                      sx={{ bgcolor: '#FFA500', color: '#fff', '&:hover': { bgcolor: '#FF8C00' }, boxShadow: '0 0 15px rgba(0,0,0,0.5)' }}
-                      onClick={() => handleAddTask()}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  )}
-                </Box>
+                )}
               </Box>
             )}
           </Box>

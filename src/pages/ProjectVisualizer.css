@@ -337,24 +337,31 @@
   will-change: transform, opacity;
   backdrop-filter: blur(2px);
 
-  min-width: 120px;
+  width: 150px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 6px 10px;
+  padding: 0 12px;
 
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.6), rgba(157, 0, 255, 0.6));
+  border-radius: 17px;
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.65), rgba(157, 0, 255, 0.65));
   color: #ffffff;
-  font-weight: 500;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 11px;
   font-family: 'Space Mono', monospace;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 
   transition: transform 0.25s ease, opacity 0.25s ease, background 0.3s ease;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  pointer-events: auto; /* Reactivate pointer events for the items themselves */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .arc-item.active {
