@@ -16,7 +16,6 @@ const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [communities, setCommunities] = useState([]);
-  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -25,7 +24,7 @@ const PublicProfile = () => {
     try {
       return await getAccessTokenSilently({
         audience: import.meta.env.VITE_BACKEND_URL,
-        scope: 'openid profile email read:write:profile'
+        scope: "openid profile email read:profile write:profile"
       });
     } catch (error) {
       console.error('Failed to get token:', error);
@@ -75,36 +74,32 @@ const PublicProfile = () => {
         
         setProfile(parsedProfile);
         
-        // Fetch badges and communities only if authenticated
-        if (isAuthenticated) {
-          try {
-            const token = await getToken();
-            if (token) {
-              const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              });
-              setBadges(badgesResponse.data.badges || []);
-
-              const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              });
-              setCommunities(communitiesResponse.data || []);
+        // Fetch badges from rewards endpoint with auth token
+        const token = await getToken();
+        if (token) {
+          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
             }
-          } catch (authReqErr) {
-            console.error("Error fetching authenticated profile data:", authReqErr);
-          }
+          });
+
+          setBadges(badgesResponse.data.badges || []);
         }
 
-        // Fetch services offered by this user (publicly available)
+        // Fetch communities for this user (separate try-catch to avoid breaking the whole page)
         try {
-          const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
-          setServices(servicesResponse.data || []);
-        } catch (servErr) {
-          console.error("Error fetching user services:", servErr);
+          const token = await getToken();
+          if (token) {
+            const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            setCommunities(communitiesResponse.data || []);
+          }
+        } catch (commErr) {
+          console.error("Error fetching user communities:", commErr);
+          // Don't set global error, just leave communities empty
         }
       } catch (err) {
         console.error("Error fetching data:", err);
