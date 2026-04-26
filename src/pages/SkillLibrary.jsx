@@ -95,7 +95,8 @@ const SkillLibrary = () => {
       // Determine what changed
       unlockedSkills.forEach(id => {
         if (!initialUnlockedSkills.has(id)) {
-          skillChanges.push({ skillId: id, action: 'unlock' });
+          const skill = skills.find(s => s.id === id);
+          skillChanges.push({ skillId: id, skillName: skill?.name, action: 'unlock' });
         }
       });
       initialUnlockedSkills.forEach(id => {
@@ -109,9 +110,14 @@ const SkillLibrary = () => {
         return;
       }
 
+      const updatedSkillsForProfile = Array.from(unlockedSkills).map(id => {
+        const skill = skills.find(s => s.id === id);
+        return { id, name: skill?.name };
+      });
+
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/skills/bulk-unlock`, {
-        userId,
-        skillChanges
+        skillChanges,
+        fullSkills: updatedSkillsForProfile
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -194,7 +200,7 @@ const SkillLibrary = () => {
   return (
     <Box className="skill-library-container">
       <Box className="skill-library-header">
-        <IconButton onClick={() => navigate('/profile')} sx={{ color: theme.colors.secondary }}>
+        <IconButton onClick={() => navigate(-1)} sx={{ color: theme.colors.secondary }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: theme.colors.secondary, textShadow: `0 0 10px ${theme.colors.secondary}` }}>

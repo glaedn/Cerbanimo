@@ -127,7 +127,7 @@ const InterestLibrary = () => {
   return (
     <Box className="interest-library-container">
       <Box className="interest-library-header">
-        <IconButton onClick={() => navigate('/profile')} sx={{ color: theme.colors.primary }}>
+        <IconButton onClick={() => navigate(-1)} sx={{ color: theme.colors.primary }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: theme.colors.primary, textShadow: `0 0 10px ${theme.colors.primary}` }}>
