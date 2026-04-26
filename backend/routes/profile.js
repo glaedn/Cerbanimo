@@ -124,6 +124,24 @@ router.get('/options', async (req, res) => {
   }
 });
 
+// Endpoint to fetch grouped interests
+router.get('/interests/grouped', async (req, res) => {
+  try {
+    const query = `
+      SELECT category, json_agg(json_build_object('id', id, 'name', name)) as interests
+      FROM interests
+      WHERE status = 'active'
+      GROUP BY category
+      ORDER BY category ASC;
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching grouped interests:', err);
+    res.status(500).json({ message: 'Failed to fetch grouped interests' });
+  }
+});
+
 // Endpoint to search for users by username
 router.get('/search', async (req, res) => {
   try {

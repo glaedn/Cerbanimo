@@ -25,6 +25,8 @@ import { Toaster } from "react-hot-toast";
 
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage/ProfilePage.jsx"));
 const SkillConstellation = React.lazy(() => import("./pages/SkillConstellation.jsx"));
+const SkillLibrary = React.lazy(() => import("./pages/SkillLibrary.jsx"));
+const InterestLibrary = React.lazy(() => import("./pages/InterestLibrary.jsx"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard.jsx"));
 const PublicProfile = React.lazy(() => import("./pages/PublicProfile.jsx"));
 const BadgeCreation = React.lazy(() => import("./pages/BadgeCreation.jsx"));
@@ -130,6 +132,22 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><SkillConstellation /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile/skill-library"
+            element={
+              <PrivateRoute>
+                <PageWrapper><SkillLibrary /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile/interest-library"
+            element={
+              <PrivateRoute>
+                <PageWrapper><InterestLibrary /></PageWrapper>
               </PrivateRoute>
             }
           />
