@@ -143,6 +143,18 @@ const CommunityHub = () => {
             const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
                 headers: headers,
             });
+
+            // Deduplicate lists to prevent duplicate key errors in React
+            if (communityResponse.data.members) {
+                communityResponse.data.members = [...new Set(communityResponse.data.members)];
+            }
+            if (communityResponse.data.proposals) {
+                communityResponse.data.proposals = [...new Set(communityResponse.data.proposals)];
+            }
+            if (communityResponse.data.approved_projects) {
+                communityResponse.data.approved_projects = [...new Set(communityResponse.data.approved_projects)];
+            }
+
             setCommunity(communityResponse.data);
 
             // Fetch member details

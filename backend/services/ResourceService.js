@@ -68,6 +68,12 @@ class ResourceService {
     return result.rows;
   }
 
+  async getCommunityResources(ownerCommunityId) {
+    const query = 'SELECT * FROM resources WHERE owner_community_id = $1';
+    const result = await pool.query(query, [ownerCommunityId]);
+    return result.rows;
+  }
+
   async completeAllocations(taskId) {
     const query = `
       UPDATE resource_allocations
