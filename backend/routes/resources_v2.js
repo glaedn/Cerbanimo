@@ -70,4 +70,23 @@ router.post('/conflicts/:conflictId/resolve', async (req, res) => {
   }
 });
 
+router.put('/inventory/:id', async (req, res) => {
+  const { name, description, category, condition, quantity, unit, status, skillIds, locationText } = req.body;
+  try {
+    const result = await ResourceService.updateResource(req.params.id, { name, description, category, condition, quantity, unit, status, skillIds, locationText });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/inventory/:id', async (req, res) => {
+  try {
+    const result = await ResourceService.deleteResource(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

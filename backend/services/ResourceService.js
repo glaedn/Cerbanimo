@@ -170,6 +170,35 @@ class ResourceService {
       client.release();
     }
   }
+
+  async updateResource(id, data) {
+    const { name, description, category, condition, quantity, unit, status, skillIds, locationText } = data;
+    const query = `
+      UPDATE resources
+      SET name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          category = COALESCE($3, category),
+          condition = COALESCE($4, condition),
+          quantity = COALESCE($5, quantity),
+          unit = COALESCE($6, unit),
+          status = COALESCE($7, status),
+          skill_ids = COALESCE($8, skill_ids),
+          location_text = COALESCE($9, location_text),
+          updated_at = NOW()
+      WHERE id = $10
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [name, description, category, condition, quantity, unit, status, skillIds, locationText, id]);
+    if (result.rows.length === 0) throw new Error('Resource not found');
+    return result.rows[0];
+  }
+
+  async deleteResource(id) {
+    const query = 'DELETE FROM resources WHERE id = $1 RETURNING *;';
+    const result = await pool.query(query, [id]);
+    if (result.rows.length === 0) throw new Error('Resource not found');
+    return { success: true, deletedResource: result.rows[0] };
+  }
 }
 
 export default new ResourceService();
