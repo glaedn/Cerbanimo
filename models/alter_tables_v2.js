@@ -25,8 +25,14 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}';
   `;
 
+  const alterSkillsQuery = `
+    ALTER TABLE skills
+    ADD COLUMN IF NOT EXISTS description TEXT;
+  `;
+
   try {
     await pool.query(alterTasksQuery);
+    await pool.query(alterSkillsQuery);
     await pool.query(alterProjectsQuery);
     await pool.query(alterUsersQuery);
     console.log('PostgreSQL: Existing tables (tasks, projects, users) altered with new fields.');

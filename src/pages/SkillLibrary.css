@@ -1,0 +1,52 @@
+.skill-library-container {
+  min-height: 100vh;
+  background-color: #0A0A2E;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 80px; /* Space for fixed save button */
+}
+
+.skill-library-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 92, 162, 0.3);
+  background-color: rgba(10, 10, 46, 0.9);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.skill-library-content {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.save-changes-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: 90%;
+  max-width: 400px;
+}
+
+.save-changes-container button {
+  width: 100%;
+  padding: 12px;
+  font-weight: bold;
+}
+
+/* Mobile specific styles */
+@media (max-width: 600px) {
+  .skill-library-header h5 {
+    font-size: 1.2rem;
+  }
+
+  .skill-item {
+    padding: 12px;
+  }
+}

@@ -810,6 +810,42 @@ const ProfilePage = () => {
         >
           Skill Constellation
         </Button>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/profile/skill-library')}
+          sx={{
+            borderColor: theme.colors.secondary,
+            color: theme.colors.secondary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+            '&:hover': {
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              backgroundColor: 'rgba(255, 92, 162, 0.1)',
+              boxShadow: theme.effects.glowStrong(theme.colors.secondary),
+            }
+          }}
+        >
+          Skill Library
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/profile/interest-library')}
+          sx={{
+            borderColor: theme.colors.accentBlue,
+            color: theme.colors.accentBlue,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
+            '&:hover': {
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              backgroundColor: 'rgba(77, 171, 247, 0.1)',
+              boxShadow: theme.effects.glowStrong(theme.colors.accentBlue),
+            }
+          }}
+        >
+          Interest Library
+        </Button>
         <Autocomplete
           multiple
           fullWidth
