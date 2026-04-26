@@ -251,13 +251,13 @@ cron.schedule('*/15 * * * *', async () => {
   }
 });
 
-// Automated Skill Hierarchy Matching (Daily at midnight)
+// Automated Skill Enrichment (Daily at midnight)
 cron.schedule('0 0 * * *', async () => {
-  console.log('Running daily skill hierarchy matching...');
+  console.log('Running daily skill enrichment...');
   try {
-    await GuildService.matchSkillsHierarchy();
+    await GuildService.enrichSkillsAndHierarchy();
   } catch (err) {
-    console.error('Hierarchy matching worker failed:', err);
+    console.error('Skill enrichment worker failed:', err);
   }
 });
 
@@ -356,7 +356,7 @@ initializeDatabase().then(async () => {
   try {
     await GuildService.syncGuildsWithSkills();
     await GuildService.syncMembershipsWithSkills();
-    await GuildService.matchSkillsHierarchy();
+    await GuildService.enrichSkillsAndHierarchy();
 
     console.log('Performing initial intelligence scoring...');
     // Initial score all unassigned tasks

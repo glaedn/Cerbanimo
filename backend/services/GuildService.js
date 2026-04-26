@@ -307,19 +307,26 @@ class GuildService {
     return { addedCount, updatedCount };
   }
 
-  async matchSkillsHierarchy() {
-    console.log('Running automated skill hierarchy matching...');
+  async enrichSkillsAndHierarchy() {
+    console.log('Running automated skill enrichment...');
     try {
-      // 1. Get "new" skills (no parent)
-      const newSkillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NULL');
-      const newSkills = newSkillsResult.rows;
+      // 1. Get skills needing enrichment
+      // Skills without a parent
+      const noParentSkillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NULL');
+      const noParentSkills = noParentSkillsResult.rows.map(s => ({ ...s, needsParent: true, needsDescription: true }));
 
-      if (newSkills.length === 0) {
-        console.log('No new skills to match.');
+      // Skills with a parent but no description
+      const noDescriptionSkillsResult = await pool.query('SELECT id, name, parent_skill_id FROM skills WHERE parent_skill_id IS NOT NULL AND (description IS NULL OR description = \'\')');
+      const noDescriptionSkills = noDescriptionSkillsResult.rows.map(s => ({ ...s, needsParent: false, needsDescription: true }));
+
+      const allSkillsToEnrich = [...noParentSkills, ...noDescriptionSkills];
+
+      if (allSkillsToEnrich.length === 0) {
+        console.log('No skills to enrich.');
         return;
       }
 
-      // 2. Get "parent" skills (skills that have children)
+      // 2. Get "parent" skills (existing hierarchy)
       const parentSkillsResult = await pool.query(`
         SELECT DISTINCT p.id, p.name
         FROM skills p
@@ -327,65 +334,100 @@ class GuildService {
       `);
       const parentSkills = parentSkillsResult.rows;
 
-      // 3. Query Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
 
-      const prompt = `
-        You are an expert in skill taxonomies and workforce development.
-        Your task is to organize a list of "new skills" into an existing hierarchy of "parent skills".
+      // Batching logic
+      const batchSize = 20;
+      for (let i = 0; i < allSkillsToEnrich.length; i += batchSize) {
+        const batch = allSkillsToEnrich.slice(i, i + batchSize);
+        console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(allSkillsToEnrich.length / batchSize)}...`);
 
-        New Skills:
-        ${JSON.stringify(newSkills)}
+        const prompt = `
+          You are an expert in skill taxonomies and workforce development.
+          Your task is to enrich a list of skills by organizing them into a hierarchy and/or providing professional descriptions.
 
-        Existing Parent Skills:
-        ${JSON.stringify(parentSkills)}
+          Existing Parent Skills (for reference):
+          ${JSON.stringify(parentSkills)}
 
-        Instructions:
-        1. For each "new skill", find the most appropriate "parent skill" from the existing list.
-        2. If no existing parent skill is a good fit, you may suggest a "new parent skill" name that would be a better fit for the new skill (and potentially others).
-        3. Return a JSON array of objects with the following structure:
-           [
-             { "skill_id": 123, "parent_skill_id": 456, "suggested_parent_name": null },
-             { "skill_id": 789, "parent_skill_id": null, "suggested_parent_name": "New Category Name" }
-           ]
-        4. Focus on logical categorization (e.g., "React" -> "Web Development", "Logo Design" -> "Graphic Design").
+          Skills to Enrich:
+          ${JSON.stringify(batch)}
 
-        ONLY return the JSON array.
-      `;
+          Instructions:
+          1. For each skill where "needsParent" is true:
+             - Find the most appropriate "parent_skill_id" from the "Existing Parent Skills" list.
+             - If no existing parent skill is a good fit, suggest a "suggested_parent_name" that would be a better fit.
+             - Generate a professional, concise description (1-2 sentences) for the skill.
+          2. For each skill where "needsParent" is false and "needsDescription" is true:
+             - ONLY generate a professional, concise description (1-2 sentences) for the skill.
+             - DO NOT change its parent or suggest a new one. Set "parent_skill_id" to its current value and "suggested_parent_name" to null.
+          3. Return a JSON array of objects with the following structure:
+             [
+               { "skill_id": 123, "parent_skill_id": 456, "suggested_parent_name": null, "description": "Professional description here..." },
+               ...
+             ]
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      const mappings = parseLLMJsonResponse(text);
+          ONLY return the JSON array.
+        `;
 
-      // 4. Update Database
-      for (const mapping of mappings) {
-        let parentId = mapping.parent_skill_id;
+        try {
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
+          const enrichments = parseLLMJsonResponse(text);
 
-        if (!parentId && mapping.suggested_parent_name) {
-          // Check if suggested parent already exists
-          const existingParent = await pool.query('SELECT id FROM skills WHERE name = $1', [mapping.suggested_parent_name]);
-          if (existingParent.rows.length > 0) {
-            parentId = existingParent.rows[0].id;
-          } else {
-            // Create new parent skill
-            const newParent = await pool.query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [mapping.suggested_parent_name]);
-            parentId = newParent.rows[0].id;
-            // Also create a guild for the new parent
-            await this.autoCreateGuild(parentId, mapping.suggested_parent_name);
+          for (const enrichment of enrichments) {
+            let parentId = enrichment.parent_skill_id;
+
+            // Handle suggested parent if needed
+            if (!parentId && enrichment.suggested_parent_name) {
+              const existingParent = await pool.query('SELECT id FROM skills WHERE name = $1', [enrichment.suggested_parent_name]);
+              if (existingParent.rows.length > 0) {
+                parentId = existingParent.rows[0].id;
+              } else {
+                const newParent = await pool.query('INSERT INTO skills (name) VALUES ($1) RETURNING id', [enrichment.suggested_parent_name]);
+                parentId = newParent.rows[0].id;
+                await this.autoCreateGuild(parentId, enrichment.suggested_parent_name);
+              }
+            }
+
+            // Update skill
+            const updateFields = [];
+            const queryParams = [enrichment.skill_id];
+            let paramIdx = 2;
+
+            if (enrichment.description) {
+              updateFields.push(`description = $${paramIdx++}`);
+              queryParams.push(enrichment.description);
+            }
+
+            // Only update parent if it was needed/provided
+            const originalSkill = batch.find(s => s.id === enrichment.skill_id);
+            if (originalSkill && originalSkill.needsParent && parentId) {
+              updateFields.push(`parent_skill_id = $${paramIdx++}`);
+              queryParams.push(parentId);
+            }
+
+            if (updateFields.length > 0) {
+              const updateQuery = `UPDATE skills SET ${updateFields.join(', ')} WHERE id = $1`;
+              await pool.query(updateQuery, queryParams);
+              console.log(`Enriched skill ${enrichment.skill_id}`);
+            }
           }
+        } catch (batchErr) {
+          console.error(`Error processing batch starting at index ${i}:`, batchErr);
         }
 
-        if (parentId) {
-          await pool.query('UPDATE skills SET parent_skill_id = $1 WHERE id = $2', [parentId, mapping.skill_id]);
-          console.log(`Matched skill ${mapping.skill_id} to parent ${parentId}`);
+        // Wait 30 seconds if there are more batches
+        if (i + batchSize < allSkillsToEnrich.length) {
+          console.log('Waiting 30 seconds before next batch...');
+          await new Promise(resolve => setTimeout(resolve, 30000));
         }
       }
 
-      console.log('Skill hierarchy matching complete.');
+      console.log('Skill enrichment complete.');
     } catch (err) {
-      console.error('Error in matchSkillsHierarchy:', err);
+      console.error('Error in enrichSkillsAndHierarchy:', err);
     }
   }
 }

@@ -95,10 +95,10 @@ router.post('/run-guild-sync', async (req, res) => {
   }
 });
 
-router.post('/run-skill-match', async (req, res) => {
+router.post('/run-skill-enrichment', async (req, res) => {
   try {
-    await GuildService.matchSkillsHierarchy();
-    res.json({ message: 'Skill hierarchy matching completed' });
+    await GuildService.enrichSkillsAndHierarchy();
+    res.json({ message: 'Skill enrichment completed' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

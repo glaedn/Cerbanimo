@@ -187,9 +187,9 @@ const AdminDashboard = () => {
                 loading={actionLoading['SYNC_GUILD_MEMBERSHIPS']}
               />
               <AdminActionButton
-                label="MATCH_SKILL_HIERARCHY"
-                onClick={() => runAction('run-skill-match', 'MATCH_SKILL_HIERARCHY')}
-                loading={actionLoading['MATCH_SKILL_HIERARCHY']}
+                label="ENRICH_SKILLS_&_HIERARCHY"
+                onClick={() => runAction('run-skill-enrichment', 'ENRICH_SKILLS_&_HIERARCHY')}
+                loading={actionLoading['ENRICH_SKILLS_&_HIERARCHY']}
               />
               <AdminActionButton
                 label="UPDATE_REWARD_ADJUSTMENTS"
