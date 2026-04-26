@@ -81,7 +81,7 @@ router.post('/bulk-unlock', async (req, res) => {
 router.get('/all', async (req, res) => {
   try {
 
-    const query = `SELECT id, name, description, category, parent_skill_id, unlocked_users FROM skills`;
+    const query = `SELECT id, name, description, parent_skill_id, unlocked_users FROM skills`;
     const result = await pool.query(query);
 
     if (result.rows.length === 0) {
