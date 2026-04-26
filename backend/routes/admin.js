@@ -10,20 +10,12 @@ import { validatePendingInterests } from '../services/interestValidationService.
 
 const router = express.Router();
 
-// Middleware to check if user is ID 15 by querying the database
-const isAdmin = async (req, res, next) => {
-  try {
-    if (!req.user || !req.user.id) {
-      return res.status(404).json({ message: 'Not Found' });
-    }
-    const result = await pool.query('SELECT id FROM users WHERE auth0_id = $1', [req.user.id]);
-    if (result.rows.length > 0 && Number(result.rows[0].id) === 15) {
-      next();
-    } else {
-      res.status(404).json({ message: 'Not Found' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+// Middleware to check if user is ID 15
+const isAdmin = (req, res, next) => {
+  if (req.user && Number(req.user.id) === 15) {
+    next();
+  } else {
+    res.status(404).json({ message: 'Not Found' });
   }
 };
 
