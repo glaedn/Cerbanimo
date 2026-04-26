@@ -27,6 +27,8 @@ import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
+import adminRoutes from './routes/admin.js';
+import { validatePendingInterests } from './services/interestValidationService.js';
 
 import impactRoutesV2 from './routes/impact_v2.js';
 import verificationRoutesV2 from './routes/verification_v2.js';
@@ -191,6 +193,7 @@ app.use('/services', (req, res, next) => {
 }, servicesRoutes);
 
 app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
+app.use('/admin', jwtCheck, resolveUser, adminRoutes);
 
 app.use('/impact_v2', jwtCheck, resolveUser, impactRoutesV2);
 app.use('/verification_v2', jwtCheck, resolveUser, verificationRoutesV2);
@@ -223,6 +226,17 @@ cron.schedule('0 0 * * *', async () => {
     console.log('Reset completed:', result);
   } catch (error) {
     console.error('Failed to reset spent points:', error);
+  }
+});
+
+// Nightly interest validation
+cron.schedule('0 1 * * *', async () => {
+  console.log('Running nightly interest validation...');
+  try {
+    await validatePendingInterests();
+    console.log('Interest validation completed.');
+  } catch (error) {
+    console.error('Interest validation worker failed:', error);
   }
 });
 

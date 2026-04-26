@@ -17,6 +17,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import AuthWrapper from "./AuthWrapper.jsx";
 import { useIsMobile } from "./hooks/useIsMobile";
+import { useUserProfile } from "./hooks/useUserProfile";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,6 +54,7 @@ const Project = React.lazy(() => import("./pages/Project.jsx"));
 const CoordinatorHUD = React.lazy(() => import("./pages/CoordinatorHUD.jsx"));
 const ImpactAtlas = React.lazy(() => import("./pages/ImpactAtlas.jsx"));
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
+const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 
 const PageWrapper = ({ children }) => (
   <motion.div
@@ -69,6 +71,7 @@ const PageWrapper = ({ children }) => (
 const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
+  const { profile } = useUserProfile();
 
   return (
     <div className="App">
@@ -327,6 +330,16 @@ const AppContent = () => {
               </PrivateRoute>
             }
           />
+          {profile?.id === 15 && (
+            <Route
+              path="/admin-dashboard"
+              element={
+                <PrivateRoute>
+                  <PageWrapper><AdminDashboard /></PageWrapper>
+                </PrivateRoute>
+              }
+            />
+          )}
           {/* Default Route */}
           <Route path="*" element={<PageWrapper><HomePage /></PageWrapper>} />
           </Routes>
