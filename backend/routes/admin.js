@@ -12,9 +12,7 @@ const router = express.Router();
 
 // Middleware to check if user is ID 15
 const isAdmin = (req, res, next) => {
-  // req.user.id is the Auth0 id, but we want to check the users table id
-  // Assume req.user.userTableId is set by earlier middleware after DB lookup
-  if (req.user && req.user.userTableId === 15) {
+  if (req.user && Number(req.user.id) === 15) {
     next();
   } else {
     res.status(404).json({ message: 'Not Found' });
