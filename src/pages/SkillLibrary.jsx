@@ -27,7 +27,7 @@ const SkillLibrary = () => {
   const fetchUserId = async () => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUserId(response.data.id);
