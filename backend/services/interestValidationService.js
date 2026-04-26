@@ -32,14 +32,14 @@ export const validatePendingInterests = async () => {
 
       try {
         const prompt = `
-          Classify the following list of potential "interests" as either "valid" or "invalid".
-          A valid interest is a real-world activity, topic, hobby, or field of study that a person might be interested in.
-          An invalid interest is junk data (like random strings "asdf"), offensive content, or gibberish.
+          Classify the following list of potential "interests" as either "valid"(making these active) or "invalid"(making these blacklisted).
+          A valid, needing to be active interest is a real-world activity, topic, hobby, or field of study that a person might be interested in.
+          An invalid,needing to be blacklisted interest is junk data (like random strings "asdf"), offensive content, or gibberish.
 
           Interests to classify:
           ${batch.map(item => `- ID: ${item.id}, Name: "${item.name}"`).join('\n')}
 
-          Return your response as a JSON array of objects, each with "id", "classification" (either "active" or "blacklisted"), and "reason" fields.
+          Return your response as a JSON array of objects, each with "id", "classification" (either "active" (valid) or "blacklisted" (invalid)), and "reason" fields.
           Ensure every ID from the input list is included in the output array.
         `;
 
