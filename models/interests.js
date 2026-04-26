@@ -7,6 +7,8 @@ const createInterestsTable = async () => {
       name VARCHAR(255) UNIQUE NOT NULL,
       description TEXT NULL,
       category VARCHAR(100) NULL,
+      status VARCHAR(50) DEFAULT 'pending',
+      creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

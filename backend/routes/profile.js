@@ -3,6 +3,7 @@ import multer from 'multer';
 import pool from '../db.js';
 import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
+import { processInterests } from '../services/interestService.js';
 
 
 // Create a router instance
@@ -25,7 +26,11 @@ router.get("/public/:userId",
     try {
       const { userId } = req.params;
 
-      // Ensure the query fetches only public data
+      // Use a join to filter out pending interests from public view
+      // We need to handle the fact that users.interests is currently a jsonb[] or text[]
+      // This is slightly complex due to the denormalized storage in users table.
+      // For now, let's fetch the user and then filter interests based on their status in the interests table.
+
       const result = await pool.query(
         `SELECT id, username, profile_picture, skills, interests, badges, contact_links FROM users WHERE id = $1`,
         [userId]
@@ -35,6 +40,23 @@ router.get("/public/:userId",
         return res.status(404).json({ error: "User not found" });
       }
       const profile = result.rows[0];
+
+      // Parse and filter interests
+      let parsedInterests = [];
+      if (profile.interests && Array.isArray(profile.interests)) {
+        parsedInterests = profile.interests.map(i => typeof i === 'string' ? JSON.parse(i) : i);
+
+        if (parsedInterests.length > 0) {
+          const interestNames = parsedInterests.map(i => i.name);
+          const statusRes = await pool.query(
+            "SELECT name FROM interests WHERE name = ANY($1) AND status = 'active'",
+            [interestNames]
+          );
+          const activeNames = new Set(statusRes.rows.map(r => r.name));
+          profile.interests = parsedInterests.filter(i => activeNames.has(i.name));
+        }
+      }
+
       profile.contact_links = profile.contact_links || [];
       if (profile.profile_picture && !profile.profile_picture.startsWith('http')) {
         try {
@@ -56,12 +78,20 @@ router.get("/public/:userId",
 // Endpoint to fetch skills and interests pool
 router.get('/options', async (req, res) => {
   try {
+    const internalUserId = req.user?.id; // Attached by resolveUser middleware
+
     // Modified query to only return skills with a non-null parent_skill_id
     // and order them alphabetically by name
     const skillsResult = await pool.query('SELECT id, name, unlocked_users FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
     
-    // Added ORDER BY to sort interests alphabetically
-    const interestsResult = await pool.query('SELECT id, name FROM interests ORDER BY name ASC');
+    // Return interests that are active OR pending and created by the current user
+    const interestsResult = await pool.query(
+      `SELECT id, name FROM interests
+       WHERE status = 'active'
+       OR (status = 'pending' AND creator_id = $1)
+       ORDER BY name ASC`,
+      [internalUserId]
+    );
 
     const skillsPool = skillsResult.rows.map((row) => ({
       id: row.id,
@@ -219,7 +249,11 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       userId = userResult.rows[0].id;
     }
 
-    // Step 1: Update user profile
+    // Step 1: Process interests (skip blacklisted, create pending)
+    const parsedInterestsInput = JSON.parse(interests);
+    const processedInterests = await processInterests(parsedInterestsInput, userId);
+
+    // Step 2: Update user profile
     const query = `
       UPDATE users
       SET 
@@ -254,15 +288,15 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
     const values = [
       username,
       JSON.parse(skills),
-      JSON.parse(interests),
-      valueForProfilePictureColumn, // This is the key change
-      contact_links, // Already an array or parsed/defaulted to one
+      processedInterests,
+      valueForProfilePictureColumn,
+      contact_links,
       userId,
     ];
     const result = await pool.query(query, values);
     const updatedProfile = result.rows[0];
 
-    // Step 2: Update skills table for each added skill
+    // Step 3: Update skills table for each added skill
     const parsedSkills = JSON.parse(skills);
 
     for (const skill of parsedSkills) {
@@ -300,14 +334,6 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
             SET unlocked_users = array_append(unlocked_users, $1::jsonb)
             WHERE id = $2
           `;
-          
-          // For regular JSONB format (alternative):
-          // const updateQuery = `
-          //   UPDATE skills 
-          //   SET unlocked_users = $1
-          //   WHERE id = $2
-          // `;
-          // unlockedUsers.push(newUserEntry);
           
           await pool.query(updateQuery, [
             JSON.stringify(newUserEntry), // For JSONB[]

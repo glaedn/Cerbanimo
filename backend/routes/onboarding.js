@@ -4,6 +4,7 @@ import path from 'path';
 import pool from '../db.js';
 import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
+import { processInterests } from '../services/interestService.js';
 
 const router = express.Router();
 // Configure multer for file uploads
@@ -108,24 +109,7 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
     }
 
     // 4. Process and Save Interests
-    const processedInterests = [];
-    if (interests && Array.isArray(interests)) {
-      for (const interestObj of interests) {
-        const interestName = interestObj.name;
-        let interestId;
-
-        // Check if interest exists
-        const existingInterestResult = await client.query('SELECT id FROM interests WHERE name = $1', [interestName]);
-        if (existingInterestResult.rows.length > 0) {
-          interestId = existingInterestResult.rows[0].id;
-        } else {
-          // Insert new interest
-          const newInterestResult = await client.query('INSERT INTO interests (name) VALUES ($1) RETURNING id', [interestName]);
-          interestId = newInterestResult.rows[0].id;
-        }
-        processedInterests.push({ id: interestId, name: interestName });
-      }
-    }
+    const processedInterests = await processInterests(interests, internalUserId, client);
 
     // 5. Update User's Skills and Interests in users table
     await client.query(
