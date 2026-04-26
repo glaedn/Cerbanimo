@@ -135,7 +135,14 @@ const AuthWrapper = ({ children }) => {
         return; // Exit early to prevent further checks like onboarding
       }
 
-      if (location.pathname !== "/onboarding") {
+      const onboardingRelatedPaths = [
+        "/onboarding",
+        "/profile/skill-library",
+        "/profile/interest-library",
+        "/waiting-list"
+      ];
+
+      if (!onboardingRelatedPaths.includes(location.pathname)) {
         const needsOnboarding =
           !profileData || // Profile doesn't exist or fetch failed
           !profileData.skills ||
@@ -162,7 +169,7 @@ const AuthWrapper = ({ children }) => {
           console.log("User does not need onboarding. Profile:", profileData);
         }
       } else {
-        console.log("Already on onboarding page.");
+        console.log(`Currently on allowed path: ${location.pathname}`);
       }
     }
   }, [
