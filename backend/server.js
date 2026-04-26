@@ -149,7 +149,7 @@ app.use('/tasks', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, taskRoutes);
 
-app.use('/skills', jwtCheck, skillsRoutes);
+app.use('/skills', jwtCheck, resolveUser, skillsRoutes);
 
 app.use('/projects', (req, res, next) => {
   if (req.path.match(/^\/\d+$/)) return next();
