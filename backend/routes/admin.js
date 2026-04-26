@@ -12,7 +12,7 @@ const router = express.Router();
 
 // Middleware to check if user is ID 15
 const isAdmin = (req, res, next) => {
-  if (req.user && req.user.id === 15) {
+  if (req.user && Number(req.user.id) === 15) {
     next();
   } else {
     // Fail silently/redirect-like
