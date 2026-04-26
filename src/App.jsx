@@ -56,6 +56,21 @@ const ImpactAtlas = React.lazy(() => import("./pages/ImpactAtlas.jsx"));
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 
+const AdminProtectedRoute = ({ children }) => {
+  const { profile, loading } = useUserProfile();
+
+  if (loading) {
+    return <div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f3ff', fontFamily: 'Orbitron' }}>VERIFYING_ACCESS...</div>;
+  }
+
+  if (profile && Number(profile.id) === 15) {
+    return children;
+  }
+
+  // Render HomePage as if the route didn't resolve
+  return <HomePage />;
+};
+
 const PageWrapper = ({ children }) => (
   <motion.div
     initial={{ opacity: 0, x: 10 }}
@@ -330,16 +345,16 @@ const AppContent = () => {
               </PrivateRoute>
             }
           />
-          {profile?.id === 15 && (
-            <Route
-              path="/admin-dashboard"
-              element={
-                <PrivateRoute>
+          <Route
+            path="/admin-dashboard"
+            element={
+              <PrivateRoute>
+                <AdminProtectedRoute>
                   <PageWrapper><AdminDashboard /></PageWrapper>
-                </PrivateRoute>
-              }
-            />
-          )}
+                </AdminProtectedRoute>
+              </PrivateRoute>
+            }
+          />
           {/* Default Route */}
           <Route path="*" element={<PageWrapper><HomePage /></PageWrapper>} />
           </Routes>
