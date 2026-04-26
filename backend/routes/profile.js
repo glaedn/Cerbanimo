@@ -78,7 +78,19 @@ router.get("/public/:userId",
 // Endpoint to fetch skills and interests pool
 router.get('/options', async (req, res) => {
   try {
-    const internalUserId = req.user?.id; // Attached by resolveUser middleware
+    // Get the user's internal database ID from the token (auth0_id) or query
+    let internalUserId;
+    if (req.auth?.payload?.sub) {
+      const userResult = await pool.query('SELECT id FROM users WHERE auth0_id = $1', [req.auth.payload.sub]);
+      if (userResult.rows.length > 0) {
+      internalUserId = userResult.rows[0].id;
+      }
+    } else if (req.user?.id) {
+      internalUserId = req.user.id;
+    }
+    if (!internalUserId) {
+      return res.status(400).json({ message: 'User ID missing or not found' });
+    }
 
     // Modified query to only return skills with a non-null parent_skill_id
     // and order them alphabetically by name
