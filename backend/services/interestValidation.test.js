@@ -12,7 +12,7 @@ vi.mock('../db.js', () => ({
 vi.mock('@google/generative-ai', () => {
   const generateContent = vi.fn().mockResolvedValue({
     response: {
-      text: () => JSON.stringify([{ id: 1, classification: 'active', reason: 'Valid hobby' }]),
+      text: () => JSON.stringify([{ id: 1, classification: 'active', reason: 'Valid hobby', description: 'A relaxing craft', category: 'Hobby' }]),
     },
   });
   const getGenerativeModel = vi.fn().mockReturnValue({ generateContent });
@@ -39,7 +39,7 @@ describe('interestValidationService', () => {
     vi.useRealTimers();
   });
 
-  it('should validate pending interests in batches and update their status', async () => {
+  it('should validate pending interests in batches and update their status, description and category', async () => {
     pool.query.mockResolvedValueOnce({
       rows: [{ id: 1, name: 'Knitting' }],
     });
@@ -47,11 +47,11 @@ describe('interestValidationService', () => {
     await validatePendingInterests();
 
     expect(pool.query).toHaveBeenCalledWith(
-      "SELECT id, name FROM interests WHERE status = 'pending'"
+      "SELECT id, name FROM interests WHERE status = 'pending' OR description IS NULL OR category IS NULL"
     );
     expect(pool.query).toHaveBeenCalledWith(
-      "UPDATE interests SET status = $1, updated_at = NOW() WHERE id = $2",
-      ['active', 1]
+      "UPDATE interests SET status = $1, description = COALESCE(description, $2), category = COALESCE(category, $3), updated_at = NOW() WHERE id = $4",
+      ['active', 'A relaxing craft', 'Hobby', 1]
     );
   });
 
@@ -62,8 +62,8 @@ describe('interestValidationService', () => {
     model.generateContent.mockResolvedValueOnce({
       response: {
         text: () => JSON.stringify([
-          { id: 1, classification: 'active', reason: 'Valid hobby' },
-          { id: 2, classification: 'blacklisted', reason: 'Junk data' }
+          { id: 1, classification: 'active', reason: 'Valid hobby', description: 'A craft', category: 'Hobby' },
+          { id: 2, classification: 'blacklisted', reason: 'Junk data', description: null, category: null }
         ]),
       },
     });
@@ -78,8 +78,8 @@ describe('interestValidationService', () => {
     await validatePendingInterests();
 
     expect(pool.query).toHaveBeenCalledWith(
-      "UPDATE interests SET status = $1, updated_at = NOW() WHERE id = $2",
-      ['active', 1]
+      "UPDATE interests SET status = $1, description = COALESCE(description, $2), category = COALESCE(category, $3), updated_at = NOW() WHERE id = $4",
+      ['active', 'A craft', 'Hobby', 1]
     );
     expect(pool.query).toHaveBeenCalledWith(
       "UPDATE interests SET status = $1, updated_at = NOW() WHERE id = $2",
@@ -96,12 +96,12 @@ describe('interestValidationService', () => {
     model.generateContent
       .mockResolvedValueOnce({
         response: {
-          text: () => JSON.stringify([{ id: 1, classification: 'active', reason: 'Ok' }]),
+          text: () => JSON.stringify([{ id: 1, classification: 'active', reason: 'Ok', description: 'Desc 1', category: 'Cat 1' }]),
         },
       })
       .mockResolvedValueOnce({
         response: {
-          text: () => JSON.stringify([{ id: 21, classification: 'active', reason: 'Ok' }]),
+          text: () => JSON.stringify([{ id: 21, classification: 'active', reason: 'Ok', description: 'Desc 21', category: 'Cat 21' }]),
         },
       });
 
@@ -124,13 +124,13 @@ describe('interestValidationService', () => {
     expect(model.generateContent).toHaveBeenCalledTimes(2);
     // Verify first batch update
     expect(pool.query).toHaveBeenCalledWith(
-      "UPDATE interests SET status = $1, updated_at = NOW() WHERE id = $2",
-      ['active', 1]
+      "UPDATE interests SET status = $1, description = COALESCE(description, $2), category = COALESCE(category, $3), updated_at = NOW() WHERE id = $4",
+      ['active', 'Desc 1', 'Cat 1', 1]
     );
     // Verify second batch update
     expect(pool.query).toHaveBeenCalledWith(
-      "UPDATE interests SET status = $1, updated_at = NOW() WHERE id = $2",
-      ['active', 21]
+      "UPDATE interests SET status = $1, description = COALESCE(description, $2), category = COALESCE(category, $3), updated_at = NOW() WHERE id = $4",
+      ['active', 'Desc 21', 'Cat 21', 21]
     );
   });
 });
