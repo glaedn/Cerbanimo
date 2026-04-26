@@ -12,6 +12,15 @@ router.get('/inventory/:userId', async (req, res) => {
   }
 });
 
+router.get('/community/:communityId', async (req, res) => {
+  try {
+    const resources = await ResourceService.getCommunityResources(req.params.communityId);
+    res.json(resources);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/add', async (req, res) => {
   const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText } = req.body;
   try {

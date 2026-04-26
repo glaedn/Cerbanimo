@@ -8,7 +8,7 @@ const ImpactGraph = ({ projectId, realmId, width, height }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      let url = '/impact_v2/atlas';
+      let url = '/impact/atlas';
       const params = new URLSearchParams();
       if (projectId) params.append('projectId', projectId);
       if (realmId) params.append('realmId', realmId);
