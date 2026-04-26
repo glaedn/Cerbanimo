@@ -29,10 +29,11 @@ router.get('/', async (req, res) => {
 
 // Bulk unlock/lock skills for a user
 router.post('/bulk-unlock', async (req, res) => {
-  const { userId, skillChanges } = req.body;
+  const { skillChanges, fullSkills } = req.body;
+  const userId = req.user?.id;
 
   if (!userId || !Array.isArray(skillChanges)) {
-    return res.status(400).json({ message: "userId and skillChanges array are required" });
+    return res.status(400).json({ message: "User not identified or skillChanges array missing" });
   }
 
   const client = await pool.connect();
@@ -44,7 +45,7 @@ router.post('/bulk-unlock', async (req, res) => {
 
       if (action === 'unlock') {
         const newUserEntry = { user_id: parseInt(userId), level: 0, exp: 0 };
-        // Use JSONB[] array format logic from profile.js
+        // Update skills table
         await client.query(`
           UPDATE skills
           SET unlocked_users = array_append(COALESCE(unlocked_users, ARRAY[]::jsonb[]), $1::jsonb)
@@ -53,7 +54,19 @@ router.post('/bulk-unlock', async (req, res) => {
             WHERE (user_info->>'user_id')::int = $3
           )
         `, [JSON.stringify(newUserEntry), skillId, userId]);
+
+        // Update users table - Add to skills JSONB array if not present
+        await client.query(`
+          UPDATE users
+          SET skills = (
+            SELECT jsonb_agg(DISTINCT x)
+            FROM jsonb_array_elements(COALESCE(skills, '[]'::jsonb) || $1::jsonb) AS x
+          )
+          WHERE id = $2
+        `, [JSON.stringify({ id: skillId, name: change.skillName }), userId]);
+
       } else if (action === 'lock') {
+        // Update skills table
         await client.query(`
           UPDATE skills
           SET unlocked_users = (
@@ -63,7 +76,27 @@ router.post('/bulk-unlock', async (req, res) => {
           )
           WHERE id = $2
         `, [userId, skillId]);
+
+        // Update users table - Remove from skills JSONB array
+        await client.query(`
+          UPDATE users
+          SET skills = (
+            SELECT COALESCE(jsonb_agg(x), '[]'::jsonb)
+            FROM jsonb_array_elements(COALESCE(skills, '[]'::jsonb)) AS x
+            WHERE (x->>'id')::int != $1
+          )
+          WHERE id = $2
+        `, [skillId, userId]);
       }
+    }
+
+    // Also update the users table with the full current list of skills
+    if (fullSkills) {
+      await client.query(`
+        UPDATE users
+        SET skills = $1::jsonb
+        WHERE id = $2
+      `, [JSON.stringify(fullSkills), userId]);
     }
 
     await client.query('COMMIT');

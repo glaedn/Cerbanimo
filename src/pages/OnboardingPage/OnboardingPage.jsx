@@ -254,63 +254,93 @@ const OnboardingPage = () => {
           sx={{ mb: 2 }}
         />
 
-        <Autocomplete
-          multiple
-          freeSolo
-          options={skillsOptions}
-          value={skills}
-          onChange={(event, newValue) => {
-            setSkills(newValue.map(option => 
-              typeof option === 'string' ? { name: option } : option
-            ));
-          }}
-          getOptionLabel={(option) => option.name || option}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...otherTagProps } = getTagProps({ index });
-              return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
-            })
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              variant="outlined"
-              label="Skills (at least 3)"
-              placeholder="Type or select skills"
-              InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
-            />
-          )}
-          sx={{ mb: 2 }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
+          <Autocomplete
+            multiple
+            freeSolo
+            options={skillsOptions}
+            value={skills}
+            onChange={(event, newValue) => {
+              setSkills(newValue.map(option =>
+                typeof option === 'string' ? { name: option } : option
+              ));
+            }}
+            getOptionLabel={(option) => option.name || option}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const { key, ...otherTagProps } = getTagProps({ index });
+                return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
+              })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Skills (at least 3)"
+                placeholder="Type or select skills"
+                InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
+              />
+            )}
+            sx={{ flexGrow: 1 }}
+          />
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/profile/skill-library')}
+            sx={{
+              height: '56px',
+              borderColor: theme.colors.secondary,
+              color: theme.colors.secondary,
+              fontFamily: 'Orbitron',
+              minWidth: '120px'
+            }}
+          >
+            Library
+          </Button>
+        </Box>
 
-        <Autocomplete
-          multiple
-          freeSolo
-          options={interestsOptions}
-          value={interests}
-          onChange={(event, newValue) => {
-            setInterests(newValue.map(option => 
-              typeof option === 'string' ? { name: option } : option
-            ));
-          }}
-          getOptionLabel={(option) => option.name || option}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...otherTagProps } = getTagProps({ index });
-              return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
-            })
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              variant="outlined"
-              label="Interests (at least 3)"
-              placeholder="Type or select interests"
-              InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
-            />
-          )}
-          sx={{ mb: 2 }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
+          <Autocomplete
+            multiple
+            freeSolo
+            options={interestsOptions}
+            value={interests}
+            onChange={(event, newValue) => {
+              setInterests(newValue.map(option =>
+                typeof option === 'string' ? { name: option } : option
+              ));
+            }}
+            getOptionLabel={(option) => option.name || option}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const { key, ...otherTagProps } = getTagProps({ index });
+                return <Chip key={key} label={option.name || option} {...otherTagProps} sx={{ bgcolor: theme.colors.secondary, color: theme.colors.textPrimary }}/>;
+              })
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Interests (at least 3)"
+                placeholder="Type or select interests"
+                InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
+              />
+            )}
+            sx={{ flexGrow: 1 }}
+          />
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/profile/interest-library')}
+            sx={{
+              height: '56px',
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              fontFamily: 'Orbitron',
+              minWidth: '120px'
+            }}
+          >
+            Library
+          </Button>
+        </Box>
 
         <Button
           type="submit"
