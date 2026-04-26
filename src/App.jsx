@@ -63,13 +63,13 @@ const AdminProtectedRoute = ({ children }) => {
     return <div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f3ff', fontFamily: 'Orbitron' }}>VERIFYING_ACCESS...</div>;
   }
 
-  if (profile && Number(profile.id) === 15) {
+  if (profile && Number(profile.id) === Number(15)) {
     return children;
   }
 
   // Render HomePage as if the route didn't resolve
   return <HomePage />;
-};
+} ;
 
 const PageWrapper = ({ children }) => (
   <motion.div
