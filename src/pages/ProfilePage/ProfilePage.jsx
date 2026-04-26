@@ -68,6 +68,9 @@ const ProfilePage = () => {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceError, setResourceError] = useState(null);
 
+  // State for Services
+  const [services, setServices] = useState([]);
+
   // State for Badges
   const [userBadges, setUserBadges] = useState([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
@@ -265,7 +268,7 @@ const ProfilePage = () => {
         audience: 'import.meta.env.VITE_BACKEND_URL/',
         scope: 'openid profile email read:profile', 
       });
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/user/${profileData.id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/inventory/${profileData.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUserResources(response.data);
@@ -376,15 +379,15 @@ const ProfilePage = () => {
       if (editingResource) {
         // Update existing resource
         payload.user_id = profileData.id; // Ensure user_id is set
-        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/${editingResource.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/inventory/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource updated successfully!');
       } else {
         // Create new resource
-        payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
+        payload.ownerUserId = profileData.id; // Correct parameter name for v2
         // console.log('Creating new resource with payload:', payload);
-        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources/add`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource created successfully!');
@@ -405,7 +408,7 @@ const ProfilePage = () => {
           audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
-        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/inventory/${resourceId}`, {
           headers: { Authorization: `Bearer ${token}`, 
           'X-User-Id': profileData.id, // Ensure user_id is sent for authorization // 
           },
