@@ -344,6 +344,8 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
     `);
 
+    await alterExistingTables();
+
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {
     console.error('Error initializing roadmap database tables:', error);
