@@ -283,7 +283,10 @@ const OnboardingPage = () => {
             )}
             sx={{ flexGrow: 1 }}
           />
-          <Button
+          
+          
+        </Box>
+<Button
             variant="outlined"
             onClick={() => navigate('/profile/skill-library')}
             sx={{
@@ -291,12 +294,12 @@ const OnboardingPage = () => {
               borderColor: theme.colors.secondary,
               color: theme.colors.secondary,
               fontFamily: 'Orbitron',
-              minWidth: '120px'
+              minWidth: '120px',
+              marginBottom: '20px'
             }}
           >
-            Library
+            Skill Library
           </Button>
-        </Box>
 
         <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
           <Autocomplete
@@ -327,7 +330,9 @@ const OnboardingPage = () => {
             )}
             sx={{ flexGrow: 1 }}
           />
-          <Button
+          
+        </Box>
+<Button
             variant="outlined"
             onClick={() => navigate('/profile/interest-library')}
             sx={{
@@ -338,10 +343,8 @@ const OnboardingPage = () => {
               minWidth: '120px'
             }}
           >
-            Library
+            Interest Library
           </Button>
-        </Box>
-
         <Button
           type="submit"
           variant="contained"

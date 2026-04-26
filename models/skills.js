@@ -4,7 +4,6 @@ const createSkillsTable = async () => {
     CREATE TABLE IF NOT EXISTS skills (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) UNIQUE NOT NULL,
-      category VARCHAR(100),
       description TEXT,
       parent_skill_id INTEGER REFERENCES skills(id) ON DELETE SET NULL,
       unlocked_users JSONB DEFAULT '[]'::jsonb, -- Stores array of objects: [{user_id, exp, level, unlocked_at}]
