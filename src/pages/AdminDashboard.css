@@ -1,0 +1,64 @@
+.admin-dashboard-container {
+  padding-top: 100px;
+  padding-bottom: 50px;
+  min-height: 100vh;
+  background: #0a0a0b;
+}
+
+.admin-title {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #00F3FF;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  letter-spacing: 2px;
+}
+
+.stat-card {
+  background: rgba(28, 28, 30, 0.8) !important;
+  border: 1px solid rgba(0, 243, 255, 0.2) !important;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: #00F3FF !important;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+  transform: translateY(-5px);
+}
+
+.admin-section-paper {
+  background: rgba(28, 28, 30, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.section-title {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #ffffff;
+  margin-bottom: 24px !important;
+  font-size: 1.1rem !important;
+  letter-spacing: 1px;
+}
+
+.chart-placeholder {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 10px;
+}
+
+.admin-action-btn {
+  height: 50px;
+  text-transform: none !important;
+}
+
+@media (max-width: 600px) {
+  .admin-dashboard-container {
+    padding-top: 80px;
+  }
+
+  .admin-title {
+    font-size: 1.8rem !important;
+  }
+}
