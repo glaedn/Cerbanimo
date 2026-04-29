@@ -144,29 +144,39 @@ class WeeklyWrapUpService {
         SELECT
           t.skill_id,
           s.name as skill_name,
+          s.unlocked_users,
           AVG(t.skill_level) as avg_task_skill_level,
           COUNT(*) as tasks_count
         FROM tasks t
         JOIN skills s ON t.skill_id = s.id
         WHERE t.submitted_by = $1 AND t.status = 'completed' AND t.completed_at > NOW() - INTERVAL '7 days'
-        GROUP BY t.skill_id, s.name
+        GROUP BY t.skill_id, s.name, s.unlocked_users
       `, [userId]);
 
       const skillData = [];
       for (const s of skillStatsRes.rows) {
-        // Get user's current level in this skill from the unlocked_users array
-        const skillLevelQuery = await pool.query(`
-          SELECT
-            elem->>'level' as current_level
-          FROM skills,
-          jsonb_array_elements(unlocked_users) AS elem
-          WHERE id = $1 AND elem->>'user_id' = $2::text
-        `, [s.skill_id, userId]);
+        let currentLevel = 0;
+        const unlockedUsers = Array.isArray(s.unlocked_users) ? s.unlocked_users : [];
+
+        for (const entry of unlockedUsers) {
+          let parsedEntry = entry;
+          if (typeof entry === 'string') {
+            try {
+              parsedEntry = JSON.parse(entry);
+            } catch (e) {
+              continue;
+            }
+          }
+          if (parsedEntry && String(parsedEntry.user_id) === String(userId)) {
+            currentLevel = parseInt(parsedEntry.level) || 0;
+            break;
+          }
+        }
 
         skillData.push({
           skill_id: s.skill_id,
           skill_name: s.skill_name,
-          skill_level_achieved: parseInt(skillLevelQuery.rows[0]?.current_level) || 0,
+          skill_level_achieved: currentLevel,
           avg_task_level_this_week: parseFloat(s.avg_task_skill_level),
           tasks_completed_count: parseInt(s.tasks_count)
         });
