@@ -43,11 +43,22 @@ const MobileDashboard = () => {
           setSuggestedTasks(suggestedRes.data.slice(0, 5));
         }
 
-        // Fetch Chronicle
-        const chronicleRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUserChronicle(chronicleRes.data || []);
+        // Fetch both chronicle entries and weekly wrap-up summaries
+        const [chronicleRes, summariesRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/story_engine_v2/summaries/user/${profile.id}?type=weekly%20wrap-up`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        const combinedData = [
+          ...(Array.isArray(chronicleRes.data) ? chronicleRes.data : []),
+          ...(Array.isArray(summariesRes.data) ? summariesRes.data : [])
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        setUserChronicle(combinedData.slice(0, 5)); // Limit to latest 5 for mobile dashboard
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       }

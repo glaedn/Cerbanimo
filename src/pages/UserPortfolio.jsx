@@ -7,7 +7,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import './UserPortfolio.css';
 import { Typography, Box } from '@mui/material';
 
-const UserPortfolio = ({ userId: propUserId }) => {
+const UserPortfolio = ({ userId: propUserId, accessToken }) => {
   const isMobile = useIsMobile();
   const routeParams = useParams();
   const userId = propUserId || routeParams.userId;
@@ -21,10 +21,11 @@ const UserPortfolio = ({ userId: propUserId }) => {
 
     const fetchData = async () => {
       try {
+        const headers = accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {};
         // Fetch both chronicle entries and weekly wrap-up summaries
         const [chronicleRes, summariesRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/story_engine_v2/summaries/user/${userId}?type=weekly%20wrap-up`)
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`, { headers }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/story_engine_v2/summaries/user/${userId}?type=weekly%20wrap-up`, { headers })
         ]);
 
         if (chronicleRes.status === 401) {
