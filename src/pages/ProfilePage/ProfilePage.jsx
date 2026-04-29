@@ -987,7 +987,7 @@ const ProfilePage = () => {
         <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1, pt: isMobile ? 2 : 0 }}>
           Mission Log
         </Typography>
-        {isMobile && <Box sx={{ width: '100%', mb: 2, px: 0 }}><ChronicleTimeline stories={userChronicle} /></Box>}
+        
         <Box sx={{ width: '100%' }}>
             <UserPortfolio userId={profileData.id} accessToken={portfolioToken}/>
         </Box>
