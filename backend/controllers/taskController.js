@@ -2058,7 +2058,10 @@ const approveByPM = async (req, res, io) => {
       return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
     }
 
-    await client.query(`UPDATE tasks SET status = 'completed' WHERE id = $1`, [taskId]);
+    await client.query(
+      `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      [taskId]
+    );
 
     const finalizeResult = await finalizeTask(taskId, client, io);
     if (finalizeResult.error) {
