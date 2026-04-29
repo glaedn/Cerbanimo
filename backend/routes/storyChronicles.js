@@ -2,6 +2,7 @@
 import express from 'express';
 import db from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendNotification } from '../services/NotificationService.js';
 
 const router = express.Router();
 
@@ -16,8 +17,21 @@ router.post('/story-node', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`,
       [id, task_id, user_id, reflection, media_urls, tags]
     );
-    res.status(201).json(result.rows[0]);
-    console.log('Inserted story node:', result.rows[0]);
+    const newNode = result.rows[0];
+
+    // Notify user of new story node (appearing in chronicle)
+    try {
+      await sendNotification(user_id, {
+        taskId: task_id,
+        message: `New chronicle entry recorded for mission: ${task_id}`,
+        type: 'chronicle-entry'
+      });
+    } catch (notifErr) {
+      console.error('Failed to send chronicle notification:', notifErr);
+    }
+
+    res.status(201).json(newNode);
+    console.log('Inserted story node:', newNode);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create story node' });
