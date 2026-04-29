@@ -39,14 +39,10 @@ describe('WeeklyWrapUpService', () => {
         rows: [{
           skill_id: 10,
           skill_name: 'Coding',
+          unlocked_users: [{ user_id: 1, level: 3 }],
           avg_task_skill_level: 5.5,
           tasks_count: 2
         }]
-      });
-
-      // Mock skillLevelQuery result
-      pool.query.mockResolvedValueOnce({
-        rows: [{ current_level: '3' }]
       });
 
       const stats = await WeeklyWrapUpService.getUserWeeklyStats(1);
