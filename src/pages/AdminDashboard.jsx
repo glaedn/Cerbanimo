@@ -201,6 +201,11 @@ const AdminDashboard = () => {
                 onClick={() => runAction('run-intelligence-scoring', 'RECALCULATE_INTELLIGENCE')}
                 loading={actionLoading['RECALCULATE_INTELLIGENCE']}
               />
+              <AdminActionButton
+                label="GENERATE_WEEKLY_WRAPUPS"
+                onClick={() => runAction('run-weekly-wrapup', 'GENERATE_WEEKLY_WRAPUPS')}
+                loading={actionLoading['GENERATE_WEEKLY_WRAPUPS']}
+              />
             </Box>
           </Paper>
         </Grid>

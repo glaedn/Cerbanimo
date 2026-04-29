@@ -21,25 +21,37 @@ const UserPortfolio = ({ userId: propUserId }) => {
 
     const fetchData = async () => {
       try {
-        const chronicleRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`);
+        // Fetch both chronicle entries and weekly wrap-up summaries
+        const [chronicleRes, summariesRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${userId}/chronicle`),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/story_engine_v2/summaries/user/${userId}?type=weekly%20wrap-up`)
+        ]);
+
         if (chronicleRes.status === 401) {
             console.warn("Unauthorized to fetch chronicle data (Public view might be restricted)");
             setChronicleData([]);
             return;
         }
-        const chronicleData = await chronicleRes.json();
 
-        if (!Array.isArray(chronicleData)) {
-          console.error("Expected chronicle data to be an array:", chronicleData);
+        const chronicleData = await chronicleRes.json();
+        const summariesData = summariesRes.ok ? await summariesRes.json() : [];
+
+        // Combine and sort by created_at desc
+        const combinedData = [
+          ...(Array.isArray(chronicleData) ? chronicleData : []),
+          ...(Array.isArray(summariesData) ? summariesData : [])
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        if (combinedData.length === 0) {
           setChronicleData([]);
           setStoryStats({ total: 0, recent: 0 });
         } else {
-          setChronicleData(chronicleData);
-          const recentCount = chronicleData.filter(
+          setChronicleData(combinedData);
+          const recentCount = combinedData.filter(
             entry => new Date(entry.created_at) > Date.now() - 2592000000
           ).length;
           setStoryStats({
-            total: chronicleData.length,
+            total: combinedData.length,
             recent: recentCount
           });
         }
