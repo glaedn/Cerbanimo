@@ -1,6 +1,7 @@
-import React, { useState } from 'react'; // Correctly import useState
+import React, { useState, useEffect } from 'react'; // Correctly import useState
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useUserProjects from '../../../hooks/useUserProjects.js'; // This still needed to sum tokens from projects
+import ChronicleTimeline from '../../ChronicleTimeline';
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
 
@@ -13,6 +14,37 @@ const CommandDeck = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { projects, loading: projectsLoading, error: projectsError } = useUserProjects(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false); // Use useState
+  const [chronicleData, setChronicleData] = useState([]);
+  const [loadingChronicle, setLoadingChronicle] = useState(false);
+
+  useEffect(() => {
+    if (profile?.id) {
+      const fetchChronicle = async () => {
+        setLoadingChronicle(true);
+        try {
+          const [chronicleRes, summariesRes] = await Promise.all([
+            fetch(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`),
+            fetch(`${import.meta.env.VITE_BACKEND_URL}/story_engine_v2/summaries/user/${profile.id}?type=weekly%20wrap-up`)
+          ]);
+
+          const chronicleData = await chronicleRes.json();
+          const summariesData = summariesRes.ok ? await summariesRes.json() : [];
+
+          const combinedData = [
+            ...(Array.isArray(chronicleData) ? chronicleData : []),
+            ...(Array.isArray(summariesData) ? summariesData : [])
+          ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+          setChronicleData(combinedData.slice(0, 3)); // Only show latest 3 in HUD
+        } catch (err) {
+          console.error("Error fetching HUD chronicle:", err);
+        } finally {
+          setLoadingChronicle(false);
+        }
+      };
+      fetchChronicle();
+    }
+  }, [profile?.id]);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -44,7 +76,7 @@ const CommandDeck = () => {
         </button>
       </div>
       {!isMinimized && (
-        <div className="hud-panel-content">
+        <div className="hud-panel-content" style={{ maxHeight: '400px', overflowY: 'auto' }}>
            {projects.length > 0 ? (
 
         <ul>
@@ -93,6 +125,9 @@ const CommandDeck = () => {
 
         <p>No projects currently managed.</p>
       )}
+          <div className="deck-chronicle-preview" style={{ marginTop: '20px' }}>
+            <ChronicleTimeline stories={chronicleData} />
+          </div>
         </div>
       )}
     </div>
