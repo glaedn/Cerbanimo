@@ -212,6 +212,25 @@ const ProfilePage = () => {
     }
   }, [profileData.experience, isAuthenticated, isLoading]);
 
+  const [portfolioToken, setPortfolioToken] = useState(null);
+  // Fetch portfolio token for UserPortfolio
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPortfolioToken = async () => {
+      try {
+        const token = await getAccessTokenSilently({
+          audience: import.meta.env.VITE_BACKEND_URL,
+          scope: "openid profile email read:profile write:profile"
+        });
+        if (isMounted) setPortfolioToken(token);
+      } catch {
+        if (isMounted) setPortfolioToken(null);
+      }
+    };
+    fetchPortfolioToken();
+    return () => { isMounted = false; };
+  }, [getAccessTokenSilently]);
+
   const handleInputChange = (field, value) => {
     setProfileData((prevData) => ({
       ...prevData,
@@ -970,7 +989,7 @@ const ProfilePage = () => {
         </Typography>
         {isMobile && <Box sx={{ width: '100%', mb: 2, px: 0 }}><ChronicleTimeline stories={userChronicle} /></Box>}
         <Box sx={{ width: '100%' }}>
-            <UserPortfolio userId={profileData.id}/>
+            <UserPortfolio userId={profileData.id} accessToken={portfolioToken}/>
         </Box>
       </Box>
       
