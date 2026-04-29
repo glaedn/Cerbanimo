@@ -7,6 +7,7 @@ import ProjectHealthService from '../services/ProjectHealthService.js';
 import GuildHealthService from '../services/GuildHealthService.js';
 import ConstellationHealthService from '../services/ConstellationHealthService.js';
 import { validatePendingInterests } from '../services/interestValidationService.js';
+import WeeklyWrapUpService from '../services/WeeklyWrapUpService.js';
 
 const router = express.Router();
 
@@ -148,6 +149,15 @@ router.post('/run-interest-validation', async (req, res) => {
   try {
     await validatePendingInterests();
     res.json({ message: 'Interest validation completed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/run-weekly-wrapup', async (req, res) => {
+  try {
+    await WeeklyWrapUpService.generateWeeklyWrapUps();
+    res.json({ message: 'Weekly wrap-up generation completed' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -43,6 +43,7 @@ import GuildService from './services/GuildService.js';
 import GuildHealthService from './services/GuildHealthService.js';
 import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
+import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -200,7 +201,10 @@ app.use('/verification_v2', jwtCheck, resolveUser, verificationRoutesV2);
 app.use('/guilds_v2', jwtCheck, resolveUser, guildRoutesV2);
 app.use('/constellations_v2', jwtCheck, resolveUser, constellationRoutesV2);
 app.use('/resources_v2', jwtCheck, resolveUser, resourceRoutesV2);
-app.use('/story_engine_v2', jwtCheck, resolveUser, storyEngineRoutesV2);
+app.use('/story_engine_v2', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, storyEngineRoutesV2);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -258,6 +262,16 @@ cron.schedule('0 0 * * *', async () => {
     await GuildService.enrichSkillsAndHierarchy();
   } catch (err) {
     console.error('Skill enrichment worker failed:', err);
+  }
+});
+
+// Weekly Wrap-up Generation (Daily at 2:00 AM)
+cron.schedule('0 2 * * *', async () => {
+  console.log('Running daily weekly wrap-up generation...');
+  try {
+    await WeeklyWrapUpService.generateWeeklyWrapUps();
+  } catch (err) {
+    console.error('Weekly wrap-up worker failed:', err);
   }
 });
 

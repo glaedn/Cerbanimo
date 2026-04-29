@@ -58,20 +58,84 @@ const ChronicleTimeline = ({ stories }) => {
   return (
     <Box sx={{ bgcolor: 'background.default', p: 2 }}>
       <Typography variant="h5" color="primary" mb={2}>
-        Chronicle Timeline
+        Chronicle Summaries
       </Typography>
       {safeStories.length === 0 ? (
         <Typography color="textSecondary">No stories to display.</Typography>
       ) : (
-        safeStories.map((story) => (
-          <StoryNode
-            key={story.id}
-            {...story}
-            onAddEndorsement={(endorsement) =>
-              handleAddEndorsement(story.id, endorsement)
-            }
-          />
-        ))
+        safeStories.map((story) => {
+          if (story.summary_type === 'weekly wrap-up') {
+            return (
+              <Box
+                key={story.id}
+                sx={{
+                  mb: 3,
+                  p: 3,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(255, 92, 162, 0.1) 100%)',
+                  border: '1px solid rgba(0, 243, 255, 0.3)',
+                  boxShadow: '0 0 20px rgba(0, 243, 255, 0.1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '4px',
+                    height: '100%',
+                    background: 'linear-gradient(to bottom, #00f3ff, #ff5ca2)'
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="overline" sx={{ color: '#00f3ff', fontWeight: 'bold', letterSpacing: 2 }}>
+                    WEEKLY_CHRONICLE_WRAPUP
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {new Date(story.created_at).toLocaleDateString()}
+                  </Typography>
+                </Box>
+
+                <Typography variant="body1" sx={{ color: '#fff', fontStyle: 'italic', mb: 3, lineHeight: 1.6 }}>
+                  "{story.content}"
+                </Typography>
+
+                {story.structured_data && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                    {story.structured_data.top_skill_focus && (
+                      <Box sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', p: 1, px: 2, borderRadius: 1, border: '1px solid #00f3ff' }}>
+                        <Typography variant="caption" display="block" sx={{ color: '#00f3ff', fontSize: '0.6rem' }}>TOP_SKILL</Typography>
+                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 'bold' }}>{story.structured_data.top_skill_focus}</Typography>
+                      </Box>
+                    )}
+                    {story.structured_data.weekly_momentum && (
+                      <Box sx={{ bgcolor: 'rgba(255, 92, 162, 0.1)', p: 1, px: 2, borderRadius: 1, border: '1px solid #ff5ca2' }}>
+                        <Typography variant="caption" display="block" sx={{ color: '#ff5ca2', fontSize: '0.6rem' }}>MOMENTUM</Typography>
+                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 'bold', textTransform: 'uppercase' }}>{story.structured_data.weekly_momentum}</Typography>
+                      </Box>
+                    )}
+                    {story.structured_data.growth_insight && (
+                      <Box sx={{ width: '100%', mt: 1, p: 1.5, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                        <Typography variant="caption" display="block" sx={{ color: '#aaa', fontSize: '0.6rem', mb: 0.5 }}>GROWTH_INSIGHT</Typography>
+                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>{story.structured_data.growth_insight}</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            );
+          }
+          return (
+            <StoryNode
+              key={story.id}
+              {...story}
+              onAddEndorsement={(endorsement) =>
+                handleAddEndorsement(story.id, endorsement)
+              }
+            />
+          );
+        })
       )}
     </Box>
   );
