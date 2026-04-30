@@ -16,12 +16,22 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(10px);
 }
 
 .skill-library-content {
   padding: 16px;
   flex: 1;
   overflow-y: auto;
+}
+
+.skill-category-header {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(5px);
+}
+
+.skill-card {
+  user-select: none;
 }
 
 .save-changes-container {
@@ -46,7 +56,7 @@
     font-size: 1.2rem;
   }
 
-  .skill-item {
+  .skill-card {
     padding: 12px;
   }
 }
