@@ -22,6 +22,10 @@ import {
   FormControlLabel,
   Checkbox
 } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -264,6 +268,7 @@ const MobileTaskDetail = () => {
   if (!task) return <Box sx={{ p: 4 }}><Typography color="error">Mission not found.</Typography></Box>;
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
     <Box className="mobile-task-detail-container">
       {/* Header */}
       <Box className="detail-header">
@@ -353,6 +358,25 @@ const MobileTaskDetail = () => {
                       onChange={(e) => setEditForm({ ...editForm, reward_tokens: e.target.value })}
                     />
                   </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2" className="section-label">START_DATE</Typography>
+                        <DatePicker
+                            value={editForm.start_date ? dayjs(editForm.start_date) : null}
+                            onChange={(nv) => setEditForm({ ...editForm, start_date: nv ? nv.toISOString() : null })}
+                            slotProps={{ textField: { fullWidth: true, className: 'cyber-input' } }}
+                        />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2" className="section-label">DUE_DATE</Typography>
+                        <DatePicker
+                            value={editForm.due_date ? dayjs(editForm.due_date) : null}
+                            onChange={(nv) => setEditForm({ ...editForm, due_date: nv ? nv.toISOString() : null })}
+                            slotProps={{ textField: { fullWidth: true, className: 'cyber-input' } }}
+                        />
+                    </Box>
                 </Box>
 
                 <Box sx={{ mb: 2 }}>
@@ -512,6 +536,18 @@ const MobileTaskDetail = () => {
                 )}
               </Box>
 
+              <Typography variant="subtitle2" className="section-title">TIMELINE</Typography>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <Box sx={{ flex: 1, p: 1.5, bgcolor: 'rgba(0, 243, 255, 0.05)', borderRadius: '4px', border: '1px solid rgba(0, 243, 255, 0.1)' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(0, 243, 255, 0.7)', display: 'block', mb: 0.5 }}>START</Typography>
+                    <Typography variant="body2">{task.start_date ? dayjs(task.start_date).format('MMM D, YYYY') : 'NOT_SET'}</Typography>
+                  </Box>
+                  <Box sx={{ flex: 1, p: 1.5, bgcolor: 'rgba(255, 92, 162, 0.05)', borderRadius: '4px', border: '1px solid rgba(255, 92, 162, 0.1)' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 92, 162, 0.7)', display: 'block', mb: 0.5 }}>DUE</Typography>
+                    <Typography variant="body2">{task.due_date ? dayjs(task.due_date).format('MMM D, YYYY') : 'NOT_SET'}</Typography>
+                  </Box>
+              </Box>
+
               <Typography variant="subtitle2" className="section-title">RESOURCES & REWARDS</Typography>
               <List dense>
                 <ListItem sx={{ px: 0 }}>
@@ -660,6 +696,7 @@ const MobileTaskDetail = () => {
         </Alert>
       </Snackbar>
     </Box>
+    </LocalizationProvider>
   );
 };
 
