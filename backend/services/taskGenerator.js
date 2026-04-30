@@ -200,8 +200,11 @@ export const autoGenerateTasks = async (
   creator_id,
   project_due_date = null
 ) => {
+  const now = new Date().toISOString();
   const userPrompt = `
 Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+
+Current Date/Time: ${now}
 
 Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
@@ -209,7 +212,12 @@ Here are the rules:
   - "project_id" in tasks must match the corresponding project's new ID.
   - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit.
   - "dependencies" in tasks must reference the correct **new task IDs**.
-- **Timeline Awareness**: Distribute tasks across time so the project completes by the due date. Assign each task a logical start and end date based on dependencies. Use ISO 8601 format for dates (YYYY-MM-DDTHH:mm:ssZ). If no project due date is provided, use a reasonable 30-day window starting from today.
+- **Timeline Awareness**: Distribute tasks across time so the project completes by the due date.
+  - Assign each task a logical start_date and due_date based on dependencies.
+  - The project starts TODAY (${now}).
+  - Use ISO 8601 format for dates (YYYY-MM-DDTHH:mm:ssZ).
+  - If no project due date is provided, distribute tasks over a reasonable 30-day window starting from today.
+  - Ensure task dates are sequential and respect dependencies (a task cannot start before its dependencies are finished).
 - Output data in **JSON format**, with **one array per table** (projects, tasks).
 
 Example skills you can use or be inspired by:
