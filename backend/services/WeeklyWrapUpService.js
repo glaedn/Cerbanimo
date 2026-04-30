@@ -31,17 +31,17 @@ class WeeklyWrapUpService {
           UNION
 
           -- Resource Contributors
-          SELECT owner_id as user_id
+          SELECT owner_user_id as user_id
           FROM resources
           WHERE created_at > NOW() - INTERVAL '7 days'
-          AND owner_id IS NOT NULL
+          AND owner_user_id IS NOT NULL
 
           UNION
 
           -- Impact Contributors
           SELECT user_id
-          FROM impact_contributions
-          WHERE timestamp > NOW() - INTERVAL '7 days'
+          FROM impact_summaries
+          WHERE created_at > NOW() - INTERVAL '7 days'
           AND user_id IS NOT NULL
 
           UNION
