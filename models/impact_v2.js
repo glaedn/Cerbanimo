@@ -20,6 +20,7 @@ const createImpactTables = async () => {
       entity_id INTEGER, -- ID of the related task, project, or outcome
       label TEXT,
       description TEXT,
+      impact_weight INTEGER CHECK (impact_weight IS NULL OR (impact_weight >= 0 AND impact_weight <= 100)),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;

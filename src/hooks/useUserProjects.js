@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
@@ -8,7 +8,7 @@ const useUserProjects = (userId) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     try {
       return await getAccessTokenSilently({
         audience: import.meta.env.VITE_BACKEND_URL,
@@ -18,7 +18,7 @@ const useUserProjects = (userId) => {
       console.error('Error getting access token in useUserProjects', e);
       throw e; 
     }
-  };
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     const fetchProjectsAndTasks = async () => {
@@ -37,7 +37,7 @@ const useUserProjects = (userId) => {
         
         // Fetch user's projects
         // Assuming the endpoint returns projects where user is creator_id or explicitly managed
-        const projectResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects?userId=${userId}`, {
+        const projectResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/userprojects?userId=${userId}&pageSize=500`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
@@ -69,7 +69,8 @@ const useUserProjects = (userId) => {
               return {
                 id: proj.id,
                 name: proj.name,
-                community_id: proj.community_id,
+                community_id: proj.community_id ?? null,
+                creator_id: proj.creator_id,
                 description: proj.description || '',
                 taskCount,
                 activeTasks,
@@ -83,7 +84,8 @@ const useUserProjects = (userId) => {
               return {
                 id: proj.id,
                 name: proj.name,
-                community_id: proj.community_id,
+                community_id: proj.community_id ?? null,
+                creator_id: proj.creator_id,
                 description: proj.description || '',
                 taskCount: 0, activeTasks: 0, completedTasks: 0, progress: 0, xpGained: 'N/A', errorFetchingTasks: true
               };
@@ -101,7 +103,7 @@ const useUserProjects = (userId) => {
     };
 
     fetchProjectsAndTasks();
-  }, [userId, isAuthenticated, getAccessTokenSilently]);
+  }, [userId, isAuthenticated, getToken]);
 
   return { projects, loading, error };
 };

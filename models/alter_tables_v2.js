@@ -50,12 +50,26 @@ const alterExistingTables = async () => {
     $$;
   `;
 
+  const alterImpactNodesQuery = `
+    ALTER TABLE impact_nodes
+    ADD COLUMN IF NOT EXISTS impact_weight INTEGER;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'impact_nodes_impact_weight_check') THEN
+        ALTER TABLE impact_nodes ADD CONSTRAINT impact_nodes_impact_weight_check CHECK (impact_weight IS NULL OR (impact_weight >= 0 AND impact_weight <= 100));
+      END IF;
+    END
+    $$;
+  `;
+
   try {
     await pool.query(alterTasksQuery);
     await pool.query(alterSkillsQuery);
     await pool.query(alterProjectsQuery);
     await pool.query(alterUsersQuery);
     await pool.query(alterStorySummariesQuery);
+    await pool.query(alterImpactNodesQuery);
     console.log('PostgreSQL: Existing tables (tasks, projects, users) altered with new fields.');
   } catch (err) {
     console.error('PostgreSQL: Error altering existing tables:', err);

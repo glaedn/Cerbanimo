@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   CardContent,
@@ -32,6 +33,9 @@ const StoryNode = ({
   endorsements = [],
   feedback = [],
   narrative,
+  impact_label,
+  impact_weight,
+  outcome_statement,
   onAddEndorsement,
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -75,7 +79,7 @@ const StoryNode = ({
           Reflection:
         </Typography>
         <Typography variant="body1" className="reflection-text">
-          "{reflection}"
+          &quot;{reflection}&quot;
         </Typography>
 
         {narrative && (
@@ -84,6 +88,21 @@ const StoryNode = ({
              <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#e0e0e0' }}>{narrative}</Typography>
           </Box>
         )}
+
+        {impact_label && (
+          <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, bgcolor: 'rgba(255, 92, 162, 0.08)', borderLeft: '3px solid #ff5ca2' }}>
+            <Typography variant="subtitle2" sx={{ color: '#ff5ca2', mb: 0.5, fontSize: '0.75rem', fontWeight: 'bold' }}>
+              IMPACT SIGNAL{impact_weight !== null && impact_weight !== undefined ? ` - ${impact_weight}%` : ''}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#f4f4f4' }}>{impact_label}</Typography>
+            {outcome_statement && (
+              <Typography variant="caption" sx={{ color: '#bbb', display: 'block', mt: 0.75 }}>
+                Outcome: {outcome_statement}
+              </Typography>
+            )}
+          </Box>
+        )}
+
         <Typography variant="subtitle2" className="story-node-subheader">
           Skill type:
         </Typography>
@@ -196,3 +215,25 @@ const StoryNode = ({
 };
 
 export default StoryNode;
+
+StoryNode.propTypes = {
+  task_name: PropTypes.string,
+  project_name: PropTypes.string,
+  reflection: PropTypes.string,
+  tags: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.arrayOf(PropTypes.string),
+  ]),
+  media_urls: PropTypes.arrayOf(PropTypes.string),
+  endorsements: PropTypes.arrayOf(PropTypes.shape({
+    emoji: PropTypes.string,
+    badge: PropTypes.string,
+    comment: PropTypes.string,
+  })),
+  feedback: PropTypes.arrayOf(PropTypes.string),
+  narrative: PropTypes.string,
+  impact_label: PropTypes.string,
+  impact_weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  outcome_statement: PropTypes.string,
+  onAddEndorsement: PropTypes.func,
+};

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import PropTypes from "prop-types";
 import * as d3 from "d3";
 import axios from "axios";
 import TaskEditor from "./TaskEditor";
@@ -8,11 +9,8 @@ import useUserProjects from "../hooks/useUserProjects";
 import "./ProjectVisualizer.css";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Chip, Box, Typography, IconButton, Button, Modal, Autocomplete, TextField } from "@mui/material";
+import { Chip, Box, Typography, IconButton, Modal, Autocomplete, TextField } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
-import DependencyListView from "../components/DependencyListView";
-import ProjectSettingsModal from "../components/ProjectSettingsModal";
-import SettingsIcon from '@mui/icons-material/Settings';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -82,6 +80,23 @@ const ArcCarouselItem = ({
   );
 };
 
+ArcCarouselItem.propTypes = {
+  realIndex: PropTypes.number.isRequired,
+  pos: PropTypes.number.isRequired,
+  item: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+    }),
+  ]),
+  N: PropTypes.number.isRequired,
+  angleStep: PropTypes.number.isRequired,
+  radiusX: PropTypes.number.isRequired,
+  radiusY: PropTypes.number.isRequired,
+  onClick: PropTypes.func.isRequired,
+};
+
 const ArcCarousel = ({
   items,
   activeIndex,
@@ -118,8 +133,6 @@ const ArcCarousel = ({
     if (N === 0) return 0;
     return ((i % N) + N) % N;
   };
-
-  const half = Math.floor(visibleCount / 2);
 
   const getWindow = () => {
     if (N === 0) return [];
@@ -175,7 +188,7 @@ const ArcCarousel = ({
     let v = drag.current.velocity;
     stopRAF();
 
-    const tick = (t) => {
+    const tick = () => {
       const pxPerItem = 120;
       const dt = 16;
       const dv = v * dt;
@@ -269,6 +282,23 @@ const ArcCarousel = ({
   );
 };
 
+ArcCarousel.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+    }),
+  ])).isRequired,
+  activeIndex: PropTypes.number.isRequired,
+  setActiveIndex: PropTypes.func.isRequired,
+  radiusX: PropTypes.number,
+  radiusY: PropTypes.number,
+  angleStep: PropTypes.number,
+  visibleCount: PropTypes.number,
+  snapDuration: PropTypes.number,
+};
+
 const ProjectVisualizer = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -308,12 +338,13 @@ const ProjectVisualizer = () => {
 
   const displayCommunities = useMemo(() => {
     const list = [...userCommunities];
+    const projectCommunityId = project?.community_id ?? null;
     // Ensure project's own community is present even if not in userCommunities (rare)
-    if (project?.community_id && !list.find(c => c.id === project.community_id)) {
-      list.push({ id: project.community_id, name: project.community_name || "Current Community" });
+    if (projectCommunityId !== null && !list.find(c => c.id === projectCommunityId)) {
+      list.push({ id: projectCommunityId, name: project.community_name || "Current Community" });
     }
     const nc = { id: null, name: "No Community" };
-    const currentCommIdx = list.findIndex(c => c.id === project?.community_id);
+    const currentCommIdx = list.findIndex(c => (c.id ?? null) === projectCommunityId);
     if (currentCommIdx !== -1) {
       // To appear to the left, it needs a higher index in our coordinate system
       list.splice(currentCommIdx + 1, 0, nc);
@@ -327,7 +358,7 @@ const ProjectVisualizer = () => {
     setProjectIsActive(tasks.some(t => ["completed", "active-assigned", "active-unassigned", "urgent-unassigned", "urgent-assigned", "submitted"].includes(t.status)));
   }, [tasks]);
 
-  const fetchUserCommunities = async () => {
+  const fetchUserCommunities = useCallback(async () => {
     if (!userId) return;
     try {
       const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
@@ -335,8 +366,8 @@ const ProjectVisualizer = () => {
       if (!response.ok) throw new Error(`Failed to fetch communities`);
       const data = await response.json();
       if (data && Array.isArray(data.communities)) setUserCommunities(data.communities);
-    } catch (error) { setUserCommunities([]); }
-  };
+    } catch { setUserCommunities([]); }
+  }, [getAccessTokenSilently, userId]);
 
   const handleGranularizeTasks = async (pid) => {
     if (!window.confirm('Are you sure? This will delete and replace ALL tasks in the project.')) return;
@@ -356,7 +387,7 @@ const ProjectVisualizer = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (userId) fetchUserCommunities(); }, [userId]);
+  useEffect(() => { if (userId) fetchUserCommunities(); }, [userId, fetchUserCommunities]);
 
   const handleSubmitCommunityProposal = async () => {
     if (!selectedCommunity) return;
@@ -510,17 +541,19 @@ const ProjectVisualizer = () => {
   const usedSkills = useMemo(() => skills.filter(s => tasks.some(t => t.skill_id === s.id)), [skills, tasks]);
   const zoomRef = useRef(null);
 
-  useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [skills, tasks]);
+  useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [activeCategory, skills, tasks]);
 
   useEffect(() => {
-    if (project && allProjects.length > 0 && displayCommunities.length > 0) {
-      const commIdx = displayCommunities.findIndex(c => c.id === project.community_id);
+    if (project && displayCommunities.length > 0) {
+      const projectCommunityId = project.community_id ?? null;
+      const commIdx = displayCommunities.findIndex(c => (c.id ?? null) === projectCommunityId);
       if (commIdx !== -1) setCommunityIndex(commIdx);
 
-      const sc = displayCommunities[commIdx] || { id: project.community_id };
-      const cp = allProjects.filter(p => p.community_id === sc.id);
+      const sc = displayCommunities[commIdx] || { id: projectCommunityId };
+      const cp = allProjects.filter(p => (p.community_id ?? null) === (sc.id ?? null));
       const pIdx = cp.findIndex(p => p.id === Number(projectId));
       if (pIdx !== -1) setProjectIndex(pIdx);
+      else setProjectIndex(0);
     }
   }, [projectId, project, allProjects, displayCommunities]);
 
@@ -751,6 +784,8 @@ const ProjectVisualizer = () => {
         ab.append("text").attr("dy", 4).attr("text-anchor", "middle").text("+").attr("font-size", "14px").attr("fill", "#FFFFFF");
       });
     }
+  // D3 owns the graph DOM in this effect; keep dependencies scoped to redraw triggers.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory, allTasks, skills, isEditMode, svgDimensions, tasks, isMobile]);
 
   useEffect(() => {
@@ -760,7 +795,7 @@ const ProjectVisualizer = () => {
           const tkn = await getAccessTokenSilently();
           const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, { headers: { Authorization: `Bearer ${tkn}` } });
           const t = res.data; if (t) { setTaskForm(t); setPopupLaunched(true); setActiveSkillId(t.skill_id); setShowTaskPopup(true); const s = skills.find(sk => sk.id === t.skill_id); if (s) setActiveCategory(s.name); }
-        } catch (e) {
+        } catch {
           const t = tasks.find(tk => tk.id === parseInt(taskId, 10));
           if (t) { setTaskForm(t); setPopupLaunched(true); setActiveSkillId(t.skill_id); setShowTaskPopup(true); const s = skills.find(sk => sk.id === t.skill_id); if (s) setActiveCategory(s.name); }
         }
@@ -777,9 +812,16 @@ const ProjectVisualizer = () => {
     const sc = displayCommunities[communityIndex];
     if (!sc) return project ? [project] : [];
 
-    const cp = allProjects.filter(p => p.community_id === sc.id);
+    const selectedCommunityId = sc.id ?? null;
+    const cp = allProjects.filter(p => (p.community_id ?? null) === selectedCommunityId);
+    const projectCommunityId = project?.community_id ?? null;
+
+    if (project && projectCommunityId === selectedCommunityId && !cp.some(p => p.id === Number(projectId))) {
+      return [project, ...cp];
+    }
+
     return cp.length > 0 ? cp : (project ? [project] : []);
-  }, [displayCommunities, communityIndex, allProjects, project]);
+  }, [displayCommunities, communityIndex, allProjects, project, projectId]);
 
   const skillOptions = useMemo(() => [
     { name: "All Tasks" },
@@ -934,7 +976,7 @@ const ProjectVisualizer = () => {
       )}
       <div className="project-info">
         <h3>{project?.name}</h3><p className="project-description">{project?.description}</p>
-        {outcomes.length > 0 && <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}><Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>INTENDED REAL-WORLD EFFECT</Typography>{outcomes.map(o => <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>"{o.statement}"</Typography>)}</Box>}
+        {outcomes.length > 0 && <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}><Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>INTENDED REAL-WORLD EFFECT</Typography>{outcomes.map(o => <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>&quot;{o.statement}&quot;</Typography>)}</Box>}
         <div className="token-pool">
           <div className="token-metric"><span className="token-label">Allocated:</span><span className="token-value">{project?.reserved_tokens}</span></div>
           <div className="token-metric"><span className="token-label">Distributed:</span><span className="token-value">{project?.used_tokens}</span></div>
