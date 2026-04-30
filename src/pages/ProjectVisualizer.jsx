@@ -555,9 +555,13 @@ const ProjectVisualizer = () => {
     if (!svgRef.current) return;
     const data = categorizedTasks[activeCategory] || [];
     if (data.length === 0) return;
-    const { width, height } = svgDimensions;
+    const { width } = svgDimensions;
     d3.select(svgRef.current).selectAll("*").remove();
     if (!zoomRef.current) zoomRef.current = d3.zoom().scaleExtent([0.3, 3]).filter(e => isMobile && e.touches ? e.touches.length > 1 : true);
+
+    // Calculate nowY before its first use
+    // (Removed duplicate declarations: timelineHeight, projectStart, projectEnd, timeToY, now, nowY)
+
     const svg = d3.select(svgRef.current)
       .attr("width", "100%")
       .attr("height", "100%")
