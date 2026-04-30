@@ -197,7 +197,8 @@ export const autoGenerateTasks = async (
   projectName,
   projectDescription,
   tags,
-  creator_id
+  creator_id,
+  project_due_date = null
 ) => {
   const userPrompt = `
 Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
@@ -208,6 +209,7 @@ Here are the rules:
   - "project_id" in tasks must match the corresponding project's new ID.
   - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit.
   - "dependencies" in tasks must reference the correct **new task IDs**.
+- **Timeline Awareness**: Distribute tasks across time so the project completes by the due date. Assign each task a logical start and end date based on dependencies. Use ISO 8601 format for dates (YYYY-MM-DDTHH:mm:ssZ). If no project due date is provided, use a reasonable 30-day window starting from today.
 - Output data in **JSON format**, with **one array per table** (projects, tasks).
 
 Example skills you can use or be inspired by:
@@ -233,19 +235,19 @@ Input:
 
 Projects
 [
-  { "name": "${projectName}", "description": "${projectDescription}", "tags": ["${tags}"], "creator_id": "${creator_id}" }
+  { "name": "${projectName}", "description": "${projectDescription}", "tags": ["${tags}"], "creator_id": "${creator_id}", "due_date": "${project_due_date || 'None provided'}" }
 ]
 
 Expected Output Format:
 
 {
   "projects": [
-    { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id} } 
+    { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80 },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z" },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z" },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z" }
   ]
 }
 
