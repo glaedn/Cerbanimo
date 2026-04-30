@@ -4,6 +4,7 @@ import pool from '../db.js';
 import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 import { processInterests } from '../services/interestService.js';
+import { processSkills } from '../services/skillService.js';
 
 
 // Create a router instance
@@ -57,6 +58,22 @@ router.get("/public/:userId",
         }
       }
 
+  // Parse and filter skills
+  let parsedSkills = [];
+  if (profile.skills && Array.isArray(profile.skills)) {
+    parsedSkills = profile.skills.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+
+    if (parsedSkills.length > 0) {
+      const skillNames = parsedSkills.map(s => s.name);
+      const skillStatusRes = await pool.query(
+        "SELECT name FROM skills WHERE name = ANY($1) AND status = 'active'",
+        [skillNames]
+      );
+      const activeSkillNames = new Set(skillStatusRes.rows.map(r => r.name));
+      profile.skills = parsedSkills.filter(s => activeSkillNames.has(s.name));
+    }
+  }
+
       profile.contact_links = profile.contact_links || [];
       if (profile.profile_picture && !profile.profile_picture.startsWith('http')) {
         try {
@@ -93,8 +110,15 @@ router.get('/options', async (req, res) => {
     }
 
     // Modified query to only return skills with a non-null parent_skill_id
+    // and that are either active or pending and created by the current user
     // and order them alphabetically by name
-    const skillsResult = await pool.query('SELECT id, name, unlocked_users FROM skills WHERE parent_skill_id IS NOT NULL ORDER BY name ASC');
+    const skillsResult = await pool.query(
+      `SELECT id, name, unlocked_users FROM skills
+       WHERE parent_skill_id IS NOT NULL
+       AND (status = 'active' OR (status = 'pending' AND creator_id = $1))
+       ORDER BY name ASC`,
+      [internalUserId]
+    );
     
     // Return interests that are active OR pending and created by the current user
     const interestsResult = await pool.query(
@@ -279,9 +303,12 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       userId = userResult.rows[0].id;
     }
 
-    // Step 1: Process interests (skip blacklisted, create pending)
+    // Step 1: Process interests and skills (skip blacklisted, create pending)
     const parsedInterestsInput = JSON.parse(interests);
     const processedInterests = await processInterests(parsedInterestsInput, userId);
+
+    const parsedSkillsInput = JSON.parse(skills);
+    const processedSkills = await processSkills(parsedSkillsInput, userId);
 
     // Step 2: Update user profile
     const query = `
@@ -317,7 +344,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
 
     const values = [
       username,
-      JSON.parse(skills),
+      processedSkills,
       processedInterests,
       valueForProfilePictureColumn,
       contact_links,
