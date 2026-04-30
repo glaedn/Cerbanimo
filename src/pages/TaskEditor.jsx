@@ -13,6 +13,10 @@ import {
   Typography,
   IconButton
 } from "@mui/material";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { X } from 'lucide-react';
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -410,6 +414,7 @@ const TaskEditor = ({
   if (!open) return null;
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
     <Modal
         open={open}
         onClose={onClose}
@@ -686,6 +691,35 @@ const TaskEditor = ({
                 disabled={!effectiveIsEdit}
               />
 
+              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <DatePicker
+                  label="START DATE"
+                  value={taskForm.start_date ? dayjs(taskForm.start_date) : null}
+                  onChange={(newValue) => setTaskForm({ ...taskForm, start_date: newValue ? newValue.toISOString() : null })}
+                  disabled={!effectiveIsEdit}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: "outlined",
+                      className: "cyber-input"
+                    }
+                  }}
+                />
+                <DatePicker
+                  label="DUE DATE"
+                  value={taskForm.due_date ? dayjs(taskForm.due_date) : null}
+                  onChange={(newValue) => setTaskForm({ ...taskForm, due_date: newValue ? newValue.toISOString() : null })}
+                  disabled={!effectiveIsEdit}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: "outlined",
+                      className: "cyber-input"
+                    }
+                  }}
+                />
+              </Box>
+
               <div className="cyber-section-container">
                 <InputLabel className="cyber-section-label">RESOURCE REQUIREMENTS</InputLabel>
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -937,6 +971,7 @@ const TaskEditor = ({
         </div>
       </div>
     </Modal>
+    </LocalizationProvider>
   );
 };
 
