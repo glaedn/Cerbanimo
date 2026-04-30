@@ -20,7 +20,7 @@ describe('WeeklyWrapUpService', () => {
       expect(stats).toBeNull();
     });
 
-    it('should calculate averages and gather skill data', async () => {
+    it('should calculate averages and gather skill data, including task titles, guilds, and constellations', async () => {
       // Mock statsQuery result
       pool.query.mockResolvedValueOnce({
         rows: [{
@@ -45,6 +45,24 @@ describe('WeeklyWrapUpService', () => {
         }]
       });
 
+      // Mock topTasksRes result
+      pool.query.mockResolvedValueOnce({
+        rows: [
+          { task_title: 'Fix Bug', project_name: 'Core' },
+          { task_title: 'Implement Auth', project_name: 'Security' }
+        ]
+      });
+
+      // Mock guildsRes result
+      pool.query.mockResolvedValueOnce({
+        rows: [{ name: 'Coding Guild' }]
+      });
+
+      // Mock constellationsRes result
+      pool.query.mockResolvedValueOnce({
+        rows: [{ name: 'Security Constellation' }]
+      });
+
       const stats = await WeeklyWrapUpService.getUserWeeklyStats(1);
 
       expect(stats).toEqual({
@@ -52,7 +70,8 @@ describe('WeeklyWrapUpService', () => {
         tasks: {
           this_week: 5,
           last_week: 3,
-          avg_6_months: 10
+          avg_6_months: 10,
+          top_titles: ['Fix Bug (Core)', 'Implement Auth (Security)']
         },
         xp: {
           this_week: 500,
@@ -65,7 +84,9 @@ describe('WeeklyWrapUpService', () => {
           skill_level_achieved: 3,
           avg_task_level_this_week: 5.5,
           tasks_completed_count: 2
-        }]
+        }],
+        guilds: ['Coding Guild'],
+        constellations: ['Security Constellation']
       });
     });
   });

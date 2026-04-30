@@ -51,6 +51,7 @@ import { createVerificationTables } from '../models/verification.js';
 import { createGuildTables } from '../models/guilds_v2.js';
 import { createConstellationTables } from '../models/constellations_v2.js';
 import { createStoryTables } from '../models/story_engine_v2.js';
+import { createStorySummariesTable } from '../models/story_summaries.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createResourceLayerTables } from '../models/resource_layer_v2.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
@@ -358,6 +359,8 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
     `);
 
+    await createStoryTables();
+    await createStorySummariesTable();
     await alterExistingTables();
 
     console.log('Database tables roadmap update checked/initialized successfully.');
