@@ -7,6 +7,8 @@ const createSkillsTable = async () => {
       description TEXT,
       parent_skill_id INTEGER REFERENCES skills(id) ON DELETE SET NULL,
       unlocked_users JSONB DEFAULT '[]'::jsonb, -- Stores array of objects: [{user_id, exp, level, unlocked_at}]
+      status VARCHAR(50) DEFAULT 'pending',
+      creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
