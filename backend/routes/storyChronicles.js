@@ -44,67 +44,42 @@ router.get('/user/:id/chronicle', async (req, res) => {
 
   try {
     const result = await db.query(`
-      WITH chronicle_entries AS (
-        SELECT
-          uc.id,
-          uc.user_id,
-          uc.story_node_id,
-          sn.task_id,
-          uc.project_id,
-          uc.community_id,
-          uc.title,
-          uc.content_type,
-          uc.reflection,
-          uc.media_urls,
-          uc.tags,
-          uc.status,
-          uc.upvotes,
-          uc.created_at,
-          uc.updated_at
-        FROM user_chronicles uc
-        LEFT JOIN story_nodes sn ON sn.id = uc.story_node_id
-        WHERE uc.user_id = $1
-
-        UNION ALL
-
-        SELECT
-          sn.id,
-          sn.user_id,
-          sn.id as story_node_id,
-          sn.task_id,
-          sn.project_id,
-          sn.community_id,
-          sn.title,
-          sn.content_type,
-          sn.reflection,
-          sn.media_urls,
-          sn.tags,
-          sn.status,
-          sn.upvotes,
-          sn.created_at,
-          sn.updated_at
-        FROM story_nodes sn
-        WHERE sn.user_id = $1
-          AND NOT EXISTS (
-            SELECT 1 FROM user_chronicles uc
-            WHERE uc.story_node_id = sn.id AND uc.user_id = sn.user_id
-          )
-      )
       SELECT
-        ce.*,
-        COALESCE(t.name, ce.title) as task_name,
-        p.name as project_name,
-        i.label as impact_label,
+        uc.id,
+        uc.user_id,
+        uc.story_node_id,
+        uc.task_id,
+        uc.project_id,
+        uc.community_id,
+        uc.title,
+        uc.content_type,
+        uc.reflection,
+        uc.media_urls,
+        uc.tags,
+        uc.status,
+        uc.upvotes,
+        uc.created_at,
+        uc.updated_at,
+        uc.task_name,
+        uc.project_name,
+        i.label           AS impact_label,
         i.impact_weight,
-        o.statement as outcome_statement
-      FROM chronicle_entries ce
-      LEFT JOIN tasks t ON t.id = ce.task_id
-      LEFT JOIN projects p ON p.id = COALESCE(ce.project_id, t.project_id)
-      LEFT JOIN impact_nodes i ON i.type = 'task' AND i.entity_id = t.id
-      LEFT JOIN impact_edges e ON e.from_node_id = i.id
-      LEFT JOIN impact_nodes outcome_node ON outcome_node.id = e.to_node_id AND outcome_node.type = 'outcome'
-      LEFT JOIN outcomes o ON o.id = outcome_node.entity_id
-      ORDER BY ce.created_at DESC
+        o.statement       AS outcome_statement
+      FROM user_chronicles uc
+      LEFT JOIN tasks t
+        ON t.id = uc.task_id
+      LEFT JOIN projects p
+        ON p.id = COALESCE(uc.project_id, t.project_id)
+      LEFT JOIN impact_nodes i
+        ON i.type = 'task' AND i.entity_id = t.id
+      LEFT JOIN impact_edges ie
+        ON ie.from_node_id = i.id
+      LEFT JOIN impact_nodes outcome_node
+        ON outcome_node.id = ie.to_node_id AND outcome_node.type = 'outcome'
+      LEFT JOIN outcomes o
+        ON o.id = outcome_node.entity_id
+      WHERE uc.user_id = $1
+      ORDER BY uc.created_at DESC
     `, [id]);
 
     // Always return an array, even if only one or zero rows
@@ -122,66 +97,42 @@ router.get('/community/:id/chronicle-feed', async (req, res) => {
   
     try {
       const result = await db.query(`
-        WITH chronicle_entries AS (
-          SELECT
-            uc.id,
-            uc.user_id,
-            uc.story_node_id,
-            sn.task_id,
-            uc.project_id,
-            uc.community_id,
-            uc.title,
-            uc.content_type,
-            uc.reflection,
-            uc.media_urls,
-            uc.tags,
-            uc.status,
-            uc.upvotes,
-            uc.created_at,
-            uc.updated_at
-          FROM user_chronicles uc
-          LEFT JOIN story_nodes sn ON sn.id = uc.story_node_id
-
-          UNION ALL
-
-          SELECT
-            sn.id,
-            sn.user_id,
-            sn.id as story_node_id,
-            sn.task_id,
-            sn.project_id,
-            sn.community_id,
-            sn.title,
-            sn.content_type,
-            sn.reflection,
-            sn.media_urls,
-            sn.tags,
-            sn.status,
-            sn.upvotes,
-            sn.created_at,
-            sn.updated_at
-          FROM story_nodes sn
-          WHERE NOT EXISTS (
-            SELECT 1 FROM user_chronicles uc
-            WHERE uc.story_node_id = sn.id AND uc.user_id = sn.user_id
-          )
-        )
         SELECT
-          ce.*,
-          COALESCE(t.name, ce.title) as task_name,
-          p.name as project_name,
-          i.label as impact_label,
+          uc.id,
+          uc.user_id,
+          uc.story_node_id,
+          uc.task_id,
+          uc.project_id,
+          uc.community_id,
+          uc.title,
+          uc.content_type,
+          uc.reflection,
+          uc.media_urls,
+          uc.tags,
+          uc.status,
+          uc.upvotes,
+          uc.created_at,
+          uc.updated_at,
+          uc.task_name,
+          uc.project_name,
+          i.label           AS impact_label,
           i.impact_weight,
-          o.statement as outcome_statement
-        FROM chronicle_entries ce
-        LEFT JOIN tasks t ON t.id = ce.task_id
-        LEFT JOIN projects p ON p.id = COALESCE(ce.project_id, t.project_id)
-        LEFT JOIN impact_nodes i ON i.type = 'task' AND i.entity_id = t.id
-        LEFT JOIN impact_edges e ON e.from_node_id = i.id
-        LEFT JOIN impact_nodes outcome_node ON outcome_node.id = e.to_node_id AND outcome_node.type = 'outcome'
-        LEFT JOIN outcomes o ON o.id = outcome_node.entity_id
-        WHERE COALESCE(ce.project_id, t.project_id) = $1
-        ORDER BY ce.created_at DESC
+          o.statement       AS outcome_statement
+        FROM user_chronicles uc
+        LEFT JOIN tasks t
+          ON t.id = uc.task_id
+        LEFT JOIN projects p
+          ON p.id = COALESCE(uc.project_id, t.project_id)
+        LEFT JOIN impact_nodes i
+          ON i.type = 'task' AND i.entity_id = t.id
+        LEFT JOIN impact_edges ie
+          ON ie.from_node_id = i.id
+        LEFT JOIN impact_nodes outcome_node
+          ON outcome_node.id = ie.to_node_id AND outcome_node.type = 'outcome'
+        LEFT JOIN outcomes o
+          ON o.id = outcome_node.entity_id
+        WHERE COALESCE(uc.project_id, t.project_id) = $1
+        ORDER BY uc.created_at DESC
       `, [projectId]);
       console.log('Community chronicle feed:', result.rows);
       res.status(200).json(result.rows);
