@@ -273,26 +273,26 @@ const createNewTask = async (
 
     // If task is active, we need to reserve tokens
     let tokenReservation = 0;
-    if (activeBoolean) {
-      tokenReservation = rewardTokens;
+    // if (activeBoolean) {
+    //   tokenReservation = rewardTokens;
 
-      // Check if we have enough tokens available
-      const availableTokens = token_pool - (used_tokens + reserved_tokens);
-      if (tokenReservation > availableTokens) {
-        await client.query("ROLLBACK");
-        return {
-          error: `Not enough tokens available. Pool: ${token_pool}, Used: ${used_tokens}, Reserved: ${reserved_tokens}, Available: ${availableTokens}, Needed: ${tokenReservation}`,
-          status: 400,
-        };
-      }
+    //   // Check if we have enough tokens available
+    //   const availableTokens = token_pool - (used_tokens + reserved_tokens);
+    //   if (tokenReservation > availableTokens) {
+    //     await client.query("ROLLBACK");
+    //     return {
+    //       error: `Not enough tokens available. Pool: ${token_pool}, Used: ${used_tokens}, Reserved: ${reserved_tokens}, Available: ${availableTokens}, Needed: ${tokenReservation}`,
+    //       status: 400,
+    //     };
+    //   }
 
-      // Reserve tokens in the project
-      await client.query(
-        "UPDATE projects SET reserved_tokens = reserved_tokens + $1 WHERE id = $2",
-        [tokenReservation, projectId]
-      );
-      console.log(`Reserved ${tokenReservation} tokens for new task`);
-    }
+    //   // Reserve tokens in the project
+    //   await client.query(
+    //     "UPDATE projects SET reserved_tokens = reserved_tokens + $1 WHERE id = $2",
+    //     [tokenReservation, projectId]
+    //   );
+    //   console.log(`Reserved ${tokenReservation} tokens for new task`);
+    // }
 
     // Create the task
     const createQuery = `
@@ -439,13 +439,13 @@ const updateTask = async (
 
     // Check if we have enough tokens for a positive adjustment
     const availableTokens = token_pool - (used_tokens + reserved_tokens);
-    if (reservationAdjustment > 0 && reservationAdjustment > availableTokens) {
-      await client.query("ROLLBACK");
-      return {
-        error: `Not enough tokens available. Pool: ${token_pool}, Used: ${used_tokens}, Reserved: ${reserved_tokens}, Available: ${availableTokens}, Needed: ${reservationAdjustment}`,
-        status: 400,
-      };
-    }
+    // if (reservationAdjustment > 0 && reservationAdjustment > availableTokens) {
+    //   await client.query("ROLLBACK");
+    //   return {
+    //     error: `Not enough tokens available. Pool: ${token_pool}, Used: ${used_tokens}, Reserved: ${reserved_tokens}, Available: ${availableTokens}, Needed: ${reservationAdjustment}`,
+    //     status: 400,
+    //   };
+    // }
 
     // Update task
     const updateQuery = `
@@ -485,16 +485,16 @@ const updateTask = async (
     ]);
 
     // Only update project reserved tokens if there's an adjustment needed
-    if (reservationAdjustment !== 0) {
-      console.log(
-        "Updating project reserved tokens by:",
-        reservationAdjustment
-      );
-      await client.query(
-        "UPDATE projects SET reserved_tokens = GREATEST(0, reserved_tokens + $1) WHERE id = $2",
-        [reservationAdjustment, projectId]
-      );
-    }
+    // if (reservationAdjustment !== 0) {
+    //   console.log(
+    //     "Updating project reserved tokens by:",
+    //     reservationAdjustment
+    //   );
+    //   await client.query(
+    //     "UPDATE projects SET reserved_tokens = GREATEST(0, reserved_tokens + $1) WHERE id = $2",
+    //     [reservationAdjustment, projectId]
+    //   );
+    // }
 
     await client.query("COMMIT");
     console.log("Update successful:", taskResult.rows[0]);

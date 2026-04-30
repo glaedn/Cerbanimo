@@ -4,7 +4,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #000; /* Pitch black for better HUD contrast */
+    background: rgba(28, 28, 30, 0.9); /* Match MobileTaskCard */
     padding: 0;
     width: 90%;
     max-width: 700px;
@@ -12,7 +12,7 @@
     border-radius: 4px;
     font-family: 'Inter', sans-serif;
     color: #00F3FF;
-    border: 1px solid rgba(0, 243, 255, 0.4);
+    border: 1px solid rgba(0, 243, 255, 0.3); /* Match MobileTaskCard */
     box-shadow: 0 0 30px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 243, 255, 0.2);
     display: flex;
     flex-direction: column;
@@ -37,6 +37,22 @@
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+}
+
+.cyber-border::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #00F3FF, transparent);
+    opacity: 0.5;
+    animation: scanline-anim 3s linear infinite;
+    z-index: 2;
+}
+
+@keyframes scanline-anim {
+    0% { transform: translateY(-20px); opacity: 0; }
+    50% { opacity: 0.5; }
+    100% { transform: translateY(600px); opacity: 0; }
 }
 
 .cyber-content {
