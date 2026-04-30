@@ -142,13 +142,18 @@ const SkillLibrary = () => {
     return false;
   };
 
-  const renderSkillCard = (skill) => {
+  const renderSkillCard = (skill, level = 0) => {
     const isUnlocked = unlockedSkills.has(skill.id);
     const children = skills.filter(s => s.parent_skill_id === skill.id && s.id !== s.parent_skill_id);
     const isExpanded = expandedSkills.has(skill.id);
 
     return (
-      <Box key={skill.id} sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' } }}>
+      <Box key={skill.id} sx={{
+        width: level === 0
+          ? { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' }
+          : '100%',
+        mb: level > 0 ? 1 : 0
+      }}>
         <Box
           className={`skill-card ${isUnlocked ? 'selected' : ''}`}
           onClick={() => {
@@ -160,7 +165,6 @@ const SkillLibrary = () => {
           }}
           sx={{
             p: 2,
-            height: '100%',
             borderRadius: '12px',
             border: `1px solid ${isUnlocked ? theme.colors.secondary : 'rgba(255, 92, 162, 0.1)'}`,
             cursor: 'pointer',
@@ -210,8 +214,18 @@ const SkillLibrary = () => {
           )}
         </Box>
         {isExpanded && children.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, mb: 2, pl: 2, borderLeft: `1px solid ${theme.colors.secondary}33`, width: '100%' }}>
-            {children.map(child => renderSkillCard(child))}
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            mt: 2,
+            mb: 2,
+            ml: 1,
+            pl: 2,
+            borderLeft: `2px solid ${theme.colors.secondary}33`,
+            width: 'calc(100% - 8px)'
+          }}>
+            {children.map(child => renderSkillCard(child, level + 1))}
           </Box>
         )}
       </Box>
@@ -280,7 +294,7 @@ const SkillLibrary = () => {
 
               {isExpanded && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, p: 1 }}>
-                  {children.map(child => renderSkillCard(child))}
+                  {children.map(child => renderSkillCard(child, 0))}
                 </Box>
               )}
             </Box>
