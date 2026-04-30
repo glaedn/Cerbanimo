@@ -513,12 +513,14 @@ const ProjectVisualizer = () => {
 
   const getPressureColor = (task) => {
     if (task.status === "completed") return "#FF69B4";
-    if (!task.due_date) return "#00FF00";
 
     const start = task.start_date ? new Date(task.start_date).getTime() : new Date(project?.created_at || Date.now()).getTime();
-    const end = new Date(task.due_date).getTime();
+    const end = task.due_date ? new Date(task.due_date).getTime() : null;
     const now = Date.now();
 
+    const baseColor = task.status.includes("inactive") ? "#4682B4" : "#00FF00";
+
+    if (!end) return baseColor;
     if (now >= end) return "#FF0000"; // Overdue
 
     // Percent of task duration elapsed
@@ -526,12 +528,7 @@ const ProjectVisualizer = () => {
     const elapsed = now - start;
     const percent = Math.max(0, Math.min(1, elapsed / total));
 
-    // For tasks entirely in the future (now < start), elapsed < 0, percent will be 0 -> Green
-
-    if (percent < 0.4) return "#00FF00"; // Green
-    if (percent < 0.7) return "#FFFF00"; // Yellow
-    if (percent < 0.9) return "#FFA500"; // Orange
-    return "#FF0000"; // Red
+    return d3.interpolateRgb(baseColor, "#FF0000")(percent);
   };
 
   const getNodeColor = (task) => {
@@ -541,15 +538,14 @@ const ProjectVisualizer = () => {
     return getPressureColor(task);
   };
 
-  const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999"); };
-  const getNodeStroke = (s) => {
-    if (s === "active-unassigned" || s === "active-assigned") return "#32CD32";
-    if (s === "inactive-unassigned" || s === "inactive-assigned") return "#4682B4";
-    if (s === "urgent-unassigned" || s === "urgent-assigned") return "#FF0000";
-    if (s === "completed") return "#FF69B4";
-    return "#CCCCCC";
+  const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => getNodeStroke(d.target)); };
+
+  const getNodeStroke = (task) => {
+    if (task.status === "completed") return "#FF69B4";
+    return getPressureColor(task);
   };
-  const getNodeFill = (s) => s.includes("unassigned") ? "#888888" : getNodeColor(s);
+
+  const getNodeFill = (task) => task.status.includes("unassigned") ? "#888888" : getNodeColor(task);
   const truncateText = (t, m = 13) => t.length <= m ? t : t.substring(0, m) + "...";
   const zoomRef = useRef(null);
 
@@ -618,7 +614,8 @@ const ProjectVisualizer = () => {
       .call(zoomRef.current)
       .style("touch-action", "none");
     const timelineHeight = 1500;
-    const projectStart = new Date(project?.created_at || Date.now()).getTime();
+    const earliestTaskStart = d3.min(tasks, t => t.start_date ? new Date(t.start_date).getTime() : null);
+    const projectStart = earliestTaskStart || new Date(project?.created_at || Date.now()).getTime();
     const projectEnd = project?.due_date
         ? new Date(project.due_date).getTime()
         : (projectStart + 30 * 24 * 60 * 60 * 1000);
@@ -642,6 +639,7 @@ const ProjectVisualizer = () => {
     }
 
     const mainGroup = svg.append("g").attr("transform", zoomTransformRef.current);
+    const gridGroup = mainGroup.append("g").attr("class", "grid-group");
     const linksGroup = mainGroup.append("g"); linksGroupRef.current = linksGroup;
     const nodesGroup = mainGroup.append("g");
     const addButtonsGroup = mainGroup.append("g");
@@ -711,11 +709,11 @@ const ProjectVisualizer = () => {
       s.dependencies.forEach(did => {
         const t = graph[did];
         if (t && (activeCategory === "All Tasks" || (allTasks[did] && allTasks[did].skill_id === activeSkillId)))
-          lnks.push({ id: `link-${lid++}`, source: graph[s.id], target: t, targetStatus: t.status });
+          lnks.push({ id: `link-${lid++}`, source: graph[s.id], target: t });
       });
     });
     linksGroup.selectAll(".link").data(lnks).enter().append("path").attr("id", d => d.id).attr("class", "link")
-      .attr("fill", "none").attr("stroke", "#999").attr("stroke-width", 1)
+      .attr("fill", "none").attr("stroke", d => getNodeStroke(d.target)).attr("stroke-width", 1).attr("stroke-opacity", 0.6)
       .attr("d", d => {
           const source = d.source;
           const target = d.target;
@@ -733,10 +731,27 @@ const ProjectVisualizer = () => {
           const enode = nodesGroup.append("g").attr("transform", `translate(${x2}, ${y2})`)
             .on("mouseover", (e) => { if (dep.taskInfo) setHoveredNode({ ...dep.taskInfo, type: dep.type, rawX: e.clientX, rawY: e.clientY, element: e.currentTarget }); })
             .on("mouseout", handleMouseOut).on("click", () => navigate(`/Visualizer/${dep.taskInfo.project_id}/${dep.taskInfo.id}`));
-          enode.append("circle").attr("r", 7).attr("fill", getNodeFill(dep.taskInfo.status)).attr("stroke", getNodeStroke(dep.taskInfo.status)).attr("stroke-dasharray", "2,1");
+          enode.append("circle").attr("r", 7).attr("fill", getNodeFill(dep.taskInfo)).attr("stroke", getNodeStroke(dep.taskInfo)).attr("stroke-dasharray", "2,1");
         });
       });
     }
+    // Timeline Grid and Day Labels
+    const totalDays = Math.ceil((projectEnd - projectStart) / (24 * 60 * 60 * 1000));
+    for (let i = 0; i <= totalDays; i++) {
+        const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
+        const y = timeToY(dayTime);
+
+        gridGroup.append("line")
+          .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
+          .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
+
+        gridGroup.append("text")
+          .attr("x", -150).attr("y", y + 15)
+          .attr("fill", "rgba(128, 128, 128, 0.4)")
+          .attr("font-size", "12px").attr("font-family", "Space Mono")
+          .text(`DAY ${i + 1}`);
+    }
+
     // Current Time Marker
     mainGroup.append("line")
       .attr("x1", -1000).attr("y1", nowY).attr("x2", 2000).attr("y2", nowY)
@@ -756,9 +771,9 @@ const ProjectVisualizer = () => {
       .attr("y1", d => d.railTop)
       .attr("x2", d => d.x)
       .attr("y2", d => d.railBottom)
-      .attr("stroke", d => getPressureColor(d))
+      .attr("stroke", d => getNodeStroke(d))
       .attr("stroke-width", 2)
-      .attr("stroke-opacity", 0.3);
+      .attr("stroke-opacity", 0.4);
 
     // Impact Circles (Deadline Terminals)
     nodesGroup.selectAll(".impact-circle")
@@ -782,7 +797,7 @@ const ProjectVisualizer = () => {
         e.stopPropagation();
         navigate(`/Visualizer/${projectId}/${d.id}`);
       });
-    nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => d.status.includes("unassigned") ? "#888888" : getNodeColor(d)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
+    nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => getNodeFill(d)).attr("stroke", d => getNodeStroke(d)).attr("stroke-width", 2)
       .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d)})`)
       .on("touchstart", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 24 : 20); })
       .on("touchend", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 18 : 15); });

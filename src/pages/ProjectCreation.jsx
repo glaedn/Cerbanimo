@@ -10,6 +10,7 @@ import {
   Chip,
   FormControlLabel,
   Checkbox,
+  createFilterOptions,
 } from "@mui/material";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -174,10 +175,37 @@ const ProjectCreation = () => {
       <Autocomplete
         multiple
         options={availableTags}
-        getOptionLabel={(option) => option.name}
+        getOptionLabel={(option) => {
+          if (typeof option === 'string') return option;
+          if (option.inputValue) return option.inputValue;
+          return option.name || '';
+        }}
         value={selectedTags}
-        onChange={(event, newValue) => setSelectedTags(newValue)}
+        filterOptions={(options, params) => {
+          const filter = createFilterOptions();
+          const filtered = filter(options, params);
+          const { inputValue } = params;
+          const isExisting = options.some((option) => inputValue.toLowerCase() === option.name.toLowerCase());
+          if (inputValue !== '' && !isExisting) {
+            filtered.push({
+              inputValue,
+              name: `+ Create Custom Interest: "${inputValue}"`,
+            });
+          }
+          return filtered;
+        }}
+        onChange={(event, newValue) => {
+          const processedValue = newValue.map(item => {
+            if (typeof item === 'string') return { name: item };
+            if (item.inputValue) return { name: item.inputValue };
+            return item;
+          });
+          setSelectedTags(processedValue);
+        }}
         freeSolo
+        selectOnFocus
+        clearOnBlur
+        handleHomeEndKeys
         sx={{ width: '100%' }}
         renderInput={(params) => (
           <TextField
@@ -191,10 +219,11 @@ const ProjectCreation = () => {
         renderTags={(value, getTagProps) =>
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
+            const item = typeof option === 'string' ? { name: option } : option;
             return (
               <Chip
                 key={key}
-                label={option.name}
+                label={item.name}
                 {...otherProps}
                 sx={{ margin: '2px' }}
               />
