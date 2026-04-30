@@ -52,7 +52,7 @@
 @keyframes scanline-anim {
     0% { transform: translateY(-20px); opacity: 0; }
     50% { opacity: 0.5; }
-    100% { transform: translateY(600px); opacity: 0; }
+    100% { transform: translateY(800px); opacity: 0; }
 }
 
 .cyber-content {

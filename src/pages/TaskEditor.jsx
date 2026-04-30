@@ -726,7 +726,7 @@ const TaskEditor = ({
                 disabled={!effectiveIsEdit}
               />
 
-              <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2, mt: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mt: 1 }}>
                 <DatePicker
                   label="START DATE"
                   value={taskForm.start_date ? dayjs(taskForm.start_date) : null}
