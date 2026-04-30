@@ -49,7 +49,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       });
       
       const tasksData = res.data;
-      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
+      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: task.skill_name || skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
       setTasks(updated);
       console.log('Tasks data:', updated);
       return updated; // Return the tasks for chaining
