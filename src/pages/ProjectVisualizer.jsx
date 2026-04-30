@@ -466,9 +466,34 @@ const ProjectVisualizer = () => {
   };
 
   const allTasks = useMemo(() => tasks.reduce((acc, t) => { acc[t.id] = t; return acc; }, {}), [tasks]);
-  const getNodeColor = (s) => {
-    switch (s) { case "completed": return "#FF69B4"; case "submitted": return "#FFA500"; case "urgent-unassigned": return "#888888"; case "urgent-assigned": return "#32CD32"; case "inactive-unassigned": return "#87CEFA"; case "inactive-assigned": return "#4682B4"; case "active-assigned": return "#32CD32"; case "active-unassigned": return "#00FF00"; default: return "#CCCCCC"; }
+
+  const getPressureColor = (task) => {
+    if (task.status === "completed") return "#FF69B4";
+    if (!task.due_date) return "#00FF00";
+
+    const start = task.start_date ? new Date(task.start_date).getTime() : new Date(project?.created_at || Date.now()).getTime();
+    const end = new Date(task.due_date).getTime();
+    const now = Date.now();
+
+    if (now >= end) return "#FF0000"; // Overdue
+
+    const total = end - start;
+    const elapsed = now - start;
+    const percent = Math.max(0, Math.min(1, elapsed / total));
+
+    if (percent < 0.4) return "#00FF00"; // Green
+    if (percent < 0.7) return "#FFFF00"; // Yellow
+    if (percent < 0.9) return "#FFA500"; // Orange
+    return "#FF0000"; // Red
   };
+
+  const getNodeColor = (task) => {
+    const s = task.status;
+    if (s === "completed") return "#FF69B4";
+    if (s === "submitted") return "#FFA500";
+    return getPressureColor(task);
+  };
+
   const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => d.targetStatus === "completed" ? "#FF69B4" : "#999"); };
   const getNodeStroke = (s) => {
     if (s === "active-unassigned" || s === "active-assigned") return "#32CD32";
@@ -572,10 +597,45 @@ const ProjectVisualizer = () => {
     assignLevels();
     const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
     for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
-    const hsp = isMobile ? 85 : 100, vsp = isMobile ? 110 : 120;
+    const hsp = isMobile ? 85 : 100;
+    const timelineStart = 80;
+    const timelineEnd = 500;
+    const projectStart = new Date(project?.created_at || Date.now()).getTime();
+    const projectEnd = project?.due_date ? new Date(project.due_date).getTime() : (projectStart + 30 * 24 * 60 * 60 * 1000); // 30 day default if no project due date
+
     lvls.forEach((lns, li) => {
-      const y = li * vsp + 80, tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
-      lns.forEach((n, i) => { n.x = sx + i * hsp; n.y = y; });
+      const tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
+      lns.forEach((n, i) => {
+        n.x = sx + i * hsp;
+
+        // Vertical positioning based on time
+        if (n.due_date) {
+          const taskStart = n.start_date ? new Date(n.start_date).getTime() : projectStart;
+          const taskEnd = new Date(n.due_date).getTime();
+          const now = Date.now();
+
+          // Position relative to project timeline
+          const taskProgress = (taskEnd - projectStart) / (projectEnd - projectStart);
+          const baseTaskY = timelineStart + taskProgress * (timelineEnd - timelineStart);
+
+          // Current position of the node on its rail
+          const railProgress = Math.max(0, Math.min(1, (now - taskStart) / (taskEnd - taskStart)));
+          const nodeOffset = railProgress * 60; // Max rail length 60px
+
+          n.y = baseTaskY + nodeOffset;
+          n.railTop = baseTaskY;
+          n.railBottom = baseTaskY + 60;
+
+          if (n.status === "completed" && n.completed_at) {
+              const compTime = new Date(n.completed_at).getTime();
+              const compProgress = Math.max(0, Math.min(1, (compTime - taskStart) / (taskEnd - taskStart)));
+              n.y = baseTaskY + compProgress * 60;
+              n.railBottom = n.y; // Compress rail
+          }
+        } else {
+          n.y = li * 120 + 80; // Fallback to level-based
+        }
+      });
     });
     const lnks = []; let lid = 0;
     data.forEach(s => {
@@ -587,7 +647,12 @@ const ProjectVisualizer = () => {
     });
     linksGroup.selectAll(".link").data(lnks).enter().append("path").attr("id", d => d.id).attr("class", "link")
       .attr("fill", "none").attr("stroke", "#999").attr("stroke-width", 1)
-      .attr("d", d => `M${d.source.x},${d.source.y} C${d.source.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${(d.source.y + d.target.y) / 2} ${d.target.x},${d.target.y}`);
+      .attr("d", d => {
+          const source = d.source;
+          const target = d.target;
+          const targetY = target.railBottom !== undefined ? target.railBottom : target.y;
+          return `M${target.x},${targetY} C${target.x},${(targetY + source.y) / 2} ${source.x},${(targetY + source.y) / 2} ${source.x},${source.y}`;
+      });
     lnks.forEach(l => { if (l.targetStatus === "completed") d3.select(`#${l.id}`).attr("stroke", "#FF69B4"); });
     if (activeCategory !== "All Tasks") {
       Object.values(graph).forEach(n => {
@@ -603,13 +668,41 @@ const ProjectVisualizer = () => {
         });
       });
     }
+    // Render Rails
+    nodesGroup.selectAll(".rail")
+      .data(Object.values(graph).filter(d => d.railTop !== undefined))
+      .enter()
+      .append("line")
+      .attr("class", "rail")
+      .attr("x1", d => d.x)
+      .attr("y1", d => d.railTop)
+      .attr("x2", d => d.x)
+      .attr("y2", d => d.railBottom)
+      .attr("stroke", d => getPressureColor(d))
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.3);
+
+    // Impact Circles (Deadline Terminals)
+    nodesGroup.selectAll(".impact-circle")
+      .data(Object.values(graph).filter(d => d.railBottom !== undefined))
+      .enter()
+      .append("circle")
+      .attr("class", "impact-circle")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.railBottom)
+      .attr("r", 4)
+      .attr("fill", d => {
+          const end = new Date(d.due_date).getTime();
+          return Date.now() >= end ? "#FF0000" : "#666";
+      });
+
     const nGroups = nodesGroup.selectAll(".node").data(Object.values(graph)).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
       .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => {
         e.stopPropagation();
         navigate(`/Visualizer/${projectId}/${d.id}`);
       });
-    nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => getNodeFill(d.status)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
-      .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d.status)})`)
+    nGroups.append("circle").attr("r", isMobile ? 18 : 15).attr("fill", d => d.status.includes("unassigned") ? "#888888" : getNodeColor(d)).attr("stroke", d => getNodeStroke(d.status)).attr("stroke-width", 2)
+      .style("filter", d => `drop-shadow(0 0 ${4 + d.level * 2}px ${getNodeColor(d)})`)
       .on("touchstart", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 24 : 20); })
       .on("touchend", function() { d3.select(this).transition().duration(100).attr("r", isMobile ? 18 : 15); });
     nGroups.append("text").attr("dy", isMobile ? 36 : 25).attr("text-anchor", "middle").text(d => truncateText(d.name, isMobile ? 11 : 13)).attr("font-size", isMobile ? "11px" : "10px").attr("font-weight", isMobile ? "600" : "400").style("fill", "#fff").style("text-shadow", "0 0 4px #000");

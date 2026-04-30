@@ -202,7 +202,9 @@ const createNewTask = async (
   reward_tokens = 10,
   dependencies = [],
   skill_level = 0,
-  resource_requirements = []
+  resource_requirements = [],
+  start_date = null,
+  due_date = null
 ) => {
   console.log("Creating task with:", {
     name,
@@ -214,6 +216,8 @@ const createNewTask = async (
     dependencies,
     skill_level,
     resource_requirements,
+    start_date,
+    due_date,
   });
 
   const client = await pool.connect();
@@ -274,8 +278,8 @@ const createNewTask = async (
 
     // Create the task
     const createQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level, resource_requirements)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level, resource_requirements, start_date, due_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `;
 
@@ -289,6 +293,8 @@ const createNewTask = async (
       dependencies,
       skill_level,
       resource_requirements,
+      start_date,
+      due_date
     ]);
 
     await client.query("COMMIT");
@@ -314,7 +320,9 @@ const updateTask = async (
   dependencies = [],
   assigned_user_ids,
   skill_level = 0,
-  resource_requirements = []
+  resource_requirements = [],
+  start_date = null,
+  due_date = null
 ) => {
   console.log("Controller received:", {
     name,
@@ -325,10 +333,11 @@ const updateTask = async (
     taskId,
     reward_tokens,
     dependencies,
-    status,
     assigned_user_ids,
     skill_level,
     resource_requirements,
+    start_date,
+    due_date,
   });
 
   const client = await pool.connect();
@@ -423,8 +432,8 @@ const updateTask = async (
     // Update task
     const updateQuery = `
       UPDATE tasks 
-      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8, resource_requirements = $9
-      WHERE id = $10 RETURNING *;
+      SET name = $1, description = $2, skill_id = $3, status = $4, reward_tokens = $5, dependencies = $6, assigned_user_ids = $7, skill_level = $8, resource_requirements = $9, start_date = $10, due_date = $11
+      WHERE id = $12 RETURNING *;
     `;
 
     console.log("Executing update with params:", [
@@ -437,6 +446,8 @@ const updateTask = async (
       assigned_user_ids,
       skill_level,
       resource_requirements,
+      start_date,
+      due_date,
       taskId,
     ]);
 
@@ -450,6 +461,8 @@ const updateTask = async (
       assigned_user_ids,
       skill_level,
       resource_requirements,
+      start_date,
+      due_date,
       taskId,
     ]);
 

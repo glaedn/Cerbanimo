@@ -121,7 +121,7 @@ router.patch('/:projectId', async (req, res) => {
 // Create a new project
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, auth0_id, outcomeStatement } = req.body;
+    const { name, description, auth0_id, outcomeStatement, due_date } = req.body;
     const tags = (req.body.tags || []).map(tag => tag.name);
 
     if (!name || !description || !auth0_id || !outcomeStatement) {
@@ -142,12 +142,12 @@ router.post('/create', async (req, res) => {
 
     // Step 2: Insert the new project with the derived creator_id
     const insertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO projects (name, description, tags, creator_id, due_date)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
 
-    const result = await pool.query(insertQuery, [name, description, tags, creator_id]);
+    const result = await pool.query(insertQuery, [name, description, tags, creator_id, due_date]);
     const project = result.rows[0];
 
     // Step 3: Enforce Outcome authorship (Phase 0)
@@ -163,7 +163,7 @@ router.post('/create', async (req, res) => {
 // Update an existing project
 router.put('/:projectId', async (req, res) => {
   const { projectId } = req.params;
-  const { name, description, tags, is_service, service_price, service_visibility } = req.body;
+  const { name, description, tags, is_service, service_price, service_visibility, due_date } = req.body;
 
   if (!name || !description) {
       return res.status(400).json({ error: 'Name and description are required' });
@@ -176,9 +176,10 @@ router.put('/:projectId', async (req, res) => {
           SET name = $1, description = $2, tags = $3,
               is_service = COALESCE($5, is_service),
               service_price = COALESCE($6, service_price),
-              service_visibility = COALESCE($7, service_visibility)
+              service_visibility = COALESCE($7, service_visibility),
+              due_date = COALESCE($8, due_date)
           WHERE id = $4`,
-          [name, description, tags, projectId, is_service, service_price, service_visibility]
+          [name, description, tags, projectId, is_service, service_price, service_visibility, due_date]
       );
       res.status(200).json({ message: 'Project updated successfully' });
   } catch (error) {
@@ -342,7 +343,7 @@ router.post('/auto-generate', async (req, res) => {
 
   try {
     // 1. Fetch project details
-    const projectResult = await pool.query('SELECT name, description, tags, creator_id FROM projects WHERE id = $1', [projectId]);
+    const projectResult = await pool.query('SELECT name, description, tags, creator_id, due_date FROM projects WHERE id = $1', [projectId]);
     const project = projectResult.rows[0];
 
     if (!project) {
@@ -350,7 +351,7 @@ router.post('/auto-generate', async (req, res) => {
     }
 
     // 2. Generate tasks using LLM
-    const generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id);
+    const generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date);
     console.log('Generated data:', generatedData);
     const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
@@ -362,8 +363,8 @@ router.post('/auto-generate', async (req, res) => {
       const skillId = await GuildService.getOrCreateSkill(task.skill_name);
 
       const result = await pool.query(
-        'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, resource_requirements) VALUES ($1, $2, $3, $4, $5, $6, $7::int[], $8, $9) RETURNING id',
-        [projectId, task.name, task.description, skillId, task.skill_level || 0, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || []]
+        'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, resource_requirements, start_date, due_date) VALUES ($1, $2, $3, $4, $5, $6, $7::int[], $8, $9, $10, $11) RETURNING id',
+        [projectId, task.name, task.description, skillId, task.skill_level || 0, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || [], task.start_date, task.due_date]
       );
       const dbId = result.rows[0].id;
       task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues

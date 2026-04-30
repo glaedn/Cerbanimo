@@ -11,6 +11,10 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile";
 import {
@@ -35,6 +39,7 @@ const ProjectCreation = () => {
   const [outcome, setOutcome] = useState("");
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [dueDate, setDueDate] = useState(null);
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
@@ -97,6 +102,7 @@ const ProjectCreation = () => {
           tags: selectedTags,
           auth0_id: user.sub,
           outcomeStatement: outcome,
+          due_date: dueDate ? dueDate.toISOString() : null,
         },
         {
           headers: {
@@ -155,6 +161,7 @@ const ProjectCreation = () => {
   };
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
     <div className="project-creation-background">
     <LoadingPopup open={loadingPopupOpen} messages={loadingPopupMessages} />
     <Box className="project-creation-container" sx={{
@@ -195,6 +202,20 @@ const ProjectCreation = () => {
         onChange={(e) => setOutcome(e.target.value)}
         placeholder="e.g. Reduce food waste in the local neighborhood by 20%"
         margin="normal"
+      />
+      <DatePicker
+        label="Target Completion Date (Optional)"
+        value={dueDate}
+        onChange={(newValue) => setDueDate(newValue)}
+        minDate={dayjs()}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            margin: "normal",
+            variant: "outlined",
+            helperText: "Setting a deadline helps AI distribute tasks effectively."
+          }
+        }}
       />
       <Autocomplete
         multiple
@@ -256,6 +277,7 @@ const ProjectCreation = () => {
       </Button>
     </Box>
     </div>
+    </LocalizationProvider>
   );
 };
 
