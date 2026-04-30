@@ -513,6 +513,7 @@ const ProjectVisualizer = () => {
 
   const getPressureColor = (task) => {
     if (task.status === "completed") return "#FF69B4";
+    if (task.status.includes("urgent")) return "#FF0000";
 
     const start = task.start_date ? new Date(task.start_date).getTime() : new Date(project?.created_at || Date.now()).getTime();
     const end = task.due_date ? new Date(task.due_date).getTime() : null;
@@ -535,6 +536,7 @@ const ProjectVisualizer = () => {
     const s = task.status;
     if (s === "completed") return "#FF69B4";
     if (s === "submitted") return "#FFA500";
+    if (s.includes("urgent")) return "#FF0000";
     return getPressureColor(task);
   };
 
@@ -542,6 +544,7 @@ const ProjectVisualizer = () => {
 
   const getNodeStroke = (task) => {
     if (task.status === "completed") return "#FF69B4";
+    if (task.status.includes("urgent")) return "#FF0000";
     return getPressureColor(task);
   };
 
