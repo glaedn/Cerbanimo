@@ -565,11 +565,24 @@ const ProjectVisualizer = () => {
       .attr("preserveAspectRatio", "xMidYMid meet")
       .call(zoomRef.current)
       .style("touch-action", "none");
-    const mainGroup = svg.append("g").attr("transform", `translate(${zoomTransformRef.current.x}, ${zoomTransformRef.current.y}) scale(${zoomTransformRef.current.k})`);
+    if (!zoomTransformRef.current.initialized) {
+        const initialK = 0.8;
+        const initialX = 400 - (400 * initialK);
+        const initialY = 150 - (nowY * initialK);
+        zoomTransformRef.current = d3.zoomIdentity.translate(initialX, initialY).scale(initialK);
+        zoomTransformRef.current.initialized = true;
+        d3.select(svgRef.current).call(zoomRef.current.transform, zoomTransformRef.current);
+    }
+
+    const mainGroup = svg.append("g").attr("transform", zoomTransformRef.current);
     const linksGroup = mainGroup.append("g"); linksGroupRef.current = linksGroup;
     const nodesGroup = mainGroup.append("g");
     const addButtonsGroup = mainGroup.append("g");
-    zoomRef.current.on("zoom", e => { zoomTransformRef.current = e.transform; mainGroup.attr("transform", e.transform); });
+    zoomRef.current.on("zoom", e => {
+        zoomTransformRef.current = e.transform;
+        zoomTransformRef.current.initialized = true;
+        mainGroup.attr("transform", e.transform);
+    });
     const graph = {}; data.forEach(n => graph[n.id] = { ...n, children: [], level: -1 });
     data.forEach(n => n.dependencies.forEach(did => { if (graph[did]) graph[did].children.push(n.id); }));
     const rootNodes = data.filter(n => {
@@ -598,42 +611,45 @@ const ProjectVisualizer = () => {
     const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
     for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
     const hsp = isMobile ? 85 : 100;
-    const timelineStart = 80;
-    const timelineEnd = 500;
+    const timelineHeight = 1500;
     const projectStart = new Date(project?.created_at || Date.now()).getTime();
-    const projectEnd = project?.due_date ? new Date(project.due_date).getTime() : (projectStart + 30 * 24 * 60 * 60 * 1000); // 30 day default if no project due date
+    const projectEnd = project?.due_date
+        ? new Date(project.due_date).getTime()
+        : (projectStart + 30 * 24 * 60 * 60 * 1000);
+
+    const timeToY = (time) => {
+        const t = typeof time === 'string' ? new Date(time).getTime() : time;
+        const progress = (t - projectStart) / (projectEnd - projectStart);
+        return 150 + (progress * timelineHeight);
+    };
+
+    const now = Date.now();
+    const nowY = timeToY(now);
 
     lvls.forEach((lns, li) => {
       const tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
       lns.forEach((n, i) => {
         n.x = sx + i * hsp;
 
-        // Vertical positioning based on time
-        if (n.due_date) {
-          const taskStart = n.start_date ? new Date(n.start_date).getTime() : projectStart;
+        if (n.due_date && n.start_date) {
+          const taskStart = new Date(n.start_date).getTime();
           const taskEnd = new Date(n.due_date).getTime();
-          const now = Date.now();
 
-          // Position relative to project timeline
-          const taskProgress = (taskEnd - projectStart) / (projectEnd - projectStart);
-          const baseTaskY = timelineStart + taskProgress * (timelineEnd - timelineStart);
+          n.railTop = timeToY(taskStart);
+          n.railBottom = timeToY(taskEnd);
 
-          // Current position of the node on its rail
           const railProgress = Math.max(0, Math.min(1, (now - taskStart) / (taskEnd - taskStart)));
-          const nodeOffset = railProgress * 60; // Max rail length 60px
-
-          n.y = baseTaskY + nodeOffset;
-          n.railTop = baseTaskY;
-          n.railBottom = baseTaskY + 60;
+          n.y = Math.max(n.railTop, Math.min(n.railBottom, n.railTop + (railProgress * (n.railBottom - n.railTop))));
 
           if (n.status === "completed" && n.completed_at) {
               const compTime = new Date(n.completed_at).getTime();
-              const compProgress = Math.max(0, Math.min(1, (compTime - taskStart) / (taskEnd - taskStart)));
-              n.y = baseTaskY + compProgress * 60;
-              n.railBottom = n.y; // Compress rail
+              n.y = timeToY(compTime);
+              n.railBottom = n.y;
           }
         } else {
-          n.y = li * 120 + 80; // Fallback to level-based
+          n.y = 150 + li * 200;
+          n.railTop = n.y - 30;
+          n.railBottom = n.y + 30;
         }
       });
     });
@@ -668,6 +684,15 @@ const ProjectVisualizer = () => {
         });
       });
     }
+    // Current Time Marker
+    mainGroup.append("line")
+      .attr("x1", -500).attr("y1", nowY).attr("x2", 1500).attr("y2", nowY)
+      .attr("stroke", "rgba(0, 243, 255, 0.4)").attr("stroke-width", 1).attr("stroke-dasharray", "8,4");
+
+    mainGroup.append("text")
+      .attr("x", -480).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 245, 0.6)")
+      .attr("font-size", "12px").attr("font-family", "Orbitron").text("PRESENT_SIGNAL");
+
     // Render Rails
     nodesGroup.selectAll(".rail")
       .data(Object.values(graph).filter(d => d.railTop !== undefined))
@@ -690,11 +715,14 @@ const ProjectVisualizer = () => {
       .attr("class", "impact-circle")
       .attr("cx", d => d.x)
       .attr("cy", d => d.railBottom)
-      .attr("r", 4)
+      .attr("r", 5)
       .attr("fill", d => {
+          if (d.status === "completed") return "#FF69B4";
           const end = new Date(d.due_date).getTime();
-          return Date.now() >= end ? "#FF0000" : "#666";
-      });
+          return Date.now() >= end ? "#FF0000" : "#333";
+      })
+      .attr("stroke", d => getPressureColor(d))
+      .attr("stroke-width", 1.5);
 
     const nGroups = nodesGroup.selectAll(".node").data(Object.values(graph)).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x}, ${d.y})`)
       .on("mouseover", handleMouseOver).on("mouseout", handleMouseOut).on("click", (e, d) => {
