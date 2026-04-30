@@ -11,13 +11,16 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS priority_score NUMERIC DEFAULT 0,
     ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS resource_requirements TEXT[] DEFAULT '{}';
   `;
 
   const alterProjectsQuery = `
     ALTER TABLE projects
     ADD COLUMN IF NOT EXISTS health_score NUMERIC DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS closure_reason TEXT;
+    ADD COLUMN IF NOT EXISTS closure_reason TEXT,
+    ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE;
   `;
 
   const alterUsersQuery = `

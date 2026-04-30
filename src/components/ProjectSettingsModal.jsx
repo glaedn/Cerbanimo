@@ -12,13 +12,18 @@ import {
   Typography,
   IconButton
 } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import CloseIcon from '@mui/icons-material/Close';
 
 const ProjectSettingsModal = ({ open, onClose, project, onSave, interestsPool }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    tags: []
+    tags: [],
+    due_date: null
   });
 
   useEffect(() => {
@@ -26,7 +31,8 @@ const ProjectSettingsModal = ({ open, onClose, project, onSave, interestsPool })
       setFormData({
         name: project.name || '',
         description: project.description || '',
-        tags: project.tags || []
+        tags: project.tags || [],
+        due_date: project.due_date ? dayjs(project.due_date) : null
       });
     }
   }, [project, open]);
@@ -37,6 +43,7 @@ const ProjectSettingsModal = ({ open, onClose, project, onSave, interestsPool })
   };
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
     <Dialog
       open={open}
       onClose={onClose}
@@ -142,6 +149,28 @@ const ProjectSettingsModal = ({ open, onClose, project, onSave, interestsPool })
               '& .MuiAutocomplete-clearIndicator': { color: '#00f3ff' },
             }}
           />
+          <DatePicker
+            label="TARGET_COMPLETION_DATE"
+            value={formData.due_date}
+            onChange={(newValue) => setFormData({ ...formData, due_date: newValue })}
+            minDate={dayjs()}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                variant: "outlined",
+                sx: {
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.3)' },
+                    '&:hover fieldset': { borderColor: '#00f3ff' },
+                    '&.Mui-focused fieldset': { borderColor: '#00f3ff' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(0, 243, 255, 0.7)' },
+                  '& .MuiSvgIcon-root': { color: '#00f3ff' }
+                }
+              }
+            }}
+          />
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
@@ -172,6 +201,7 @@ const ProjectSettingsModal = ({ open, onClose, project, onSave, interestsPool })
         </Button>
       </DialogActions>
     </Dialog>
+    </LocalizationProvider>
   );
 };
 

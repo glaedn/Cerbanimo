@@ -30,7 +30,38 @@ class TaskRoutingService {
       [score, taskId]
     );
 
+    // Timeline Urgency Transition
+    await this.checkTimelineUrgency(taskId);
+
     return score;
+  }
+
+  async checkTimelineUrgency(taskId) {
+    const query = `
+      SELECT id, status, due_date
+      FROM tasks
+      WHERE id = $1 AND due_date IS NOT NULL AND status NOT IN ('completed', 'submitted', 'cancelled');
+    `;
+    const result = await pool.query(query, [taskId]);
+    const task = result.rows[0];
+
+    if (task) {
+        const now = new Date();
+        const due = new Date(task.due_date);
+        const diffHours = (due - now) / (1000 * 60 * 60);
+
+        if (diffHours <= 24 && !task.status.startsWith('urgent')) {
+            let newStatus;
+            if (task.status.includes('assigned')) {
+                newStatus = 'urgent-assigned';
+            } else {
+                newStatus = 'urgent-unassigned';
+            }
+
+            await pool.query('UPDATE tasks SET status = $1 WHERE id = $2', [newStatus, taskId]);
+            console.log(`Task ${taskId} transitioned to ${newStatus} due to timeline pressure (due in ${diffHours.toFixed(1)}h)`);
+        }
+    }
   }
 
   async getMatchingTasksForUser(userId) {
