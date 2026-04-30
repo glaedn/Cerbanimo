@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -17,7 +17,6 @@ import {
   IconButton,
   Select,
   MenuItem,
-  InputLabel,
   FormControl,
   FormControlLabel,
   Checkbox
@@ -30,8 +29,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
@@ -109,6 +106,7 @@ const MobileTaskDetail = () => {
   const isReviewer = profile && task && task.reviewer_ids?.includes(Number(profile.id));
   const isSubmitted = task?.status?.toLowerCase().includes('submitted');
   const isCompleted = task?.status?.toLowerCase().includes('completed');
+  const impactWeight = Math.max(0, Math.min(100, Number(task?.impact_weight) || 0));
 
   const handleAction = async (action) => {
     try {
@@ -131,7 +129,7 @@ const MobileTaskDetail = () => {
       });
       setTask(updatedTaskRes.data);
       setEditForm(updatedTaskRes.data);
-    } catch (err) {
+    } catch {
         setFeedback({ open: true, message: `Failed to ${action} mission.`, severity: 'error' });
     } finally {
         setActionLoading(false);
@@ -156,7 +154,7 @@ const MobileTaskDetail = () => {
       });
       setTask(updatedTaskRes.data);
       setEditForm(updatedTaskRes.data);
-    } catch (err) {
+    } catch {
         setFeedback({ open: true, message: 'Submission failed.', severity: 'error' });
     }
   };
@@ -212,7 +210,7 @@ const MobileTaskDetail = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTask(updatedTaskRes.data);
-    } catch (err) {
+    } catch {
       setFeedback({ open: true, message: 'Review failed.', severity: 'error' });
     } finally {
       setActionLoading(false);
@@ -234,7 +232,7 @@ const MobileTaskDetail = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTask(updatedTaskRes.data);
-    } catch (err) {
+    } catch {
       setFeedback({ open: true, message: 'PM Review failed.', severity: 'error' });
     } finally {
       setActionLoading(false);
@@ -259,7 +257,7 @@ const MobileTaskDetail = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTask(updatedTaskRes.data);
-    } catch (err) {
+    } catch {
       setFeedback({ open: true, message: "FAILED TO OPEN DISPUTE.", severity: 'error' });
     }
   };
@@ -500,10 +498,20 @@ const MobileTaskDetail = () => {
                 <Chip label={task.status.toUpperCase()} className={`cyber-chip status ${task.status.toLowerCase()}`} />
               </Box>
 
-              {task.outcome_statement && (
+              {(task.impact_label || task.outcome_statement) && (
                 <Box className="impact-goal-box">
-                  <Typography variant="caption" className="impact-label">IMPACT GOAL</Typography>
-                  <Typography variant="body2" className="impact-text">"{task.outcome_statement}"</Typography>
+                  <Box className="impact-meter" style={{ '--impact-weight': `${impactWeight}%` }}>
+                    <Typography variant="caption" className="impact-label">IMPACT</Typography>
+                    <div className="impact-meter-track" aria-hidden="true">
+                      <div className="impact-meter-fill" />
+                    </div>
+                  </Box>
+                  <Typography variant="body2" className="impact-text">&quot;{task.impact_label || task.outcome_statement}&quot;</Typography>
+                  {task.project_outcome_statement && (
+                    <Typography variant="caption" className="impact-text" sx={{ display: 'block', mt: 0.75, opacity: 0.75 }}>
+                      Project outcome: {task.project_outcome_statement}
+                    </Typography>
+                  )}
                 </Box>
               )}
 

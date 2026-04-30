@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import {
   Modal,
   TextField,
@@ -41,16 +42,16 @@ const TaskEditor = ({
   const isUrgent = statusParts[0] === "urgent";
   const isActive =
     statusParts[0] !== "inactive" && statusParts[0] !== "completed";
-  const [availableTasks, setAvailableTasks] = useState([]);
   const [dependencyOptions, setDependencyOptions] = useState([]);
   const [selectedDependency, setSelectedDependency] = useState("");
   const [loadingDependencies, setLoadingDependencies] = useState(false);
-  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
   const [isSubmitted, setIsSubmitted] = useState(
     (taskForm.status || "").toLowerCase().includes("submitted")
   );
 
   const effectiveIsEdit = taskForm.status === "completed" ? false : isEdit;
+  const impactWeight = Math.max(0, Math.min(100, Number(taskForm.impact_weight) || 0));
  
   const [platformUserId, setPlatformUserId] = useState(null);
   const isAssigned = taskForm.assigned_user_ids?.length > 0;
@@ -102,8 +103,6 @@ const TaskEditor = ({
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setAvailableTasks(response.data);
-
         // Create options excluding current task (if editing)
         const options = response.data
           .filter((task) => task.id !== taskForm.id)
@@ -168,6 +167,7 @@ const TaskEditor = ({
   }, [
     open,
     taskForm.dependencies,
+    taskForm.dependenciesWithNames,
     taskForm.id,
     getAccessTokenSilently,
     setTaskForm,
@@ -440,14 +440,24 @@ const TaskEditor = ({
             </h3>
 
             <div className="cyber-form">
-              {taskForm.outcome_statement && (
+              {(taskForm.impact_label || taskForm.outcome_statement) && (
                 <Box sx={{ mb: 2, p: 1.5, borderLeft: '3px solid #FF5CA2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}>
-                  <Typography variant="caption" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron', display: 'block', mb: 0.5, letterSpacing: 1 }}>
-                    IMPACT GOAL
-                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(90px, 1fr)', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron', display: 'block', letterSpacing: 1 }}>
+                      IMPACT
+                    </Typography>
+                    <Box sx={{ height: '3px', bgcolor: 'rgba(255, 92, 162, 0.22)', overflow: 'visible' }}>
+                      <Box sx={{ width: `${impactWeight}%`, minWidth: '8px', maxWidth: '100%', height: '9px', bgcolor: '#FF5CA2', boxShadow: '0 0 10px rgba(255, 92, 162, 0.65)', transform: 'translateY(-3px)' }} />
+                    </Box>
+                  </Box>
                   <Typography variant="body2" sx={{ color: '#eee', fontStyle: 'italic', fontFamily: 'Inter' }}>
-                    "{taskForm.outcome_statement}"
+                    &quot;{taskForm.impact_label || taskForm.outcome_statement}&quot;
                   </Typography>
+                  {taskForm.project_outcome_statement && (
+                    <Typography variant="caption" sx={{ color: '#bbb', display: 'block', mt: 0.75, fontFamily: 'Inter' }}>
+                      Project outcome: {taskForm.project_outcome_statement}
+                    </Typography>
+                  )}
                 </Box>
               )}
 
@@ -932,7 +942,7 @@ const TaskEditor = ({
                                   }, { headers: { Authorization: `Bearer ${token}` } });
                                   alert("DISPUTE PROTOCOL INITIATED.");
                                   onClose();
-                                } catch (err) {
+                                } catch {
                                   alert("FAILED TO OPEN DISPUTE.");
                                 }
                               }
@@ -973,6 +983,22 @@ const TaskEditor = ({
     </Modal>
     </LocalizationProvider>
   );
+};
+
+TaskEditor.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  taskForm: PropTypes.object.isRequired,
+  setTaskForm: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  skills: PropTypes.array.isRequired,
+  isEdit: PropTypes.bool,
+  projectId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  currentUser: PropTypes.shape({
+    sub: PropTypes.string,
+  }),
+  projectCreatorId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  isReviewer: PropTypes.bool,
 };
 
 export default TaskEditor;

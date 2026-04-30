@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
@@ -17,16 +17,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile";
-import {
-  blue,
-  red,
-  green,
-  orange,
-  purple,
-  teal,
-  pink,
-  indigo,
-} from "@mui/material/colors";
 import "./ProjectCreation.css";
 import LoadingPopup from '../components/LoadingPopup/LoadingPopup';
 
@@ -43,29 +33,6 @@ const ProjectCreation = () => {
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
-
-  const colorPalette = [
-    blue[100],
-    red[100],
-    green[100],
-    orange[100],
-    purple[100],
-    teal[100],
-    pink[100],
-    indigo[100],
-    blue[200],
-    red[200],
-    green[200],
-    orange[200],
-    purple[200],
-    teal[200],
-    pink[200],
-    indigo[200],
-  ];
-
-  const getRandomColorFromPalette = () => {
-    return colorPalette[Math.floor(Math.random() * colorPalette.length)];
-  };
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -114,19 +81,6 @@ const ProjectCreation = () => {
       if (response.status === 201) {
         const projectId = response.data.id;
         setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
-
-        // Step 1.5: Create Outcome node
-        if (outcome) {
-          try {
-            await axios.post(
-              `${import.meta.env.VITE_BACKEND_URL}/impact_v2/outcomes`,
-              { projectId, statement: outcome },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-          } catch (outcomeError) {
-            console.error("Failed to create outcome:", outcomeError);
-          }
-        }
 
         if (autoGenerateTasks) {
           setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
