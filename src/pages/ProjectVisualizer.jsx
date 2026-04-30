@@ -538,11 +538,17 @@ const ProjectVisualizer = () => {
     return getPressureColor(task);
   };
 
-  const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => getNodeStroke(d.target)); };
+  const updateLinkColors = () => { if (linksGroupRef.current) linksGroupRef.current.selectAll(".link").attr("stroke", d => getLinkStroke(d.target)); };
 
   const getNodeStroke = (task) => {
     if (task.status === "completed") return "#FF69B4";
     return getPressureColor(task);
+  };
+
+  const getLinkStroke = (task) => {
+    if (task.status === "completed") return "#FF69B4";
+    if (task.status === "submitted") return "#FFA500";
+    return "#FFFFFF";
   };
 
   const getNodeFill = (task) => task.status.includes("unassigned") ? "#888888" : getNodeColor(task);
@@ -714,14 +720,14 @@ const ProjectVisualizer = () => {
       });
     });
     linksGroup.selectAll(".link").data(lnks).enter().append("path").attr("id", d => d.id).attr("class", "link")
-      .attr("fill", "none").attr("stroke", d => getNodeStroke(d.target)).attr("stroke-width", 1).attr("stroke-opacity", 0.6)
+      .attr("fill", "none").attr("stroke", d => getLinkStroke(d.target)).attr("stroke-width", 1).attr("stroke-opacity", 0.6)
       .attr("d", d => {
           const source = d.source;
           const target = d.target;
           const targetY = target.railBottom !== undefined ? target.railBottom : target.y;
           return `M${target.x},${targetY} C${target.x},${(targetY + source.y) / 2} ${source.x},${(targetY + source.y) / 2} ${source.x},${source.y}`;
       });
-    lnks.forEach(l => { if (l.targetStatus === "completed") d3.select(`#${l.id}`).attr("stroke", "#FF69B4"); });
+    // lnks.forEach(l => { if (l.targetStatus === "completed") d3.select(`#${l.id}`).attr("stroke", "#FF69B4"); });
     if (activeCategory !== "All Tasks") {
       Object.values(graph).forEach(n => {
         const edps = n.dependencies.filter(did => allTasks[did] && allTasks[did].skill_id !== activeSkillId).map(did => ({ id: did, sourceNode: n, type: "depends-on", taskInfo: allTasks[did] }));
@@ -995,7 +1001,7 @@ const ProjectVisualizer = () => {
       )}
       <ServiceSettingsModal open={showServiceModal} onClose={() => setShowServiceModal(false)} project={project} onUpdate={u => updateProject(u)} userId={userId} />
       {hoveredNode && (
-        <div ref={tooltipRef} className="tooltip-container" style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, opacity: 1, zIndex: 9999 }}>
+        <div ref={tooltipRef} className="tooltip-container" style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, opacity: 1, zIndex: 9999, pointerEvents: 'none' }}>
           <div className="node-tooltip">
             <h4>{hoveredNode.name}</h4>
             {hoveredNode.category && <p>Category: {hoveredNode.category}</p>}
@@ -1007,11 +1013,11 @@ const ProjectVisualizer = () => {
       <div className="project-info">
         <h3>{project?.name}</h3><p className="project-description">{project?.description}</p>
         {outcomes.length > 0 && <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}><Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>INTENDED REAL-WORLD EFFECT</Typography>{outcomes.map(o => <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>&quot;{o.statement}&quot;</Typography>)}</Box>}
-        <div className="token-pool">
+        {/* <div className="token-pool">
           <div className="token-metric"><span className="token-label">Allocated:</span><span className="token-value">{project?.reserved_tokens}</span></div>
           <div className="token-metric"><span className="token-label">Distributed:</span><span className="token-value">{project?.used_tokens}</span></div>
           <div className="token-metric"><span className="token-label">Available:</span><span className="token-value">{Number(project?.token_pool || 0) - Number(project?.used_tokens || 0) - Number(project?.reserved_tokens || 0)}</span></div>
-        </div>
+        </div> */}
         <div className="vproject-tags">
           {isEditMode ? <Autocomplete multiple freeSolo options={interests || []} value={project?.tags || []} onChange={(e, nv) => handleUpdateTags(nv)} renderTags={(v, gtp) => v.map((o, i) => <Chip {...gtp({ i })} key={i} label={o} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)} renderInput={p => <TextField {...p} variant="outlined" placeholder="Add tags..." size="small" />} /> : project?.tags?.map((t, i) => <Chip key={i} label={t} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)}
         </div>
