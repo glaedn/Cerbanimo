@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton, Button, CircularProgress } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -140,15 +142,15 @@ const SkillLibrary = () => {
     return false;
   };
 
-  const renderSkill = (skill, level = 0) => {
+  const renderSkillCard = (skill) => {
+    const isUnlocked = unlockedSkills.has(skill.id);
     const children = skills.filter(s => s.parent_skill_id === skill.id && s.id !== s.parent_skill_id);
     const isExpanded = expandedSkills.has(skill.id);
-    const isUnlocked = unlockedSkills.has(skill.id);
 
     return (
-      <Box key={skill.id} sx={{ ml: level * 2, mb: 1 }}>
+      <Box key={skill.id} sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' } }}>
         <Box
-          className={`skill-item ${isUnlocked ? 'unlocked' : ''}`}
+          className={`skill-card ${isUnlocked ? 'selected' : ''}`}
           onClick={() => {
             if (children.length > 0) {
               toggleExpand(skill.id);
@@ -157,30 +159,59 @@ const SkillLibrary = () => {
             }
           }}
           sx={{
-            p: 1.5,
-            border: `1px solid ${isUnlocked ? theme.colors.secondary : 'rgba(255, 255, 255, 0.1)'}`,
-            borderRadius: '8px',
+            p: 2,
+            height: '100%',
+            borderRadius: '12px',
+            border: `1px solid ${isUnlocked ? theme.colors.secondary : 'rgba(255, 92, 162, 0.1)'}`,
             cursor: 'pointer',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: isUnlocked ? 'rgba(255, 92, 162, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+            color: isUnlocked ? theme.colors.secondary : '#FFF',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: isUnlocked ? `0 0 20px ${theme.colors.secondary}33` : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '2px',
+              background: isUnlocked ? `linear-gradient(90deg, transparent, ${theme.colors.secondary}, transparent)` : 'transparent',
             },
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: isUnlocked ? `0 0 10px ${theme.colors.secondary}4D` : 'none',
+            '&:hover': {
+              backgroundColor: isUnlocked ? 'rgba(255, 92, 162, 0.15)' : 'rgba(255, 255, 255, 0.07)',
+              transform: 'translateY(-2px)',
+              boxShadow: isUnlocked ? `0 5px 25px ${theme.colors.secondary}44` : `0 5px 15px rgba(0,0,0,0.3)`,
+              borderColor: isUnlocked ? theme.colors.secondary : 'rgba(255, 92, 162, 0.3)',
+            }
           }}
         >
-          <Typography variant="body1" sx={{ fontFamily: 'Orbitron', color: isUnlocked ? theme.colors.secondary : '#FFF' }}>
-            {skill.name}
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Typography variant="body1" sx={{ fontFamily: 'Orbitron', fontWeight: 600, letterSpacing: '1px' }}>
+              {skill.name}
+            </Typography>
+            {children.length > 0 && (
+              isExpanded ? <ExpandLessIcon sx={{ color: isUnlocked ? theme.colors.secondary : 'rgba(255,255,255,0.5)' }} /> : <ExpandMoreIcon sx={{ color: isUnlocked ? theme.colors.secondary : 'rgba(255,255,255,0.5)' }} />
+            )}
+          </Box>
           {skill.description && (
-            <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.6)', mt: 0.5 }}>
+            <Typography variant="body2" sx={{
+              color: isUnlocked ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.5)',
+              fontSize: '0.85rem',
+              lineHeight: 1.4,
+              fontFamily: 'Inter'
+            }}>
               {skill.description}
             </Typography>
           )}
         </Box>
         {isExpanded && children.length > 0 && (
-          <Box sx={{ mt: 1 }}>
-            {children.map(child => renderSkill(child, level + 1))}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, mb: 2, pl: 2, borderLeft: `1px solid ${theme.colors.secondary}33`, width: '100%' }}>
+            {children.map(child => renderSkillCard(child))}
           </Box>
         )}
       </Box>
@@ -209,7 +240,52 @@ const SkillLibrary = () => {
       </Box>
 
       <Box className="skill-library-content">
-        {topLevelSkills.map(skill => renderSkill(skill))}
+        {topLevelSkills.map((skill) => {
+          const isExpanded = expandedSkills.has(skill.id);
+          const children = skills.filter(s => s.parent_skill_id === skill.id && s.id !== skill.id);
+
+          return (
+            <Box key={skill.id} sx={{ mb: 3 }}>
+              <Box
+                className="skill-category-header"
+                onClick={() => toggleExpand(skill.id)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 2,
+                  backgroundColor: 'rgba(255, 92, 162, 0.1)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  border: `1px solid ${theme.colors.secondary}33`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 92, 162, 0.15)',
+                    boxShadow: `0 0 15px ${theme.colors.secondary}22`
+                  }
+                }}
+              >
+                <Box>
+                  <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: theme.colors.secondary }}>
+                    {skill.name}
+                  </Typography>
+                  {skill.description && (
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', mt: 0.5 }}>
+                      {skill.description}
+                    </Typography>
+                  )}
+                </Box>
+                {isExpanded ? <ExpandLessIcon sx={{ color: theme.colors.secondary }} /> : <ExpandMoreIcon sx={{ color: theme.colors.secondary }} />}
+              </Box>
+
+              {isExpanded && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, p: 1 }}>
+                  {children.map(child => renderSkillCard(child))}
+                </Box>
+              )}
+            </Box>
+          );
+        })}
       </Box>
 
       {hasChanges() && (

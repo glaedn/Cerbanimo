@@ -128,7 +128,7 @@ router.get('/options', async (req, res) => {
 router.get('/interests/grouped', async (req, res) => {
   try {
     const query = `
-      SELECT category, json_agg(json_build_object('id', id, 'name', name)) as interests
+      SELECT category, json_agg(json_build_object('id', id, 'name', name, 'description', description)) as interests
       FROM interests
       WHERE status = 'active'
       GROUP BY category

@@ -159,32 +159,59 @@ const InterestLibrary = () => {
             </Box>
 
             {expandedCategories.has(cat.category) && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, p: 1 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, p: 1 }}>
                 {cat.interests.map((interest) => {
                   const isSelected = selectedInterests.has(interest.name);
                   return (
                     <Box
                       key={interest.id}
                       onClick={() => toggleInterest(interest.name)}
-                      className={`interest-chip ${isSelected ? 'selected' : ''}`}
+                      className={`interest-card ${isSelected ? 'selected' : ''}`}
                       sx={{
-                        px: 2,
-                        py: 1,
-                        borderRadius: '20px',
-                        border: `2px solid ${isSelected ? theme.colors.primary : 'rgba(255, 255, 255, 0.2)'}`,
+                        p: 2,
+                        borderRadius: '12px',
+                        border: `1px solid ${isSelected ? theme.colors.primary : 'rgba(0, 243, 255, 0.1)'}`,
                         cursor: 'pointer',
-                        backgroundColor: isSelected ? 'rgba(0, 243, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        backgroundColor: isSelected ? 'rgba(0, 243, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                         color: isSelected ? theme.colors.primary : '#FFF',
-                        transition: 'all 0.2s ease',
-                        boxShadow: isSelected ? `0 0 10px ${theme.colors.primary}66` : 'none',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: isSelected ? `0 0 20px ${theme.colors.primary}33` : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' },
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '2px',
+                          background: isSelected ? `linear-gradient(90deg, transparent, ${theme.colors.primary}, transparent)` : 'transparent',
+                        },
                         '&:hover': {
-                          backgroundColor: isSelected ? 'rgba(0, 243, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                          backgroundColor: isSelected ? 'rgba(0, 243, 255, 0.15)' : 'rgba(255, 255, 255, 0.07)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: isSelected ? `0 5px 25px ${theme.colors.primary}44` : `0 5px 15px rgba(0,0,0,0.3)`,
+                          borderColor: isSelected ? theme.colors.primary : 'rgba(0, 243, 255, 0.3)',
                         }
                       }}
                     >
-                      <Typography variant="body2" sx={{ fontFamily: 'Orbitron', fontWeight: 500 }}>
+                      <Typography variant="body1" sx={{ fontFamily: 'Orbitron', fontWeight: 600, letterSpacing: '1px' }}>
                         {interest.name}
                       </Typography>
+                      {interest.description && (
+                        <Typography variant="body2" sx={{
+                          color: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.5)',
+                          fontSize: '0.85rem',
+                          lineHeight: 1.4,
+                          fontFamily: 'Inter'
+                        }}>
+                          {interest.description}
+                        </Typography>
+                      )}
                     </Box>
                   );
                 })}
