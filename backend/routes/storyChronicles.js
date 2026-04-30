@@ -45,39 +45,21 @@ router.get('/user/:id/chronicle', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT
-        uc.id,
-        uc.user_id,
-        uc.story_node_id,
-        uc.task_id,
-        uc.project_id,
-        uc.community_id,
-        uc.title,
-        uc.content_type,
-        uc.reflection,
-        uc.media_urls,
-        uc.tags,
-        uc.status,
-        uc.upvotes,
-        uc.created_at,
-        uc.updated_at,
-        uc.task_name,
-        uc.project_name,
-        i.label           AS impact_label,
-        i.impact_weight,
-        o.statement       AS outcome_statement
+      uc.id,
+      uc.user_id,
+      uc.reflection,
+      uc.tags,
+      uc.created_at,
+      uc.task_id,
+      uc.task_name,
+      uc.reward_tokens,
+      uc.project_id,
+      uc.project_name,
+      uc.skill_id,
+      uc.skill_name,
+      uc.media_urls,
+      uc.endorsements
       FROM user_chronicles uc
-      LEFT JOIN tasks t
-        ON t.id = uc.task_id
-      LEFT JOIN projects p
-        ON p.id = COALESCE(uc.project_id, t.project_id)
-      LEFT JOIN impact_nodes i
-        ON i.type = 'task' AND i.entity_id = t.id
-      LEFT JOIN impact_edges ie
-        ON ie.from_node_id = i.id
-      LEFT JOIN impact_nodes outcome_node
-        ON outcome_node.id = ie.to_node_id AND outcome_node.type = 'outcome'
-      LEFT JOIN outcomes o
-        ON o.id = outcome_node.entity_id
       WHERE uc.user_id = $1
       ORDER BY uc.created_at DESC
     `, [id]);
