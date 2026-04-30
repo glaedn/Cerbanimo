@@ -140,7 +140,11 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       });
   
       // Refresh to ensure sync with server
-      await Promise.all([fetchTasks(), fetchProject()]);
+      if (action === 'accept' || action === 'drop' || action === 'submit' || action === 'update') {
+        await fetchTasks();
+      } else {
+        await Promise.all([fetchTasks(), fetchProject()]);
+      }
       
       return {
         ...response.data,
@@ -171,7 +175,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
       fetchProject();
       fetchTasks();
     }
-  }, [projectId, skills.length]);
+  }, [projectId]);
 
   return {
     skills,
