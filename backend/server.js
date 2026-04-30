@@ -51,6 +51,8 @@ import { createVerificationTables } from '../models/verification.js';
 import { createGuildTables } from '../models/guilds_v2.js';
 import { createConstellationTables } from '../models/constellations_v2.js';
 import { createStoryTables } from '../models/story_engine_v2.js';
+import { createStoryNodesTable } from '../models/story_nodes.js';
+import { createUserChroniclesTable } from '../models/user_chronicles.js';
 import { createStorySummariesTable } from '../models/story_summaries.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createResourceLayerTables } from '../models/resource_layer_v2.js';
@@ -361,6 +363,8 @@ async function initializeDatabase() {
 
     await createImpactTables();
     await createStoryTables();
+    await createStoryNodesTable();
+    await createUserChroniclesTable();
     await createStorySummariesTable();
     await alterExistingTables();
 
