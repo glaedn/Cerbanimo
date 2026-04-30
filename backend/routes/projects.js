@@ -59,14 +59,14 @@ router.get('/personal', async (req, res) => {
 // Fetch user projects (creator or assignee)
 router.get('/userprojects', async (req, res) => {
   try {
-    const { userId = '', page = 1, pageSize = 10 } = req.query;
+    const { userId = '', page = 1, pageSize = 500 } = req.query;
     const offset = (page - 1) * pageSize;
 
     const query = `
       SELECT DISTINCT p.* FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
       WHERE p.creator_id = $1 OR $1 = ANY(t.assigned_user_ids)
-      ORDER BY p.id ASC
+      ORDER BY p.id DESC
       LIMIT $2 OFFSET $3
     `;
     const values = [userId, pageSize, offset];
@@ -350,8 +350,14 @@ router.post('/auto-generate', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
+    const outcomeResult = await pool.query(
+      'SELECT statement FROM outcomes WHERE project_id = $1 ORDER BY id ASC LIMIT 1',
+      [projectId]
+    );
+    const outcomeStatement = outcomeResult.rows[0]?.statement || '';
+
     // 2. Generate tasks using LLM
-    const generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date);
+    const generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date, outcomeStatement);
     console.log('Generated data:', generatedData);
     const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
@@ -388,6 +394,8 @@ router.post('/auto-generate', async (req, res) => {
     });
 
     await Promise.all(updatePromises);
+
+    await ImpactGraphService.createTaskImpactNodesForProject(projectId, tasks);
 
     // 5. Respond with success and DB task IDs
     const insertedTasks = tasks.map(task => ({

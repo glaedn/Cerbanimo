@@ -2,6 +2,16 @@ import pool from '../db.js';
 
 class ImpactGraphService {
   async createOutcome(projectId, statement) {
+    const existing = await pool.query(
+      'SELECT * FROM outcomes WHERE project_id = $1 AND statement = $2 ORDER BY id ASC LIMIT 1',
+      [projectId, statement]
+    );
+    if (existing.rows.length > 0) {
+      const outcome = existing.rows[0];
+      await this.createImpactNode('outcome', outcome.id, outcome.statement);
+      return outcome;
+    }
+
     const query = `
       INSERT INTO outcomes (project_id, statement)
       VALUES ($1, $2)
@@ -16,17 +26,42 @@ class ImpactGraphService {
     return outcome;
   }
 
-  async createImpactNode(type, entityId, label, description = '') {
+  async createImpactNode(type, entityId, label, description = '', impactWeight = null) {
+    const existing = await pool.query(
+      'SELECT * FROM impact_nodes WHERE type = $1 AND entity_id = $2 ORDER BY id ASC LIMIT 1',
+      [type, entityId]
+    );
+    if (existing.rows.length > 0) {
+      const result = await pool.query(
+        `UPDATE impact_nodes
+         SET label = COALESCE($2, label),
+             description = COALESCE($3, description),
+             impact_weight = COALESCE($4, impact_weight)
+         WHERE id = $1
+         RETURNING *`,
+        [existing.rows[0].id, label, description, impactWeight]
+      );
+      return result.rows[0];
+    }
+
     const query = `
-      INSERT INTO impact_nodes (type, entity_id, label, description)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO impact_nodes (type, entity_id, label, description, impact_weight)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const result = await pool.query(query, [type, entityId, label, description]);
+    const result = await pool.query(query, [type, entityId, label, description, impactWeight]);
     return result.rows[0];
   }
 
   async linkNodes(fromNodeId, toNodeId, relationType) {
+    const existing = await pool.query(
+      'SELECT * FROM impact_edges WHERE from_node_id = $1 AND to_node_id = $2 AND relation_type = $3 LIMIT 1',
+      [fromNodeId, toNodeId, relationType]
+    );
+    if (existing.rows.length > 0) {
+      return existing.rows[0];
+    }
+
     const query = `
       INSERT INTO impact_edges (from_node_id, to_node_id, relation_type)
       VALUES ($1, $2, $3)
@@ -36,12 +71,43 @@ class ImpactGraphService {
     return result.rows[0];
   }
 
+  async createTaskImpactNodesForProject(projectId, tasks = []) {
+    if (!projectId || !Array.isArray(tasks) || tasks.length === 0) {
+      return [];
+    }
+
+    const outcomeResult = await pool.query(
+      'SELECT id, statement FROM outcomes WHERE project_id = $1 ORDER BY id ASC LIMIT 1',
+      [projectId]
+    );
+    if (outcomeResult.rows.length === 0) {
+      return [];
+    }
+
+    const outcome = outcomeResult.rows[0];
+    const outcomeNode = await this.createImpactNode('outcome', outcome.id, outcome.statement);
+    const createdNodes = [];
+
+    for (const task of tasks) {
+      const taskId = task.db_id || task.db_id_internal || task.id;
+      if (!taskId) continue;
+
+      const label = task.impact_label || task.impact_statement || `Contributes to the project outcome through: ${task.name}`;
+      const weight = Number.isFinite(Number(task.impact_weight)) ? Number(task.impact_weight) : null;
+      const taskNode = await this.createImpactNode('task', taskId, label, task.description || '', weight);
+      await this.linkNodes(taskNode.id, outcomeNode.id, 'contributes_to');
+      createdNodes.push(taskNode);
+    }
+
+    return createdNodes;
+  }
+
   async getImpactTrace(taskId) {
     const query = `
       WITH RECURSIVE impact_trace AS (
-        SELECT id, type, entity_id, label FROM impact_nodes WHERE type = 'task' AND entity_id = $1
+        SELECT id, type, entity_id, label, description, impact_weight FROM impact_nodes WHERE type = 'task' AND entity_id = $1
         UNION
-        SELECT n.id, n.type, n.entity_id, n.label
+        SELECT n.id, n.type, n.entity_id, n.label, n.description, n.impact_weight
         FROM impact_nodes n
         JOIN impact_edges e ON e.to_node_id = n.id
         JOIN impact_trace it ON e.from_node_id = it.id
@@ -53,7 +119,7 @@ class ImpactGraphService {
   }
 
   async getAtlasData(projectId = null, realmId = null) {
-    let nodesQuery = 'SELECT id, type, entity_id, label FROM impact_nodes';
+    let nodesQuery = 'SELECT id, type, entity_id, label, description, impact_weight FROM impact_nodes';
     let edgesQuery = 'SELECT from_node_id, to_node_id, relation_type FROM impact_edges';
     let params = [];
 
@@ -61,7 +127,10 @@ class ImpactGraphService {
       nodesQuery = `
         SELECT DISTINCT n.* FROM impact_nodes n
         LEFT JOIN outcomes o ON n.entity_id = o.id AND n.type = 'outcome'
-        WHERE o.project_id = $1 OR (n.type = 'project' AND n.entity_id = $1)
+        LEFT JOIN tasks t ON n.entity_id = t.id AND n.type = 'task'
+        WHERE o.project_id = $1
+           OR t.project_id = $1
+           OR (n.type = 'project' AND n.entity_id = $1)
       `;
       params = [projectId];
     } else if (realmId) {
@@ -69,7 +138,8 @@ class ImpactGraphService {
        nodesQuery = `
         SELECT DISTINCT n.* FROM impact_nodes n
         LEFT JOIN outcomes o ON n.entity_id = o.id AND n.type = 'outcome'
-        LEFT JOIN projects p ON o.project_id = p.id OR (n.type = 'project' AND n.entity_id = p.id)
+        LEFT JOIN tasks t ON n.entity_id = t.id AND n.type = 'task'
+        LEFT JOIN projects p ON o.project_id = p.id OR t.project_id = p.id OR (n.type = 'project' AND n.entity_id = p.id)
         WHERE p.community_id = $1
        `;
        params = [realmId];

@@ -45,6 +45,41 @@ const parseLLMTasksResponse = (text) => {
   return data.tasks;
 };
 
+export const normalizeTaskImpactWeights = (tasks = []) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return [];
+  }
+
+  const parsedWeights = tasks.map((task) => {
+    const parsed = Number(task.impact_weight);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  });
+  const total = parsedWeights.reduce((sum, weight) => sum + weight, 0);
+  const baseWeights = total > 0
+    ? parsedWeights.map((weight) => (weight / total) * 100)
+    : tasks.map((task) => {
+        const reward = Number(task.reward_tokens);
+        return Number.isFinite(reward) && reward > 0 ? reward : 1;
+      });
+  const baseTotal = baseWeights.reduce((sum, weight) => sum + weight, 0) || tasks.length;
+
+  let roundedWeights = baseWeights.map((weight) => Math.floor((weight / baseTotal) * 100));
+  let remainder = 100 - roundedWeights.reduce((sum, weight) => sum + weight, 0);
+  let cursor = 0;
+
+  while (remainder > 0 && roundedWeights.length > 0) {
+    roundedWeights[cursor % roundedWeights.length] += 1;
+    remainder -= 1;
+    cursor += 1;
+  }
+
+  return tasks.map((task, index) => ({
+    ...task,
+    impact_label: task.impact_label || task.impact_statement || `Contributes to the project outcome through: ${task.name}`,
+    impact_weight: roundedWeights[index],
+  }));
+};
+
 export const generateProjectIdea = async (skills, interests) => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
@@ -198,13 +233,15 @@ export const autoGenerateTasks = async (
   projectDescription,
   tags,
   creator_id,
-  project_due_date = null
+  project_due_date = null,
+  outcomeStatement = ''
 ) => {
   const now = new Date().toISOString();
   const userPrompt = `
-Your objective is to take the given project name and description and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+Your objective is to take the given project name, description, and intended outcome and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
 
 Current Date/Time: ${now}
+Intended Outcome: ${outcomeStatement || 'None provided'}
 
 Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
@@ -219,6 +256,10 @@ Here are the rules:
   - If no project due date is provided, distribute tasks over a reasonable 30-day window starting from today.
   - Ensure task dates are sequential and respect dependencies (a task cannot start before its dependencies are finished).
 - Output data in **JSON format**, with **one array per table** (projects, tasks).
+- For every task, include:
+  - "impact_label": one concise sentence explaining how that task contributes to the intended outcome.
+  - "impact_weight": an integer from 0 to 100 representing that task's share of the total project impact.
+- The sum of all task impact_weight values for this project must equal exactly 100.
 
 Example skills you can use or be inspired by:
 - Web Development
@@ -253,9 +294,9 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z" },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z" },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z" }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30 },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45 },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25 }
   ]
 }
 
@@ -276,7 +317,11 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
     const response = await result.response;
     const responseText = response.text();
 
-    return parseLLMJsonResponse(responseText);
+    const data = parseLLMJsonResponse(responseText);
+    if (data.tasks && Array.isArray(data.tasks)) {
+      data.tasks = normalizeTaskImpactWeights(data.tasks);
+    }
+    return data;
   } catch (error) {
     console.error("Error generating tasks:", error);
     throw new Error(`Failed to generate tasks: ${error.message}`);

@@ -48,8 +48,8 @@ describe('WeeklyWrapUpService', () => {
       // Mock topTasksRes result
       pool.query.mockResolvedValueOnce({
         rows: [
-          { task_title: 'Fix Bug', project_name: 'Core' },
-          { task_title: 'Implement Auth', project_name: 'Security' }
+          { task_title: 'Fix Bug', project_name: 'Core', impact_label: 'Keeps the core workflow reliable.', impact_weight: 60, outcome_statement: 'Reliability improves' },
+          { task_title: 'Implement Auth', project_name: 'Security', impact_label: 'Protects user access.', impact_weight: 40, outcome_statement: 'Reliability improves' }
         ]
       });
 
@@ -71,7 +71,26 @@ describe('WeeklyWrapUpService', () => {
           this_week: 5,
           last_week: 3,
           avg_6_months: 10,
-          top_titles: ['Fix Bug (Core)', 'Implement Auth (Security)']
+          top_titles: [
+            'Fix Bug (Core) - 60% impact: Keeps the core workflow reliable.',
+            'Implement Auth (Security) - 40% impact: Protects user access.'
+          ],
+          high_impact_tasks: [
+            {
+              task_title: 'Fix Bug',
+              project_name: 'Core',
+              impact_label: 'Keeps the core workflow reliable.',
+              impact_weight: 60,
+              outcome_statement: 'Reliability improves'
+            },
+            {
+              task_title: 'Implement Auth',
+              project_name: 'Security',
+              impact_label: 'Protects user access.',
+              impact_weight: 40,
+              outcome_statement: 'Reliability improves'
+            }
+          ]
         },
         xp: {
           this_week: 500,
