@@ -30,7 +30,9 @@ const alterExistingTables = async () => {
 
   const alterSkillsQuery = `
     ALTER TABLE skills
-    ADD COLUMN IF NOT EXISTS description TEXT;
+    ADD COLUMN IF NOT EXISTS description TEXT,
+    ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending',
+    ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
   `;
 
   const alterStorySummariesQuery = `

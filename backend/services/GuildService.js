@@ -312,14 +312,18 @@ class GuildService {
     try {
       // 1. Get skills needing enrichment
       // Skills without a parent
-      const noParentSkillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NULL');
-      const noParentSkills = noParentSkillsResult.rows.map(s => ({ ...s, needsParent: true, needsDescription: true }));
+      const noParentSkillsResult = await pool.query('SELECT id, name FROM skills WHERE parent_skill_id IS NULL AND status = \'active\'');
+      const noParentSkills = noParentSkillsResult.rows.map(s => ({ ...s, needsParent: true, needsDescription: true, needsValidation: false }));
 
       // Skills with a parent but no description
-      const noDescriptionSkillsResult = await pool.query('SELECT id, name, parent_skill_id FROM skills WHERE parent_skill_id IS NOT NULL AND (description IS NULL OR description = \'\')');
-      const noDescriptionSkills = noDescriptionSkillsResult.rows.map(s => ({ ...s, needsParent: false, needsDescription: true }));
+      const noDescriptionSkillsResult = await pool.query('SELECT id, name, parent_skill_id FROM skills WHERE parent_skill_id IS NOT NULL AND (description IS NULL OR description = \'\') AND status = \'active\'');
+      const noDescriptionSkills = noDescriptionSkillsResult.rows.map(s => ({ ...s, needsParent: false, needsDescription: true, needsValidation: false }));
 
-      const allSkillsToEnrich = [...noParentSkills, ...noDescriptionSkills];
+      // Pending skills (need validation, parent, and description)
+      const pendingSkillsResult = await pool.query('SELECT id, name FROM skills WHERE status = \'pending\'');
+      const pendingSkills = pendingSkillsResult.rows.map(s => ({ ...s, needsParent: true, needsDescription: true, needsValidation: true }));
+
+      const allSkillsToEnrich = [...noParentSkills, ...noDescriptionSkills, ...pendingSkills];
 
       if (allSkillsToEnrich.length === 0) {
         console.log('No skills to enrich.');
@@ -345,7 +349,7 @@ class GuildService {
 
         const prompt = `
           You are an expert in skill taxonomies and workforce development.
-          Your task is to enrich a list of skills by organizing them into a hierarchy and/or providing professional descriptions.
+          Your task is to enrich a list of skills by organizing them into a hierarchy, providing professional descriptions, and validating them.
 
           Existing Parent Skills (for reference):
           ${JSON.stringify(parentSkills)}
@@ -354,16 +358,28 @@ class GuildService {
           ${JSON.stringify(batch)}
 
           Instructions:
-          1. For each skill where "needsParent" is true:
+          1. For each skill where "needsValidation" is true:
+             - Classify the skill as either "active" or "blacklisted".
+             - A valid "active" skill is a real-world professional skill, technical ability, or soft skill.
+             - An "invalid" or "blacklisted" skill is junk data, offensive content, or gibberish.
+          2. For each skill where "needsParent" is true (and it is "active"):
              - Find the most appropriate "parent_skill_id" from the "Existing Parent Skills" list.
              - If no existing parent skill is a good fit, suggest a "suggested_parent_name" that would be a better fit.
+          3. For each skill where "needsDescription" is true (and it is "active"):
              - Generate a professional, concise description (1-2 sentences) for the skill.
-          2. For each skill where "needsParent" is false and "needsDescription" is true:
+          4. For each skill where "needsParent" is false and "needsDescription" is true:
              - ONLY generate a professional, concise description (1-2 sentences) for the skill.
              - DO NOT change its parent or suggest a new one. Set "parent_skill_id" to its current value and "suggested_parent_name" to null.
-          3. Return a JSON array of objects with the following structure:
+          5. Return a JSON array of objects with the following structure:
              [
-               { "skill_id": 123, "parent_skill_id": 456, "suggested_parent_name": null, "description": "Professional description here..." },
+               {
+                 "skill_id": 123,
+                 "status": "active", // or "blacklisted"
+                 "parent_skill_id": 456,
+                 "suggested_parent_name": null,
+                 "description": "Professional description here...",
+                 "reason": "Optional reason for blacklisting"
+               },
                ...
              ]
 
@@ -396,22 +412,36 @@ class GuildService {
             const queryParams = [enrichment.skill_id];
             let paramIdx = 2;
 
-            if (enrichment.description) {
-              updateFields.push(`description = $${paramIdx++}`);
-              queryParams.push(enrichment.description);
-            }
+            const status = enrichment.status || 'active';
+            updateFields.push(`status = $${paramIdx++}`);
+            queryParams.push(status);
 
-            // Only update parent if it was needed/provided
-            const originalSkill = batch.find(s => s.id === enrichment.skill_id);
-            if (originalSkill && originalSkill.needsParent && parentId) {
-              updateFields.push(`parent_skill_id = $${paramIdx++}`);
-              queryParams.push(parentId);
+            if (status === 'active') {
+              if (enrichment.description) {
+                updateFields.push(`description = $${paramIdx++}`);
+                queryParams.push(enrichment.description);
+              }
+
+              // Only update parent if it was needed/provided
+              const originalSkill = batch.find(s => s.id === enrichment.skill_id);
+              if (originalSkill && originalSkill.needsParent && parentId) {
+                updateFields.push(`parent_skill_id = $${paramIdx++}`);
+                queryParams.push(parentId);
+              }
             }
 
             if (updateFields.length > 0) {
               const updateQuery = `UPDATE skills SET ${updateFields.join(', ')} WHERE id = $1`;
               await pool.query(updateQuery, queryParams);
-              console.log(`Enriched skill ${enrichment.skill_id}`);
+              console.log(`Enriched skill ${enrichment.skill_id} as ${status}`);
+
+              // If it became active, ensure a guild exists
+              if (status === 'active') {
+                const skillNameRes = await pool.query('SELECT name, description FROM skills WHERE id = $1', [enrichment.skill_id]);
+                if (skillNameRes.rows.length > 0) {
+                  await this.autoCreateGuild(enrichment.skill_id, skillNameRes.rows[0].name, skillNameRes.rows[0].description);
+                }
+              }
             }
           }
         } catch (batchErr) {
