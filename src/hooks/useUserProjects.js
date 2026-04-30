@@ -53,45 +53,26 @@ const useUserProjects = (userId) => {
         }
 
 
-        const projectsWithTaskData = await Promise.all(
-          fetchedProjects.map(async (proj) => {
-            try {
-              const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${proj.id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const tasks = tasksResponse.data;
-              const taskCount = tasks.length;
-              const completedTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'completed' || t.status.toLowerCase() === 'archived')).length;
-                const inactiveTasks = tasks.filter(t => t.status && (t.status.toLowerCase() === 'inactive-assigned' || t.status.toLowerCase() === 'inactive-unassigned')).length;
-                const activeTasks = taskCount - completedTasks - inactiveTasks;
-              const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
+        const projectsWithTaskData = fetchedProjects.map((proj) => {
+          const taskCount = parseInt(proj.task_count, 10) || 0;
+          const completedTasks = parseInt(proj.completed_task_count, 10) || 0;
+          const inactiveTasks = parseInt(proj.inactive_task_count, 10) || 0;
+          const activeTasks = taskCount - completedTasks - inactiveTasks;
+          const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
 
-              return {
-                id: proj.id,
-                name: proj.name,
-                community_id: proj.community_id ?? null,
-                creator_id: proj.creator_id,
-                description: proj.description || '',
-                taskCount,
-                activeTasks,
-                completedTasks,
-                progress,
-                token_pool: proj.token_pool || 0,
-              };
-            } catch (taskError) {
-              console.error(`Error fetching tasks for project ${proj.id}:`, taskError);
-              // Return project with partial data or mark as error for this project
-              return {
-                id: proj.id,
-                name: proj.name,
-                community_id: proj.community_id ?? null,
-                creator_id: proj.creator_id,
-                description: proj.description || '',
-                taskCount: 0, activeTasks: 0, completedTasks: 0, progress: 0, xpGained: 'N/A', errorFetchingTasks: true
-              };
-            }
-          })
-        );
+          return {
+            id: proj.id,
+            name: proj.name,
+            community_id: proj.community_id ?? null,
+            creator_id: proj.creator_id,
+            description: proj.description || '',
+            taskCount,
+            activeTasks,
+            completedTasks,
+            progress,
+            token_pool: proj.token_pool || 0,
+          };
+        });
         setProjects(projectsWithTaskData);
       } catch (err) {
         console.error('Error fetching user projects:', err.response?.data || err.message);

@@ -63,9 +63,20 @@ router.get('/userprojects', async (req, res) => {
     const offset = (page - 1) * pageSize;
 
     const query = `
-      SELECT DISTINCT p.* FROM projects p
+      SELECT
+        p.*,
+        COUNT(t.id) as task_count,
+        COUNT(t.id) FILTER (WHERE t.status ILIKE 'completed' OR t.status ILIKE 'archived') as completed_task_count,
+        COUNT(t.id) FILTER (WHERE t.status ILIKE 'inactive-assigned' OR t.status ILIKE 'inactive-unassigned') as inactive_task_count
+      FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
-      WHERE p.creator_id = $1 OR $1 = ANY(t.assigned_user_ids)
+      WHERE p.id IN (
+        SELECT DISTINCT p2.id
+        FROM projects p2
+        LEFT JOIN tasks t2 ON p2.id = t2.project_id
+        WHERE p2.creator_id = $1 OR $1 = ANY(t2.assigned_user_ids)
+      )
+      GROUP BY p.id
       ORDER BY p.id DESC
       LIMIT $2 OFFSET $3
     `;
