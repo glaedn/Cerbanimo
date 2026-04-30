@@ -40,7 +40,7 @@ class TaskRoutingService {
     const query = `
       SELECT id, status, due_date
       FROM tasks
-      WHERE id = $1 AND due_date IS NOT NULL AND status NOT IN ('completed', 'submitted', 'cancelled');
+      WHERE id = $1 AND due_date IS NOT NULL AND status NOT IN ('completed', 'submitted');
     `;
     const result = await pool.query(query, [taskId]);
     const task = result.rows[0];
