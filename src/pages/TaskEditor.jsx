@@ -38,6 +38,7 @@ const TaskEditor = ({
   isReviewer,
 }) => {
   const isMobile = useIsMobile();
+  const [localIsEdit, setLocalIsEdit] = useState(isEdit);
   const statusParts = taskForm.status?.split("-") || ["inactive", "unassigned"];
   const isUrgent = statusParts[0] === "urgent";
   const isActive =
@@ -50,7 +51,11 @@ const TaskEditor = ({
     (taskForm.status || "").toLowerCase().includes("submitted")
   );
 
-  const effectiveIsEdit = taskForm.status === "completed" ? false : isEdit;
+  useEffect(() => {
+    setLocalIsEdit(isEdit);
+  }, [isEdit, open]);
+
+  const effectiveIsEdit = taskForm.status === "completed" ? false : localIsEdit;
   const impactWeight = Math.max(0, Math.min(100, Number(taskForm.impact_weight) || 0));
  
   const [platformUserId, setPlatformUserId] = useState(null);
@@ -290,9 +295,11 @@ const TaskEditor = ({
 
       const result = await onSubmit(formData);
       // Only show success if no error returned
-      if (!result.error) {
+      if (result && !result.error) {
         alert(`Task "${taskForm.name}" saved successfully`);
         onClose();
+      } else if (result && result.error) {
+        alert(`Failed to save task: ${result.error}`);
       }
     } catch (error) {
       alert("Failed to save task. Please try again.");
@@ -435,9 +442,27 @@ const TaskEditor = ({
                     </IconButton>
                 </Box>
             )}
-            <h3 className="cyber-title">
-              {isEdit ? "EDITOR" : "VIEWER"}
-            </h3>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                <h3 className="cyber-title" style={{ margin: 0 }}>
+                {localIsEdit ? "EDITOR" : "VIEWER"}
+                </h3>
+                {taskForm.status !== "completed" && (
+                    <Button
+                        size="small"
+                        onClick={() => setLocalIsEdit(!localIsEdit)}
+                        sx={{
+                            color: '#00f3ff',
+                            borderColor: '#00f3ff',
+                            '&:hover': { bgcolor: 'rgba(0, 243, 255, 0.1)' },
+                            fontFamily: 'Orbitron',
+                            fontSize: '0.7rem'
+                        }}
+                        variant="outlined"
+                    >
+                        {localIsEdit ? "GO TO VIEW" : "GO TO EDIT"}
+                    </Button>
+                )}
+            </Box>
 
             <div className="cyber-form">
               {(taskForm.impact_label || taskForm.outcome_statement) && (
@@ -772,7 +797,7 @@ const TaskEditor = ({
               </div>
 
               <div className="cyber-button-group">
-                {isEdit ? (
+                {localIsEdit ? (
                   <>
                     <Button
                       className="cyber-button primary" // Updated class
@@ -787,7 +812,7 @@ const TaskEditor = ({
                   </>
                 ) : (
                   <>
-                    {!isEdit && (
+                    {!localIsEdit && (
                       <>
                         <Button
                           className={`cyber-button ${ // Base class
