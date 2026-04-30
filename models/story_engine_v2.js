@@ -32,18 +32,6 @@ const createStoryTables = async () => {
     );
   `;
 
-  const storySummariesTableQuery = `
-    CREATE TABLE IF NOT EXISTS story_summaries (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      summary_type VARCHAR(50), -- 'micro', 'pattern', 'portfolio'
-      content TEXT, -- LLM generated narrative
-      structured_data JSONB, -- The source units/patterns
-      is_cached BOOLEAN DEFAULT TRUE,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-
   const impactSummariesTableQuery = `
     CREATE TABLE IF NOT EXISTS impact_summaries (
       id SERIAL PRIMARY KEY,
@@ -60,7 +48,6 @@ const createStoryTables = async () => {
   try {
     await pool.query(storyUnitsTableQuery);
     await pool.query(userPatternsTableQuery);
-    await pool.query(storySummariesTableQuery);
     await pool.query(impactSummariesTableQuery);
     console.log('PostgreSQL: Story and Pattern tables created.');
   } catch (err) {

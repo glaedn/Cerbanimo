@@ -30,11 +30,27 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS description TEXT;
   `;
 
+  const alterStorySummariesQuery = `
+    ALTER TABLE story_summaries
+    ADD COLUMN IF NOT EXISTS week_start_date DATE,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+    -- Add unique constraint if it doesn't exist
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'story_summaries_user_id_week_start_date_summary_type_key') THEN
+        ALTER TABLE story_summaries ADD CONSTRAINT story_summaries_user_id_week_start_date_summary_type_key UNIQUE (user_id, week_start_date, summary_type);
+      END IF;
+    END
+    $$;
+  `;
+
   try {
     await pool.query(alterTasksQuery);
     await pool.query(alterSkillsQuery);
     await pool.query(alterProjectsQuery);
     await pool.query(alterUsersQuery);
+    await pool.query(alterStorySummariesQuery);
     console.log('PostgreSQL: Existing tables (tasks, projects, users) altered with new fields.');
   } catch (err) {
     console.error('PostgreSQL: Error altering existing tables:', err);
