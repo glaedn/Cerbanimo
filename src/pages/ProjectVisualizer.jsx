@@ -477,9 +477,12 @@ const ProjectVisualizer = () => {
 
     if (now >= end) return "#FF0000"; // Overdue
 
+    // Percent of task duration elapsed
     const total = end - start;
     const elapsed = now - start;
     const percent = Math.max(0, Math.min(1, elapsed / total));
+
+    // For tasks entirely in the future (now < start), elapsed < 0, percent will be 0 -> Green
 
     if (percent < 0.4) return "#00FF00"; // Green
     if (percent < 0.7) return "#FFFF00"; // Yellow
@@ -565,6 +568,21 @@ const ProjectVisualizer = () => {
       .attr("preserveAspectRatio", "xMidYMid meet")
       .call(zoomRef.current)
       .style("touch-action", "none");
+    const timelineHeight = 1500;
+    const projectStart = new Date(project?.created_at || Date.now()).getTime();
+    const projectEnd = project?.due_date
+        ? new Date(project.due_date).getTime()
+        : (projectStart + 30 * 24 * 60 * 60 * 1000);
+
+    const timeToY = (time) => {
+        const t = typeof time === 'string' ? new Date(time).getTime() : time;
+        const progress = (t - projectStart) / (projectEnd - projectStart);
+        return 150 + (progress * timelineHeight);
+    };
+
+    const now = Date.now();
+    const nowY = timeToY(now);
+
     if (!zoomTransformRef.current.initialized) {
         const initialK = 0.8;
         const initialX = 400 - (400 * initialK);
@@ -611,20 +629,6 @@ const ProjectVisualizer = () => {
     const lvls = []; const maxL = Math.max(...Object.values(graph).map(n => n.level));
     for (let i = 0; i <= maxL; i++) lvls[i] = Object.values(graph).filter(n => n.level === i);
     const hsp = isMobile ? 85 : 100;
-    const timelineHeight = 1500;
-    const projectStart = new Date(project?.created_at || Date.now()).getTime();
-    const projectEnd = project?.due_date
-        ? new Date(project.due_date).getTime()
-        : (projectStart + 30 * 24 * 60 * 60 * 1000);
-
-    const timeToY = (time) => {
-        const t = typeof time === 'string' ? new Date(time).getTime() : time;
-        const progress = (t - projectStart) / (projectEnd - projectStart);
-        return 150 + (progress * timelineHeight);
-    };
-
-    const now = Date.now();
-    const nowY = timeToY(now);
 
     lvls.forEach((lns, li) => {
       const tw = (lns.length - 1) * hsp, sx = (width - tw) / 2;
@@ -686,11 +690,11 @@ const ProjectVisualizer = () => {
     }
     // Current Time Marker
     mainGroup.append("line")
-      .attr("x1", -500).attr("y1", nowY).attr("x2", 1500).attr("y2", nowY)
+      .attr("x1", -1000).attr("y1", nowY).attr("x2", 2000).attr("y2", nowY)
       .attr("stroke", "rgba(0, 243, 255, 0.4)").attr("stroke-width", 1).attr("stroke-dasharray", "8,4");
 
     mainGroup.append("text")
-      .attr("x", -480).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 245, 0.6)")
+      .attr("x", 10).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 255, 0.6)")
       .attr("font-size", "12px").attr("font-family", "Orbitron").text("PRESENT_SIGNAL");
 
     // Render Rails
