@@ -647,6 +647,7 @@ const ProjectVisualizer = () => {
         zoomTransformRef.current = e.transform;
         zoomTransformRef.current.initialized = true;
         mainGroup.attr("transform", e.transform);
+        gridGroup.selectAll(".day-label").attr("x", (20 - e.transform.x) / e.transform.k);
     });
     const graph = {}; data.forEach(n => graph[n.id] = { ...n, children: [], level: -1 });
     data.forEach(n => n.dependencies.forEach(did => { if (graph[did]) graph[did].children.push(n.id); }));
@@ -746,7 +747,9 @@ const ProjectVisualizer = () => {
           .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
 
         gridGroup.append("text")
-          .attr("x", -150).attr("y", y + 15)
+          .attr("class", "day-label")
+          .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
+          .attr("y", y + 15)
           .attr("fill", "rgba(128, 128, 128, 0.4)")
           .attr("font-size", "12px").attr("font-family", "Space Mono")
           .text(`DAY ${i + 1}`);
@@ -1016,10 +1019,9 @@ const ProjectVisualizer = () => {
       <TaskEditor open={showTaskPopup} onClose={() => { setShowTaskPopup(false); refreshTasks(); }} projectId={projectId} taskForm={taskForm} setTaskForm={setTaskForm} onSubmit={async f => { const r = await handleTaskAction(f, f.id ? 'update' : 'create'); if (!r.error) { await refreshTasks(); updateLinkColors(); } return r; }} skills={skills} isEdit={isEditMode} currentUser={user} projectCreatorId={project?.creator_id} isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))} />
       <div className="legend">
         <div><span style={{ color: "#FF69B4" }}>● </span>Pink: Completed</div>
-        <div><span style={{ color: "#FF0000" }}>● </span>Red: Urgent</div>
-        <div><span style={{ color: "#87CEFA" }}>○ </span>Blue: Vacancy</div>
-        <div><span style={{ color: "#4682B4" }}>● </span>Filled Blue: Assigned</div>
-        <div><span style={{ color: "#32CD32" }}>● </span>Green: Active</div>
+        <div><span style={{ color: "#00FF00" }}>● </span>Green: Active (Redshifts over time)</div>
+        <div><span style={{ color: "#4682B4" }}>● </span>Blue: Inactive (Redshifts over time)</div>
+        <div><span style={{ border: "2px solid #00FF00", borderRadius: "50%", display: "inline-block", width: "10px", height: "10px", backgroundColor: "#888" }}></span> Outline: Vacancy / Filled: Assigned</div>
         <div><span style={{ border: "1px dashed #666", borderRadius: "50%", display: "inline-block", width: "10px", height: "10px" }}></span> External</div>
       </div>
       <Modal open={showCommunityProposalPopup} onClose={() => setShowCommunityProposalPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
