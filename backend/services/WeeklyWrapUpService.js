@@ -110,6 +110,7 @@ class WeeklyWrapUpService {
           - Analyze trends, momentum, and skill growth.
           - Compare this week's performance against last week and their 6-month average.
           - Highlight positive achievements and offer specific growth insights.
+          - Use the highest-impact completed missions as the detailed examples. Explain their impact labels and relative impact weights in plain language.
           - Return a JSON array of objects, one for each user in the batch.
 
           Required Output Format:
@@ -244,11 +245,20 @@ class WeeklyWrapUpService {
 
       // Top task titles and project names
       const topTasksRes = await pool.query(`
-        SELECT t.name as task_title, p.name as project_name
+        SELECT
+          t.name as task_title,
+          p.name as project_name,
+          COALESCE(i.label, t.name) as impact_label,
+          COALESCE(i.impact_weight, 0) as impact_weight,
+          o.statement as outcome_statement
         FROM tasks t
         JOIN projects p ON t.project_id = p.id
+        LEFT JOIN impact_nodes i ON i.type = 'task' AND i.entity_id = t.id
+        LEFT JOIN impact_edges e ON e.from_node_id = i.id
+        LEFT JOIN impact_nodes outcome_node ON outcome_node.id = e.to_node_id AND outcome_node.type = 'outcome'
+        LEFT JOIN outcomes o ON o.id = outcome_node.entity_id
         WHERE t.submitted_by = $1 AND t.status = 'completed' AND t.completed_at > NOW() - INTERVAL '7 days'
-        ORDER BY t.reward_tokens DESC
+        ORDER BY COALESCE(i.impact_weight, 0) DESC, t.reward_tokens DESC
         LIMIT 5
       `, [userId]);
 
@@ -274,7 +284,14 @@ class WeeklyWrapUpService {
           this_week: parseInt(row.tasks_this_week) || 0,
           last_week: parseInt(row.tasks_last_week) || 0,
           avg_6_months: avgTasks6m,
-          top_titles: topTasksRes.rows.map(r => `${r.task_title} (${r.project_name})`)
+          top_titles: topTasksRes.rows.map(r => `${r.task_title} (${r.project_name}) - ${r.impact_weight}% impact: ${r.impact_label}`),
+          high_impact_tasks: topTasksRes.rows.map(r => ({
+            task_title: r.task_title,
+            project_name: r.project_name,
+            impact_label: r.impact_label,
+            impact_weight: parseInt(r.impact_weight) || 0,
+            outcome_statement: r.outcome_statement
+          }))
         },
         xp: {
           this_week: parseInt(row.xp_this_week) || 0,

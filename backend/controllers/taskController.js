@@ -115,9 +115,27 @@ const getTasksByProjectId = async (projectId) => {
   console.log(`Fetching tasks for project ID: ${parsedProjectId}`);
 
   const query = `
-    SELECT DISTINCT ON (t.id) t.*, o.statement as outcome_statement, s.name as skill_name
+    SELECT DISTINCT ON (t.id)
+      t.*,
+      COALESCE(i.label, o.statement) as outcome_statement,
+      i.label as impact_label,
+      i.impact_weight,
+      o.statement as project_outcome_statement,
+      s.name as skill_name
     FROM tasks t
     LEFT JOIN outcomes o ON t.project_id = o.project_id
+    LEFT JOIN LATERAL (
+      SELECT n.label, n.impact_weight
+      FROM impact_nodes n
+      LEFT JOIN impact_edges e ON e.from_node_id = n.id AND e.relation_type = 'contributes_to'
+      LEFT JOIN impact_nodes outcome_node ON outcome_node.id = e.to_node_id AND outcome_node.type = 'outcome'
+      LEFT JOIN outcomes linked_outcome ON linked_outcome.id = outcome_node.entity_id AND linked_outcome.project_id = t.project_id
+      WHERE n.type = 'task' AND n.entity_id = t.id
+      ORDER BY
+        CASE WHEN linked_outcome.id IS NOT NULL THEN 0 ELSE 1 END,
+        n.id DESC
+      LIMIT 1
+    ) i ON true
     LEFT JOIN skills s ON t.skill_id = s.id
     WHERE t.project_id = $1
     ORDER BY t.id, o.id
@@ -1385,11 +1403,26 @@ const findById = async (taskId) => {
       SELECT DISTINCT ON (t.id)
         t.*,
         p.name as project_name,
-        o.statement as outcome_statement,
+        COALESCE(i.label, o.statement) as outcome_statement,
+        i.label as impact_label,
+        i.impact_weight,
+        o.statement as project_outcome_statement,
         s.name as skill_name
       FROM tasks t
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN outcomes o ON p.id = o.project_id
+      LEFT JOIN LATERAL (
+        SELECT n.label, n.impact_weight
+        FROM impact_nodes n
+        LEFT JOIN impact_edges e ON e.from_node_id = n.id AND e.relation_type = 'contributes_to'
+        LEFT JOIN impact_nodes outcome_node ON outcome_node.id = e.to_node_id AND outcome_node.type = 'outcome'
+        LEFT JOIN outcomes linked_outcome ON linked_outcome.id = outcome_node.entity_id AND linked_outcome.project_id = t.project_id
+        WHERE n.type = 'task' AND n.entity_id = t.id
+        ORDER BY
+          CASE WHEN linked_outcome.id IS NOT NULL THEN 0 ELSE 1 END,
+          n.id DESC
+        LIMIT 1
+      ) i ON true
       LEFT JOIN skills s ON t.skill_id = s.id
       WHERE t.id = $1
       ORDER BY t.id, o.id

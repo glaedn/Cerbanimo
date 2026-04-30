@@ -359,6 +359,7 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
     `);
 
+    await createImpactTables();
     await createStoryTables();
     await createStorySummariesTable();
     await alterExistingTables();

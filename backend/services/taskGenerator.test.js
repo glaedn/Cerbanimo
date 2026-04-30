@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateProjectIdea, parseLLMJsonResponse } from './taskGenerator';
+import { generateProjectIdea, normalizeTaskImpactWeights, parseLLMJsonResponse } from './taskGenerator';
 
 // Mock the @google/generative-ai library
 const mockGenerateContent = vi.fn();
@@ -62,6 +62,28 @@ describe('taskGenerator.js', () => {
     it('should throw an error if JSON start is found but no valid end', () => {
       const text = 'Here is an unclosed object: {"name": "Test"';
       expect(() => parseLLMJsonResponse(text)).toThrow('Valid JSON object/array end not found in response');
+    });
+  });
+
+  describe('normalizeTaskImpactWeights', () => {
+    it('should normalize impact weights to total 100', () => {
+      const tasks = normalizeTaskImpactWeights([
+        { id: 1, name: 'Research', impact_weight: 2 },
+        { id: 2, name: 'Build', impact_weight: 3 },
+      ]);
+
+      expect(tasks.map(t => t.impact_weight)).toEqual([40, 60]);
+      expect(tasks.reduce((sum, task) => sum + task.impact_weight, 0)).toBe(100);
+    });
+
+    it('should fall back to reward tokens and add labels when weights are missing', () => {
+      const tasks = normalizeTaskImpactWeights([
+        { id: 1, name: 'Small', reward_tokens: 25 },
+        { id: 2, name: 'Large', reward_tokens: 75 },
+      ]);
+
+      expect(tasks.map(t => t.impact_weight)).toEqual([25, 75]);
+      expect(tasks[0].impact_label).toContain('Small');
     });
   });
 
