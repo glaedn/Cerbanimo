@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
-  Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress
+  Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress,
+  createFilterOptions
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -479,12 +480,24 @@ const ProfilePage = () => {
         throw new Error('Access token not available');
       }
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/profile`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/profile`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (response.data.profile) {
+        const updatedProfile = response.data.profile;
+        setProfileData(prev => ({
+          ...prev,
+          username: updatedProfile.username || prev.username,
+          skills: (updatedProfile.skills || []).map(skill => typeof skill === 'string' ? JSON.parse(skill) : skill),
+          interests: (updatedProfile.interests || []).map(interest => typeof interest === 'string' ? JSON.parse(interest) : interest),
+          profile_picture: updatedProfile.profile_picture || prev.profile_picture,
+          contact_links: updatedProfile.contact_links || prev.contact_links,
+        }));
+      }
 
       alert('Profile updated successfully!');
     } catch (err) {
@@ -679,10 +692,37 @@ const ProfilePage = () => {
           multiple
           fullWidth // Takes width of panel constraint
           options={skillsPool}
-          getOptionLabel={(option) => option.name || ''} 
+          getOptionLabel={(option) => {
+            if (typeof option === 'string') return option;
+            if (option.inputValue) return option.inputValue;
+            return option.name || '';
+          }}
           value={profileData.skills || []}
-          onChange={(event, newValue) => handleInputChange('skills', newValue)}
+          filterOptions={(options, params) => {
+            const filter = createFilterOptions();
+            const filtered = filter(options, params);
+            const { inputValue } = params;
+            const isExisting = options.some((option) => inputValue.toLowerCase() === option.name.toLowerCase());
+            if (inputValue !== '' && !isExisting) {
+              filtered.push({
+                inputValue,
+                name: `+ Create Custom Skill: "${inputValue}"`,
+              });
+            }
+            return filtered;
+          }}
+          onChange={(event, newValue) => {
+            const processedValue = newValue.map(item => {
+              if (typeof item === 'string') return { name: item };
+              if (item.inputValue) return { name: item.inputValue };
+              return item;
+            });
+            handleInputChange('skills', processedValue);
+          }}
           freeSolo
+          selectOnFocus
+          clearOnBlur
+          handleHomeEndKeys
           renderInput={(params) => (
             <TextField 
               {...params} 
@@ -773,9 +813,10 @@ const ProfilePage = () => {
         renderTags={(value, getTagProps) =>
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
+            const item = typeof option === 'string' ? { name: option } : option;
         
             // Ensure we have a full skill object
-            let fullSkill = skillsPool.find(skill => skill.name === option.name) || option;
+            let fullSkill = skillsPool.find(skill => skill.name === item.name) || item;
         
             // console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
         
@@ -869,10 +910,37 @@ const ProfilePage = () => {
           multiple
           fullWidth
           options={interestsPool}
-          getOptionLabel={(option) => option.name || ''} 
+          getOptionLabel={(option) => {
+            if (typeof option === 'string') return option;
+            if (option.inputValue) return option.inputValue;
+            return option.name || '';
+          }}
           value={profileData.interests || []}
-          onChange={(event, newValue) => handleInputChange('interests', newValue)}
+          filterOptions={(options, params) => {
+            const filter = createFilterOptions();
+            const filtered = filter(options, params);
+            const { inputValue } = params;
+            const isExisting = options.some((option) => inputValue.toLowerCase() === option.name.toLowerCase());
+            if (inputValue !== '' && !isExisting) {
+              filtered.push({
+                inputValue,
+                name: `+ Create Custom Interest: "${inputValue}"`,
+              });
+            }
+            return filtered;
+          }}
+          onChange={(event, newValue) => {
+            const processedValue = newValue.map(item => {
+              if (typeof item === 'string') return { name: item };
+              if (item.inputValue) return { name: item.inputValue };
+              return item;
+            });
+            handleInputChange('interests', processedValue);
+          }}
           freeSolo
+          selectOnFocus
+          clearOnBlur
+          handleHomeEndKeys
           renderInput={(params) => (
             <TextField 
               {...params} 
@@ -967,8 +1035,9 @@ const ProfilePage = () => {
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const { key, ...otherProps } = getTagProps({ index });
+              const item = typeof option === 'string' ? { name: option } : option;
               return (
-                <Chip key={key} label={option.name} {...otherProps} />
+                <Chip key={key} label={item.name} {...otherProps} />
               );
             })
           }
