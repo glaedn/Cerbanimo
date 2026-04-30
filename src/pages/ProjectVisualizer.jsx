@@ -113,6 +113,7 @@ const ArcCarousel = ({
   const [pos, setPos] = useState(activeIndex || 0);
   const posRef = useRef(pos);
   const rafRef = useRef(null);
+  const prevActiveRef = useRef(activeIndex);
 
   const drag = useRef({
     down: false,
@@ -123,9 +124,10 @@ const ArcCarousel = ({
   });
 
   useEffect(() => {
-    if (Math.round(posRef.current) !== activeIndex) {
+    if (prevActiveRef.current !== activeIndex) {
       setPos(activeIndex || 0);
       posRef.current = activeIndex || 0;
+      prevActiveRef.current = activeIndex;
     }
   }, [activeIndex]);
 
@@ -155,7 +157,7 @@ const ArcCarousel = ({
     rafRef.current = null;
   };
 
-  const animateTo = (target) => {
+  const animateTo = (target, shouldSelect = false) => {
     stopRAF();
     const start = posRef.current;
     const startTime = performance.now();
@@ -173,7 +175,9 @@ const ArcCarousel = ({
       } else {
         posRef.current = target;
         setPos(target);
-        setActiveIndex(mod(Math.round(target)));
+        if (shouldSelect) {
+          setActiveIndex(mod(Math.round(target)));
+        }
         stopRAF();
       }
     };
@@ -201,7 +205,7 @@ const ArcCarousel = ({
         rafRef.current = requestAnimationFrame(tick);
       } else {
         const snapped = Math.round(posRef.current);
-        animateTo(snapped);
+        animateTo(snapped, false);
       }
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -274,7 +278,7 @@ const ArcCarousel = ({
             angleStep={angleStep}
             radiusX={radiusX}
             radiusY={radiusY}
-            onClick={() => animateTo(realIndex)}
+            onClick={() => animateTo(realIndex, true)}
           />
         ))}
       </div>
@@ -457,12 +461,21 @@ const ProjectVisualizer = () => {
     if (user) fetchProfile();
   }, [user, getAccessTokenSilently]);
 
+  const usedSkills = useMemo(() => {
+    const skillMap = new Map();
+    tasks.forEach(t => {
+      if (t.skill_id && !skillMap.has(t.skill_id)) {
+        skillMap.set(t.skill_id, { id: t.skill_id, name: t.skill_name || "Unknown Skill" });
+      }
+    });
+    return Array.from(skillMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
   const categorizedTasks = useMemo(() => {
     const taskMap = { "All Tasks": [...tasks] };
-    const filteredSkills = skills.filter(s => tasks.some(t => t.skill_id === s.id));
-    filteredSkills.forEach(s => { taskMap[s.name] = tasks.filter(t => t.skill_id === s.id); });
+    usedSkills.forEach(s => { taskMap[s.name] = tasks.filter(t => t.skill_id === s.id); });
     return taskMap;
-  }, [tasks, skills]);
+  }, [tasks, usedSkills]);
 
   const initialForm = { id: null, name: "", description: "", status: "inactive-unassigned", dependencies: [], skill_id: 0, project_id: projectId, reward_tokens: 10 };
   const [taskForm, setTaskForm] = useState(initialForm);
@@ -538,7 +551,6 @@ const ProjectVisualizer = () => {
   };
   const getNodeFill = (s) => s.includes("unassigned") ? "#888888" : getNodeColor(s);
   const truncateText = (t, m = 13) => t.length <= m ? t : t.substring(0, m) + "...";
-  const usedSkills = useMemo(() => skills.filter(s => tasks.some(t => t.skill_id === s.id)), [skills, tasks]);
   const zoomRef = useRef(null);
 
   useEffect(() => { if (!activeCategory) { setActiveCategory("All Tasks"); setActiveSkillId(null); } }, [activeCategory, skills, tasks]);
