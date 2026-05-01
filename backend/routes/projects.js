@@ -65,18 +65,20 @@ router.get('/userprojects', async (req, res) => {
     const query = `
       SELECT
         p.*,
+        c.name AS community_name,
         COUNT(t.id) as task_count,
         COUNT(t.id) FILTER (WHERE t.status ILIKE 'completed' OR t.status ILIKE 'archived') as completed_task_count,
         COUNT(t.id) FILTER (WHERE t.status ILIKE 'inactive-assigned' OR t.status ILIKE 'inactive-unassigned') as inactive_task_count
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
+      LEFT JOIN communities c ON p.community_id = c.id
       WHERE p.id IN (
         SELECT DISTINCT p2.id
         FROM projects p2
         LEFT JOIN tasks t2 ON p2.id = t2.project_id
         WHERE p2.creator_id = $1 OR $1 = ANY(t2.assigned_user_ids)
       )
-      GROUP BY p.id
+      GROUP BY p.id, c.name
       ORDER BY p.id DESC
       LIMIT $2 OFFSET $3
     `;
@@ -95,7 +97,12 @@ router.get('/userprojects', async (req, res) => {
 router.get('/:projectId', async (req, res) => {
   const { projectId } = req.params;
   try {
-    const query = 'SELECT * FROM projects WHERE id = $1';
+    const query = `
+      SELECT p.*, c.name AS community_name
+      FROM projects p
+      LEFT JOIN communities c ON p.community_id = c.id
+      WHERE p.id = $1
+    `;
     const result = await pool.query(query, [projectId]);
 
     if (result.rows.length === 0) {

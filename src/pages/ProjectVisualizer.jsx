@@ -366,10 +366,10 @@ const ProjectVisualizer = () => {
     if (!userId) return;
     try {
       const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities`, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error(`Failed to fetch communities`);
       const data = await response.json();
-      if (data && Array.isArray(data.communities)) setUserCommunities(data.communities);
+      if (data && Array.isArray(data)) setUserCommunities(data);
     } catch { setUserCommunities([]); }
   }, [getAccessTokenSilently, userId]);
 
@@ -408,14 +408,20 @@ const ProjectVisualizer = () => {
   };
 
   const handleUpdateTags = async (newTags) => {
+    const processedTags = newTags.map(tag => {
+      if (typeof tag === 'string') return tag;
+      if (tag.inputValue) return tag.inputValue;
+      return tag.name;
+    });
+
     try {
       const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ tags: newTags }),
+        body: JSON.stringify({ tags: processedTags }),
       });
       if (!response.ok) throw new Error('Failed to update tags');
-      updateProject({ tags: newTags });
+      updateProject({ tags: processedTags });
     } catch (error) { console.error('Error updating tags:', error); }
   };
 
@@ -425,7 +431,10 @@ const ProjectVisualizer = () => {
         const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await response.json();
-        setInterests(data.interestsPool || []);
+        const pool = data.interestsPool || [];
+        // Deduplicate pool by name to prevent key collisions
+        const uniquePool = Array.from(new Map(pool.map(i => [i.name.toLowerCase(), i])).values());
+        setInterests(uniquePool);
       } catch (error) { console.error('Error fetching interests:', error.message); }
     };
     fetchInterests();
@@ -849,17 +858,16 @@ const ProjectVisualizer = () => {
   
   const filteredProjects = useMemo(() => {
     const sc = displayCommunities[communityIndex];
-    if (!sc) return project ? [project] : [];
-
-    const selectedCommunityId = sc.id ?? null;
+    const selectedCommunityId = sc?.id ?? null;
     const cp = allProjects.filter(p => (p.community_id ?? null) === selectedCommunityId);
     const projectCommunityId = project?.community_id ?? null;
 
+    // If viewing a project, it should be in the list if its community matches the selected one
     if (project && projectCommunityId === selectedCommunityId && !cp.some(p => p.id === Number(projectId))) {
       return [project, ...cp];
     }
 
-    return cp.length > 0 ? cp : (project ? [project] : []);
+    return cp;
   }, [displayCommunities, communityIndex, allProjects, project, projectId]);
 
   const skillOptions = useMemo(() => [
@@ -1022,7 +1030,64 @@ const ProjectVisualizer = () => {
           <div className="token-metric"><span className="token-label">Available:</span><span className="token-value">{Number(project?.token_pool || 0) - Number(project?.used_tokens || 0) - Number(project?.reserved_tokens || 0)}</span></div>
         </div> */}
         <div className="vproject-tags">
-          {isEditMode ? <Autocomplete multiple freeSolo options={interests || []} value={project?.tags || []} onChange={(e, nv) => handleUpdateTags(nv)} renderTags={(v, gtp) => v.map((o, i) => <Chip {...gtp({ i })} key={i} label={o} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)} renderInput={p => <TextField {...p} variant="outlined" placeholder="Add tags..." size="small" />} /> : project?.tags?.map((t, i) => <Chip key={i} label={t} variant="outlined" style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }} />)}
+          {isEditMode ? (
+            <Autocomplete
+              multiple
+              freeSolo
+              options={interests || []}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') return option;
+                if (option.inputValue) return option.inputValue;
+                return option.name || '';
+              }}
+              isOptionEqualToValue={(option, value) => {
+                const oname = typeof option === 'string' ? option : (option.name || '');
+                const vname = typeof value === 'string' ? value : (value.name || '');
+                return oname === vname;
+              }}
+              filterOptions={(options, params) => {
+                const { inputValue } = params;
+                const filtered = options.filter(o => o.name.toLowerCase().includes(inputValue.toLowerCase()));
+                const isExisting = options.some((option) => inputValue.toLowerCase() === option.name.toLowerCase());
+                if (inputValue !== '' && !isExisting) {
+                  filtered.push({
+                    inputValue,
+                    name: `+ Create Custom Interest: "${inputValue}"`,
+                  });
+                }
+                return filtered;
+              }}
+              value={project?.tags || []}
+              onChange={(e, nv) => handleUpdateTags(nv)}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...otherProps } = getTagProps({ index });
+                  const label = typeof option === 'string' ? option : (option.name || '');
+                  return (
+                    <Chip
+                      key={key}
+                      label={label}
+                      {...otherProps}
+                      variant="outlined"
+                      style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }}
+                    />
+                  );
+                })
+              }
+              renderInput={(p) => (
+                <TextField {...p} variant="outlined" placeholder="Add tags..." size="small" />
+              )}
+            />
+          ) : (
+            project?.tags?.map((t, i) => (
+              <Chip
+                key={i}
+                label={t}
+                variant="outlined"
+                style={{ backgroundColor: "#000", color: "#FFF", margin: "2px" }}
+              />
+            ))
+          )}
         </div>
       </div>
       <TaskEditor open={showTaskPopup} onClose={() => { setShowTaskPopup(false); refreshTasks(); }} projectId={projectId} taskForm={taskForm} setTaskForm={setTaskForm} onSubmit={async f => { const r = await handleTaskAction(f, f.id ? 'update' : 'create'); if (!r.error) { await refreshTasks(); updateLinkColors(); } return r; }} skills={skills} isEdit={isEditMode} currentUser={user} projectCreatorId={project?.creator_id} isReviewer={allTasks[taskForm?.id]?.reviewer_ids?.includes(Number(userId))} />
