@@ -18,6 +18,8 @@ const createNeedsTable = async () => {
       location_text TEXT, -- Added, replacing/clarifying 'location_requirements'
       latitude NUMERIC, -- Added
       longitude NUMERIC, -- Added
+      discord_message_id VARCHAR(50), -- Added for Discord integration
+      discord_thread_id VARCHAR(50), -- Added for Discord integration
       fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

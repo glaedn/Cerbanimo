@@ -86,9 +86,15 @@ const alterExistingTables = async () => {
     await pool.query(alterUsersQuery);
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
-    await pool.query(alterNeedsQuery);
-    await pool.query(alterResourcesQuery);
-    console.log('PostgreSQL: Existing tables (tasks, projects, users, needs, resources) altered with new fields.');
+
+    // Add Discord columns to needs table
+    await pool.query(`
+      ALTER TABLE needs
+      ADD COLUMN IF NOT EXISTS discord_message_id VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50)
+    `);
+
+    console.log('PostgreSQL: Existing tables (tasks, projects, users, needs) altered with new fields.');
   } catch (err) {
     console.error('PostgreSQL: Error altering existing tables:', err);
   }
