@@ -9,7 +9,11 @@ import {
   Typography,
   Grid,
   FormControl,
-  InputLabel
+  InputLabel,
+  Slider,
+  Switch,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 // import './NeedDeclarationForm.css'; // CSS file can be created for additional styling
 
@@ -20,12 +24,19 @@ const NeedDeclarationForm = ({
   loggedInUserId,
   communityId
 }) => {
+  const urgencyLevels = ['low', 'medium', 'high', 'critical'];
+
   const getInitialFormData = () => ({
     name: '',
     description: '',
     category: '',
     quantity_needed: '',
     urgency: 'medium',
+    urgency_level: 'medium',
+    is_recurring: false,
+    recurrence_pattern: { frequency: 'weekly', interval: 1 },
+    location: { text: '', latitude: null, longitude: null, context: '' },
+    mobility_required: false,
     required_before_date: '',
     location_text: '',
     // Fields not directly in form but part of need data structure
@@ -59,10 +70,30 @@ const NeedDeclarationForm = ({
   }, [initialNeedData]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: type === 'checkbox' || type === 'switch' ? checked : value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' || type === 'switch' ? checked : value,
+      }));
+    }
+  };
+
+  const handleUrgencySliderChange = (event, newValue) => {
+    const level = urgencyLevels[newValue];
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      urgency: level,
+      urgency_level: level
     }));
   };
 
@@ -166,21 +197,19 @@ const NeedDeclarationForm = ({
           />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel id="urgency-select-label">Urgency</InputLabel>
-            <Select
-              labelId="urgency-select-label"
-              name="urgency"
-              value={formData.urgency}
-              onChange={handleChange}
-              label="Urgency"
-            >
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-              <MenuItem value="critical">Critical</MenuItem>
-            </Select>
-          </FormControl>
+          <Typography gutterBottom>Urgency Level</Typography>
+          <Box sx={{ px: 2 }}>
+            <Slider
+              value={urgencyLevels.indexOf(formData.urgency_level || 'medium')}
+              step={1}
+              marks
+              min={0}
+              max={3}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(value) => urgencyLevels[value]}
+              onChange={handleUrgencySliderChange}
+            />
+          </Box>
         </Grid>
         <Grid item xs={12} sm={6}>
           <TextField
@@ -196,14 +225,77 @@ const NeedDeclarationForm = ({
         </Grid>
         <Grid item xs={12}>
           <TextField
-            label="Location (General Area or Address if applicable)"
-            name="location_text"
-            value={formData.location_text}
+            label="Location Description"
+            name="location.text"
+            value={formData.location?.text || ''}
             onChange={handleChange}
             fullWidth
             variant="outlined"
           />
         </Grid>
+        <Grid item xs={12}>
+          <TextField
+            label="Location Context (e.g., Door code, nearby landmark)"
+            name="location.context"
+            value={formData.location?.context || ''}
+            onChange={handleChange}
+            fullWidth
+            variant="outlined"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.mobility_required}
+                onChange={handleChange}
+                name="mobility_required"
+              />
+            }
+            label="Mobility Required (Requires travel/transport)"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.is_recurring}
+                onChange={handleChange}
+                name="is_recurring"
+              />
+            }
+            label="Is Recurring Need?"
+          />
+        </Grid>
+        {formData.is_recurring && (
+          <>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Frequency</InputLabel>
+                <Select
+                  name="recurrence_pattern.frequency"
+                  value={formData.recurrence_pattern?.frequency || 'weekly'}
+                  onChange={handleChange}
+                  label="Frequency"
+                >
+                  <MenuItem value="daily">Daily</MenuItem>
+                  <MenuItem value="weekly">Weekly</MenuItem>
+                  <MenuItem value="monthly">Monthly</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Interval"
+                name="recurrence_pattern.interval"
+                type="number"
+                value={formData.recurrence_pattern?.interval || 1}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
 
       {error && (

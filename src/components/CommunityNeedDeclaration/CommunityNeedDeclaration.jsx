@@ -102,6 +102,41 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
     }
   };
 
+  const handleOfferHelp = (needId) => {
+    // Navigate to a matching or exchange screen, or open a specific modal
+    showNotification('Opening help offer flow for need ' + needId, 'info');
+    // For now, we can redirect to the matching display if it's available as a standalone route
+    // window.location.href = `/matching/need/${needId}`;
+  };
+
+  const handleAssignResource = (needId) => {
+    showNotification('Opening resource assignment for need ' + needId, 'info');
+    // This would ideally open a modal with user's available resources
+  };
+
+  const handleStartCoordination = async (need) => {
+    if (!getAccessTokenSilently) return;
+    try {
+      const token = await getAccessTokenSilently();
+      const projectPayload = {
+        name: `Coordination: ${need.name}`,
+        description: `Coordination project for need: ${need.description}`,
+        community_id: communityId,
+        status: 'active',
+        is_direct: true
+      };
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/projects`, projectPayload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      showNotification('Coordination project created!', 'success');
+      // Redirect to the new project
+      // window.location.href = `/visualizer/${response.data.id}`;
+    } catch (err) {
+      console.error('Error starting coordination:', err);
+      showNotification('Failed to start coordination.', 'error');
+    }
+  };
+
   const handleDeleteNeed = async (needId) => {
     if (!getAccessTokenSilently) {
       showNotification('Authentication service not available.', 'error');
@@ -160,32 +195,44 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
             <ListItem
               key={need.id}
               divider
-              secondaryAction={
-                <>
-                  {/* Consider more granular permissions for edit/delete based on loggedInUserId vs need.requestor_user_id or community role */}
+              sx={{ flexDirection: 'column', alignItems: 'flex-start' }}
+            >
+              <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                <ListItemText
+                  primary={need.name}
+                  secondary={
+                    <>
+                      <Typography component="span" variant="body2" color="text.primary">
+                        Urgency: {need.urgency || 'N/A'} - Quantity: {need.quantity_needed || 'N/A'}
+                      </Typography>
+                      <br />
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        Status: {need.status || 'N/A'}
+                      </Typography>
+                    </>
+                  }
+                />
+                <Box>
                   <IconButton edge="end" aria-label="edit" onClick={() => handleOpenNeedModal(need)} sx={{ mr: 0.5 }} disabled={loadingNeeds}>
                     <EditIcon />
                   </IconButton>
                   <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteNeed(need.id)} disabled={loadingNeeds}>
                     <DeleteIcon />
                   </IconButton>
-                </>
-              }
-            >
-              <ListItemText
-                primary={need.name}
-                secondary={
-                  <>
-                    <Typography component="span" variant="body2" color="text.primary">
-                      Urgency: {need.urgency || 'N/A'} - Quantity: {need.quantity_needed || 'N/A'}
-                    </Typography>
-                    <br />
-                    <Typography component="span" variant="body2" color="text.secondary">
-                      Status: {need.status || 'N/A'}
-                    </Typography>
-                  </>
-                }
-              />
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button size="small" variant="outlined" onClick={() => handleOfferHelp(need.id)}>
+                  Offer Help
+                </Button>
+                <Button size="small" variant="outlined" onClick={() => handleAssignResource(need.id)}>
+                  Assign Resource
+                </Button>
+                <Button size="small" variant="contained" color="primary" onClick={() => handleStartCoordination(need)}>
+                  Start Coordination
+                </Button>
+              </Box>
             </ListItem>
           ))}
         </List>

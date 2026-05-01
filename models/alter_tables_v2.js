@@ -63,6 +63,22 @@ const alterExistingTables = async () => {
     $$;
   `;
 
+  const alterNeedsQuery = `
+    ALTER TABLE needs
+    ADD COLUMN IF NOT EXISTS urgency_level TEXT CHECK (urgency_level IN ('low','medium','high','critical')),
+    ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS recurrence_pattern JSONB,
+    ADD COLUMN IF NOT EXISTS location JSONB,
+    ADD COLUMN IF NOT EXISTS mobility_required BOOLEAN DEFAULT FALSE;
+  `;
+
+  const alterResourcesQuery = `
+    ALTER TABLE resources
+    ADD COLUMN IF NOT EXISTS resource_type TEXT,
+    ADD COLUMN IF NOT EXISTS availability_schedule JSONB,
+    ADD COLUMN IF NOT EXISTS conditions TEXT;
+  `;
+
   try {
     await pool.query(alterTasksQuery);
     await pool.query(alterSkillsQuery);
@@ -70,7 +86,9 @@ const alterExistingTables = async () => {
     await pool.query(alterUsersQuery);
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
-    console.log('PostgreSQL: Existing tables (tasks, projects, users) altered with new fields.');
+    await pool.query(alterNeedsQuery);
+    await pool.query(alterResourcesQuery);
+    console.log('PostgreSQL: Existing tables (tasks, projects, users, needs, resources) altered with new fields.');
   } catch (err) {
     console.error('PostgreSQL: Error altering existing tables:', err);
   }

@@ -1,13 +1,13 @@
 import pool from '../db.js';
 
 class ResourceService {
-  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '') {
+  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '', resourceType = null, availabilitySchedule = null, conditions = null) {
     const query = `
-      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text, resource_type, availability_schedule, conditions)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *;
     `;
-    const result = await pool.query(query, [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText]);
+    const result = await pool.query(query, [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions]);
     return result.rows[0];
   }
 
@@ -110,8 +110,37 @@ class ResourceService {
       query += ` AND (name ILIKE $${params.length} OR description ILIKE $${params.length})`;
     }
 
+    if (filters.resource_type) {
+      params.push(filters.resource_type);
+      query += ` AND resource_type = $${params.length}`;
+    }
+
     const result = await pool.query(query, params);
-    return result.rows;
+    let resources = result.rows;
+
+    // Filter by availability if requested
+    if (filters.required_at) {
+        const requiredTime = new Date(filters.required_at);
+        resources = resources.filter(res => this.isAvailableAt(res, requiredTime));
+    }
+
+    return resources;
+  }
+
+  isAvailableAt(resource, dateTime) {
+    if (!resource.availability_schedule) return true; // Assume always available if no schedule
+
+    const dayOfWeek = dateTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+    const timeString = dateTime.toTimeString().slice(0, 5); // "HH:MM"
+
+    const schedule = resource.availability_schedule;
+    if (schedule[dayOfWeek]) {
+        return schedule[dayOfWeek].some(slot => {
+            return timeString >= slot.start && timeString <= slot.end;
+        });
+    }
+
+    return false;
   }
 
   async getBookingSchedule(userId) {
@@ -178,7 +207,7 @@ class ResourceService {
   }
 
   async updateResource(id, data) {
-    const { name, description, category, condition, quantity, unit, status, skillIds, locationText } = data;
+    const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions } = data;
     const query = `
       UPDATE resources
       SET name = COALESCE($1, name),
@@ -190,11 +219,14 @@ class ResourceService {
           status = COALESCE($7, status),
           skill_ids = COALESCE($8, skill_ids),
           location_text = COALESCE($9, location_text),
+          resource_type = COALESCE($10, resource_type),
+          availability_schedule = COALESCE($11, availability_schedule),
+          conditions = COALESCE($12, conditions),
           updated_at = NOW()
-      WHERE id = $10
+      WHERE id = $13
       RETURNING *;
     `;
-    const result = await pool.query(query, [name, description, category, condition, quantity, unit, status, skillIds, locationText, id]);
+    const result = await pool.query(query, [name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, id]);
     if (result.rows.length === 0) throw new Error('Resource not found');
     return result.rows[0];
   }
