@@ -7,15 +7,12 @@ const createUserChroniclesTable = async () => {
     CREATE OR REPLACE VIEW user_chronicles AS
     SELECT
         sn.user_id,
-        sn.id                        AS id,
         sn.id                        AS story_node_id,
         sn.reflection,
         sn.tags,
         sn.created_at,
         p.id                         AS project_id,
-        NULL::INTEGER                AS community_id,
         t.name                       AS title,
-        'text'::VARCHAR(50)          AS content_type,
         'published'::VARCHAR(50)     AS status,
         0                            AS upvotes,
         sn.created_at                AS updated_at,
