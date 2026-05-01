@@ -33,6 +33,23 @@ class DiscordBotService {
     }
   }
 
+  async resolveInvite(inviteLink) {
+    if (!this.isReady) return null;
+    try {
+      const code = inviteLink.split('/').pop();
+      const invite = await this.client.fetchInvite(code);
+      if (invite) {
+        return {
+          guildId: invite.guild?.id,
+          channelId: invite.channel?.id,
+        };
+      }
+    } catch (err) {
+      console.error('Error resolving Discord invite:', err);
+    }
+    return null;
+  }
+
   async registerSlashCommands() {
     if (!this.token || !this.clientId) {
         console.warn('DISCORD_TOKEN or DISCORD_CLIENT_ID missing. Cannot register slash commands.');
@@ -92,7 +109,7 @@ class DiscordBotService {
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
             await user.send(`You reacted to "${need.name}". You can offer help or see more details here: ${frontendUrl}/needs/${need.id}`);
           } catch (err) {
-            print(`Could not send DM to user: ${err}`);
+            console.error(`Could not send DM to user: ${err}`);
           }
         }
       }
