@@ -219,6 +219,16 @@ router.put('/:taskId/accept', async (req, res) => {
 
   try {
     const task = await taskController.acceptTask(taskId, userId);
+
+    // Emit audio event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${userId}`).emit('audio:event', {
+        type: 'task.accepted',
+        payload: { impact_weight: task.reward_tokens / 100 }
+      });
+    }
+
     res.json({ 
       message: 'Task accepted successfully',
       task,
@@ -292,6 +302,16 @@ router.put('/:taskId/drop', async (req, res) => {
 
   try {
     const task = await taskController.dropTask(taskId, userId);
+
+    // Emit audio event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${userId}`).emit('audio:event', {
+        type: 'task.dropped',
+        payload: { impact_weight: task.reward_tokens / 100 }
+      });
+    }
+
     res.json({ 
       message: 'Task dropped successfully',
       task,
