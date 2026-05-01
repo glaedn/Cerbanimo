@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../db.js'; // Assuming db.js is in the backend directory
+import DiscordBotService from '../services/DiscordBotService.js';
 
 const router = express.Router();
 
@@ -53,7 +54,14 @@ router.post('/', async (req, res) => {
         location_text, latitude, longitude, status
       ]
     );
-    res.status(201).json(result.rows[0]);
+    const newNeed = result.rows[0];
+
+    // Broadcast to Discord if it's a community need
+    if (newNeed.requestor_community_id) {
+      DiscordBotService.broadcastNeed(newNeed).catch(err => console.error('Discord broadcast failed:', err));
+    }
+
+    res.status(201).json(newNeed);
   } catch (err) {
     console.error('Error creating need:', err);
     res.status(500).json({ error: 'Failed to create need' });
@@ -189,7 +197,14 @@ router.put('/:needId', async (req, res) => {
     if (result.rows.length === 0) { // Should not happen if previous check passed
       return res.status(404).json({ error: 'Need not found after update attempt' });
     }
-    res.json(result.rows[0]);
+    const updatedNeed = result.rows[0];
+
+    // Sync update to Discord
+    if (updatedNeed.discord_thread_id) {
+      DiscordBotService.syncNeedUpdate(updatedNeed).catch(err => console.error('Discord sync failed:', err));
+    }
+
+    res.json(updatedNeed);
   } catch (err) {
     console.error('Error updating need:', err);
     res.status(500).json({ error: 'Failed to update need' });

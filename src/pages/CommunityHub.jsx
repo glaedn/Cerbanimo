@@ -15,7 +15,8 @@ import {
   Tooltip,
   Box,
   Paper,
-  Link
+  Link,
+  TextField
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -36,6 +37,8 @@ import CommunityResourceManagement from '../components/CommunityResourceManageme
 import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
 import { useIsMobile } from '../hooks/useIsMobile';
 import { toast } from 'react-hot-toast';
 
@@ -63,6 +66,8 @@ const CommunityHub = () => {
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
     const [memberScores, setMemberScores] = useState([]);
+    const [discordConfig, setDiscordConfig] = useState({ guild_id: '', need_channel_id: '', alert_channel_id: '' });
+    const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false);
 
     const showNotification = (message, severity = 'success') => {
         if (severity === 'success') {
@@ -247,6 +252,16 @@ const CommunityHub = () => {
                     headers: headers
                 });
                 setCommunityServices(servicesResponse.data || []);
+
+                // Fetch Discord config
+                try {
+                    const discordRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/discord-config/${communityId}`, {
+                        headers: headers
+                    });
+                    setDiscordConfig(discordRes.data);
+                } catch (dErr) {
+                    console.warn("Discord config not found or error:", dErr);
+                }
                 
             } catch (error) {
                 console.error('Failed to fetch community data:', error);
@@ -505,6 +520,23 @@ const CommunityHub = () => {
         }
     };
 
+    const handleSaveDiscordConfig = async () => {
+        try {
+            const token = await getAccessTokenSilently();
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/discord-config`, {
+                community_id: communityId,
+                ...discordConfig
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            showNotification('Discord configuration saved successfully!');
+            setIsDiscordConfigOpen(false);
+        } catch (error) {
+            console.error('Failed to save Discord config:', error);
+            toast.error('Failed to save Discord configuration.');
+        }
+    };
+
     const handlePurchaseService = async (service, e) => {
         if (e) e.stopPropagation();
         if (!userId) {
@@ -579,9 +611,19 @@ const CommunityHub = () => {
 
     return (
         <Box className={`community-hub community-hub-container ${isMobile ? 'mobile-hub' : ''}`} sx={{ pb: isMobile ? 12 : 5 }}>
-            <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit' }}>
-                {community.name}
-            </Typography>
+            <Box display="flex" justifyContent="center" alignItems="center" gap={2}>
+                <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit' }}>
+                    {community.name}
+                </Typography>
+                {isMember && (
+                    <IconButton
+                        onClick={() => setIsDiscordConfigOpen(true)}
+                        sx={{ color: '#00F3FF', border: '1px solid #00F3FF' }}
+                    >
+                        <SettingsIcon />
+                    </IconButton>
+                )}
+            </Box>
             
             {/* Community Info Section */}
             <Box className="community-info" sx={{ p: isMobile ? 2 : 4, width: '100%' }}>
@@ -1100,6 +1142,82 @@ const CommunityHub = () => {
 
             <CommunityResourceManagement communityId={communityId} />
             <CommunityChronicle communityId={communityId} />
+
+            {/* Discord Configuration Modal */}
+            <Modal
+                open={isDiscordConfigOpen}
+                onClose={() => setIsDiscordConfigOpen(false)}
+            >
+                <Paper sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: { xs: '90%', sm: '400px' },
+                    p: 4,
+                    bgcolor: 'rgba(28, 28, 30, 0.95)',
+                    border: '1px solid #00F3FF',
+                    color: 'white'
+                }}>
+                    <Typography variant="h5" sx={{ mb: 3, fontFamily: 'Orbitron', color: '#00F3FF' }}>
+                        Connect Discord
+                    </Typography>
+                    <Box display="flex" flexDirection="column" gap={3}>
+                        <TextField
+                            label="GUILD ID"
+                            variant="outlined"
+                            fullWidth
+                            value={discordConfig.guild_id}
+                            onChange={(e) => setDiscordConfig({...discordConfig, guild_id: e.target.value})}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    color: 'white',
+                                    '& fieldset': { borderColor: '#00F3FF' },
+                                    '&:hover fieldset': { borderColor: '#00F3FF' },
+                                },
+                                '& .MuiInputLabel-root': { color: '#00F3FF' }
+                            }}
+                        />
+                        <TextField
+                            label="NEEDS CHANNEL ID"
+                            variant="outlined"
+                            fullWidth
+                            value={discordConfig.need_channel_id}
+                            onChange={(e) => setDiscordConfig({...discordConfig, need_channel_id: e.target.value})}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    color: 'white',
+                                    '& fieldset': { borderColor: '#00F3FF' },
+                                    '&:hover fieldset': { borderColor: '#00F3FF' },
+                                },
+                                '& .MuiInputLabel-root': { color: '#00F3FF' }
+                            }}
+                        />
+                        <TextField
+                            label="ALERTS CHANNEL ID"
+                            variant="outlined"
+                            fullWidth
+                            value={discordConfig.alert_channel_id}
+                            onChange={(e) => setDiscordConfig({...discordConfig, alert_channel_id: e.target.value})}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    color: 'white',
+                                    '& fieldset': { borderColor: '#00F3FF' },
+                                    '&:hover fieldset': { borderColor: '#00F3FF' },
+                                },
+                                '& .MuiInputLabel-root': { color: '#00F3FF' }
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            onClick={handleSaveDiscordConfig}
+                            sx={{ mt: 2, bgcolor: '#00F3FF', color: 'black', fontWeight: 'bold' }}
+                        >
+                            SAVE CONFIGURATION
+                        </Button>
+                    </Box>
+                </Paper>
+            </Modal>
             <Snackbar 
   open={snackbarOpen} 
   autoHideDuration={6000} 

@@ -7,12 +7,15 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ChatIcon from '@mui/icons-material/Chat';
 import NeedDeclarationForm from '../NeedDeclarationForm/NeedDeclarationForm'; // Adjust path if needed
+import NeedComments from '../NeedComments/NeedComments';
 
 const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenSilently }) => {
   const [isNeedModalOpen, setIsNeedModalOpen] = useState(false);
   const [communityNeeds, setCommunityNeeds] = useState([]);
   const [editingNeed, setEditingNeed] = useState(null);
+  const [commentingNeed, setCommentingNeed] = useState(null);
   const [loadingNeeds, setLoadingNeeds] = useState(true);
   const [errorNeeds, setErrorNeeds] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
@@ -63,6 +66,14 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
   const handleCloseNeedModal = () => {
     setIsNeedModalOpen(false);
     setEditingNeed(null);
+  };
+
+  const handleOpenCommentModal = (need) => {
+    setCommentingNeed(need);
+  };
+
+  const handleCloseCommentModal = () => {
+    setCommentingNeed(null);
   };
 
   const handleNeedSubmit = async (needData) => {
@@ -163,6 +174,9 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
               secondaryAction={
                 <>
                   {/* Consider more granular permissions for edit/delete based on loggedInUserId vs need.requestor_user_id or community role */}
+                  <IconButton edge="end" aria-label="comments" onClick={() => handleOpenCommentModal(need)} sx={{ mr: 0.5 }} disabled={loadingNeeds}>
+                    <ChatIcon />
+                  </IconButton>
                   <IconButton edge="end" aria-label="edit" onClick={() => handleOpenNeedModal(need)} sx={{ mr: 0.5 }} disabled={loadingNeeds}>
                     <EditIcon />
                   </IconButton>
@@ -190,6 +204,33 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
           ))}
         </List>
       )}
+
+      <Modal
+        open={!!commentingNeed}
+        onClose={handleCloseCommentModal}
+      >
+        <Paper sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '75%', md: '600px' },
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          bgcolor: 'rgba(10, 10, 46, 0.95)',
+          border: '1px solid #00F3FF',
+          p: 4,
+          borderRadius: 2,
+        }}>
+          <Typography variant="h5" sx={{ color: '#00F3FF', mb: 1, fontFamily: 'Orbitron' }}>
+            {commentingNeed?.name}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'gray', mb: 3 }}>
+            {commentingNeed?.description}
+          </Typography>
+          <NeedComments needId={commentingNeed?.id} />
+        </Paper>
+      </Modal>
 
       <Modal
         open={isNeedModalOpen}
