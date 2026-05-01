@@ -358,7 +358,7 @@ const MobileTaskDetail = () => {
                   </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                
                     <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2" className="section-label">START_DATE</Typography>
                         <DatePicker
@@ -375,7 +375,7 @@ const MobileTaskDetail = () => {
                             slotProps={{ textField: { fullWidth: true, className: 'cyber-input' } }}
                         />
                     </Box>
-                </Box>
+                
 
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" className="section-label">DEPENDENCIES</Typography>
