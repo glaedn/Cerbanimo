@@ -11,6 +11,11 @@ router.post('/', async (req, res) => {
     category,
     quantity_needed,
     urgency,
+    urgency_level,
+    is_recurring,
+    recurrence_pattern,
+    location,
+    mobility_required,
     requestor_user_id, // Can be provided, or taken from req.user.id
     requestor_community_id,
     required_before_date,
@@ -43,12 +48,14 @@ router.post('/', async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO needs (name, description, category, quantity_needed, urgency, 
+                          urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
                           requestor_user_id, requestor_community_id, required_before_date, 
                           location_text, latitude, longitude, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING *`,
       [
         name, description, category, quantity_needed, urgency,
+        urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
         requestor_user_id, requestor_community_id, required_before_date,
         location_text, latitude, longitude, status
       ]
@@ -143,6 +150,11 @@ router.put('/:needId', async (req, res) => {
     category,
     quantity_needed,
     urgency,
+    urgency_level,
+    is_recurring,
+    recurrence_pattern,
+    location,
+    mobility_required,
     // requestor_user_id and requestor_community_id are generally not changed post-creation
     required_before_date,
     location_text,
@@ -174,13 +186,15 @@ router.put('/:needId', async (req, res) => {
     const updateQuery = `
       UPDATE needs 
       SET name = $1, description = $2, category = $3, quantity_needed = $4, urgency = $5,
-          required_before_date = $6, location_text = $7, latitude = $8, longitude = $9, status = $10
+          urgency_level = $6, is_recurring = $7, recurrence_pattern = $8, location = $9, mobility_required = $10,
+          required_before_date = $11, location_text = $12, latitude = $13, longitude = $14, status = $15
           -- updated_at is handled by the trigger
-      WHERE id = $11
+      WHERE id = $16
       RETURNING *
     `;
     const values = [
       name, description, category, quantity_needed, urgency,
+      urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
       required_before_date, location_text, latitude, longitude, status,
       needId
     ];

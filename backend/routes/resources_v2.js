@@ -22,9 +22,9 @@ router.get('/community/:communityId', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-  const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText } = req.body;
+  const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText, resourceType, availabilitySchedule, conditions } = req.body;
   try {
-    const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText);
+    const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText, resourceType, availabilitySchedule, conditions);
     res.status(201).json(resource);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -42,9 +42,9 @@ router.post('/allocate', async (req, res) => {
 });
 
 router.get('/catalog', async (req, res) => {
-  const { category, search } = req.query;
+  const { category, search, resource_type, required_at } = req.query;
   try {
-    const resources = await ResourceService.getAllResources({ category, search });
+    const resources = await ResourceService.getAllResources({ category, search, resource_type, required_at });
     res.json(resources);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -80,9 +80,9 @@ router.post('/conflicts/:conflictId/resolve', async (req, res) => {
 });
 
 router.put('/inventory/:id', async (req, res) => {
-  const { name, description, category, condition, quantity, unit, status, skillIds, locationText } = req.body;
+  const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions } = req.body;
   try {
-    const result = await ResourceService.updateResource(req.params.id, { name, description, category, condition, quantity, unit, status, skillIds, locationText });
+    const result = await ResourceService.updateResource(req.params.id, { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

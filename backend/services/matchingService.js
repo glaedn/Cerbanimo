@@ -7,19 +7,34 @@ const URGENCY_SCORES = {
   critical: 4,
 };
 
-// Placeholder for future Haversine distance calculation
-// const calculateDistance = (lat1, lon1, lat2, lon2) => {
-//   // Haversine formula implementation:
-//   // const R = 6371; // Radius of the earth in km
-//   // const dLat = (lat2 - lat1) * Math.PI / 180;
-//   // const dLon = (lon2 - lon1) * Math.PI / 180;
-//   // const a =
-//   //   0.5 - Math.cos(dLat) / 2 +
-//   //   Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-//   //   (1 - Math.cos(dLon)) / 2;
-//   // return R * 2 * Math.asin(Math.sqrt(a)); // Distance in km
-//   return 0; // Placeholder
-// };
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    0.5 - Math.cos(dLat) / 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    (1 - Math.cos(dLon)) / 2;
+  return R * 2 * Math.asin(Math.sqrt(a)); // Distance in km
+};
+
+const isResourceAvailableAt = (resource, dateTime) => {
+  if (!resource.availability_schedule) return true;
+  if (!dateTime) return true;
+
+  const date = new Date(dateTime);
+  const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+  const timeString = date.toTimeString().slice(0, 5); // "HH:MM"
+
+  const schedule = resource.availability_schedule;
+  if (schedule[dayOfWeek]) {
+    return schedule[dayOfWeek].some(slot => {
+      return timeString >= slot.start && timeString <= slot.end;
+    });
+  }
+  return false;
+};
 
 const findMatchesForNeed = async (needId, dbPool) => {
   try {
@@ -67,39 +82,42 @@ const findMatchesForNeed = async (needId, dbPool) => {
     // }
 
     const resourcesResult = await dbPool.query(resourceQueryText, queryParams);
-    
-    // If more complex JS-based filtering (e.g., Haversine) were needed after a broader SQL query:
-    // const matchedResources = resourcesResult.rows.filter(resource => {
-    //   if (need.latitude != null && need.longitude != null && resource.latitude != null && resource.longitude != null) {
-    //     // const distance = calculateDistance(need.latitude, need.longitude, resource.latitude, resource.longitude);
-    //     // return distance < searchRadiusKm; 
-    //     return true; // Placeholder if SQL did not filter by distance
-    //   }
-    //   // If location data is missing on either, decide if it's a match by default or not.
-    //   // For now, if SQL didn't filter, and we don't filter here, it's a match based on category/status.
-    //   return true; 
-    // });
-    // return matchedResources;
+    let resources = resourcesResult.rows;
 
-    // Sort resources: prioritize those expiring sooner.
-    // Resources with null availability_window_end are considered "available indefinitely" and come after those with specific end dates.
-    resourcesResult.rows.sort((a, b) => {
-      const dateA = a.availability_window_end ? new Date(a.availability_window_end).getTime() : Infinity;
-      const dateB = b.availability_window_end ? new Date(b.availability_window_end).getTime() : Infinity;
+    // Scoring and Ranking
+    const scoredResources = resources.map(resource => {
+      let score = 0;
 
-      if (dateA === Infinity && dateB === Infinity) {
-        return 0; // Keep original order if both are null
+      // Proximity Score (if available)
+      const needLat = need.location?.latitude || need.latitude;
+      const needLon = need.location?.longitude || need.longitude;
+      const resLat = resource.latitude;
+      const resLon = resource.longitude;
+
+      if (needLat && needLon && resLat && resLon) {
+        const distance = calculateDistance(needLat, needLon, resLat, resLon);
+        if (distance < 5) score += 50;
+        else if (distance < 20) score += 20;
+        else if (distance < 50) score += 5;
       }
-      if (dateA === Infinity) {
-        return 1; // a (null) comes after b (not null)
+
+      // Availability Score
+      if (need.required_before_date && isResourceAvailableAt(resource, need.required_before_date)) {
+        score += 30;
       }
-      if (dateB === Infinity) {
-        return -1; // b (null) comes after a (not null)
+
+      // Resource Type Match (Example: if need requires specific type)
+      // This can be expanded based on more complex requirement definitions
+      if (need.category === resource.category) {
+        score += 10;
       }
-      return dateA - dateB; // Ascending sort by date (earlier is higher priority)
+
+      return { ...resource, match_score: score };
     });
 
-    return resourcesResult.rows;
+    scoredResources.sort((a, b) => b.match_score - a.match_score);
+
+    return scoredResources;
 
   } catch (error) {
     console.error(`Error in findMatchesForNeed for needId ${needId}:`, error);
@@ -136,29 +154,36 @@ const findMatchesForResource = async (resourceId, dbPool) => {
     // }
     
     const needsResult = await dbPool.query(needQueryText, queryParams);
-    
-    // Similar JS filtering placeholder as above if needed
-    // return needsResult.rows.filter(need => { ... });
+    const needs = needsResult.rows;
 
-    // Sort needs:
-    // 1. By urgency (descending: critical > high > medium > low)
-    // 2. By required_before_date (ascending: earlier date is higher priority)
-    needsResult.rows.sort((a, b) => {
-      const urgencyA = URGENCY_SCORES[a.urgency?.toLowerCase()] || 0;
-      const urgencyB = URGENCY_SCORES[b.urgency?.toLowerCase()] || 0;
-      if (urgencyB !== urgencyA) {
-        return urgencyB - urgencyA; // Higher urgency score first
+    // Scoring and Ranking for Resource -> Needs
+    const scoredNeeds = needs.map(need => {
+      let score = 0;
+
+      // Urgency Score
+      const urgencyScore = URGENCY_SCORES[need.urgency?.toLowerCase()] || URGENCY_SCORES[need.urgency_level?.toLowerCase()] || 0;
+      score += urgencyScore * 10;
+
+      // Proximity
+      const needLat = need.location?.latitude || need.latitude;
+      const needLon = need.location?.longitude || need.longitude;
+      if (needLat && needLon && resource.latitude && resource.longitude) {
+        const distance = calculateDistance(needLat, needLon, resource.latitude, resource.longitude);
+        if (distance < 5) score += 50;
+        else if (distance < 20) score += 20;
       }
 
-      // If urgency is the same, sort by required_before_date
-      // Needs with null required_before_date are considered less urgent (come after those with specific dates)
-      const dateA = a.required_before_date ? new Date(a.required_before_date).getTime() : Infinity;
-      const dateB = b.required_before_date ? new Date(b.required_before_date).getTime() : Infinity;
-      
-      return dateA - dateB; // Ascending sort by date (earlier is higher priority)
+      // Availability
+      if (need.required_before_date && isResourceAvailableAt(resource, need.required_before_date)) {
+        score += 30;
+      }
+
+      return { ...need, match_score: score };
     });
 
-    return needsResult.rows;
+    scoredNeeds.sort((a, b) => b.match_score - a.match_score);
+
+    return scoredNeeds;
 
   } catch (error) {
     console.error(`Error in findMatchesForResource for resourceId ${resourceId}:`, error);
