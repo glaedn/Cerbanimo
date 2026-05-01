@@ -1034,6 +1034,12 @@ const approveTask = async (taskId, io, client) => {
           read: false,
           timestamp: new Date().toISOString(),
         });
+
+        // Emit audio event
+        io.to(room).emit("audio:event", {
+          type: "task.approved",
+          payload: { impact_weight: reward_tokens / 100 }
+        });
       }
     }
 
@@ -1278,6 +1284,15 @@ const submitTask = async (req, res, io) => {
     }
 
     await client.query("COMMIT");
+
+    // Emit audio event for submitter
+    if (io && task.submitted_by) {
+      io.to(`user_${task.submitted_by}`).emit("audio:event", {
+        type: "task.submitted",
+        payload: { impact_weight: task.reward_tokens / 100 }
+      });
+    }
+
     // Return the same shape as router expects
     return {
       message: "Task submitted for approval",
@@ -1960,8 +1975,9 @@ const processReview = async (taskId, userId, action, io) => {
 
           // Socket notifications
           if (io) {
-            assignedUserIds.forEach((uId) => {
-              io.to(`user_${uId}`).emit("notification", {
+            assignedUserIds.forEach((uId) => { // Renamed userId to uId to avoid conflict with outer scope userId
+              const room = `user_${uId}`;
+              io.to(room).emit("notification", {
                 id: Date.now(),
                 type: "task",
                 message: "Your task was rejected and needs revisions",
@@ -1969,6 +1985,12 @@ const processReview = async (taskId, userId, action, io) => {
                 taskId: taskId,
                 read: false,
                 timestamp: new Date().toISOString(),
+              });
+
+              // Emit audio event
+              io.to(room).emit("audio:event", {
+                type: "task.rejected",
+                payload: { impact_weight: reward_tokens / 100 }
               });
             });
           }
