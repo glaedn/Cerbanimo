@@ -612,14 +612,19 @@ const CommunityHub = () => {
 
     return (
         <Box className={`community-hub community-hub-container ${isMobile ? 'mobile-hub' : ''}`} sx={{ pb: isMobile ? 12 : 5 }}>
-            <Box display="flex" justifyContent="center" alignItems="center" gap={2}>
+            <Box display="flex" justifyContent="center" alignItems="center" gap={2} sx={{ position: 'relative' }}>
                 <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit' }}>
                     {community.name}
                 </Typography>
                 {isMember && (
                     <IconButton
                         onClick={() => setIsDiscordConfigOpen(true)}
-                        sx={{ color: '#00F3FF', border: '1px solid #00F3FF' }}
+                        sx={{
+                            color: '#00F3FF',
+                            border: '1px solid #00F3FF',
+                            position: isMobile ? 'absolute' : 'static',
+                            right: isMobile ? 10 : 'auto'
+                        }}
                     >
                         <SettingsIcon />
                     </IconButton>
@@ -1160,16 +1165,29 @@ const CommunityHub = () => {
                     border: '1px solid #00F3FF',
                     color: 'white'
                 }}>
-                    <Typography variant="h5" sx={{ mb: 3, fontFamily: 'Orbitron', color: '#00F3FF' }}>
+                    <Typography variant="h5" sx={{ mb: 1, fontFamily: 'Orbitron', color: '#00F3FF' }}>
                         Connect Discord
                     </Typography>
+                    <Typography variant="body2" sx={{ color: '#CCC', mb: 3 }}>
+                        Paste Discord Invite Links or raw IDs.
+                    </Typography>
                     <Box display="flex" flexDirection="column" gap={3}>
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            href={`https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
+                            target="_blank"
+                            sx={{ color: '#5865F2', borderColor: '#5865F2', mb: 1 }}
+                        >
+                            INVITE BOT TO SERVER
+                        </Button>
                         <TextField
-                            label="GUILD ID"
+                            label="GUILD ID / INVITE LINK"
                             variant="outlined"
                             fullWidth
                             value={discordConfig.guild_id}
                             onChange={(e) => setDiscordConfig({...discordConfig, guild_id: e.target.value})}
+                            helperText="Paste server invite or ID"
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     color: 'white',
@@ -1180,11 +1198,12 @@ const CommunityHub = () => {
                             }}
                         />
                         <TextField
-                            label="NEEDS CHANNEL ID"
+                            label="NEEDS CHANNEL ID / INVITE LINK"
                             variant="outlined"
                             fullWidth
                             value={discordConfig.need_channel_id}
                             onChange={(e) => setDiscordConfig({...discordConfig, need_channel_id: e.target.value})}
+                            helperText="Channel invite or ID"
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     color: 'white',
