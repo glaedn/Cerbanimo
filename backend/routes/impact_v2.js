@@ -13,6 +13,16 @@ router.post('/outcomes', async (req, res) => {
   }
 });
 
+router.get('/outcomes/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  try {
+    const outcomes = await ImpactGraphService.getOutcomes(projectId);
+    res.json(outcomes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/trace/:taskId', async (req, res) => {
   try {
     const trace = await ImpactGraphService.getImpactTrace(req.params.taskId);

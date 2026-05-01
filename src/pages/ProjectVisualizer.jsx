@@ -444,14 +444,13 @@ const ProjectVisualizer = () => {
     const fetchOutcomes = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const res = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/impact/outcomes`,
-          { projectId },
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/impact/outcomes/${projectId}`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }
         );
-        setOutcomes(res.data ? [res.data] : []);
+        setOutcomes(res.data || []);
       } catch (err) {
         console.error("Failed to fetch outcomes:", err);
       }

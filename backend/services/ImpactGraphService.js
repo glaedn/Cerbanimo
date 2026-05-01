@@ -26,6 +26,12 @@ class ImpactGraphService {
     return outcome;
   }
 
+  async getOutcomes(projectId) {
+    const query = 'SELECT * FROM outcomes WHERE project_id = $1 ORDER BY id ASC';
+    const result = await pool.query(query, [projectId]);
+    return result.rows;
+  }
+
   async createImpactNode(type, entityId, label, description = '', impactWeight = null) {
     const existing = await pool.query(
       'SELECT * FROM impact_nodes WHERE type = $1 AND entity_id = $2 ORDER BY id ASC LIMIT 1',
