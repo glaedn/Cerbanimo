@@ -28,6 +28,8 @@ import exchangeRoutes from './routes/exchange.js';
 import servicesRoutes from './routes/services.js';
 import onboardingRoutes from './routes/onboarding.js';
 import adminRoutes from './routes/admin.js';
+import discordConfigRoutes from './routes/discord_config.js';
+import needCommentRoutes from './routes/need_comments.js';
 import { validatePendingInterests } from './services/interestValidationService.js';
 
 import impactRoutesV2 from './routes/impact_v2.js';
@@ -56,6 +58,9 @@ import { createUserChroniclesTable } from '../models/user_chronicles.js';
 import { createStorySummariesTable } from '../models/story_summaries.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createResourceLayerTables } from '../models/resource_layer_v2.js';
+import { createDiscordConfigTable } from '../models/discord_config.js';
+import { createNeedCommentsTable } from '../models/need_comments.js';
+import { createNeedsTable } from '../models/needs.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
 
@@ -198,6 +203,8 @@ app.use('/services', (req, res, next) => {
 
 app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
 app.use('/admin', jwtCheck, resolveUser, adminRoutes);
+app.use('/discord-config', jwtCheck, resolveUser, discordConfigRoutes);
+app.use('/need-comments', jwtCheck, resolveUser, needCommentRoutes);
 
 app.use('/impact_v2', jwtCheck, resolveUser, impactRoutesV2);
 app.use('/verification_v2', jwtCheck, resolveUser, verificationRoutesV2);
@@ -366,6 +373,9 @@ async function initializeDatabase() {
     await createStoryNodesTable();
     await createUserChroniclesTable();
     await createStorySummariesTable();
+    await createNeedsTable(); // Ensure needs table exists before dependent tables
+    await createDiscordConfigTable();
+    await createNeedCommentsTable();
     await alterExistingTables();
 
     console.log('Database tables roadmap update checked/initialized successfully.');
