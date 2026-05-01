@@ -16,7 +16,8 @@ import {
   Box,
   Paper,
   Link,
-  TextField
+  TextField,
+  Modal
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
