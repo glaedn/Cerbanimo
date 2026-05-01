@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import LevelNotification from '../components/LevelNotification/LevelNotification.jsx';
+import { audioEngine } from '../audio/AudioEngine';
 
 const NotificationContext = createContext();
 
@@ -73,8 +74,16 @@ useEffect(() => {
 
   socket.on('notification', handleNotification);
 
+    const handleAudioEvent = ({ type, payload }) => {
+      console.log("Received audio event via socket:", type, payload);
+      audioEngine.trigger(type, payload);
+    };
+
+    socket.on('audio:event', handleAudioEvent);
+
   return () => {
     socket.off('notification', handleNotification);
+      socket.off('audio:event', handleAudioEvent);
   };
 }, [socket]); // Only socket as dependency
 
@@ -169,6 +178,15 @@ useEffect(() => {
   // Setup socket connection
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
+
+    // Start audio engine on user interaction
+    const handleFirstInteraction = () => {
+      audioEngine.start();
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('keydown', handleFirstInteraction);
 
     const setupSocket = async () => {
       try {
