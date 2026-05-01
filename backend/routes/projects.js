@@ -67,8 +67,8 @@ router.get('/userprojects', async (req, res) => {
         p.*,
         c.name AS community_name,
         COUNT(t.id) as task_count,
-        COUNT(t.id) FILTER (WHERE t.status ILIKE 'completed' OR t.status ILIKE 'archived') as completed_task_count,
-        COUNT(t.id) FILTER (WHERE t.status ILIKE 'inactive-assigned' OR t.status ILIKE 'inactive-unassigned') as inactive_task_count
+        COUNT(t.id) FILTER (WHERE t.status::text ILIKE 'completed') as completed_task_count,
+        COUNT(t.id) FILTER (WHERE t.status::text ILIKE 'inactive-assigned' OR t.status::text ILIKE 'inactive-unassigned') as inactive_task_count
       FROM projects p
       LEFT JOIN tasks t ON p.id = t.project_id
       LEFT JOIN communities c ON p.community_id = c.id
