@@ -342,6 +342,7 @@ if (missingVars.length > 0) {
 } else {
   console.log('Environment variables loaded successfully.');
 }
+console.log("DISCORD_CLIENT_ID:", process.env.DISCORD_CLIENT_ID);
 
 // Initialize Database Tables
 async function initializeDatabase() {

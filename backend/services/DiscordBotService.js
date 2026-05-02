@@ -11,7 +11,7 @@ class DiscordBotService {
         GatewayIntentBits.GuildMessageReactions,
       ],
     });
-
+console.log("RUNTIME:", typeof process);
     this.token = process.env.DISCORD_TOKEN;
     this.clientId = process.env.DISCORD_CLIENT_ID;
     this.isReady = false;
