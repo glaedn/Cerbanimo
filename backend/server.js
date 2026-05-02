@@ -46,6 +46,7 @@ import GuildHealthService from './services/GuildHealthService.js';
 import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
 import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
+import EscalationService from './services/EscalationService.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -282,6 +283,16 @@ cron.schedule('0 2 * * *', async () => {
     await WeeklyWrapUpService.generateWeeklyWrapUps();
   } catch (err) {
     console.error('Weekly wrap-up worker failed:', err);
+  }
+});
+
+// Need Escalation Engine (Daily at 3:00 AM)
+cron.schedule('0 3 * * *', async () => {
+  console.log('Running daily need escalation check...');
+  try {
+    await EscalationService.checkAndEscalateNeeds();
+  } catch (err) {
+    console.error('Need escalation worker failed:', err);
   }
 });
 
