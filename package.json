@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
+    "test:e2e": "playwright test",
     "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@mui/system": "^5.14.9",
     "@mui/x-date-pickers": "^8.3.1",
     "@reduxjs/toolkit": "^2.5.0",
+    "@use-gesture/react": "^10.3.1",
     "axios": "^1.7.9",
     "backblaze-b2": "^1.7.1",
     "cors": "^2.8.5",
@@ -66,6 +68,7 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@google/genai": "^1.22.0",
+    "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.0.8",
@@ -79,6 +82,7 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
     "jsdom": "^27.0.0",
+    "puppeteer": "^24.34.0",
     "supertest": "^7.1.4",
     "vite": "^6.2.0",
     "vitest": "^3.2.4"

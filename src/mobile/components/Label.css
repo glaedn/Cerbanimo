@@ -1,0 +1,19 @@
+.label-container {
+  position: absolute;
+  background-color: #FF8FAB;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 143, 171, 0.8);
+}
+
+.label-container.top {
+  top: 40px;
+}
+
+.label-container.bottom {
+  bottom: 40px;
+}
