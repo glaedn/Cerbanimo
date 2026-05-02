@@ -10,7 +10,7 @@
   border-right: none;
   border-radius: 0; /* Typically status bars are not rounded or only top-rounded if at bottom */
   position: absolute;
-  bottom: 0;
+  bottom: 60px;
   left: 0;
   width: 100%;
   box-sizing: border-box;

@@ -18,12 +18,12 @@ const TaskBrowser = () => {
       const fetchProfileAndTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
       
           // Fetch user profile
-          const profileResponse = await axios.get('http://localhost:4000/profile', {
+          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             params: { sub: user.sub, email: user.email, name: user.name },
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -69,20 +69,21 @@ const TaskBrowser = () => {
           }
       
           // Fetch all relevant tasks based on user skills
-          const tasksResponse = await axios.get('http://localhost:4000/tasks/relevant', {
+          const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
             params: { skills: userSkills },
             headers: { Authorization: `Bearer ${token}` },
           });
       
-          // Sort tasks based on shared project tags and user interests
+          // Sort tasks based on priority score and shared interests
           const sortedTasks = tasksResponse.data.sort((a, b) => {
-            // Count shared tags for Task A and Task B, normalized for comparison
+            // Sort by Priority Score (primary) and shared tags (secondary)
+            if ((b.priority_score || 0) !== (a.priority_score || 0)) {
+                return (b.priority_score || 0) - (a.priority_score || 0);
+            }
+
             const sharedA = a.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
             const sharedB = b.projectTags?.filter(tag => typeof tag === 'string' && usersInterests.includes(tag.toLowerCase().trim())).length || 0;
-      
-            console.log(`Shared Tags for Task A: ${sharedA}, Shared Tags for Task B: ${sharedB}`);
-      
-            return sharedB - sharedA; // Sort in descending order based on shared tags
+            return sharedB - sharedA;
           });
       
           // Add shared tags to each task for display purposes
@@ -111,7 +112,7 @@ const TaskBrowser = () => {
       const fetchAcceptedTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
 
@@ -120,7 +121,7 @@ const TaskBrowser = () => {
 
           // Only fetch accepted tasks if we have a user ID
           if (userIdString) {
-            const acceptedResponse = await axios.get('http://localhost:4000/tasks/accepted', {
+            const acceptedResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/accepted`, {
               params: { userId: userIdString },
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -140,7 +141,7 @@ const TaskBrowser = () => {
       const fetchApprovalTasks = async () => {
         try {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
 
@@ -148,7 +149,7 @@ const TaskBrowser = () => {
           console.log("Fetching review tasks for userId:", userIdString);
 
           if (userIdString) {
-            const approvalResponse = await axios.get(`http://localhost:4000/tasks/reviewer/${userIdString}`, {
+            const approvalResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/reviewer/${userIdString}`, {
               params: { userId: userIdString },
               headers: { Authorization: `Bearer ${token}` },
             });
@@ -195,6 +196,10 @@ const TaskBrowser = () => {
                           {task.sharedTagsCount > 0
                             ? `🔹 Shared Interests: ${task.sharedTags.join(', ')}`
                             : '⚠️ No shared interests'}
+                        </Typography>
+                        <br />
+                        <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
+                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
                         </Typography>
                         <br />
                         {task.project_id && (

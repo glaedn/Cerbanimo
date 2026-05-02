@@ -37,7 +37,7 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
     setErrorNeeds(null);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.get(`http://localhost:4000/needs/community/${communityId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/community/${communityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCommunityNeeds(response.data);
@@ -80,12 +80,12 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
       const payload = { ...needData }; 
       
       if (editingNeed) {
-        response = await axios.put(`http://localhost:4000/needs/${editingNeed.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/needs/${editingNeed.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Community need updated successfully!', 'success');
       } else {
-        response = await axios.post('http://localhost:4000/needs', payload, {
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Community need declared successfully!', 'success');
@@ -116,7 +116,7 @@ const CommunityNeedDeclaration = ({ communityId, loggedInUserId, getAccessTokenS
       setLoadingNeeds(true); // Indicate loading state during deletion
       try {
         const token = await getAccessTokenSilently();
-        await axios.delete(`http://localhost:4000/needs/${needId}`, {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/needs/${needId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showNotification('Community need deleted successfully!', 'success');

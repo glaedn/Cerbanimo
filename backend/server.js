@@ -24,22 +24,36 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import impactRoutes from './routes/impact.js';
+import onboardingRoutes from './routes/onboarding.js';
+
+import impactRoutesV2 from './routes/impact_v2.js';
+import verificationRoutesV2 from './routes/verification_v2.js';
+import guildRoutesV2 from './routes/guilds_v2.js';
+import constellationRoutesV2 from './routes/constellations_v2.js';
+import resourceRoutesV2 from './routes/resources_v2.js';
+import storyEngineRoutesV2 from './routes/story_engine_v2.js';
+
+import TaskRoutingService from './services/TaskRoutingService.js';
+import ProjectHealthService from './services/ProjectHealthService.js';
+import pool from './db.js';
 
 // Import database table creation functions
-//import { createResourcesTable, createUpdatedAtTrigger as createResourcesUpdatedAtTrigger } from './models/resources.js';
-//import { createNeedsTable, createNeedsUpdatedAtTrigger } from './models/needs.js';
-//import { createTaskTable, createTaskUpdatedAtTrigger } from './models/tasks.js';
-//import { createTokenTransactionsTable } from './models/tokenTransactions.js';
-// Note: Assuming users, communities, projects tables are handled elsewhere or created manually.
-// If they had similar exported creation functions, they would be imported here too.
+import { createImpactTables } from '../models/impact_v2.js';
+import { createVerificationTables } from '../models/verification.js';
+import { createGuildTables } from '../models/guilds_v2.js';
+import { createConstellationTables } from '../models/constellations_v2.js';
+import { createStoryTables } from '../models/story_engine_v2.js';
+import { createResourceLayerTables } from '../models/resource_layer_v2.js';
+import { alterExistingTables } from '../models/alter_tables_v2.js';
 
 // Initialize app
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Adjust for frontend URL
-    methods: ["GET", "POST"]
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -111,13 +125,13 @@ export const sendNotification = async (userId, notification) => {
 
 // JWT middleware for secured routes
 const jwtCheck = auth({
-  audience: 'http://localhost:4000',
+  audience: process.env.BACKEND_URL,
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
   tokenSigningAlg: 'RS256',
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -162,6 +176,14 @@ app.use('/needs', needRoutes);
 app.use('/matching', matchingRoutes);
 app.use('/exchange', exchangeRoutes);
 app.use('/impact', impactRoutes);
+app.use('/onboarding', jwtCheck, onboardingRoutes);
+
+app.use('/impact_v2', impactRoutesV2);
+app.use('/verification_v2', verificationRoutesV2);
+app.use('/guilds_v2', guildRoutesV2);
+app.use('/constellations_v2', constellationRoutesV2);
+app.use('/resources_v2', resourceRoutesV2);
+app.use('/story_engine_v2', storyEngineRoutesV2);
 
 // Nightly task reset
 cron.schedule('0 0 * * *', async () => {
@@ -174,36 +196,64 @@ cron.schedule('0 0 * * *', async () => {
   }
 });
 
+// Roadmap Background Workers
+// Dynamic Reward & Decay Adjustment (Every 6 hours)
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Running dynamic reward and decay adjustment');
+  try {
+    const adjusted = await TaskRoutingService.applyDynamicRewardAdjustment();
+    console.log(`Adjusted ${adjusted.length} tasks.`);
+  } catch (err) {
+    console.error('Reward adjustment worker failed:', err);
+  }
+});
+
+// Intelligence Scoring (Hourly)
+cron.schedule('0 * * * *', async () => {
+  console.log('Running intelligence scoring (Priority & Project Health)');
+  try {
+    // Score all unassigned tasks
+    const tasks = await pool.query("SELECT id FROM tasks WHERE status LIKE '%unassigned'");
+    for (const task of tasks.rows) {
+      await TaskRoutingService.calculatePriorityScore(task.id);
+    }
+
+    // Score all active projects
+    const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
+    for (const project of projects.rows) {
+      await ProjectHealthService.calculateHealthScore(project.id);
+    }
+    console.log('Intelligence scoring completed.');
+  } catch (err) {
+    console.error('Intelligence scoring worker failed:', err);
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 4000;
 
 // Initialize Database Tables
 async function initializeDatabase() {
   try {
-    // Create tables first
-    //await createResourcesTable();
-    //await createNeedsTable();
-    //await createTaskTable(); // Includes new schema with task_type, related_resource_id, related_need_id
-    //await createTokenTransactionsTable();
-    
-    // Then create triggers that depend on these tables
-    // Ensure the trigger function (update_updated_at_column) is created once,
-    // which is handled within each of these trigger creation functions by using CREATE OR REPLACE.
-    //await createResourcesUpdatedAtTrigger();
-    //await createNeedsUpdatedAtTrigger();
-    //await createTaskUpdatedAtTrigger();
-    // tokenTransactions table in this example does not have an updated_at trigger by default.
+    // Create new tables and alter existing ones
+    await createImpactTables();
+    await createVerificationTables();
+    await createGuildTables();
+    await createConstellationTables();
+    await createStoryTables();
+    await createResourceLayerTables();
+    await alterExistingTables();
 
-    console.log('Database tables checked/initialized successfully.');
+    console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {
-    console.error('Error initializing database tables:', error);
+    console.error('Error initializing roadmap database tables:', error);
     process.exit(1); // Exit if essential tables can't be set up
   }
 }
 
 initializeDatabase().then(() => {
   server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }).catch(error => {
   // This catch is for errors during the initializeDatabase() promise itself,

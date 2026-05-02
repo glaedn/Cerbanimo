@@ -178,6 +178,19 @@ router.put('/:projectId', async (req, res) => {
   }
 });
 
+import ProjectHealthService from '../services/ProjectHealthService.js';
+
+router.post('/:projectId/close', async (req, res) => {
+  const { projectId } = req.params;
+  const { reason } = req.body;
+  try {
+    await ProjectHealthService.closeProject(projectId, reason);
+    res.json({ message: 'Project closed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 //import and export functions
 // Export project + tasks as JSON
 router.get('/:projectId/export', async (req, res) => {
@@ -319,7 +332,9 @@ router.post('/auto-generate', async (req, res) => {
     }
 
     // 2. Generate tasks using LLM
-    const tasks = await autoGenerateTasks(project.name, project.description);
+    const generatedData = await autoGenerateTasks(project.name, project.description);
+    console.log('Generated data:', generatedData);
+    const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
 
     // 3. First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map

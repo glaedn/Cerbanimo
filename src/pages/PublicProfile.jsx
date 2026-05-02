@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -17,7 +17,7 @@ const PublicProfile = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:write:profile'
       });
     } catch (error) {
@@ -30,7 +30,7 @@ const PublicProfile = () => {
     const fetchData = async () => {
       try {
         // Fetch basic profile data
-        const profileResponse = await axios.get(`http://localhost:4000/profile/public/${userId}`);
+        const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${userId}`);
         
         // Safely parse profile data
         const parsedProfile = {
@@ -60,6 +60,9 @@ const PublicProfile = () => {
                 }
                 return interest;
               })
+            : [],
+          contact_links: Array.isArray(profileResponse.data.contact_links)
+            ? profileResponse.data.contact_links
             : []
         };
         
@@ -68,7 +71,7 @@ const PublicProfile = () => {
         // Fetch badges from rewards endpoint with auth token
         const token = await getToken();
         if (token) {
-          const badgesResponse = await axios.get(`http://localhost:4000/rewards/user/${userId}`, {
+          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -142,7 +145,7 @@ const PublicProfile = () => {
   return (
     <div className="public-profile-container">
       <Avatar 
-        src={profile.profile_picture ? `http://localhost:4000${profile.profile_picture}` : "/default-avatar.png"} 
+        src={profile.profile_picture ? profile.profile_picture : "/default-avatar.png"}
         className="public-profile-avatar"
         sx={{ width: 100, height: 100, marginBottom: 2 }}
       />
@@ -150,6 +153,26 @@ const PublicProfile = () => {
       <Typography variant="h4" gutterBottom>
         {profile.username}
       </Typography>
+
+      {/* Contact Links Section */}
+      {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (
+        <Box sx={{ my: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Contact:
+          </Typography>
+          {profile.contact_links.filter(link => link && link.trim() !== '').map((link, index) => {
+            const href = (link.startsWith('http://') || link.startsWith('https://')) ? link : `http://${link}`;
+            return (
+              <Typography key={index} sx={{ mb: 0.5 }}>
+                <MuiLink href={href} target="_blank" rel="noopener noreferrer" sx={{ wordBreak: 'break-all' }}>
+                  {link}
+                </MuiLink>
+              </Typography>
+            );
+          })}
+        </Box>
+      )}
+
       <UserPortfolio userId={userId} />
       <Typography variant="h6" gutterBottom>
         Skills:
@@ -173,7 +196,7 @@ const PublicProfile = () => {
           badges.map((badge, index) => (
             <div key={`badge-${badge.id || index}`} className="badge-item">
               <Avatar 
-                src={badge.icon ? `http://localhost:4000${badge.icon}` : "/default-badge.png"} 
+                src={badge.icon ? badge.icon : "/default-badge.png"}
                 alt={badge.name}
                 className="badge-avatar"
                 sx={{ width: 50, height: 50 }}

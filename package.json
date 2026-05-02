@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.(js|jsx)$": "babel-jest"
+    },
+    "testEnvironment": "jsdom"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
@@ -23,6 +30,7 @@
     "@mui/x-date-pickers": "^8.3.1",
     "@reduxjs/toolkit": "^2.5.0",
     "axios": "^1.7.9",
+    "backblaze-b2": "^1.7.1",
     "cra-template": "1.2.0",
     "d3": "^7.9.0",
     "dayjs": "^1.11.13",
@@ -38,6 +46,7 @@
     "react-hot-toast": "^2.5.2",
     "react-infinite-scroll-component": "^6.1.0",
     "react-intersection-observer": "^9.16.0",
+    "react-markdown": "^10.1.0",
     "react-material-ui-carousel": "^3.4.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.14.1",
@@ -55,6 +64,7 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
-    "vite": "^6.2.0"
+    "jest-environment-jsdom": "^30.0.0-beta.3",
+    "vite": "^6.4.1"
   }
 }
