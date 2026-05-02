@@ -35,9 +35,6 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { profile } = useUserProfile();
-  const [processedSkills, setProcessedSkills] = useState([]);
-  const [d3Nodes, setD3Nodes] = useState([]);
-  const [d3Links, setD3Links] = useState([]);
   const svgRef = useRef(null);
 
   // FIX (Infinite Loop 1): Store the simulation in a REF, not state.
@@ -45,6 +42,15 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   // caused the effect to re-run (simulation was in its deps), which called
   // setSimulation() again → infinite loop.
   const simulationRef = useRef(null);
+
+  useEffect(() => {
+    simulationRef.current = d3.forceSimulation()
+      .force('link', d3.forceLink().id((d) => d.id).distance(80).strength(0.3))
+      .force('charge', d3.forceManyBody().strength(-800))
+      .force('collide', d3.forceCollide().radius(30));
+
+    return () => simulationRef.current?.stop();
+  }, []);
 
   const fixedStarPositionsRef = useRef(new Map());
   const initialZoomAppliedRef = useRef(false);
@@ -85,11 +91,8 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
   const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
 
-  // ── Data processing effect ────────────────────────────────────────────────
-  // FIX: Removed forceDataUpdate from deps. fixedStarPositionsRef.current is
-  // always current (it's a ref), so re-running this effect to "pick up" new
-  // fixed positions is unnecessary and was the trigger for loop 2.
-  useEffect(() => {
+  // ── Data processing memo ────────────────────────────────────────────────
+  const { d3Nodes, d3Links, processedSkills } = React.useMemo(() => {
     if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && (user?.sub || propUserId)) {
       const userId = propUserId || profile?.id || user?.sub;
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
@@ -100,7 +103,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         return false;
       });
 
-      const newNodes = validSkills.map((skill) => {
+      const nodes = validSkills.map((skill) => {
         let fx = null, fy = null;
         if (skill.category === 'star') {
           const fixedPos = fixedStarPositionsRef.current.get(skill.id.toString());
@@ -126,12 +129,12 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         };
       });
 
-      const newLinks = [];
+      const links = [];
       skillsForGalaxy.forEach((skill) => {
         if (skill.parent_skill_id) {
           const parentExists = skillsForGalaxy.find((s) => s.id === skill.parent_skill_id);
           if (parentExists) {
-            newLinks.push({
+            links.push({
               source: skill.parent_skill_id.toString(),
               target: skill.id.toString(),
               id: `link-${skill.parent_skill_id}-${skill.id}`,
@@ -140,18 +143,21 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         }
       });
 
-      setD3Nodes(newNodes);
-      setD3Links(newLinks);
-      setProcessedSkills(skillsForGalaxy);
-    } else {
-      if (d3Nodes.length > 0) setD3Nodes([]);
-      if (d3Links.length > 0) setD3Links([]);
-      if (processedSkills.length > 0) setProcessedSkills([]);
+      return { d3Nodes: nodes, d3Links: links, processedSkills: skillsForGalaxy };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return { d3Nodes: [], d3Links: [], processedSkills: [] };
   }, [allSkills, skillsLoading, isAuthenticated, user?.sub, profile?.id, propUserId]);
-  // Note: user?.sub and profile?.id (primitives) instead of user/profile objects
-  // to avoid re-running when Auth0 recreates the user object reference.
+
+  // Update simulation instead of recreating
+  useEffect(() => {
+    const sim = simulationRef.current;
+    if (!sim || d3Nodes.length === 0) return;
+
+    sim.nodes(d3Nodes);
+    sim.force('link').links(d3Links);
+
+    sim.alpha(0.5).alphaDecay(0.08).restart();
+  }, [d3Nodes, d3Links]);
 
   // ── D3 rendering effect ───────────────────────────────────────────────────
   // FIX: simulation is now a ref (simulationRef) — not in deps, not state.
@@ -159,18 +165,15 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   useEffect(() => {
     if (d3Nodes.length === 0 || !svgRef.current) {
       if (svgRef.current) d3.select(svgRef.current).selectAll('.everything').remove();
-      simulationRef.current?.stop();
       return;
     }
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
-    const containerRect = container.getBoundingClientRect();
-    const width = containerRect.width || 800;
-    const height = containerRect.height || 600;
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 600;
 
     svg.attr('width', width).attr('height', height);
-    svg.select('.everything').remove();
 
     let defs = svg.select('defs');
     if (defs.empty()) defs = svg.append('defs');
@@ -196,34 +199,26 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
       }
     });
 
-    const mainGroup = svg.append('g').attr('class', 'everything');
+    let mainGroup = svg.select('g.everything');
+    if (mainGroup.empty()) mainGroup = svg.append('g').attr('class', 'everything');
 
-    // FIX: Stop and discard previous simulation before creating a new one.
-    // Previously, the old simulation was kept running while a new one was
-    // started, causing both to mutate the same node positions simultaneously.
-    simulationRef.current?.stop();
-    const sim = d3.forceSimulation();
-    simulationRef.current = sim;
+    const sim = simulationRef.current;
+    sim.force('center', d3.forceCenter(width / 2, height / 2));
 
-    sim
-      .nodes(d3Nodes)
-      .force('link', d3.forceLink(d3Links).id((d) => d.id).distance(80).strength(0.3))
-      .force('charge', d3.forceManyBody().strength(-800))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide().radius(30));
+    let linksLayer = mainGroup.select('g.links');
+    if (linksLayer.empty()) linksLayer = mainGroup.append('g').attr('class', 'links');
 
-    const link = mainGroup.append('g')
-      .attr('class', 'links')
-      .selectAll('line')
+    const link = linksLayer.selectAll('line')
       .data(d3Links, (d) => d.id)
       .join('line')
       .attr('stroke', theme.colors.border || '#666')
       .attr('stroke-width', 1.5)
       .style('stroke-opacity', 0.6);
 
-    const node = mainGroup.append('g')
-      .attr('class', 'nodes')
-      .selectAll('g.node-group')
+    let nodesLayer = mainGroup.select('g.nodes');
+    if (nodesLayer.empty()) nodesLayer = mainGroup.append('g').attr('class', 'nodes');
+
+    const node = nodesLayer.selectAll('g.node-group')
       .data(d3Nodes, (d) => d.id)
       .join(
         (enter) => {
@@ -400,21 +395,16 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
       // Persist fixed positions for next data processing run (no state update needed)
       d3Nodes.forEach((dNode) => {
+        dNode.fx = dNode.x;
+        dNode.fy = dNode.y;
         if (dNode.category === 'star') {
           fixedStarPositionsRef.current.set(dNode.id, { fx: dNode.x, fy: dNode.y });
-          dNode.fx = dNode.x;
-          dNode.fy = dNode.y;
         }
       });
     });
 
-    sim.alpha(0.3).restart();
-
     return () => {
-      sim.stop();
       sim.on('end.fixStars', null);
-      // Don't null simulationRef here — just stop it. The ref is cleaned up
-      // at the top of the next run.
     };
   }, [d3Nodes, d3Links, getStarGradientUrl, theme.colors]);
   // FIX: Removed `simulation` (now a ref) and `forceDataUpdate` (removed entirely)
