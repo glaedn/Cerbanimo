@@ -1,0 +1,100 @@
+.skill-galaxy-panel {
+  /* max-width: 300px; */ /* REMOVED */
+  /* height: 98%; Removed to allow parent to control height */
+  overflow: hidden;
+  color: var(--theme-colors-textPrimary, #FFFFFF);
+} 
+
+.hud-panel.minimized .skill-galaxy-panel {
+  height: auto !important; /* Ensure minimized state can shrink */
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 !important;
+}
+
+.skill-galaxy-panel-loading,
+.skill-galaxy-panel-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: var(--theme-typography-fontSizeLg, 1.25rem); /* Consistent theme typography */
+}
+
+.skill-galaxy-svg {
+  border: 1px solid var(--theme-colors-border, #444444); /* Already themed */
+  background-color: var(--theme-colors-backgroundDefault, #0A0A2E);
+  cursor: grab; /* For zoom/pan */
+}
+
+.skill-galaxy-svg:active {
+  cursor: grabbing;
+}
+
+.nodes .node-group circle {
+  stroke: var(--theme-colors-textPrimary, #FFFFFF); /* Themed stroke */
+  stroke-width: 1.5px;
+  cursor: pointer;
+  transition: transform var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out), 
+              fill var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out),
+              filter var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out);
+}
+
+.nodes .node-group:hover circle {
+  transform: scale(1.15); /* Slightly increased scale */
+  filter: brightness(1.3); /* Added brightness effect */
+}
+
+.node-label {
+  fill: var(--theme-colors-textPrimary, #FFFFFF); /* Already themed */
+  font-family: var(--theme-typography-fontFamilyAccent, 'Orbitron', sans-serif); /* Already themed */
+  pointer-events: none; 
+  text-anchor: middle;
+  font-weight: bold;
+  paint-order: stroke; 
+  stroke: var(--theme-colors-backgroundDefault, #0A0A2E); /* Already themed for halo */
+  stroke-width: 3px; 
+  stroke-linecap: butt; 
+  stroke-linejoin: miter;
+  transition: font-size var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out); /* Smooth font size changes */
+}
+
+.links line {
+  stroke: var(--theme-colors-border, #444444); /* Already themed */
+  stroke-opacity: 0.6;
+}
+
+.node-group.active circle {
+  stroke: var(--theme-colors-secondary, #FF69B4); /* Already themed */
+  stroke-width: 3px;
+}
+
+/* For the empty state message */
+.skill-galaxy-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: var(--theme-spacing-lg, 2rem);
+  font-family: var(--theme-typography-fontFamilyBase, 'Inter', sans-serif);
+}
+
+.skill-galaxy-empty p {
+  font-size: var(--theme-typography-fontSizeMd, 1rem);
+  margin-bottom: var(--theme-spacing-sm, 0.5rem);
+}
+
+.level-label {
+  fill: var(--theme-colors-textSecondary, #bbb);
+  font-size: 9px; /* Base size, JS handles scaling on zoom */
+  text-anchor: middle;
+  pointer-events: none;
+  font-family: var(--theme-typography-fontFamilyAccent, 'Orbitron', sans-serif); /* Consistent with node-label */
+  paint-order: stroke; /* Halo effect for readability */
+  stroke: var(--theme-colors-backgroundDefault, #0A0A2E); /* Match node-label halo color */
+  stroke-width: 2px; /* Slightly smaller halo than node-label's 3px */
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  transition: font-size var(--theme-transitions-short, 0.15s) var(--theme-transitions-easing, ease-in-out); /* Smooth font size changes on zoom */
+}

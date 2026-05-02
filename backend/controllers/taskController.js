@@ -7,7 +7,8 @@ import {
 const getAllTasks = async () => {
   const query = `
     SELECT 
-      *
+      tasks.*,
+      skills.name as skill_name
     FROM tasks
     JOIN skills ON tasks.skill_id = skills.id;
   `;
@@ -339,6 +340,13 @@ const updateTask = async (
       reserved_tokens = 0,
     } = dataResult.rows[0];
 
+    // Check if the task is already completed
+    if (task_status === "completed") {
+      await client.query("ROLLBACK");
+      // client.release() will be called in the finally block
+      return { error: "Completed tasks cannot be modified.", status: 403 };
+    }
+
     console.log("Current values:", {
       task_reward,
       task_status,
@@ -537,7 +545,7 @@ const approveTask = async (taskId, io, client) => {
     // Fetch task details first (remove FOR UPDATE to avoid deadlock)
     const initialTaskDetails = await localClient.query(
       `
-      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens
+      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens, submitted_by
       FROM tasks WHERE id = $1
     `,
       [taskId]
@@ -561,14 +569,9 @@ const approveTask = async (taskId, io, client) => {
     );
     const tags = [tagsQuery.rows[0]?.name].filter(Boolean);
 
-    // Store story node data for later use (after transaction)
-    const storyNodeData = {
-      task_id: initialTask.id,
-      user_id: initialTask.assigned_user_ids[0],
-      reflection: initialTask.reflection || "",
-      media_urls: initialTask.proof_of_work_links,
-      tags,
-    };
+    // Story node data will be prepared and used conditionally later, after COMMIT.
+    // We need 'tags' and 'initialTask' (which includes submitted_by, reflection, proof_of_work_links)
+    // 'tags' is already fetched from initialTask.skill_id.
 
     console.log("task ID:", taskId);
     // No need to rollback and begin a new transaction here; just continue in the same transaction
@@ -620,6 +623,7 @@ const approveTask = async (taskId, io, client) => {
     const taskQuery = `
       SELECT t.reward_tokens, 
              t.assigned_user_ids,
+             t.submitted_by,
              t.skill_id, 
              t.status,
              t.project_id,
@@ -639,12 +643,21 @@ const approveTask = async (taskId, io, client) => {
     const {
       reward_tokens,
       assigned_user_ids,
+      submitted_by,
       skill_id,
       status,
       project_id,
       community_id,
       creator_id,
     } = taskResult.rows[0];
+
+    // Fetch skill name
+    const skillNameQuery = await localClient.query(
+      `SELECT name FROM skills WHERE id = $1`,
+      [skill_id]
+    );
+    const skillName = skillNameQuery.rows[0]?.name || "Unknown Skill";
+    console.log("Fetched skillName:", skillName);
 
     console.log(
       "Assigned users:",
@@ -654,15 +667,20 @@ const approveTask = async (taskId, io, client) => {
     );
 
     // Add notifications in the database
-    const notificationText = `Your submitted task was approved!`;
+    const notificationMessage = `Your submitted task was approved!`;
     if (assigned_user_ids && assigned_user_ids.length > 0) {
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: project_id,
+        taskId: taskId,
+      });
       const notificationQuery = `
           INSERT INTO notifications (user_id, message, type, created_at, read) 
           SELECT unnest($1::int[]), $2, $3, NOW(), false
       `;
       await localClient.query(notificationQuery, [
         assigned_user_ids,
-        notificationText,
+        notificationDetails,
         "task",
       ]);
     }
@@ -682,128 +700,144 @@ const approveTask = async (taskId, io, client) => {
       return { error: "Skill not found for this task", status: 404 };
     }
 
-    let unlockedUsers = skillsResult.rows[0].unlocked_users || [];
-    let updatedUsers = [];
-
-    if (unlockedUsers.length === 1 && unlockedUsers[0] === null) {
-      unlockedUsers = [];
-    }
+    let rawUnlockedUsers = skillsResult.rows[0].unlocked_users || [];
+    console.log("Initial raw unlockedUsers from DB:", JSON.stringify(rawUnlockedUsers));
 
     const calculateLevel = (exp) => {
       return Math.floor(Math.sqrt(exp / 40)) + 1;
     };
 
-    for (const userId of assigned_user_ids) {
-      let found = false;
-
-      for (let entry of unlockedUsers) {
-        let parsedEntry;
-        try {
-          parsedEntry = typeof entry === "string" ? JSON.parse(entry) : entry;
-          if (typeof parsedEntry === "string")
-            parsedEntry = JSON.parse(parsedEntry);
-          if (typeof parsedEntry === "string") {
-            parsedEntry = JSON.parse(
-              parsedEntry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, "")
-            );
-          }
-        } catch (err) {
-          console.error("Error parsing entry:", err, "Entry:", entry);
-          continue;
+    let parsedSkillEntries = [];
+    if (Array.isArray(rawUnlockedUsers)) {
+        for (const entry of rawUnlockedUsers) {
+            if (entry === null && rawUnlockedUsers.length === 1) continue; // Skip if it's a single null entry placeholder
+            console.log("Parsing raw entry:", entry, "type:", typeof entry);
+            let parsedEntry;
+            try {
+                if (typeof entry === 'string') {
+                    try {
+                        parsedEntry = JSON.parse(entry);
+                    } catch (e1) {
+                        console.log("Simple JSON.parse failed for entry, trying replacement parse. Error:", e1.message, "Entry:", entry);
+                        parsedEntry = JSON.parse(entry.replace(/\\"/g, '"').replace(/^"{|}"}$/g, ""));
+                    }
+                } else {
+                    parsedEntry = entry; // Assume it's already an object
+                }
+                if (parsedEntry && typeof parsedEntry.user_id !== 'undefined') { // Basic validation
+                    parsedSkillEntries.push(parsedEntry);
+                } else {
+                    console.error("Parsed entry is invalid or missing user_id:", parsedEntry, "Original entry:", entry);
+                }
+            } catch (err) {
+                console.error("Error parsing entry for DB:", entry, "Error:", err.message);
+                // Decide if to keep unparseable but potentially valid non-JSON string entries, or skip.
+                // For now, skipping if it's meant to be JSON and fails. If it could be a simple user_id string, handle differently.
+            }
         }
-
-        if (parsedEntry.user_id === userId) {
-          found = true;
-          parsedEntry.experience += rewardPerUser;
-          parsedEntry.level = calculateLevel(parsedEntry.experience);
-          updatedUsers.push(parsedEntry);
-        } else {
-          updatedUsers.push(parsedEntry);
-        }
-      }
-
-      if (!found) {
-        const newEntry = {
-          user_id: userId,
-          experience: rewardPerUser,
-          level: calculateLevel(rewardPerUser),
-        };
-        updatedUsers.push(newEntry);
-      }
     }
+    console.log("Initial parsedSkillEntries:", JSON.stringify(parsedSkillEntries));
+
+    const skillEntryMap = new Map(parsedSkillEntries.map(entry => [entry.user_id, entry]));
+    console.log("Created skillEntryMap:", JSON.stringify(Array.from(skillEntryMap.entries())));
+
+    for (const userId of assigned_user_ids) {
+      let previousXP = 0, previousLevel = 1, newXP = 0, newLevel = 1; // Default for new users
+
+      const existingEntry = skillEntryMap.get(userId);
+      console.log("For userId:", userId, "existingEntry found in map:", !!existingEntry);
+
+      if (existingEntry) {
+        previousXP = existingEntry.exp;
+        previousLevel = existingEntry.level;
+
+        existingEntry.exp += rewardPerUser;
+        existingEntry.level = calculateLevel(existingEntry.exp);
+
+        newXP = existingEntry.exp;
+        newLevel = existingEntry.level;
+
+        skillEntryMap.set(userId, existingEntry); // Update the map
+        console.log("Updated existingEntry for userId:", userId, { previousXP, previousLevel, newXP, newLevel, updatedData: existingEntry });
+      } else {
+        // New user for this skill
+        newXP = rewardPerUser;
+        newLevel = calculateLevel(rewardPerUser);
+        // previousXP and previousLevel remain 0 and 1 respectively as initialized
+        const newSkillEntry = { user_id: userId, exp: newXP, level: newLevel };
+        skillEntryMap.set(userId, newSkillEntry); // Add the new entry to the map
+        console.log("Created newSkillEntry for userId:", userId, { previousXP, previousLevel, newXP, newLevel, entryData: newSkillEntry });
+      }
+
+      if (!skillName) { // skillName is fetched once before this loop
+          console.error("skillName is undefined before emitting socket event for userId:", userId);
+      }
+
+      const room = `user_${userId}`;
+      console.log("Emitting levelUpdate to room:", room, "for userId:", userId, "with payload:", { previousXP, newXP, previousLevel, newLevel, skillName });
+      io.to(room).emit("levelUpdate", { previousXP, newXP, previousLevel, newLevel, skillName });
+    }
+
+    const finalUpdatedSkillEntries = Array.from(skillEntryMap.values());
+    console.log("Final finalUpdatedSkillEntries for DB update:", JSON.stringify(finalUpdatedSkillEntries));
 
     await localClient.query(
       `UPDATE skills SET unlocked_users = $1 WHERE id = $2`,
-      [updatedUsers, skill_id]
+      [finalUpdatedSkillEntries, skill_id]
     );
 
-    // After level and XP updates are finalized
-    for (const user of updatedUsers) {
-      const { user_id, experience, level } = user;
-
-      const previousLevel = calculateLevel(experience - rewardPerUser);
-      const previousXP = experience - rewardPerUser;
-      const newXP = experience;
-      const newLevel = level;
-
-      console.log("Emitting levelUpdate for", user_id, {
-        previousXP,
-        newXP,
-        previousLevel,
-        newLevel,
-      });
-      const room = `user_${user_id}`;
-      console.log(`Emitting to ${room}`);
-      io.to(room).emit("levelUpdate", {
-        previousXP,
-        newXP,
-        previousLevel,
-        newLevel,
-      });
+    // Step 5: Update user experience
+    if (assigned_user_ids && assigned_user_ids.length > 0) {
+      await localClient.query(
+        `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
+         WHERE id = ANY($2)`,
+        [taskId.toString(), assigned_user_ids]
+      );
     }
 
-    // Step 5: Update users with tokens and experience logs
-    await localClient.query(
-      `
-      UPDATE users SET cotokens = cotokens + $1, experience = array_append(experience, $2)
-      WHERE id = ANY($3)
-    `,
-      [rewardPerUser, taskId.toString(), assigned_user_ids]
-    );
+    // Step 6: Differential cotoken and token_ledger updates
+    const main_reward = reward_tokens;
+    const bonus_reward = Math.ceil(reward_tokens / 10);
 
-    // Step 6a: Update token ledgers for assigned users
-    const ledgerUpdates = community_id
-      ? [
-          {
-            type: "community",
-            id: community_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
-          {
-            type: "project",
-            id: project_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
-        ]
-      : [
-          {
-            type: "project",
-            id: project_id,
-            tokens: reward_tokens,
-            creationDate: new Date(),
-          },
+    // Update cotokens and token_ledger for submitted_by user
+    if (submitted_by) {
+      await localClient.query(
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+        [main_reward, submitted_by]
+      );
+      const submitterLedgerEntries = [
+        { type: "task_completion_reward", taskId: taskId, tokens: main_reward, creationDate: new Date(), projectId: project_id }
+      ];
+      if (community_id) {
+        submitterLedgerEntries.push({ type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
+      }
+      await localClient.query(
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        [submitterLedgerEntries.map(JSON.stringify), submitted_by]
+      );
+    }
+
+    // Update cotokens and token_ledger for other assigned users
+    if (assigned_user_ids && assigned_user_ids.length > 0) {
+      for (const userId of assigned_user_ids) {
+        if (userId === submitted_by) continue; // Skip the main submitter, already handled
+
+        await localClient.query(
+          `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+          [bonus_reward, userId]
+        );
+        const bonusLedgerEntries = [
+          { type: "task_completion_bonus", taskId: taskId, tokens: bonus_reward, creationDate: new Date(), projectId: project_id }
         ];
-
-    await localClient.query(
-      `
-UPDATE users 
-SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) 
-WHERE id = ANY($2)
-`,
-      [ledgerUpdates.map(JSON.stringify), assigned_user_ids]
-    );
+        if (community_id) {
+          bonusLedgerEntries.push({ type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
+        }
+        await localClient.query(
+          `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+          [bonusLedgerEntries.map(JSON.stringify), userId]
+        );
+      }
+    }
 
     // Step 6b: Reward project creator
     console.log("creator_id:", creator_id ? creator_id : "No creator_id found");
@@ -850,35 +884,52 @@ WHERE id = ANY($2)
     );
 
     // Step 8: Notify users
-    const approveText = `Your submitted task was approved!`;
-    await localClient.query(
-      `
-      INSERT INTO notifications (user_id, message, type, created_at, read)
-      SELECT unnest($1::int[]), $2, 'task', NOW(), false
-    `,
-      [assigned_user_ids, approveText]
-    );
+    // This section seems redundant as notifications are already created above.
+    // However, if it's intended for a different purpose or audience, it should also be updated.
+    // For now, assuming the earlier notification is the primary one.
+    // If this is a separate notification, it needs similar JSON stringify treatment.
+    // const approveText = `Your submitted task was approved!`;
+    // await localClient.query(
+    //   `
+    //   INSERT INTO notifications (user_id, message, type, created_at, read)
+    //   SELECT unnest($1::int[]), $2, 'task', NOW(), false
+    // `,
+    //   [assigned_user_ids, approveText]
+    // );
 
     // COMMIT the transaction before making external calls
     await localClient.query("COMMIT");
 
-    // After transaction is committed, we can make external HTTP calls
-    try {
-      console.log("posting story node with tags:", storyNodeData.tags);
-      const response = await fetch(
-        `http://localhost:4000/storyChronicles/story-node`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(storyNodeData),
+    // After transaction is committed, conditionally create story node
+    if (initialTask && initialTask.submitted_by) {
+      const storyNodeData = {
+        task_id: initialTask.id,
+        user_id: initialTask.submitted_by, // Strictly use submitted_by
+        reflection: initialTask.reflection || "",
+        media_urls: initialTask.proof_of_work_links || [],
+        tags: tags, // 'tags' was fetched earlier based on initialTask.skill_id
+      };
+      try {
+        console.log("Posting story node for submitted_by user:", initialTask.submitted_by, "with data:", storyNodeData);
+        const response = await fetch(
+          `${process.env.BACKEND_URL}/storyChronicles/story-node`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(storyNodeData),
+          }
+        );
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Error creating story node: ${response.status} ${response.statusText}`, errorText);
+        } else {
+            console.log("Story node creation request successful for user:", initialTask.submitted_by, "status:", response.status);
         }
-      );
-      console.log("response.status:", response.status);
-      console.log("response text:", await response.text());
-    } catch (fetchError) {
-      // Log error but don't fail the whole operation
-      console.error("Error creating story node:", fetchError);
-      // We don't rollback here because the DB transaction is already committed
+      } catch (fetchError) {
+        console.error("Fetch error creating story node:", fetchError);
+      }
+    } else {
+      console.warn(`Skipping story node creation for task ${taskId} as submitted_by user is not defined or initialTask is missing.`);
     }
 
     // Send socket notifications after transaction is complete
@@ -891,6 +942,8 @@ WHERE id = ANY($2)
           id: Date.now(),
           type: "task-approved",
           message: "Your task was approved!",
+          projectId: project_id,
+          taskId: taskId,
           read: false,
           timestamp: new Date().toISOString(),
         });
@@ -939,13 +992,23 @@ const submitTask = async (req, res, io) => {
   const proofOfWorkLinks =
     req.body.proofOfWorkLinks || req.body.proof_of_work_links;
   const reflection = req.body.reflection;
+  const platformUserId = req.body.platformUserId;
+
+  if (!platformUserId) {
+    // This function is called by a route handler, so it should return an error object.
+    // The route handler will then send the actual HTTP response.
+    // Note: The original code was calling res.status().json() directly.
+    // This is a change in pattern to allow the route handler to manage the response.
+    return { error: "Platform User ID is required for submission.", status: 400 };
+  }
 
   if (
     !proofOfWorkLinks ||
     !Array.isArray(proofOfWorkLinks) ||
     proofOfWorkLinks.length === 0
   ) {
-    return res.status(400).json({ error: "Proof of work links are required." });
+    // Similarly, return an error object for the route handler.
+    return { error: "Proof of work links are required.", status: 400 };
   }
 
   const client = await pool.connect();
@@ -982,17 +1045,19 @@ const submitTask = async (req, res, io) => {
        submitted_at = NOW(), 
        status = 'submitted',
        proof_of_work_links = $2,
-       reflection = $3
+       reflection = $3,
+       submitted_by = $4
        FROM projects p
        WHERE t.id = $1 AND p.id = t.project_id
        RETURNING t.*, p.name as project_name, p.creator_id as project_owner_id, 
-                 p.community_id, t.assigned_user_ids, t.skill_id`,
-      [taskId, proofOfWorkLinks || [], reflection || null]
+                 p.community_id, t.assigned_user_ids, t.skill_id, t.submitted_by`,
+      [taskId, proofOfWorkLinks || [], reflection || null, platformUserId]
     );
 
     if (result.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Task not found" });
+      // Return error object for the route handler
+      return { error: "Task not found or project mismatch.", status: 404 };
     }
 
     const task = result.rows[0];
@@ -1065,41 +1130,60 @@ const submitTask = async (req, res, io) => {
 
     // Step 2: Notify the project creator if we have an owner
     if (task.project_owner_id && reviewerIds.length === 0) {
-      const notificationText = `A task was submitted for approval in your project "${
+      const notificationMessage = `A task was submitted for approval in your project "${
         task.project_name || "Untitled"
       }".`;
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: task.project_id,
+        taskId: taskId,
+      });
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          VALUES ($1, $2, $3, NOW(), false)`,
-        [task.project_owner_id, notificationText, "task"]
+        [task.project_owner_id, notificationDetails, "task"]
       );
 
       if (io && typeof io.to === "function") {
         io.to(`user_${task.project_owner_id}`).emit("notification", {
-          message: notificationText,
+          message: notificationMessage,
           type: "task",
+          projectId: task.project_id,
+          taskId: task.id,
         });
       }
     }
 
     // Notify reviewers if we found any
     if (reviewerIds.length > 0) {
-      const notificationText = `You've been assigned to review a task in project "${
+      const notificationMessage = `You've been assigned to review a task in project "${
         task.project_name || "Untitled"
       }"`;
+      const notificationDetails = JSON.stringify({
+        text: notificationMessage,
+        projectId: task.project_id,
+        taskId: task.id,
+      });
+      console.log(
+        "Inserting notifications for reviewers:",
+        reviewerIds,
+        notificationDetails
+      );
 
       await client.query(
         `INSERT INTO notifications (user_id, message, type, created_at, read) 
          SELECT unnest($1::int[]), $2, $3, NOW(), false`,
-        [reviewerIds, notificationText, "task"]
+        [reviewerIds, notificationDetails, "task"]
       );
 
       if (io && typeof io.to === "function") {
         reviewerIds.forEach((reviewerId) => {
           io.to(`user_${reviewerId}`).emit("notification", {
-            message: notificationText,
+            message: notificationMessage,
             type: "task",
+            projectId: task.project_id,
+            taskId: taskId,
           });
         });
       }
@@ -1115,7 +1199,8 @@ const submitTask = async (req, res, io) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error submitting task:", error);
-    return res.status(500).json({ error: "Failed to submit task" });
+    // Return error object for the route handler
+    return { error: "Failed to submit task: " + error.message, status: 500 };
   } finally {
     client.release();
   }
@@ -1180,7 +1265,14 @@ const dropTask = async (taskId, userId) => {
         console.log(
           "Last assigned user dropping task, updating status to unassigned"
         );
-        newStatus = currentStatus.includes("-unassigned")
+        if (currentStatus === "submitted") {
+          await client.query("ROLLBACK");
+          throw new Error("User is the last assigned user on a submitted task and cannot be removed");
+        }
+
+        newStatus = currentStatus === "completed" 
+          ? "completed"
+          : currentStatus.includes("-unassigned")
           ? currentStatus
           : currentStatus.includes("-assigned")
           ? currentStatus.replace("-assigned", "-unassigned")
@@ -1514,6 +1606,26 @@ const processReview = async (taskId, userId, action, io) => {
     console.log("New approvals:", newApprovals);
     console.log("New rejections:", newRejections);
 
+    // Award reviewer 10 cotokens
+    const reviewerReward = 10;
+    await client.query(
+      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+      [reviewerReward, userId] // userId is the reviewer's ID passed to processReview
+    );
+
+    // Add to reviewer's token ledger
+    const reviewLedgerUpdate = { 
+      type: "task_review_reward", 
+      taskId: taskId, 
+      tokens: reviewerReward, 
+      creationDate: new Date(),
+      projectId: project_id // project_id is available from taskResult
+    };
+    await client.query(
+      `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2`,
+      [JSON.stringify(reviewLedgerUpdate), userId]
+    );
+
     // Check if we've reached consensus (2 or more approvals/rejections)
     if (newApprovals?.length >= 2 || newRejections?.length >= 2) {
       const finalAction = newApprovals?.length >= 2 ? "approve" : "reject";
@@ -1550,22 +1662,31 @@ const processReview = async (taskId, userId, action, io) => {
 
         // Notify assigned users
         if (assignedUserIds && assignedUserIds.length > 0) {
-          const notificationText = `Your submitted task was rejected and needs revisions.`;
+          const notificationMessage = `Your submitted task was rejected and needs revisions.`;
+          // project_id is available from the taskResult destructuring earlier in processReview
+          // taskId is a parameter of processReview
+          const notificationDetails = JSON.stringify({
+            text: notificationMessage,
+            projectId: project_id, // This was destructured from taskResult.rows[0]
+            taskId: taskId,       // This is the function parameter
+          });
           await client.query(
             `
             INSERT INTO notifications (user_id, message, type, created_at, read) 
             SELECT unnest($1::int[]), $2, $3, NOW(), false
           `,
-            [assignedUserIds, notificationText, "task"]
+            [assignedUserIds, notificationDetails, "task"]
           );
 
           // Socket notifications
           if (io) {
-            assignedUserIds.forEach((userId) => {
-              io.to(`user_${userId}`).emit("notification", {
+            assignedUserIds.forEach((uId) => { // Renamed userId to uId to avoid conflict with outer scope userId
+              io.to(`user_${uId}`).emit("notification", {
                 id: Date.now(),
                 type: "task",
                 message: "Your task was rejected and needs revisions",
+                projectId: project_id, // This was destructured from taskResult.rows[0]
+                taskId: taskId,       // This is the function parameter
                 read: false,
                 timestamp: new Date().toISOString(),
               });

@@ -36,7 +36,7 @@ const Dashboard = () => {
           localStorage.setItem('token', token);
 
           // Send user data and token to the backend
-          await axios.post('http://localhost:4000/auth/save-user', {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/save-user`, {
             sub: user.sub, // Auth0 user ID
             email: user.email,
             name: user.name,

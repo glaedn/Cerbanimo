@@ -1,51 +1,102 @@
-import React from 'react';
-import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-import useUserProjects from '../../../hooks/useUserProjects.js';
+import React, { useState } from 'react'; // Correctly import useState
+import { useUserProfile } from '../../../hooks/useUserProfile';
+import useUserProjects from '../../../hooks/useUserProjects.js'; // This still needed to sum tokens from projects
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
+
+// Mock data if not available from hooks - REMOVE IF REAL DATA IS PRESENT
+const MOCKED_TOKEN_POOL = 10000; // Example global pool
+const MOCK_PROJECT_TOKENS = true; // Set to false if projects have real token data
+const accentGreen = '#00D787'; // theme.colors.accentGreen
 
 const CommandDeck = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { projects, loading: projectsLoading, error: projectsError } = useUserProjects(profile?.id);
+  const [isMinimized, setIsMinimized] = useState(false); // Use useState
 
-  if (profileLoading || projectsLoading) return <div className="hud-panel command-deck">Loading Command Deck...</div>;
-  if (profileError) return <div className="hud-panel command-deck">Error loading profile: {profileError.message}</div>;
-  if (projectsError) return <div className="hud-panel command-deck">Error loading projects: {projectsError.message}</div>;
-  if (!profile) return <div className="hud-panel command-deck">User profile not available.</div>;
+  const toggleMinimize = (e) => {
+    if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
+      e.stopPropagation();
+    }
+    setIsMinimized(!isMinimized);
+  };
 
-  const accentGreen = '#00D787'; // theme.colors.accentGreen
-
+  if (profileLoading || projectsLoading) {
+    return <div className="hud-panel command-deck">Loading Commmand Deck...</div>;
+  }
+  
+  // Simplified error display
+  if (profileError) {
+    console.error("Profile Error in CommandDeck:", profileError);
+    return <div className="hud-panel command-deck">Error loading profile data. Check console.</div>;
+  }
+  if (projectsError) {
+    console.error("Projects Error in CommandDeck:", projectsError);
+    return <div className="hud-panel command-deck">Error loading project data. Check console.</div>;
+  }
+  
   return (
-    <div className="hud-panel command-deck">
-      <div className="hud-panel-header">
+    <div className={`hud-panel command-deck ${isMinimized ? 'minimized' : ''}`}>
+      <div className="hud-panel-header" onClick={toggleMinimize} title={isMinimized ? "Expand Panel" : "Minimize Panel"}>
         <h4>Command Deck (Managed Projects)</h4>
+        <button onClick={toggleMinimize} className="minimize-btn" aria-label={isMinimized ? "Expand Galactic Treasury" : "Minimize Galactic Treasury"}>
+          {isMinimized ? '+' : '-'}
+        </button>
       </div>
-      {projects.length > 0 ? (
+      {!isMinimized && (
+        <div className="hud-panel-content">
+           {projects.length > 0 ? (
+
         <ul>
+
           {projects.map(p => (
+
             <li key={p.id} className="project-item">
+
               <div className="project-info">
-                <span className="project-name">{p.name}</span>
+
+                <a className="project-name" href={`/visualizer/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.name}</a>
+                <br />
                 <span className="project-details">
-                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} | XP: {p.xpGained}
+
+                  Tasks: {p.taskCount} | Active: {p.activeTasks} | Completed: {p.completedTasks} <br/> credits: {p.token_pool - (p.used_tokens || 0) - (p.reserved_tokens || 0)}
+
                 </span>
+
               </div>
+
               <div className="progress-bar-container">
+
                 <div 
+
                   className="progress-bar" 
+
                   style={{ width: `${p.progress}%`, backgroundColor: accentGreen }}
+
                 >
+
                   {p.progress}%
+
                 </div>
+
               </div>
+
               {p.errorFetchingTasks && <span className="error-text"> (Error loading project tasks)</span>}
+
             </li>
+
           ))}
+
         </ul>
+
       ) : (
+
         <p>No projects currently managed.</p>
+      )}
+        </div>
       )}
     </div>
   );
 };
+
 export default CommandDeck;
