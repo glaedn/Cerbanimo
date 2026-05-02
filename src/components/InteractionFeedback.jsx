@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, TextField, Rating, Stack } from '@mui/material';
+import { Box, Typography, Button, TextField, Stack } from '@mui/material';
 import theme from '../styles/theme';
 
 const InteractionFeedback = ({ needId, taskId, onSubmit, onCancel }) => {

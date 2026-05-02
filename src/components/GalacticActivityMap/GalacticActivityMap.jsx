@@ -181,26 +181,38 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     fetchData();
   }, []);
 
-  // useEffect for D3 rendering
+  const tooltipD3Ref = useRef(null);
+
   useEffect(() => {
-    window.twinkleTimeoutIds = window.twinkleTimeoutIds || [];
-    // --- Tooltip Management with D3 START ---
-    // Remove any old tooltip managed by this instance
+    // Clean up any existing tooltips to avoid duplicates
     d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
 
-    // Create the new tooltip attached to the body
-    const tooltipD3 = d3.select("body")
+    tooltipD3Ref.current = d3.select("body")
       .append("div")
-      .attr("class", "galactic-tooltip galactic-tooltip-managed-by-d3") // Add a specific class for removal
+      .attr("class", "galactic-tooltip galactic-tooltip-managed-by-d3")
       .style("opacity", 0)
-      .style("position", "absolute") // Crucial: ensure it's absolutely positioned
-      .style("pointer-events", "none") // Crucial: ensure it doesn't intercept mouse events
-      .style("z-index", 1000); // Ensure it's on top
-    // --- Tooltip Management with D3 END ---
+      .style("position", "absolute")
+      .style("pointer-events", "none")
+      .style("z-index", 1000);
 
+    return () => {
+      if (tooltipD3Ref.current) tooltipD3Ref.current.remove();
+    };
+  }, []);
+
+  // useEffect for D3 rendering
+  useEffect(() => {
     if (d3Container.current && !isLoading && !error && starData.length > 0) {
       const { clientWidth, clientHeight } = d3Container.current;
-      setMapDimensions({ width: clientWidth, height: clientHeight });
+
+      // Use floor and threshold to prevent dimension loops
+      if (Math.abs(clientWidth - mapDimensions.width) > 2 || Math.abs(clientHeight - mapDimensions.height) > 2) {
+        setMapDimensions({ width: Math.floor(clientWidth), height: Math.floor(clientHeight) });
+        return;
+      }
+
+      const tooltipD3 = tooltipD3Ref.current;
+      if (!tooltipD3) return;
       let svg = d3.select(d3Container.current).select("svg");
       svg.selectAll("*").remove();
 
@@ -248,27 +260,44 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       // Performance Note: Force simulation is run once per data update.
       // Running it for a fixed number of ticks (e.g., 150) is efficient for static layouts.
       // Avoid running the simulation continuously if not needed.
-      const randomizedStarData = starData.map((d) => ({
-        ...d,
-        x: Math.random() * clientWidth,
-        y: Math.random() * clientHeight,
-      })); // Important: simulation is stopped after ticks.
+      // Deterministic positions based on ID to prevent jumping and loop issues
+      const seedRandom = (str) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = (hash << 5) - hash + str.charCodeAt(i);
+          hash |= 0;
+        }
+        return () => {
+          hash = (hash * 16807) % 2147483647;
+          return (hash - 1) / 2147483646;
+        };
+      };
+
+      const randomizedStarData = starData.map((d) => {
+        const rng = seedRandom(d.id);
+        return {
+          ...d,
+          x: rng() * clientWidth,
+          y: rng() * clientHeight,
+        };
+      });
 
       // Active help routes: draw lines between tasks and their related needs
       const routes = [];
       const tasks = randomizedStarData.filter(d => d.type === "task");
       const needs = randomizedStarData.filter(d => d.type === "need");
+      const needsById = new Map();
+      needs.forEach(n => needsById.set(n.raw_data.id, n));
 
       tasks.forEach(task => {
-        if (task.raw_data.related_need_id) {
-          const targetNeed = needs.find(n => n.raw_data.id === task.raw_data.related_need_id);
-          if (targetNeed) {
-            routes.push({
-              id: `route-${task.id}-${targetNeed.id}`,
-              source: task,
-              target: targetNeed
-            });
-          }
+        const needId = task.raw_data.related_need_id;
+        if (needId && needsById.has(needId)) {
+          const targetNeed = needsById.get(needId);
+          routes.push({
+            id: `route-${task.id}-${targetNeed.id}`,
+            source: task,
+            target: targetNeed
+          });
         }
       });
 
@@ -404,6 +433,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             navigate(`/communityhub/${idOnly}`);
           }
         });
+      }
 
       // Create sonar ping effect for urgent tasks and all needs
       const urgentStarsData = randomizedStarData.filter(d =>
@@ -423,17 +453,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
          .attr("fill", "none") 
          .attr("stroke", (d) => getStarColor(d)) // Use star's urgent color
          .style("pointer-events", "none");
-
-      // Performance Note: Pulsing animations.
-      // Applying to all 'active'/'urgent' stars. If this becomes too many,
-      // consider limiting the number of simultaneously pulsing stars or simplifying the animation.
-      // D3 transitions are generally efficient for this.
-      const allStarD3Elements = [];
-      visualStars.each(function (d) { // Ensure this uses visualStars
-        const starElement = d3.select(this);
-        allStarD3Elements.push(starElement); 
-      });
-
 
     } else if (d3Container.current && (isLoading || error)) {
       let svg = d3.select(d3Container.current).select("svg");
@@ -463,7 +482,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         window.twinkleTimeoutIds = []; 
       }
     };
-  }}, [starData, isLoading, error, navigate, enableTooltips, enableClicks]);
+  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks, mapDimensions.width, mapDimensions.height]);
 
   if (isLoading) {
     if (showLoadingText) {

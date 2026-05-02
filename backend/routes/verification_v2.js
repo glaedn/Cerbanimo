@@ -16,7 +16,8 @@ router.post('/events', async (req, res) => {
 
 router.post('/feedback', async (req, res) => {
   const { needId, taskId, isSafe, isFulfilled, comment } = req.body;
-  const userId = req.user.id;
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: "User not resolved" });
   try {
     const query = `
       INSERT INTO feedback (user_id, need_id, task_id, is_safe, is_fulfilled, comment)
