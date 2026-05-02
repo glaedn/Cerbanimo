@@ -49,7 +49,7 @@ const MissionConsole = () => {
         }
     };
     fetchMissions();
-  }, [profile?.id, getAccessTokenSilently, assignedTasks.length]);
+  }, [profile?.id, getAccessTokenSilently, assignedTasks]);
 
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
