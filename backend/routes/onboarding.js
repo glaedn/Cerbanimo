@@ -234,7 +234,7 @@ router.post('/save', async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await pool.query(
-      'UPDATE profiles SET capacity_status = $1 WHERE user_id = $2 RETURNING *',
+      'UPDATE users SET capacity_status = $1 WHERE id = $2 RETURNING *',
       [capacity_status, userId]
     );
     res.json(result.rows[0]);

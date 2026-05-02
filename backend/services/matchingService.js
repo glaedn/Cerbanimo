@@ -103,13 +103,13 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
     let matchedUsers = [];
     if (need.skill_ids && need.skill_ids.length > 0) {
       let usersBySkillsQuery = `
-        SELECT DISTINCT u.id, u.username, u.profile_picture, p.location, p.latitude, p.longitude, p.capacity_status
+        SELECT DISTINCT u.id, u.username, u.profile_picture, u.capacity_status, p.location, p.latitude, p.longitude
         FROM skills s
         JOIN LATERAL jsonb_array_elements(s.unlocked_users) AS su ON true
         JOIN users u ON (su->>'user_id')::int = u.id
         LEFT JOIN profiles p ON u.id = p.user_id
         WHERE s.id = ANY($1)
-        AND (p.capacity_status IS NULL OR p.capacity_status != 'unavailable')
+        AND (u.capacity_status IS NULL OR u.capacity_status != 'unavailable')
       `;
       const userParams = [need.skill_ids];
       let userParamIndex = 2;

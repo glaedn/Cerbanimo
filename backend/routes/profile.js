@@ -33,10 +33,7 @@ router.get("/public/:userId",
       // For now, let's fetch the user and then filter interests based on their status in the interests table.
 
       const result = await pool.query(
-        `SELECT u.id, u.username, u.profile_picture, u.skills, u.interests, u.badges, u.contact_links, p.capacity_status
-         FROM users u
-         LEFT JOIN profiles p ON u.id = p.user_id
-         WHERE u.id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status FROM users WHERE id = $1`,
         [userId]
       );
 
@@ -235,10 +232,9 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT u.id, u.username, u.skills, u.interests, u.profile_picture, u.cotokens, u.contact_links, pr.capacity_status
-      FROM users u
-      LEFT JOIN profiles pr ON u.id = pr.user_id
-      WHERE u.auth0_id = $1;
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status
+      FROM users
+      WHERE auth0_id = $1;
     `;
     const result = await pool.query(query, [userId]);
 
@@ -276,7 +272,7 @@ router.get('/', async (req, res) => {
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
-  let { username, skills, interests, user_id, contact_links } = req.body;
+  let { username, skills, interests, user_id, contact_links, capacity_status } = req.body;
   const auth0Id = req.auth.payload.sub;
   // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
   let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
@@ -322,9 +318,10 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
         skills = $2,
         interests = $3,
         profile_picture = COALESCE($4, profile_picture),
-        contact_links = $5
-      WHERE id = $6
-      RETURNING id, username, skills, interests, profile_picture, experience, contact_links;
+        contact_links = $5,
+        capacity_status = COALESCE($6, capacity_status)
+      WHERE id = $7
+      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status;
     `;
 
     // Validate and truncate contact_links
@@ -352,6 +349,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       processedInterests,
       valueForProfilePictureColumn,
       contact_links,
+      capacity_status,
       userId,
     ];
     const result = await pool.query(query, values);

@@ -458,6 +458,7 @@ const ProfilePage = () => {
       formData.append('username', profileData.username);
       formData.append('skills', JSON.stringify(profileData.skills));
       formData.append('interests', JSON.stringify(profileData.interests));
+      formData.append('capacity_status', profileData.capacity_status);
 
       // Handle contact_links
       const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
@@ -491,12 +492,6 @@ const ProfilePage = () => {
         },
       });
 
-      // Update capacity_status separately or in profiles table
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/onboarding/save`, {
-        capacity_status: profileData.capacity_status
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
 
       if (response.data.profile) {
         const updatedProfile = response.data.profile;

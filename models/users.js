@@ -19,6 +19,7 @@ const createUserTable = async () => {
       roles TEXT[] DEFAULT '{"user"}'::text[],
       contact_links TEXT[] DEFAULT '{}'::TEXT[],
       alpha BOOLEAN DEFAULT FALSE,
+      capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

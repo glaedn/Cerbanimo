@@ -26,11 +26,7 @@ const alterExistingTables = async () => {
 
   const alterUsersQuery = `
     ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}';
-  `;
-
-  const alterProfilesQuery = `
-    ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}',
     ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable'));
   `;
 
@@ -90,7 +86,6 @@ const alterExistingTables = async () => {
     await pool.query(alterSkillsQuery);
     await pool.query(alterProjectsQuery);
     await pool.query(alterUsersQuery);
-    await pool.query(alterProfilesQuery);
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
 
