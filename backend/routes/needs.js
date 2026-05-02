@@ -1,6 +1,9 @@
 import express from 'express';
 import pool from '../db.js'; // Assuming db.js is in the backend directory
 import DiscordBotService from '../services/DiscordBotService.js';
+import { findMatchesForNeed } from '../services/matchingService.js';
+import { sendNotification } from '../services/NotificationService.js';
+import ProjectConversionService from '../services/ProjectConversionService.js';
 
 const router = express.Router();
 
@@ -67,6 +70,38 @@ router.post('/', async (req, res) => {
     if (newNeed.requestor_community_id) {
       DiscordBotService.broadcastNeed(newNeed).catch(err => console.error('Discord broadcast failed:', err));
     }
+
+    // Trigger Matching and Notifications (Non-blocking)
+    findMatchesForNeed(newNeed.id, pool).then(matches => {
+      const notifications = [];
+
+      // Notify matched users
+      for (const user of matches.users) {
+        if (user.id === newNeed.requestor_user_id) continue;
+        notifications.push(
+          sendNotification(user.id, {
+            message: `A new need matching your skills has been posted: ${newNeed.name}`,
+            type: 'need_match'
+          })
+        );
+      }
+
+      // Notify owners of matched resources
+      for (const resource of matches.resources) {
+        if (resource.owner_user_id && resource.owner_user_id !== newNeed.requestor_user_id) {
+          notifications.push(
+            sendNotification(resource.owner_user_id, {
+              message: `A new need matching your resource "${resource.name}" has been posted: ${newNeed.name}`,
+              type: 'resource_match'
+            })
+          );
+        }
+      }
+
+      return Promise.all(notifications);
+    }).catch(matchErr => {
+      console.error('Error during automated matching/notification:', matchErr);
+    });
 
     res.status(201).json(newNeed);
   } catch (err) {
@@ -222,6 +257,18 @@ router.put('/:needId', async (req, res) => {
   } catch (err) {
     console.error('Error updating need:', err);
     res.status(500).json({ error: 'Failed to update need' });
+  }
+});
+
+// POST /needs/:needId/convert - Convert a need to a project
+router.post('/:needId/convert', async (req, res) => {
+  const { needId } = req.params;
+  try {
+    const project = await ProjectConversionService.convertNeedToProject(needId);
+    res.status(201).json(project);
+  } catch (err) {
+    console.error(`Error converting need ${needId} to project:`, err);
+    res.status(500).json({ error: 'Failed to convert need to project' });
   }
 });
 

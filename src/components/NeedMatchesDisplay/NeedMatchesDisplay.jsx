@@ -8,7 +8,7 @@ import {
 // import './NeedMatchesDisplay.css'; // Optional CSS file
 
 const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) => {
-  const [matchedResources, setMatchedResources] = useState([]);
+  const [matches, setMatches] = useState({ resources: [], users: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
@@ -27,7 +27,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/matching/need/${needId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMatchedResources(response.data);
+      setMatches(response.data);
     } catch (err) {
       console.error('Error fetching matched resources:', err);
       const errorMessage = err.response?.data?.message || 'Failed to fetch resource matches.';
@@ -105,16 +105,71 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
     );
   }
 
+  const { resources, users } = matches;
+
   return (
     <Paper elevation={1} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+      {/* 1. Skilled Users Matches */}
+      <Typography variant="h6" gutterBottom component="div" sx={{ mb: 2 }}>
+        Matched Responders (by Skills)
+      </Typography>
+      {users.length === 0 ? (
+        <Typography sx={{ mb: 4 }}>No skilled users matched this need yet.</Typography>
+      ) : (
+        <List sx={{ mb: 4 }}>
+          {users.map((user, index) => (
+            <React.Fragment key={user.id}>
+              <ListItem alignItems="flex-start" sx={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Box sx={{ mr: 2 }}>
+                  <img
+                    src={user.profile_picture || 'https://via.placeholder.com/50'}
+                    alt={user.username}
+                    style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                </Box>
+                <ListItemText
+                  primary={
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                      {user.username}
+                    </Typography>
+                  }
+                  secondary={
+                    <>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Match Score:</strong> {user.match_score}%
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Location:</strong> {user.location || 'Not specified'}
+                      </Typography>
+                    </>
+                  }
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href={`/profile/${user.id}`}
+                  sx={{ ml: 'auto' }}
+                >
+                  View Profile
+                </Button>
+              </ListItem>
+              {index < users.length - 1 && <Divider sx={{ my: 1 }} />}
+            </React.Fragment>
+          ))}
+        </List>
+      )}
+
+      <Divider sx={{ my: 3 }} />
+
+      {/* 2. Resource Matches */}
       <Typography variant="h6" gutterBottom component="div" sx={{ mb: 2 }}>
         Potential Resource Matches
       </Typography>
-      {matchedResources.length === 0 ? (
+      {resources.length === 0 ? (
         <Typography>No resource matches found at this time.</Typography>
       ) : (
         <List>
-          {matchedResources.map((resource, index) => (
+          {resources.map((resource, index) => (
             <React.Fragment key={resource.id}>
               <ListItem alignItems="flex-start" sx={{ flexDirection: 'column' }}>
                 <Box sx={{ width: '100%' }}>
@@ -133,10 +188,10 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
                   secondary={
                     <>
                       <Typography component="div" variant="body2" color="text.secondary">
-                        <strong>Quantity:</strong> {resource.quantity || 'N/A'}
+                        <strong>Match Score:</strong> {resource.match_score}%
                       </Typography>
                       <Typography component="div" variant="body2" color="text.secondary">
-                        <strong>Condition:</strong> {resource.condition || 'N/A'}
+                        <strong>Quantity:</strong> {resource.quantity || 'N/A'}
                       </Typography>
                       <Typography component="div" variant="body2" color="text.secondary">
                         <strong>Location:</strong> {resource.location_text || 'N/A'}
@@ -147,11 +202,6 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
                           ? `${formatDate(resource.availability_window_start)} - ${formatDate(resource.availability_window_end)}` 
                           : 'Always available or not specified'}
                       </Typography>
-                      {resource.is_recurring && (
-                        <Typography component="div" variant="body2" color="text.secondary">
-                          <strong>Recurring:</strong> {resource.recurring_details || 'Yes'}
-                        </Typography>
-                      )}
                        <Typography component="div" variant="body2" sx={{ color: resource.status === 'available' ? 'success.main' : 'text.secondary', mt: 0.5 }}>
                           <strong>Status:</strong> {resource.status || 'N/A'}
                       </Typography>
@@ -170,7 +220,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
                   </Button>
                 </Box>
               </ListItem>
-              {index < matchedResources.length - 1 && <Divider sx={{ my: 1 }} />}
+              {index < resources.length - 1 && <Divider sx={{ my: 1 }} />}
             </React.Fragment>
           ))}
         </List>
