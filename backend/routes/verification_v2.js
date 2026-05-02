@@ -5,10 +5,26 @@ import pool from '../db.js';
 const router = express.Router();
 
 router.post('/events', async (req, res) => {
-  const { taskId, verifierId, status, proofOfWorkLink } = req.body;
+  const { taskId, verifierId, status, proofOfWorkLink, verificationType } = req.body;
   try {
-    const event = await verificationService.recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink);
+    const event = await verificationService.recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink, verificationType);
     res.status(201).json(event);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/feedback', async (req, res) => {
+  const { needId, taskId, isSafe, isFulfilled, comment } = req.body;
+  const userId = req.user.id;
+  try {
+    const query = `
+      INSERT INTO feedback (user_id, need_id, task_id, is_safe, is_fulfilled, comment)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [userId, needId, taskId, isSafe, isFulfilled, comment]);
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

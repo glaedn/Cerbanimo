@@ -7,8 +7,22 @@ const createVerificationTables = async () => {
       task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
       verifier_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+      verification_type VARCHAR(50), -- 'recipient_confirmed', 'peer_confirmed', 'oracle_confirmed'
       proof_of_work_link TEXT, -- Optional, for oracle model
       accuracy_score NUMERIC, -- Calibrated against quorum
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  const feedbackTableQuery = `
+    CREATE TABLE IF NOT EXISTS feedback (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL,
+      task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      is_safe BOOLEAN,
+      is_fulfilled BOOLEAN,
+      comment TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
@@ -45,7 +59,8 @@ const createVerificationTables = async () => {
     await pool.query(verificationEventsTableQuery);
     await pool.query(disputesTableQuery);
     await pool.query(disputeVotesTableQuery);
-    console.log('PostgreSQL: Verification and Dispute tables created.');
+    await pool.query(feedbackTableQuery);
+    console.log('PostgreSQL: Verification, Dispute, and Feedback tables created.');
   } catch (err) {
     console.error('PostgreSQL: Error creating verification tables:', err);
   }

@@ -141,6 +141,7 @@ const ChronicleTimeline = ({ stories }) => {
             onAddEndorsement={(endorsement) =>
               handleAddEndorsement(story.id, endorsement)
             }
+            verification_type={story.verification_type}
           />
         ))
       )}

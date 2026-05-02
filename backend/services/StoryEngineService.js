@@ -24,6 +24,11 @@ class StoryEngineService {
     const skillNameQuery = await pool.query('SELECT name FROM skills WHERE id = $1', [task.skill_id]);
     const skillTags = [skillNameQuery.rows[0]?.name].filter(Boolean);
 
+    // Add Mutual Aid tag if task is related to a need
+    if (task.related_need_id) {
+      skillTags.push('Mutual Aid Contributions');
+    }
+
     // Dependencies unblocked
     const unblockedQuery = await pool.query('SELECT count(*) FROM tasks WHERE $1 = ANY(dependencies)', [taskId]);
     const dependenciesUnblocked = parseInt(unblockedQuery.rows[0].count);

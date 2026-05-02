@@ -37,6 +37,7 @@ const StoryNode = ({
   impact_weight,
   outcome_statement,
   onAddEndorsement,
+  verification_type,
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [comment, setComment] = useState('');
@@ -106,6 +107,36 @@ const StoryNode = ({
         <Typography variant="subtitle2" className="story-node-subheader">
           Skill type:
         </Typography>
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          {(typeof tags === 'string' ? tags.split(',') : Array.isArray(tags) ? tags : []).some(t => t.trim() === 'Mutual Aid Contributions') && (
+            <Chip
+              label="Mutual Aid"
+              sx={{
+                bgcolor: 'rgba(255, 0, 255, 0.15)',
+                color: '#ff00ff',
+                borderColor: '#ff00ff',
+                border: '1px solid',
+                fontFamily: 'Orbitron',
+                fontSize: '0.65rem'
+              }}
+              size="small"
+            />
+          )}
+          {verification_type && (
+            <Chip
+              label={verification_type.replace('_', ' ').toUpperCase()}
+              sx={{
+                bgcolor: 'rgba(0, 255, 255, 0.15)',
+                color: '#00ffff',
+                borderColor: '#00ffff',
+                border: '1px solid',
+                fontFamily: 'Orbitron',
+                fontSize: '0.65rem'
+              }}
+              size="small"
+            />
+          )}
+        </Stack>
         <Stack direction="row" spacing={1} className="tag-container">
           {(typeof tags === 'string' ? tags.split(',') : Array.isArray(tags) ? tags : []).map((tag, i) => (
             <Chip
@@ -236,4 +267,5 @@ StoryNode.propTypes = {
   impact_weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   outcome_statement: PropTypes.string,
   onAddEndorsement: PropTypes.func,
+  verification_type: PropTypes.string,
 };

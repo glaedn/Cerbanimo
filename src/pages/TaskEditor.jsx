@@ -20,6 +20,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { X } from 'lucide-react';
 import axios from "axios";
+import InteractionFeedback from "../components/InteractionFeedback";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import "./TaskEditor.css";
@@ -50,6 +51,7 @@ const TaskEditor = ({
   const [isSubmitted, setIsSubmitted] = useState(
     (taskForm.status || "").toLowerCase().includes("submitted")
   );
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     setLocalIsEdit(isEdit);
@@ -381,10 +383,30 @@ const TaskEditor = ({
       alert(
         `Task ${approved ? "approved" : "rejected"} successfully`
       );
-      onClose();
+
+      if (approved && taskForm.related_need_id) {
+        setShowFeedbackModal(true);
+      } else {
+        onClose();
+      }
       // Add notification logic here
     } catch (error) {
       console.error(`${approved ? "Approval" : "Rejection"} failed:`, error);
+    }
+  };
+
+  const handleFeedbackSubmit = async (feedbackData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verification_v2/feedback`, feedbackData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert("Feedback submitted. Thank you for making Cerbanimo safer.");
+      setShowFeedbackModal(false);
+      onClose();
+    } catch (error) {
+      console.error("Feedback submission failed:", error);
+      alert("Failed to submit feedback.");
     }
   };
 
@@ -1005,6 +1027,16 @@ const TaskEditor = ({
           </div>
         </div>
       </div>
+    </Modal>
+    <Modal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'auto' }}>
+        <InteractionFeedback
+          needId={taskForm.related_need_id}
+          taskId={taskForm.id}
+          onSubmit={handleFeedbackSubmit}
+          onCancel={() => { setShowFeedbackModal(false); onClose(); }}
+        />
+      </Box>
     </Modal>
     </LocalizationProvider>
   );

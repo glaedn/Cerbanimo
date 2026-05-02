@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
   Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress,
-  createFilterOptions
+  createFilterOptions, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -54,6 +54,7 @@ const ProfilePage = () => {
     experience: [],
     profile_picture: '', // This will hold the file path or URL of the profile picture
     contact_links: ['', '', ''], // Initialize with 3 empty strings
+    capacity_status: 'active',
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -115,6 +116,8 @@ const ProfilePage = () => {
             },
           });
 
+          const capacityStatus = profileResponse.data.capacity_status || 'active';
+
             const fetchedProfileData = {
             id: profileResponse.data.id,
             username: profileResponse.data.username || '',
@@ -146,6 +149,7 @@ const ProfilePage = () => {
             contact_links: Array.isArray(profileResponse.data.contact_links)
               ? [...profileResponse.data.contact_links.slice(0, 3), '', '', ''].slice(0, 3)
               : ['', '', ''],
+            capacity_status: capacityStatus,
             };
           setProfileData(fetchedProfileData);
 
@@ -487,6 +491,13 @@ const ProfilePage = () => {
         },
       });
 
+      // Update capacity_status separately or in profiles table
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/onboarding/save`, {
+        capacity_status: profileData.capacity_status
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
       if (response.data.profile) {
         const updatedProfile = response.data.profile;
         setProfileData(prev => ({
@@ -611,6 +622,7 @@ const ProfilePage = () => {
           fullWidth
         sx={{
           maxWidth: '400px',
+          mb: 2,
           '& .MuiInputLabel-root': { 
             color: theme.colors.textSecondary,
             fontFamily: theme.typography.fontFamilyAccent,
@@ -640,6 +652,35 @@ const ProfilePage = () => {
           },
         }}
       />
+      <FormControl fullWidth sx={{ maxWidth: '400px', mb: 2 }}>
+        <InputLabel sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent }}>Capacity Status</InputLabel>
+        <Select
+          value={profileData.capacity_status || 'active'}
+          label="Capacity Status"
+          onChange={(e) => handleInputChange('capacity_status', e.target.value)}
+          sx={{
+            color: theme.colors.textPrimary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            backgroundColor: 'rgba(10, 10, 46, 0.6)',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: theme.colors.border,
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: theme.colors.primary,
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: theme.colors.primary,
+            },
+            '& .MuiSvgIcon-root': {
+              color: theme.colors.primary,
+            }
+          }}
+        >
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="limited">Limited</MenuItem>
+          <MenuItem value="unavailable">Unavailable</MenuItem>
+        </Select>
+      </FormControl>
       {[0, 1, 2].map((index) => (
         <TextField
           key={index}

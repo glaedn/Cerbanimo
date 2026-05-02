@@ -24,8 +24,10 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   // They are currently simple and efficient. Avoid complex computations here if possible,
   // or memoize if they become bottlenecks with very large datasets.
   const getStarColor = (item) => {
+    if (item.type === "need") return "#ff00ff"; // Magenta for needs
+    if (item.type === "resource") return "#00ffff"; // Cyan for resources
     const status = item.status.toLowerCase();
-    if (status.includes("urgent")) return "#ff0000"; // Red
+    if (status.includes("urgent") || status.includes("critical")) return "#ff0000"; // Red
     if (status.includes("completed") || status.includes("archived"))
       return "#ff69b4"; // Pink
     if (status.includes("submitted")) return "#ffa500"; // Orange
@@ -64,16 +66,30 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           cacheMode: "off",
         });
         const config = { headers: { Authorization: `Bearer ${token}` } };
-        const [tasksRes, projectsRes, communitiesRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks`, config),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects`, config),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities`, config),
+        const fetchWithFallback = async (url) => {
+          try {
+            const res = await axios.get(url, config);
+            return res.data;
+          } catch (e) {
+            console.warn(`Failed to fetch ${url}, using empty array fallback`, e);
+            return [];
+          }
+        };
+
+        const [tasksData, projectsData, communitiesRaw, needsData, resourcesData] = await Promise.all([
+          fetchWithFallback(`${import.meta.env.VITE_BACKEND_URL}/tasks`),
+          fetchWithFallback(`${import.meta.env.VITE_BACKEND_URL}/projects`),
+          fetchWithFallback(`${import.meta.env.VITE_BACKEND_URL}/communities`),
+          fetchWithFallback(`${import.meta.env.VITE_BACKEND_URL}/needs`),
+          fetchWithFallback(`${import.meta.env.VITE_BACKEND_URL}/resources/catalog`),
         ]);
         const processedData = [];
-        console.log("Tasks:", tasksRes.data);
-        console.log("Projects:", projectsRes.data);
-        console.log("Communities:", communitiesRes.data);
-        tasksRes.data.forEach((task) => {
+        const tasks = Array.isArray(tasksData) ? tasksData : [];
+        const projects = Array.isArray(projectsData) ? projectsData : [];
+        const needs = Array.isArray(needsData) ? needsData : [];
+        const resources = Array.isArray(resourcesData) ? resourcesData : [];
+
+        tasks.forEach((task) => {
           processedData.push({
             id: `task-${task.id}`,
             type: "task",
@@ -87,14 +103,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           });
         });
 
-        projectsRes.data.forEach((project) => {
+        projects.forEach((project) => {
           let projectStatus = "active";
-          const urgentTasksInProject = tasksRes.data.filter(
+          const urgentTasksInProject = tasks.filter(
             (t) =>
               `project-${t.project_id}` === `project-${project.id}` &&
               (t.status || "").toLowerCase().includes("urgent")
           );
-          const activeTasksInProject = tasksRes.data.filter(
+          const activeTasksInProject = tasks.filter(
             (t) =>
               `project-${t.project_id}` === `project-${project.id}` &&
               (t.status || "").toLowerCase().startsWith("active")
@@ -116,7 +132,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           });
         });
         const communities =
-          communitiesRes.data.communities || communitiesRes.data;
+          communitiesRaw?.communities || communitiesRaw || [];
         communities.forEach((community) => {
           processedData.push({
             id: `community-${community.id}`,
@@ -130,6 +146,31 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             raw_data: community,
           });
         });
+
+        needs.forEach((need) => {
+          processedData.push({
+            id: `need-${need.id}`,
+            type: "need",
+            name: need.name,
+            status: need.urgency_level || need.urgency || "medium",
+            lastActivity: new Date(need.updated_at || need.created_at || Date.now()),
+            contributors: 0,
+            raw_data: need,
+          });
+        });
+
+        resources.forEach((resource) => {
+          processedData.push({
+            id: `resource-${resource.id}`,
+            type: "resource",
+            name: resource.name,
+            status: resource.status || "available",
+            lastActivity: new Date(resource.updated_at || resource.created_at || Date.now()),
+            contributors: 0,
+            raw_data: resource,
+          });
+        });
+
         setStarData(processedData);
       } catch (err) {
         setError(err.message || "Failed to fetch data");
@@ -212,6 +253,38 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         x: Math.random() * clientWidth,
         y: Math.random() * clientHeight,
       })); // Important: simulation is stopped after ticks.
+
+      // Active help routes: draw lines between tasks and their related needs
+      const routes = [];
+      const tasks = randomizedStarData.filter(d => d.type === "task");
+      const needs = randomizedStarData.filter(d => d.type === "need");
+
+      tasks.forEach(task => {
+        if (task.raw_data.related_need_id) {
+          const targetNeed = needs.find(n => n.raw_data.id === task.raw_data.related_need_id);
+          if (targetNeed) {
+            routes.push({
+              id: `route-${task.id}-${targetNeed.id}`,
+              source: task,
+              target: targetNeed
+            });
+          }
+        }
+      });
+
+      svg.selectAll(".help-route")
+         .data(routes, d => d.id)
+         .enter()
+         .insert("line", ":first-child")
+         .attr("class", "help-route")
+         .attr("x1", d => d.source.x)
+         .attr("y1", d => d.source.y)
+         .attr("x2", d => d.target.x)
+         .attr("y2", d => d.target.y)
+         .attr("stroke", "#00ff00")
+         .attr("stroke-width", 1)
+         .attr("stroke-dasharray", "5,5")
+         .attr("opacity", 0.5);
 
       const visualStars = svg
         .selectAll(".star")
@@ -332,8 +405,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           }
         });
 
-      // Create sonar ping effect for urgent tasks
-      const urgentStarsData = randomizedStarData.filter(d => d.status.toLowerCase().includes("urgent"));
+      // Create sonar ping effect for urgent tasks and all needs
+      const urgentStarsData = randomizedStarData.filter(d =>
+        d.status.toLowerCase().includes("urgent") ||
+        d.status.toLowerCase().includes("critical") ||
+        d.type === "need"
+      );
 
       svg.selectAll(".sonar-ping-effect")
          .data(urgentStarsData, (d) => d.id) // Use urgent stars data

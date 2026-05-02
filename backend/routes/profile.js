@@ -33,7 +33,10 @@ router.get("/public/:userId",
       // For now, let's fetch the user and then filter interests based on their status in the interests table.
 
       const result = await pool.query(
-        `SELECT id, username, profile_picture, skills, interests, badges, contact_links FROM users WHERE id = $1`,
+        `SELECT u.id, u.username, u.profile_picture, u.skills, u.interests, u.badges, u.contact_links, p.capacity_status
+         FROM users u
+         LEFT JOIN profiles p ON u.id = p.user_id
+         WHERE u.id = $1`,
         [userId]
       );
 
@@ -232,9 +235,10 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links
-      FROM users
-      WHERE auth0_id = $1;
+      SELECT u.id, u.username, u.skills, u.interests, u.profile_picture, u.cotokens, u.contact_links, pr.capacity_status
+      FROM users u
+      LEFT JOIN profiles pr ON u.id = pr.user_id
+      WHERE u.auth0_id = $1;
     `;
     const result = await pool.query(query, [userId]);
 

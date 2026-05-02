@@ -229,4 +229,18 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
   }
 });
 
+router.post('/save', async (req, res) => {
+  const { capacity_status } = req.body;
+  const userId = req.user.id;
+  try {
+    const result = await pool.query(
+      'UPDATE profiles SET capacity_status = $1 WHERE user_id = $2 RETURNING *',
+      [capacity_status, userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

@@ -2,13 +2,13 @@ import pool from '../db.js';
 import { calculateVoteWeight } from '../utils/voteWeight.js';
 
 class VerificationService {
-  async recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink = null) {
+  async recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink = null, verificationType = null) {
     const query = `
-      INSERT INTO verification_events (task_id, verifier_id, status, proof_of_work_link)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO verification_events (task_id, verifier_id, status, proof_of_work_link, verification_type)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const result = await pool.query(query, [taskId, verifierId, status, proofOfWorkLink]);
+    const result = await pool.query(query, [taskId, verifierId, status, proofOfWorkLink, verificationType]);
     return result.rows[0];
   }
 
