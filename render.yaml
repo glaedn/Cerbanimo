@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cerbanimo-api # Backend service
+    env: node
+    plan: free
+    region: oregon # User can change this
+    buildPacks: # Explicitly specify Node.js buildpack
+      - type: nodejs
+    buildCommand: "cd backend && npm install"
+    startCommand: "cd backend && node server.js"
+    envVars:
+      - key: DATABASE_URL
+        generateValue: true # For Render PostgreSQL or external
+      - key: FRONTEND_URL
+        value: https://cerbanimo.onrender.com # Frontend's public URL
+      # PORT is usually set by Render automatically, no need to set it here unless overriding
+
+  - type: static # Changed from web to static as it's a Vite SPA
+    name: cerbanimo # Frontend service
+    env: static
+    plan: free
+    region: oregon # User can change this
+    buildPacks: # Explicitly specify Node.js buildpack for build process
+      - type: nodejs
+    buildCommand: "npm install && npm run build" # Root package.json handles this
+    staticPublishPath: "./dist" # Vite's default output directory
+    envVars: # For build-time environment variables
+      - key: VITE_BACKEND_URL
+        value: https://cerbanimo-api.onrender.com # Backend's public URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

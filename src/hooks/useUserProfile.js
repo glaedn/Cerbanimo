@@ -10,6 +10,7 @@ const useUserProfile = () => {
     experience: { total_xp: 0, current_level: 0, xp_for_next_level: 0 },
     skills: [],
     tokens: 0, // Placeholder initially, will be updated
+    contact_links: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,7 +18,7 @@ const useUserProfile = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000', // Make sure this matches your Auth0 API audience
+        audience: import.meta.env.VITE_BACKEND_URL, // Make sure this matches your Auth0 API audience
         scope: 'openid profile email',
       });
     } catch (e) {
@@ -44,12 +45,12 @@ const useUserProfile = () => {
 
         // Fetch profile and skills options concurrently
         const [profileResponse, optionsResponse] = await Promise.all([
-          axios.get('http://localhost:4000/profile', {
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             headers: { Authorization: `Bearer ${token}` },
             // Params might be needed if your backend expects sub/email for initial profile creation/retrieval
             // params: { sub: user.sub, email: user.email, name: user.name } 
           }),
-          axios.get('http://localhost:4000/profile/options', {
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
             headers: { Authorization: `Bearer ${token}` },
           })
         ]);
@@ -81,7 +82,8 @@ const useUserProfile = () => {
           experience: profileData.experience || { total_xp: 0, current_level: 0, xp_for_next_level: 0 },
           skills: userSkills,
           // Check for token balance, if not found, use placeholder
-          tokens: profileData.tokens !== undefined ? profileData.tokens : 100, // Placeholder 100 if not present
+          tokens: profileData.cotokens !== undefined ? profileData.cotokens : 100, // Placeholder 100 if not present
+          contact_links: profileData.contact_links || [],
         });
 
       } catch (err) {
