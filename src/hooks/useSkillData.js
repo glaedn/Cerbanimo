@@ -11,7 +11,7 @@ const useSkillData = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000', // Ensure this matches your Auth0 API audience
+        audience: import.meta.env.VITE_BACKEND_URL, // Ensure this matches your Auth0 API audience
         scope: 'openid profile email', // Adjust scopes as needed
       });
     } catch (e) {
@@ -33,13 +33,13 @@ const useSkillData = () => {
 
       try {
         const token = await getToken();
-        const response = await axios.get('http://localhost:4000/skills/all', {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/skills/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
         // Assuming response.data is the array of all skill objects
         // Each skill object might look like: { id, name, category, parent_skill_id, description, ... }
-        setAllSkills(response.data || []);
+        setAllSkills(Array.isArray(response.data) ? response.data : []);
         
       } catch (err) {
         console.error('Error fetching all skills:', err.response?.data || err.message);

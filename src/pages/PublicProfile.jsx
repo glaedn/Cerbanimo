@@ -1,23 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
 import "./PublicProfile.css";
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import { Card, CardContent, Button as MuiButton } from "@mui/material";
 
 const PublicProfile = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user, getAccessTokenSilently } = useAuth0();
+  const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
+
   // Centralized token retrieval method
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:write:profile'
       });
     } catch (error) {
@@ -30,7 +36,7 @@ const PublicProfile = () => {
     const fetchData = async () => {
       try {
         // Fetch basic profile data
-        const profileResponse = await axios.get(`http://localhost:4000/profile/public/${userId}`);
+        const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${userId}`);
         
         // Safely parse profile data
         const parsedProfile = {
@@ -60,15 +66,31 @@ const PublicProfile = () => {
                 }
                 return interest;
               })
+            : [],
+          contact_links: Array.isArray(profileResponse.data.contact_links)
+            ? profileResponse.data.contact_links
             : []
         };
         
         setProfile(parsedProfile);
+
+        // Fetch advertised services
+        const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/user/${userId}`);
+        setServices(servicesResponse.data || []);
         
+        // Fetch current user's profile to get their internal ID for purchasing
+        if (isAuthenticated) {
+            const token = await getToken();
+            const currentProfileRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setCurrentUserProfile(currentProfileRes.data);
+        }
+
         // Fetch badges from rewards endpoint with auth token
         const token = await getToken();
         if (token) {
-          const badgesResponse = await axios.get(`http://localhost:4000/rewards/user/${userId}`, {
+          const badgesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${userId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -85,7 +107,32 @@ const PublicProfile = () => {
     };
 
     fetchData();
-  }, [userId]);
+  }, [userId, isAuthenticated]);
+
+  const handlePurchaseService = async (service) => {
+    if (!currentUserProfile) {
+        alert("Please log in to purchase services.");
+        return;
+    }
+
+    const confirm = window.confirm(`Purchase service "${service.name}" for ${service.service_price} community tokens?`);
+    if (!confirm) return;
+
+    try {
+        const token = await getToken();
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/services/${service.id}/purchase`, {
+            userId: currentUserProfile.id
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        alert("Service purchased successfully! Redirecting to your new project instance.");
+        navigate(`/visualizer/${response.data.projectId}`);
+    } catch (error) {
+        console.error("Purchase failed:", error);
+        alert(`Purchase failed: ${error.response?.data?.message || error.message}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -142,7 +189,7 @@ const PublicProfile = () => {
   return (
     <div className="public-profile-container">
       <Avatar 
-        src={profile.profile_picture ? `http://localhost:4000${profile.profile_picture}` : "/default-avatar.png"} 
+        src={profile.profile_picture ? profile.profile_picture : "/default-avatar.png"}
         className="public-profile-avatar"
         sx={{ width: 100, height: 100, marginBottom: 2 }}
       />
@@ -150,7 +197,57 @@ const PublicProfile = () => {
       <Typography variant="h4" gutterBottom>
         {profile.username}
       </Typography>
+
+      {/* Contact Links Section */}
+      {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (
+        <Box sx={{ my: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Contact:
+          </Typography>
+          {profile.contact_links.filter(link => link && link.trim() !== '').map((link, index) => {
+            const href = (link.startsWith('http://') || link.startsWith('https://')) ? link : `http://${link}`;
+            return (
+              <Typography key={index} sx={{ mb: 0.5 }}>
+                <MuiLink href={href} target="_blank" rel="noopener noreferrer" sx={{ wordBreak: 'break-all' }}>
+                  {link}
+                </MuiLink>
+              </Typography>
+            );
+          })}
+        </Box>
+      )}
+
       <UserPortfolio userId={userId} />
+
+      {services.length > 0 && (
+        <Box sx={{ my: 4, width: '100%' }}>
+          <Typography variant="h5" sx={{ color: '#00F3FF', mb: 2, fontFamily: 'Orbitron' }}>
+            Services Offered
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
+            {services.map(service => (
+              <Card key={service.id} sx={{ bgcolor: 'rgba(28, 28, 30, 0.7)', border: '1px solid #00F3FF', color: 'white' }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#00F3FF' }}>{service.name}</Typography>
+                  <Typography variant="body2" sx={{ color: '#CCC', mb: 2, minHeight: '3em' }}>{service.description}</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" sx={{ color: '#FF5CA2' }}>{service.service_price} Tokens</Typography>
+                    <MuiButton
+                        variant="contained"
+                        startIcon={<ShoppingCartIcon />}
+                        onClick={() => handlePurchaseService(service)}
+                        sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'black' }}
+                    >
+                        Purchase
+                    </MuiButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </Box>
+      )}
+
       <Typography variant="h6" gutterBottom>
         Skills:
       </Typography>
@@ -173,7 +270,7 @@ const PublicProfile = () => {
           badges.map((badge, index) => (
             <div key={`badge-${badge.id || index}`} className="badge-item">
               <Avatar 
-                src={badge.icon ? `http://localhost:4000${badge.icon}` : "/default-badge.png"} 
+                src={badge.icon ? badge.icon : "/default-badge.png"}
                 alt={badge.name}
                 className="badge-avatar"
                 sx={{ width: 50, height: 50 }}

@@ -29,7 +29,7 @@ const CommunityCreation = () => {
     const fetchTags = async () => {
       try {
         const token = await getAccessTokenSilently();
-        const response = await axios.get('http://localhost:4000/profile/options', {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAvailableTags(response.data.interestsPool);
@@ -45,7 +45,7 @@ const CommunityCreation = () => {
         const fetchUserId = async () => {
         try {
             const token = await getAccessTokenSilently();
-            const response = await axios.get('http://localhost:4000/profile/userId', {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
             headers: { Authorization: `Bearer ${token}` },
             });
             if (response.data && response.data.id) {
@@ -82,7 +82,7 @@ const CommunityCreation = () => {
           return tag.id; // If it's already an object
         }).filter(id => id !== null);
     
-        const response = await axios.post('http://localhost:4000/communities/', {
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/communities/`, {
           name: name,
           description: description,
           id: userId,

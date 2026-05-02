@@ -20,8 +20,8 @@ const ProjectVisualizer = () => {
     useProjectTasks(projectId, user);
   const [activeCategory, setActiveCategory] = useState("All Tasks"); // Default to All Tasks
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeNode, setActiveNode] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [svgDimensions, setSvgDimensions] = useState({
     width: 800,
@@ -68,11 +68,11 @@ const ProjectVisualizer = () => {
     
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
   
-      const response = await fetch(`http://localhost:4000/communities/user/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -103,11 +103,11 @@ const ProjectVisualizer = () => {
     setLoading(true);
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
 
-      const response = await fetch(`http://localhost:4000/tasks/${projectId}/granularize`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${projectId}/granularize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,12 +152,12 @@ const ProjectVisualizer = () => {
   
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
   
       const response = await fetch(
-        `http://localhost:4000/communities/${selectedCommunity.id}/submit/${projectId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`,
         {
           method: 'POST',
           headers: {
@@ -184,11 +184,11 @@ const ProjectVisualizer = () => {
   const handleUpdateTags = async (newTags) => {
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });// Use the token for authorized request
 
-      const response = await fetch(`http://localhost:4000/projects/${projectId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -215,24 +215,28 @@ const ProjectVisualizer = () => {
     const fetchInterests = async () => {
       try {
         const token = await getAccessTokenSilently({
-          audience: "http://localhost:4000",
+          audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: "openid profile email",
         });
 
-        const response = await fetch('http://localhost:4000/profile/options', {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch interests');
+          const errorText = await response.text(); // Get text if not ok
+          console.error('Failed to fetch interests. Status:', response.status, 'Response:', errorText);
+          throw new Error(`Failed to fetch interests: ${response.status}`);
         }
 
         const data = await response.json();
         setInterests(data.interestsPool || []);
       } catch (error) {
-        console.error('Error fetching interests:', error);
+        console.error('Error fetching interests:', error.message);
+        // If the error object was augmented with responseText, it could be logged here too.
+        // For this change, the primary log is before throwing.
       }
     };
 
@@ -259,11 +263,11 @@ useEffect(() => {
   const fetchProfile = async () => {
     try {
       const token = await getAccessTokenSilently({
-        audience: "http://localhost:4000",
+        audience: `${import.meta.env.VITE_BACKEND_URL}`,
         scope: "openid profile email",
       });
 
-      const response = await fetch('http://localhost:4000/profile/userId', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -271,14 +275,17 @@ useEffect(() => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        const errorText = await response.text(); // Get text if not ok
+        console.error('Failed to fetch profile. Status:', response.status, 'Response:', errorText);
+        throw new Error(`Failed to fetch profile: ${response.status}`);
       }
 
       const data = await response.json();
       setUserId(data.id);
       
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching profile:', error.message);
+      // If the error object was augmented with responseText, it could be logged here too.
     }
   };
 
@@ -350,8 +357,8 @@ useEffect(() => {
     if (hoveredNode?.id === d.id) return;
     setHoveredNode({
       ...d,
-      x: event.clientX + 20, // Viewport-relative X
-      y: event.clientY + 20, // Viewport-relative Y
+      rawX: event.clientX,
+      rawY: event.clientY,
       element: event.currentTarget,
     });
   };
@@ -486,6 +493,59 @@ useEffect(() => {
   }
 }, [skills, tasks]); // Dependencies remain the same
 
+useEffect(() => {
+  if (hoveredNode && tooltipRef.current) {
+    const { width: tooltipWidth, height: tooltipHeight } = tooltipRef.current.getBoundingClientRect();
+    const screenWidth = window.innerWidth; // Renamed for clarity from prompt
+    const screenHeight = window.innerHeight; // Renamed for clarity from prompt
+    const offset = 20;
+
+    let finalX = hoveredNode.rawX - tooltipWidth / 2; // Default: bottom-center X
+    let finalY = hoveredNode.rawY + offset;          // Default: bottom-center Y
+
+    const nearTop = hoveredNode.rawY < tooltipHeight + offset * 1.5; 
+    const nearBottom = hoveredNode.rawY + tooltipHeight + offset * 1.5 > screenHeight;
+    const nearLeft = hoveredNode.rawX < tooltipWidth / 2 + offset; 
+    const nearRight = hoveredNode.rawX + tooltipWidth / 2 + offset > screenWidth;
+
+    // Corner conditions first
+    if (nearTop && nearLeft) { // Top-left corner => position bottom-right of cursor
+      finalX = hoveredNode.rawX + offset;
+      finalY = hoveredNode.rawY + offset;
+    } else if (nearTop && nearRight) { // Top-right corner => position bottom-left of cursor
+      finalX = hoveredNode.rawX - tooltipWidth - offset;
+      finalY = hoveredNode.rawY + offset;
+    } else if (nearBottom && nearLeft) { // Bottom-left corner => position top-right of cursor
+      finalX = hoveredNode.rawX + offset;
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+    } else if (nearBottom && nearRight) { // Bottom-right corner => position top-left of cursor
+      finalX = hoveredNode.rawX - tooltipWidth - offset;
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+    }
+    // Edge conditions (if not a corner)
+    else if (nearTop) { // Near top edge => position top-centered (which means tooltip bottom is above cursor)
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+      // X is already default (centered relative to cursor)
+    } else if (nearBottom) { // Near bottom edge => position top-centered
+      finalY = hoveredNode.rawY - tooltipHeight - offset;
+      // X is already default (centered relative to cursor)
+    } else if (nearLeft) { // Near left edge => position right-centered from cursor
+        finalX = hoveredNode.rawX + offset;
+        // Y is already default (bottom of cursor)
+    } else if (nearRight) { // Near right edge => position left-centered from cursor
+        finalX = hoveredNode.rawX - tooltipWidth - offset;
+        // Y is already default (bottom of cursor)
+    }
+
+    // Boundary checks
+    if (finalX < 0) finalX = 0;
+    if (finalX + tooltipWidth > screenWidth) finalX = screenWidth - tooltipWidth;
+    if (finalY < 0) finalY = 0;
+    if (finalY + tooltipHeight > screenHeight) finalY = screenHeight - tooltipHeight;
+
+    setTooltipPosition({ x: finalX, y: finalY });
+  }
+}, [hoveredNode]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -639,19 +699,6 @@ useEffect(() => {
       }
     })
     .map((node) => node.id);
-
-    const handleNodeClick = (event, d) => {
-      event.stopPropagation(); // Prevent click bubbling
-
-      // Get node position relative to the SVG container
-      const [x, y] = d3.pointer(event, containerRef.current);
-
-      setActiveNode({
-        ...d,
-        x,
-        y,
-      });
-    };
 
     // Perform topological sorting to assign levels
     const assignLevels = () => {
@@ -866,13 +913,14 @@ links.forEach(link => {
                   status: dep.taskInfo.status,
                   category: dep.taskInfo.category,
                   type: dep.type,
-                  x: event.pageX,
-                  y: event.pageY,
+                  rawX: event.clientX,
+                  rawY: event.clientY,
+                  element: event.currentTarget,
                 });
               }
             })
-            .on("mouseout", () => setHoveredNode(null))
-            .on("mouseleave", () => setHoveredNode(null)) // Additional check to ensure tooltip disappears
+            .on("mouseout", handleMouseOut)
+            .on("mouseleave", handleMouseOut) 
             .on("click", () => handleEditTask(dep.taskInfo.id));
 
           externalNodeGroup
@@ -924,13 +972,14 @@ links.forEach(link => {
                   status: dep.taskInfo.status,
                   category: dep.taskInfo.category,
                   type: dep.type,
-                  x: event.pageX,
-                  y: event.pageY,
+                  rawX: event.clientX,
+                  rawY: event.clientY,
+                  element: event.currentTarget,
                 });
               }
             })
-            .on("mouseout", () => setHoveredNode(null))
-            .on("mouseleave", () => setHoveredNode(null)); // Additional check
+            .on("mouseout", handleMouseOut)
+            .on("mouseleave", handleMouseOut);
 
           externalNodeGroup
             .append("circle")
@@ -1062,9 +1111,6 @@ links.forEach(link => {
 
   // Add these debug logs right before the TaskEditor component in the return statement
 
-// Show the comparison that's happening
-const currentReviewerIds = allTasks[taskForm?.id]?.reviewer_ids || [];
-const numericUserId = Number(userId);
   return (
     <div
       className="skill-hierarchy-container"
@@ -1200,13 +1246,16 @@ const numericUserId = Number(userId);
           ref={tooltipRef}
           className="tooltip-container"
           style={{
-            left: hoveredNode.x,
-            top: hoveredNode.y,
+            position: 'fixed',
+            left: tooltipPosition.x,
+            top: tooltipPosition.y,
             opacity: hoveredNode ? 1 : 0,
-            transform: `translate(20px, 20px)`,
           }}
           onMouseEnter={() => clearTimeout(hoverIntentRef.current)}
-          onMouseLeave={() => setHoveredNode(null)}
+          onMouseLeave={() => {
+            clearTimeout(hoverIntentRef.current); // Clear any pending show
+            setHoveredNode(null); // Hide tooltip
+          }}
         >
           <div className="node-tooltip">
             <h4>{hoveredNode.name}</h4>

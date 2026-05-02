@@ -345,8 +345,6 @@
 
 .cyber-button {
   flex: 1;
-  background: linear-gradient(45deg, #0011ff, #000b8f) !important;
-  color: #00f3ff !important;
   border: 2px solid #00f3ff !important;
   font-family: 'Orbitron', sans-serif !important;
   letter-spacing: 1px;
@@ -456,7 +454,6 @@
 
   
   .node-tooltip {
-    position: absolute;
     background: rgb(0, 0, 0);
     border: 1px solid #ccc;
     padding: 8px;
@@ -465,10 +462,7 @@
     z-index: 1000;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     max-width: 300px;
-    transform: translate(20px, 20px);
-    transition: 
-    opacity 0.2s ease 0.1s,
-    transform 0.2s ease 0.1s;
+    transition: opacity 0.2s ease 0.1s;
   }
 
   .node-tooltip::before {
@@ -484,12 +478,10 @@
 
   .node-tooltip-enter {
     opacity: 0;
-    transform: translate(20px, 10px);
   }
   
   .node-tooltip-enter-active {
     opacity: 1;
-    transform: translate(20px, 20px);
   }
 
   .tooltip-container {
@@ -519,7 +511,10 @@
   display: flex;
   gap: 1rem;
   margin: 1rem 0;
+  flex-wrap: wrap;
 }
+
+
 
 .token-metric {
   background: #222;

@@ -158,18 +158,25 @@ router.post('/create', async (req, res) => {
 // Update an existing project
 router.put('/:projectId', async (req, res) => {
   const { projectId } = req.params;
-  const { name, description, tags } = req.body;
+  const { name, description, tags, is_service, service_price, service_visibility } = req.body;
 
   if (!name || !description) {
       return res.status(400).json({ error: 'Name and description are required' });
   }
 
   try {
+      // Use COALESCE to keep existing values if not provided in the request
       await pool.query(
           `UPDATE projects 
-          SET name = $1, description = $2, tags = $3 
-          WHERE id = $4`,
-          [name, description, tags, projectId]
+          SET
+            name = $1,
+            description = $2,
+            tags = $3,
+            is_service = COALESCE($4, is_service),
+            service_price = COALESCE($5, service_price),
+            service_visibility = COALESCE($6, service_visibility)
+          WHERE id = $7`,
+          [name, description, tags, is_service, service_price, service_visibility, projectId]
       );
       res.status(200).json({ message: 'Project updated successfully' });
   } catch (error) {
@@ -319,7 +326,9 @@ router.post('/auto-generate', async (req, res) => {
     }
 
     // 2. Generate tasks using LLM
-    const tasks = await autoGenerateTasks(project.name, project.description);
+    const generatedData = await autoGenerateTasks(project.name, project.description);
+    console.log('Generated data:', generatedData);
+    const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
 
     // 3. First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map

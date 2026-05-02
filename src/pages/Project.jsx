@@ -9,6 +9,7 @@ import { useNotifications } from "./NotificationProvider.jsx";
 import './Project.css';
 import { useProjectTasks } from "../hooks/useProjectTasks";
 import TaskEditor from './TaskEditor.jsx'; // Assuming you have a TaskEditor component
+import ProjectServiceModal from './ProjectServiceModal.jsx';
 
 // Updated axios interceptor to handle errors more comprehensively
 axios.interceptors.response.use(
@@ -46,6 +47,8 @@ const Project = () => {
   // Keep other state that's not managed by the hook
   const [interestsPool, setInterestsPool] = useState([]);
   const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [userCommunities, setUserCommunities] = useState([]);
   const [isProjectCreator, setIsProjectCreator] = useState(false);
   const [profileData, setProfileData] = useState({
     username: '',
@@ -80,7 +83,7 @@ const Project = () => {
   const getToken = async () => {
     try {
       return await getAccessTokenSilently({
-        audience: 'http://localhost:4000',
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:write:profile'
       });
     } catch (error) {
@@ -95,7 +98,7 @@ const Project = () => {
       const token = await getToken();
   
       // Fetch profile
-      const profileResponse = await axios.get('http://localhost:4000/profile', {
+      const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
         params: { sub: user.sub, email: user.email, name: user.name },
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -103,26 +106,40 @@ const Project = () => {
         },
       });
   
+      const userId = Number(profileResponse.data.id) || 0;
       setProfileData({
         username: profileResponse.data.username || '',
         skills: profileResponse.data.skills || [],
-        id: Number(profileResponse.data.id) || 0, // Convert to number
+        id: userId, // Convert to number
       });
+
+      // Fetch user's communities
+      if (userId) {
+        const communitiesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserCommunities(communitiesResponse.data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch skills and profile:', error);
     }
   };
 
   // Save project method
-  const saveProject = async () => {
+  const saveProject = async (serviceUpdates = null) => {
     try {
       const token = await getToken();
-      await axios.put(`http://localhost:4000/projects/${projectId}`, project, {
+      const payload = serviceUpdates ? { ...project, ...serviceUpdates } : project;
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      if (serviceUpdates) {
+          setShowServiceModal(false);
+          await fetchProject();
+      }
       alert('Project saved successfully!');
     } catch (error) {
       console.error('Failed to save project:', error);
@@ -250,7 +267,18 @@ const Project = () => {
           <div><strong>Tokens Available:</strong> {(project.token_pool || 250) - (project.used_tokens || 0) - (project.reserved_tokens || 0)}</div>
         </div>
         )}
-        <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Button variant="contained" sx={{ background: 'linear-gradient(45deg, #00F3FF, #4DABF7)', color: 'common.black', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }} onClick={() => navigate(`/visualizer/${projectId}`)}>Visualize</Button>
+          {isProjectCreator && (
+            <Button
+              variant="contained"
+              sx={{ background: 'linear-gradient(45deg, #FF5CA2, #FF003C)', color: 'common.white', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '1px', padding: '8px 15px', marginY: 1 }}
+              onClick={() => setShowServiceModal(true)}
+            >
+              {project.is_service ? 'Service Settings' : 'Make a Service'}
+            </Button>
+          )}
+        </div>
         {isProjectCreator && (
         <Autocomplete
           multiple
@@ -354,6 +382,14 @@ const Project = () => {
   currentUser={user}
   projectCreatorId={Number(project?.creator_id)} // Convert to number
 />
+
+      <ProjectServiceModal
+        open={showServiceModal}
+        onClose={() => setShowServiceModal(false)}
+        project={project}
+        communities={userCommunities}
+        onSave={saveProject}
+      />
     </div>
     );
 };

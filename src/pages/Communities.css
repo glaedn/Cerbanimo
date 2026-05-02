@@ -1,14 +1,21 @@
 /* Container for Communities Page */
+
+.html, body {
+    overflow-y: auto; /* Prevents scrolling on the main page */
+}
+
 .communities-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    height: 100vh;
+    height: calc(100% - 60px);
     width: 100vw;
-    padding: 20px;
+    padding: 5px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: 60px;
     background: radial-gradient(circle, #0A0A2E, #000000);
     color: #FFFFFF;
     font-family: 'Orbitron', sans-serif;
@@ -21,7 +28,6 @@
     color: #00F3FF;
     text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
     margin-bottom: 10px;
-    margin-top: 60px;
 }
 
 /* Search Bar & Add Button */
@@ -72,10 +78,11 @@
     max-width: 1200px;
     margin-top: 10px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: rgba(28, 28, 30, 0.9);
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
-    padding: 20px;
+    padding: 10px;
 }
 
 /* Custom Scrollbar */
@@ -121,6 +128,8 @@
     color: #00F3FF;
     text-shadow: 0 0 8px rgba(0, 243, 255, 0.6), 0 0 15px rgba(0, 243, 255, 0.4); /* Adjusted shadow */
     margin-bottom: 10px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 /* Community Description */
@@ -128,6 +137,9 @@
     font-size: 1rem;
     color: #CCCCCC;
     margin-bottom: 15px;
+    padding-right: 50px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 /* Tag Chips */

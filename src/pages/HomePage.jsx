@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import "./Homepage.css";
+import "./HomePage.css";
+import GalacticActivityMap from "../components/GalacticActivityMap/GalacticActivityMap.jsx";
+//Had to fix home page capitalization to match the file name
 
 export default function Homepage() {
   // Get the navigate function from React Router
@@ -26,7 +28,7 @@ export default function Homepage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
         >
-          Revolutionizing Collaborative Work through Decentralization, Stakeholder Equalization, and Gamification.
+          Collaboration made fun and fair.
         </motion.p>
         <button className="cta-button" onClick={handleJoinAlpha}>Join the Alpha</button>
       </section>
