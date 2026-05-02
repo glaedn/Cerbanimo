@@ -1,11 +1,55 @@
-.double-helix {
+:root {
+  --orb-color-healthy: #70ffd6;
+  --orb-color-progressing: #70d6ff;
+  --orb-color-stalled: #ff7070;
+}
+
+.double-helix-container {
+  width: 100%;
+  height: 150px;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px 0;
+  animation: subtle-rotate 30s linear infinite alternate;
 }
 
-.helix-image {
-  width: 350px; /* Scaled to fit the 390px mobile canvas with margins */
-  filter: drop-shadow(0 0 10px rgba(223, 168, 223, 0.7)); /* Subtle violet glow */
+.double-helix-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 15px rgba(207, 252, 255, 0.3));
+}
+
+.helix-strand {
+  fill: none;
+  stroke: url(#helixGradient);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.helix-orb {
+  stroke: #fff;
+  stroke-width: 1;
+  filter: url(#glow);
+}
+
+.orb-status-healthy {
+  fill: var(--orb-color-healthy);
+}
+
+.orb-status-progressing {
+  fill: var(--orb-color-progressing);
+}
+
+.orb-status-stalled {
+  fill: var(--orb-color-stalled);
+}
+
+/* A subtle animation to give the helix life */
+@keyframes subtle-rotate {
+  from {
+    transform: perspective(500px) rotateY(5deg);
+  }
+  to {
+    transform: perspective(500px) rotateY(-5deg);
+  }
 }

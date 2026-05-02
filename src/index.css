@@ -2,6 +2,9 @@
   box-sizing: border-box;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+
 @font-face {
   font-family: 'Orbitron';
   src: url('/fonts/Orbitron-Regular.ttf') format('truetype');

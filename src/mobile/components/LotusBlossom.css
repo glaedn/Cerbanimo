@@ -1,46 +1,94 @@
-.lotus-blossom {
+:root {
+  --glow-color-assigned: #bb91ff; /* pale violet */
+  --glow-color-unassigned: #cffcff; /* icy cyan */
+  --glow-color-completed: #fd73fd; /* soft pink */
+  --glow-color-beacon: #ff8e8e; /* dim red ember */
+  --glow-color-submitted: #ffae6c; /* warm orange */
+  --glow-color-default: #ffffff;
+}
+
+.lotus-blossom-container {
   position: relative;
-  width: 390px;
-  height: 250px;
+  height: 520px;
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  overflow: hidden;
 }
+
+.lotus-blossom {
+  position: relative;
+  padding-left: 105px;
+  width: 300px;
+  height: 300px;
+  transform-style: preserve-3d;
+}
+
 
 .petal {
   position: absolute;
   width: 90px;
-  height: 150px;
-  filter: drop-shadow(0 0 15px rgba(223, 168, 223, 0.9)); /* Soft violet glow */
-  transform-origin: bottom center;
-  transition: transform 0.3s ease-in-out;
+  height: 160px;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    rgba(197, 51, 202, 0.836),
+    rgba(247, 189, 239, 0.432) 70%
+  );
+
+  border-radius: 50% 50% 60% 60%;
+  transform-origin: 50% 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  user-select: none;
+
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: 0.02em;
 }
 
-/* Center Petal (selected) */
-.petal-3 {
-  transform: scale(1.15) translateY(-20px);
-  z-index: 5;
-  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)); /* Brighter white glow */
+
+.petal::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(-50%);
+  border-radius: 1px;
 }
 
-/* Middle Petals */
-.petal-2 {
-  transform: translateX(-55px) rotate(-20deg) scale(1.05) translateY(-10px);
-  z-index: 4;
+.petal-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
 }
 
-.petal-4 {
-  transform: translateX(55px) rotate(20deg) scale(1.05) translateY(-10px);
-  z-index: 4;
+.petal-content h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.08em;
+  opacity: 0.95;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
-/* Back Petals */
-.petal-1 {
-  transform: translateX(-100px) rotate(-35deg);
-  z-index: 3;
-}
-
-.petal-5 {
-  transform: translateX(100px) rotate(35deg);
-  z-index: 3;
+.petal-content p {
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0;
+  opacity: 0.75;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
