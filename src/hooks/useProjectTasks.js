@@ -12,7 +12,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   const [loading, setLoading] = useState(false);
 
   const getToken = async () => await getAccessTokenSilently({ 
-    audience: 'http://localhost:4000',
+    audience: import.meta.env.VITE_BACKEND_URL,
     scope: 'openid profile email'
   });
 
@@ -20,16 +20,16 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     try {
       const token = await getToken();
       const [options, profile] = await Promise.all([
-        axios.get('http://localhost:4000/profile/options', {
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:4000/profile', {
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
           params: { sub: user.sub, email: user.email, name: user.name },
           headers: { Authorization: `Bearer ${token}` },
         })
       ]);
       
-      setSkills(options.data.skillsPool || []);
+      setSkills(Array.isArray(options.data?.skillsPool) ? options.data.skillsPool : []);
       setProfileData({
         id: profile.data.id,
         username: profile.data.username,
@@ -44,15 +44,12 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await axios.get(`http://localhost:4000/tasks/p/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/p/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const updated = res.data.map(task => ({
-        ...task,
-        skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'
-      }));
-      
+      const tasksData = res.data;
+      const updated = Array.isArray(tasksData) ? tasksData.map(task => ({...task, skill_name: skills.find(s => s.id === task.skill_id)?.name || 'Not specified'})) : [];
       setTasks(updated);
       console.log('Tasks data:', updated);
       return updated; // Return the tasks for chaining
@@ -67,10 +64,10 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
   const fetchProject = async () => {
     try {
       const token = await getToken();
-      const res = await axios.get(`http://localhost:4000/projects/${projectId}`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setProject(res.data);
+      setProject(typeof res.data === 'object' && res.data !== null && !Array.isArray(res.data) ? res.data : null);
       console.log('Project data:', res.data);
       return res.data; // Return project data for chaining
     } catch (error) {
@@ -117,7 +114,7 @@ export const useProjectTasks = (projectId, user, setUnreadCount) => {
         default: // update
           endpoint = `/tasks/update/${formData.id}`;
       }
-      const response = await axios[method](`http://localhost:4000${endpoint}`, payload, {
+      const response = await axios[method](`${import.meta.env.VITE_BACKEND_URL}${endpoint}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
   

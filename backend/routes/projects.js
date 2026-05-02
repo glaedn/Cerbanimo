@@ -319,7 +319,9 @@ router.post('/auto-generate', async (req, res) => {
     }
 
     // 2. Generate tasks using LLM
-    const tasks = await autoGenerateTasks(project.name, project.description);
+    const generatedData = await autoGenerateTasks(project.name, project.description);
+    console.log('Generated data:', generatedData);
+    const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
 
     // 3. First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map

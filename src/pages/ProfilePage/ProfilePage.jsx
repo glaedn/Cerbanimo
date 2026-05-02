@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useNavigate } from 'react-router-dom';
+import theme from '../../styles/theme'; // Import the theme
 //import TaskBrowser from '../TaskBrowser.jsx';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
@@ -19,12 +20,30 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
+
+  // Base style for panels
+  const panelStyle = {
+    backgroundColor: 'rgba(28, 28, 30, 0.85)', // theme.colors.backgroundPaper with transparency
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.borders.borderRadiusLg,
+    padding: '5px',
+    marginBottom: theme.spacing.lg,
+    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+    width: '100%', 
+    maxWidth: '800px', 
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center', 
+    gap: theme.spacing.md, 
+  };
+
   const [profileData, setProfileData] = useState({
     username: '',
     skills: [],
     interests: [],
     experience: [],
     profile_picture: '', // This will hold the file path or URL of the profile picture
+    contact_links: ['', '', ''], // Initialize with 3 empty strings
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -33,10 +52,17 @@ const ProfilePage = () => {
 
   // State for Resources
   const [userResources, setUserResources] = useState([]);
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [communitiesLoading, setCommunitiesLoading] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceError, setResourceError] = useState(null);
+
+  // State for Badges
+  const [userBadges, setUserBadges] = useState([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
+  const [badgesError, setBadgesError] = useState(null);
 
   const colorPalette = [
       blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
@@ -56,7 +82,7 @@ const ProfilePage = () => {
           }
 
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:write:profile',
           });
           
@@ -64,7 +90,7 @@ const ProfilePage = () => {
             throw new Error('Access token not available');
           }
 
-          const profileResponse = await axios.get('http://localhost:4000/profile', {
+          const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
             params: { 
               sub: user.sub,
               email: user.email,
@@ -76,51 +102,54 @@ const ProfilePage = () => {
             },
           });
 
-          const fetchedProfileData = {
+            const fetchedProfileData = {
             id: profileResponse.data.id,
             username: profileResponse.data.username || '',
             skills: (profileResponse.data.skills || []).map(skill => {
-              // Handle different potential formats
               if (typeof skill === 'string') {
-                try {
-                  if (skill.startsWith('{') && skill.includes('"name"')) {
-                    return JSON.parse(skill);
-                  }
-                  return { name: skill };
-                } catch (e) {
-                  return { name: skill };
-                }
+              try {
+                return JSON.parse(skill);
+              } catch (e) {
+                return { name: skill };
+              }
               }
               return skill;
             }),
             interests: (profileResponse.data.interests || []).map(interest => {
               if (typeof interest === 'string') {
                 try {
-                  if (interest.startsWith('{') && interest.includes('"name"')) {
-                    return JSON.parse(interest);
-                  }
-                  return { name: interest };
+                  const parsed = JSON.parse(interest);
+                  // console.log('Parsed interest:', parsed); // Debugging
+                  return { name: parsed.name || parsed };
                 } catch (e) {
+                  // console.log('Error parsing interest:', e);
                   return { name: interest };
                 }
               }
-              return interest;
+              return { name: interest.name || interest };
             }),
             experience: profileResponse.data.experience || [],
             profile_picture: profileResponse.data.profile_picture || '',
-          };
+            contact_links: Array.isArray(profileResponse.data.contact_links)
+              ? [...profileResponse.data.contact_links.slice(0, 3), '', '', ''].slice(0, 3)
+              : ['', '', ''],
+            };
           setProfileData(fetchedProfileData);
 
 
-          const optionsResponse = await axios.get('http://localhost:4000/profile/options', {
+          const optionsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           });
-          setSkillsPool(optionsResponse.data.skillsPool);
+          const skills = optionsResponse.data?.skillsPool;
+          setSkillsPool(Array.isArray(skills) ? skills : []);
           // Transform interest strings into objects with name property
-          setInterestsPool(optionsResponse.data.interestsPool.map(interest => ({ name: interest })));
-          console.log("API Response:", optionsResponse.data); // Debugging
+          const interests = optionsResponse.data?.interestsPool;
+          setInterestsPool(Array.isArray(interests) ? interests.map(interest =>
+            typeof interest === 'object' ? interest : { name: interest }
+          ) : []);
+          // console.log("API Response:", optionsResponse.data); // Debugging
         } catch (err) {
           console.error('Error fetching profile/options:', err);
           if (err.response && err.response.status === 401) {
@@ -143,13 +172,13 @@ const ProfilePage = () => {
       try {
         if (profileData.experience && profileData.experience.length > 0) {
           const token = await getAccessTokenSilently({
-            audience: 'http://localhost:4000',
+            audience: 'import.meta.env.VITE_BACKEND_URL',
             scope: 'openid profile email read:profile',
           });
 
           // Use Promise.all to fetch details for all tasks concurrently
           const taskDetailsPromises = profileData.experience.map(async (taskId) => {
-            const response = await axios.get(`http://localhost:4000/tasks/${taskId}`, {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/${taskId}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -178,6 +207,17 @@ const ProfilePage = () => {
     }));
   };
 
+  const handleContactLinkChange = (index, value) => {
+    setProfileData((prevData) => {
+      const newContactLinks = [...prevData.contact_links];
+      newContactLinks[index] = value;
+      return {
+        ...prevData,
+        contact_links: newContactLinks,
+      };
+    });
+  };
+
   const handleProfilePictureChange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -203,10 +243,10 @@ const ProfilePage = () => {
     setResourceError(null);
     try {
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000/',
+        audience: 'import.meta.env.VITE_BACKEND_URL/',
         scope: 'openid profile email read:profile', 
       });
-      const response = await axios.get(`http://localhost:4000/resources/user/${profileData.id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/user/${profileData.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUserResources(response.data);
@@ -225,6 +265,62 @@ const ProfilePage = () => {
     }
   }, [profileData.id, fetchUserResources]);
 
+  // --- Badge Management Functions ---
+  const fetchUserBadges = useCallback(async () => {
+    if (!profileData.id) return;
+    setBadgesLoading(true);
+    setBadgesError(null);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: `${import.meta.env.VITE_BACKEND_URL}/`, // Make sure audience is just the backend URL
+        scope: 'openid profile email read:profile', // Adjust scope as needed for badges
+      });
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserBadges(response.data.badges || []);
+    } catch (err) {
+      console.error('Error fetching user badges:', err);
+      setBadgesError('Failed to fetch badges.');
+    } finally {
+      setBadgesLoading(false);
+    }
+  }, [profileData.id, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (profileData.id) {
+      fetchUserBadges();
+    }
+  }, [profileData.id, fetchUserBadges]);
+  // --- End Badge Management Functions ---
+
+  // --- Community Management Functions ---
+  const fetchUserCommunities = useCallback(async () => {
+    if (!profileData.id) return;
+    setCommunitiesLoading(true);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: import.meta.env.VITE_BACKEND_URL,
+        scope: 'openid profile email read:profile',
+      });
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserCommunities(response.data || []);
+    } catch (err) {
+      console.error('Error fetching user communities:', err);
+    } finally {
+      setCommunitiesLoading(false);
+    }
+  }, [profileData.id, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (profileData.id) {
+      fetchUserCommunities();
+    }
+  }, [profileData.id, fetchUserCommunities]);
+  // --- End Community Management Functions ---
+
   const handleOpenResourceModal = (resource = null) => {
     setEditingResource(resource);
     setIsResourceModalOpen(true);
@@ -237,9 +333,9 @@ const ProfilePage = () => {
 
   const handleResourceSubmit = async (resourceData) => {
     try {
-      console.log('Submitting resource:', resourceData);
+      // console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
-        audience: 'http://localhost:4000/',
+        audience: `${import.meta.env.VITE_BACKEND_URL}/`,
         // Ensure appropriate scope for writing resources
         scope: 'read:write:profile openid profile email read:profile',
         ignoreCache: true
@@ -250,15 +346,15 @@ const ProfilePage = () => {
       if (editingResource) {
         // Update existing resource
         payload.user_id = profileData.id; // Ensure user_id is set
-        response = await axios.put(`http://localhost:4000/resources/${editingResource.id}`, payload, {
+        response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/resources/${editingResource.id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource updated successfully!');
       } else {
         // Create new resource
         payload.owner_user_id = profileData.id; // Ensure owner_user_id is set
-        console.log('Creating new resource with payload:', payload);
-        response = await axios.post('http://localhost:4000/resources', payload, {
+        // console.log('Creating new resource with payload:', payload);
+        response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/resources`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Resource created successfully!');
@@ -276,11 +372,13 @@ const ProfilePage = () => {
     if (window.confirm('Are you sure you want to delete this resource?')) {
       try {
         const token = await getAccessTokenSilently({
-          audience: 'http://localhost:4000',
+          audience: `${import.meta.env.VITE_BACKEND_URL}`,
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
-        await axios.delete(`http://localhost:4000/resources/${resourceId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/${resourceId}`, {
+          headers: { Authorization: `Bearer ${token}`, 
+          'X-User-Id': profileData.id, // Ensure user_id is sent for authorization // 
+          },
         });
         alert('Resource deleted successfully!');
         fetchUserResources(); // Refresh list
@@ -304,24 +402,32 @@ const ProfilePage = () => {
       formData.append('skills', JSON.stringify(profileData.skills));
       formData.append('interests', JSON.stringify(profileData.interests));
 
+      // Handle contact_links
+      const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
+      formData.append('contact_links', JSON.stringify(cleanedContactLinks));
+
       if (profileData.id) {
         formData.append('user_id', profileData.id);
       }
 
-      if (profileData.profile_picture) {
-        formData.append('profilePicture', profileData.profile_picture); // Use the file selected for the profile picture
+      if (profileData.profile_picture && profileData.profile_picture instanceof File) {
+        formData.append('profilePicture', profileData.profile_picture);
+      } else if (profileData.profile_picture === null || profileData.profile_picture === '') {
+        // Optionally, send a signal to backend to clear the picture if needed
+        // formData.append('clearProfilePicture', 'true'); 
       }
+      // If profileData.profile_picture is a URL string, do nothing, backend won't update it unless new file is sent
 
       const token = user?.idToken || await getAccessTokenSilently({
-        audience: import.meta.env.REACT_APP_AUTH0_AUDIENCE,
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:profile write:profile',
       });
-      console.log('JWT Token:', token);
+      // console.log('JWT Token:', token);
       if (!token) {
         throw new Error('Access token not available');
       }
 
-      await axios.post('http://localhost:4000/profile', formData, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/profile`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
@@ -340,44 +446,249 @@ const ProfilePage = () => {
   }
   return (
     <Box className="profile-container">
-      <Typography className="profile-title" variant="h4" gutterBottom>
-        Edit Your Profile
+      <Typography 
+        className="profile-title" 
+        variant="h4" 
+        gutterBottom
+        sx={{
+          color: theme.colors.primary,
+          fontFamily: theme.typography.fontFamilyAccent,
+          textShadow: `0 0 8px ${theme.colors.primary}7A`,
+        }}
+      >
+        Your Profile
       </Typography>
-      {error && <Typography color="error">{error}</Typography>}
-      
-      {/* Display profile picture or preview new one */}
-      <Box className="profile-card">
-        <Avatar
-          alt="Profile Picture"
-          src={newProfilePicture || (profileData.profile_picture ? `http://localhost:4000${profileData.profile_picture}` : '/default-avatar.png')} // Default avatar if no picture
-          sx={{ width: 100, height: 100, marginBottom: 2 }}
-        />
-      </Box>
-      
-      {/* File input to change the profile picture */}
-      <Button variant="contained" component="label" color="primary" sx={{ marginTop: 1, marginBottom: 2 }}>
-        Edit
-        <input type="file" hidden onChange={handleProfilePictureChange} />
-      </Button>
-      
-      <TextField
-        label="Username"
-        value={profileData.username || ''}
-        onChange={(e) => handleInputChange('username', e.target.value)}
-        margin="normal"
+      {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
+        <Box sx={{ ...panelStyle, borderColor: theme.colors.primary, boxShadow: theme.effects.glowStrong(theme.colors.primary), paddingBottom: '20px' }}>
+          <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb: 1 }}>
+            User Identification
+          </Typography>
+          <Box 
+            className="profile-card" 
+            sx={{
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          padding: theme.spacing.md, 
+          backgroundColor: 'rgba(10, 10, 46, 0.5)', // Slightly different background for ID card effect
+            borderRadius: theme.borders.borderRadiusMd,
+            boxShadow: `inset 0 0 8px rgba(0, 243, 255, 0.3)`, // Inner shadow
+            mb: 1, // Margin bottom before username field
+          }}
+        >
+          <Avatar
+            alt="Profile Picture"
+            src={newProfilePicture || profileData.profile_picture || '/default-avatar.png'}
+            sx={{ 
+              width: 120, 
+              height: 120, 
+              border: `3px solid ${theme.colors.primary}`,
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+              // Attempting hexagonal clip-path. Revert if problematic.
+              // clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', 
+            }}
+          />
+          <Button 
+            variant="contained" 
+            component="label" 
+            size="small"
+            sx={{ 
+              mt: 1, // Adjusted margin for internal spacing
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.backgroundDefault,
+              fontFamily: theme.typography.fontFamilyAccent,
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+              '&:hover': {
+                backgroundColor: theme.colors.accentBlue,
+                boxShadow: theme.effects.glowStrong(theme.colors.primary),
+              }
+            }}
+          >
+            Edit Picture
+            <input type="file" hidden onChange={handleProfilePictureChange} />
+          </Button>
+        </Box>
+        <TextField
+          label="Username"
+          value={profileData.username || ''}
+          onChange={(e) => handleInputChange('username', e.target.value)}
+          margin="none" // Margin is handled by panel's gap or specific sx here
+          fullWidth // Take full width of the panel's constraint
+        sx={{
+          // width: '100%', // Already fullWidth
+          maxWidth: '400px', // Specific max width for username field
+          '& .MuiInputLabel-root': { 
+            color: theme.colors.textSecondary,
+            fontFamily: theme.typography.fontFamilyAccent,
+          },
+          '& .MuiInputLabel-root.Mui-focused': {
+            color: theme.colors.primary, // Label color when focused
+          },
+          '& .MuiOutlinedInput-root': {
+            fontFamily: theme.typography.fontFamilyAccent,
+            color: theme.colors.textPrimary,
+            backgroundColor: 'rgba(10, 10, 46, 0.6)', // theme.colors.backgroundDefault with transparency
+            '& fieldset': {
+              borderColor: theme.colors.border,
+              borderRadius: theme.borders.borderRadiusMd,
+            },
+            '&:hover fieldset': {
+              borderColor: theme.colors.primary,
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: theme.colors.primary,
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            },
+          },
+          '& .MuiInputBase-input': {
+            color: theme.colors.textPrimary,
+            fontFamily: theme.typography.fontFamilyAccent,
+          },
+        }}
       />
-      <Box mb={2} >
-      
-      <Autocomplete
-        multiple
-        options={skillsPool}
-        getOptionLabel={(option) => option.name || ''} // Ensure it returns a string
-        value={profileData.skills || []}
-        onChange={(event, newValue) => handleInputChange('skills', newValue)}
-        freeSolo
-        renderInput={(params) => (
-          <TextField {...params} variant="outlined" label="Skills" placeholder="Add skills" />
-        )}
+      {[0, 1, 2].map((index) => (
+        <TextField
+          key={index}
+          label={`Contact Link ${index + 1}`}
+          value={profileData.contact_links[index] || ''}
+          onChange={(e) => handleContactLinkChange(index, e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            maxWidth: '400px',
+            mt: index === 0 ? 1 : 1, // Add margin top for spacing between fields
+            '& .MuiInputLabel-root': { 
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: theme.colors.primary,
+            },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': {
+                borderColor: theme.colors.border,
+                borderRadius: theme.borders.borderRadiusMd,
+              },
+              '&:hover fieldset': {
+                borderColor: theme.colors.primary,
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: theme.colors.primary,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+              },
+            },
+            '& .MuiInputBase-input': {
+              color: theme.colors.textPrimary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+          }}
+        />
+      ))}
+      </Box> 
+
+      {/* Skillset Analysis Panel */}
+      <Box sx={panelStyle}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Skillset Analysis
+        </Typography>
+        <Autocomplete
+          multiple
+          fullWidth // Takes width of panel constraint
+          options={skillsPool}
+          getOptionLabel={(option) => option.name || ''} 
+          value={profileData.skills || []}
+          onChange={(event, newValue) => handleInputChange('skills', newValue)}
+          freeSolo
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              label="Skills" 
+              placeholder="Add skills"
+              sx={{
+                // Styles for TextField wrapper of Autocomplete are mostly from panelStyle or default
+                '& .MuiInputLabel-root': { 
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiOutlinedInput-root': {
+                  fontFamily: theme.typography.fontFamilyAccent,
+                  color: theme.colors.textPrimary,
+                  backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                  '& fieldset': {
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borders.borderRadiusMd,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.colors.primary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.colors.primary,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.colors.textPrimary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiAutocomplete-popupIndicator': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiAutocomplete-clearIndicator': {
+                  color: theme.colors.primary,
+                },
+              }}
+            />
+          )}
+          ChipProps={{
+            sx: {
+              backgroundColor: 'rgba(0, 243, 255, 0.15)', // Slightly more opaque primary color
+              color: theme.colors.primary,
+              fontFamily: theme.typography.fontFamilyAccent,
+              borderColor: theme.colors.primary,
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              margin: '3px', // Increased margin slightly
+              boxShadow: theme.effects.glowSubtle(theme.colors.primary), // Add subtle glow to chips
+              '& .MuiChip-deleteIcon': {
+                color: theme.colors.secondary, // Changed to secondary for better contrast/theme alignment
+                '&:hover': {
+                  color: theme.colors.error, // Keep error color on hover for delete
+                }
+              },
+            }
+          }}
+        slots={{
+          popper: ({ disablePortal, anchorEl, ...otherPopperProps }) => (
+            <Paper 
+              {...otherPopperProps}
+              sx={{
+                backgroundColor: theme.colors.backgroundPaper,
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: theme.borders.borderRadiusMd,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                '& .MuiAutocomplete-listbox': {
+                  '& .MuiAutocomplete-option': {
+                    color: theme.colors.textPrimary,
+                    fontFamily: theme.typography.fontFamilyAccent,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 243, 255, 0.1)', 
+                    },
+                    '&[aria-selected="true"]': {
+                      backgroundColor: 'rgba(0, 243, 255, 0.2)', 
+                    },
+                  },
+                },
+              }}
+            />
+          )
+        }}
         renderTags={(value, getTagProps) =>
           value.map((option, index) => {
             const { key, ...otherProps } = getTagProps({ index });
@@ -385,13 +696,13 @@ const ProfilePage = () => {
             // Ensure we have a full skill object
             let fullSkill = skillsPool.find(skill => skill.name === option.name) || option;
         
-            console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
+            // console.log('Full Skill in renderTags:', JSON.stringify(fullSkill, null, 2));
         
             let label = fullSkill.name || '';
             let skillLevel = 0;
         
             if (Array.isArray(fullSkill.unlocked_users)) {
-              console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
+              // console.log('Unlocked Users:', JSON.stringify(fullSkill.unlocked_users, null, 2));
         
               const userEntry = fullSkill.unlocked_users.find(u => u.user_id == profileData.id);
         
@@ -400,12 +711,13 @@ const ProfilePage = () => {
               }
             }
         
+            // ChipProps above handles the primary styling
             return (
               <Chip
                 key={key}
                 label={`${label} (Lvl ${skillLevel})`}
                 {...otherProps}
-                sx={{ margin: '2px' }}
+                // sx prop here would override ChipProps if needed for specific tags
               />
             );
           })
@@ -418,97 +730,261 @@ const ProfilePage = () => {
         
         
       />
+        <Button 
+          variant="outlined" 
+          onClick={goToSkillTree}
+          sx={{ 
+            borderColor: theme.colors.accentGreen,
+            color: theme.colors.accentGreen,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.accentGreen),
+            '&:hover': {
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              backgroundColor: 'rgba(0, 215, 135, 0.1)', 
+              boxShadow: theme.effects.glowStrong(theme.colors.accentGreen),
+            }
+          }}
+        >
+          Skill Tree
+        </Button>
+        <Autocomplete
+          multiple
+          fullWidth
+          options={interestsPool}
+          getOptionLabel={(option) => option.name || ''} 
+          value={profileData.interests || []}
+          onChange={(event, newValue) => handleInputChange('interests', newValue)}
+          freeSolo
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              label="Interests" 
+              placeholder="Add interests"
+              sx={{
+                '& .MuiInputLabel-root': { 
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiOutlinedInput-root': {
+                  fontFamily: theme.typography.fontFamilyAccent,
+                  color: theme.colors.textPrimary,
+                  backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                  '& fieldset': {
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.borders.borderRadiusMd,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.colors.primary,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.colors.primary,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: theme.colors.textPrimary,
+                  fontFamily: theme.typography.fontFamilyAccent,
+                },
+                '& .MuiAutocomplete-popupIndicator': {
+                  color: theme.colors.primary,
+                },
+                '& .MuiAutocomplete-clearIndicator': {
+                  color: theme.colors.primary,
+                },
+              }}
+            />
+          )}
+          ChipProps={{
+            sx: {
+              backgroundColor: 'rgba(255, 92, 162, 0.15)', // Slightly more opaque secondary color
+              color: theme.colors.secondary,
+              fontFamily: theme.typography.fontFamilyAccent,
+              borderColor: theme.colors.secondary,
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              margin: '3px', // Increased margin slightly
+              borderRadius: theme.borders.borderRadiusSm, 
+              boxShadow: theme.effects.glowSubtle(theme.colors.secondary), // Add subtle glow to chips
+              '& .MuiChip-deleteIcon': {
+                color: theme.colors.primary, 
+                '&:hover': {
+                  color: theme.colors.error, // Keep error color for delete hover
+                }
+              },
+            }
+          }}
+          PopperComponent={({ disablePortal, anchorEl, ...otherPopperProps }) => (
+            <Paper 
+              {...otherPopperProps}
+              sx={{
+                backgroundColor: theme.colors.backgroundPaper,
+                border: `1px solid ${theme.colors.secondary}`, 
+                borderRadius: theme.borders.borderRadiusMd,
+                boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+                '& .MuiAutocomplete-listbox': {
+                  '& .MuiAutocomplete-option': {
+                    color: theme.colors.textPrimary,
+                    fontFamily: theme.typography.fontFamilyAccent,
+                    borderRadius: theme.borders.borderRadiusSm,
+                    margin: '2px', 
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 92, 162, 0.1)', 
+                      boxShadow: `0 0 5px ${theme.colors.secondary}7A`,
+                    },
+                    '&[aria-selected="true"]': {
+                      backgroundColor: 'rgba(255, 92, 162, 0.2)', 
+                      '&:hover': {
+                         backgroundColor: 'rgba(255, 92, 162, 0.25)',
+                      }
+                    },
+                  },
+                },
+              }} 
+            />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...otherProps } = getTagProps({ index });
+              return (
+                <Chip key={key} label={option.name} {...otherProps} />
+              );
+            })
+          }
+        />
       </Box>
-      <Button variant="contained" color="secondary" sx={{ marginTop: 1, marginBottom: 2 }} onClick={goToSkillTree}>
-        Skill Tree
-      </Button>
-      <Box mb={2}>
-      <Autocomplete
-        multiple
-        options={interestsPool}
-        getOptionLabel={(option) => option.name || ''} // Ensure string return
-        value={profileData.interests || []}
-        onChange={(event, newValue) => handleInputChange('interests', newValue)}
-        freeSolo
-        renderInput={(params) => (
-          <TextField {...params} variant="outlined" label="Interests" placeholder="Add interests" />
-        )}
-        
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
-            const { key, ...otherProps } = getTagProps({ index });
-            return (
-              <Chip
-                key={key}
-                label={option.name} // Ensure label is a string
-                {...otherProps}
-                sx={{ margin: '2px' }}
-              />
-            );
-          })
-        }
-      />
 
-      </Box>
-      <Box className="profile-experience-container">
+      {/* Experience Panel */}
+      <Box 
+        className="profile-experience-container" 
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.primary, 
+          // boxShadow is from panelStyle, padding from panelStyle
+          // backgroundColor is from panelStyle
+          // borderRadius is from panelStyle
+        }}
+      >
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Mission Log
+        </Typography>
         <UserPortfolio userId={profileData.id}/>
       </Box>
       
-      <Box className="profile-footer">
-      <Button variant="contained" color="primary" onClick={handleSaveProfile}>
-        Save Profile
-      </Button>
-      <Button variant="contained" color="secondary" onClick={goToDashboard}>
-        Dashboard
-      </Button>
-      <Button variant="contained" sx={{ backgroundColor: 'error.main', '&:hover': { backgroundColor: 'error.dark' } }} onClick={() => logout({ returnTo: window.location.origin })}>
-        Logout
-      </Button>
-      </Box>
-
-      {/* My Resources Section */}
-      <Box className="profile-resources-container" sx={{ mt: 4, p: 2, border: '1px solid #ddd', borderRadius: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          My Resources
+      {/* Resources Panel */}
+      <Box 
+        className="profile-resources-container" 
+        sx={{ 
+          ...panelStyle,
+          borderColor: theme.colors.secondary, // Example: make this panel use secondary color for border/glow
+          boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+        }}
+      >
+        <Typography 
+          variant="h6" // Changed to h6 for consistency
+          gutterBottom 
+          sx={{
+            color: theme.colors.primary, 
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%', 
+            textAlign: 'center',
+            // mb: 2, // Handled by panel gap or specific title margin
+          }}
+        >
+          Resource Inventory
         </Typography>
-        <Button variant="contained" color="primary" onClick={() => handleOpenResourceModal()} sx={{ mb: 2 }}>
+        <Button 
+          variant="contained" 
+          onClick={() => handleOpenResourceModal()} 
+          sx={{ 
+            backgroundColor: theme.colors.accentGreen,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.accentGreen),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              backgroundColor: '#00b870', 
+              boxShadow: theme.effects.glowStrong(theme.colors.accentGreen),
+            }
+          }}
+        >
           List New Resource
         </Button>
-        {resourcesLoading && <CircularProgress />}
-        {resourceError && <Typography color="error">{resourceError}</Typography>}
+        {resourcesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {resourceError && <Typography color="error" sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error}}>{resourceError}</Typography>}
         {!resourcesLoading && !resourceError && userResources.length === 0 && (
-          <Typography>You haven't listed any resources yet.</Typography>
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>You haven't listed any resources yet.</Typography>
         )}
         {!resourcesLoading && !resourceError && userResources.length > 0 && (
-          <List>
+          <List sx={{width: '100%'}}>
             {userResources.map((resource) => (
               <ListItem 
                 key={resource.id}
                 secondaryAction={
                   <>
-                    <IconButton edge="end" aria-label="edit" onClick={() => handleOpenResourceModal(resource)} sx={{mr: 1}}>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="edit" 
+                      onClick={() => handleOpenResourceModal(resource)} 
+                      sx={{
+                        mr: 1, 
+                        color: theme.colors.accentBlue,
+                        '&:hover': { color: theme.colors.primary }
+                      }}
+                    >
                       <EditIcon />
                     </IconButton>
-                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteResource(resource.id)}>
+                    <IconButton 
+                      edge="end" 
+                      aria-label="delete" 
+                      onClick={() => handleDeleteResource(resource.id)}
+                      sx={{
+                        color: theme.colors.accentOrange,
+                        '&:hover': { color: theme.colors.error }
+                      }}
+                    >
                       <DeleteIcon />
                     </IconButton>
                   </>
                 }
-                sx={{ borderBottom: '1px solid #eee' }}
+                sx={{ 
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  mb: 1,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)', 
+                  borderRadius: theme.borders.borderRadiusSm,
+                  '&:hover': {
+                    backgroundColor: 'rgba(28, 28, 30, 0.8)',
+                    boxShadow: `0 0 5px ${theme.colors.secondary}`,
+                  }
+                }}
               >
                 <ListItemText 
                   primary={resource.name} 
                   secondary={
                     <>
-                      <Typography component="span" variant="body2" color="text.primary">
+                      <Typography component="span" variant="body2" sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyBase }}>
                         Category: {resource.category || 'N/A'}
                       </Typography>
                       <br />
-                      <Typography component="span" variant="body2" color="text.secondary">
+                      <Typography component="span" variant="body2" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
                         Quantity: {resource.quantity || 'N/A'} - Status: {resource.status || 'N/A'}
                       </Typography>
                     </>
                   } 
+                  primaryTypographyProps={{
+                    sx: {
+                      color: theme.colors.primary,
+                      fontFamily: theme.typography.fontFamilyAccent,
+                      fontSize: theme.typography.fontSizeLg, 
+                    }
+                  }}
+                  secondaryTypographyProps={{ 
+                     sx: { fontFamily: theme.typography.fontFamilyBase }
+                  }}
                 />
               </ListItem>
             ))}
@@ -516,7 +992,202 @@ const ProfilePage = () => {
         )}
       </Box>
 
-      {/* Resource Form Modal */}
+      {/* Communities Panel */}
+      <Box
+        className="profile-communities-container"
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.accentBlue,
+          boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
+        }}
+      >
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            color: theme.colors.primary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          My Realms
+        </Typography>
+        {communitiesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {!communitiesLoading && userCommunities.length === 0 && (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
+            You haven't joined any realms yet.
+          </Typography>
+        )}
+        {!communitiesLoading && userCommunities.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.md, width: '100%' }}>
+            {userCommunities.map((community) => (
+              <Box
+                key={community.id}
+                onClick={() => navigate(`/communityhub/${community.id}`)}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  padding: theme.spacing.sm,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)',
+                  borderRadius: theme.borders.borderRadiusMd,
+                  border: `1px solid ${theme.colors.accentBlue}`,
+                  minWidth: '120px',
+                  cursor: 'pointer',
+                  transition: '0.3s',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                    boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                <Typography variant="body2" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}>
+                  {community.name}
+                </Typography>
+                <Typography variant="caption" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
+                  {community.members ? community.members.length : 0} Members
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* Badges Panel */}
+      <Box 
+        className="profile-badges-container" 
+        sx={{ 
+          ...panelStyle,
+          borderColor: theme.colors.accentPurple, // Example: use a different color for this panel
+          boxShadow: theme.effects.glowSubtle(theme.colors.accentPurple),
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          gutterBottom 
+          sx={{
+            color: theme.colors.primary, 
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%', 
+            textAlign: 'center',
+          }}
+        >
+          My Badges
+        </Typography>
+        {badgesLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {badgesError && <Typography color="error" sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error}}>{badgesError}</Typography>}
+        {!badgesLoading && !badgesError && userBadges.length === 0 && (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>
+            No badges earned yet. Keep engaging and completing tasks to earn them!
+          </Typography>
+        )}
+        {!badgesLoading && !badgesError && userBadges.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.md, width: '100%' }}>
+            {userBadges.map((badge) => (
+              <Box 
+                key={badge.id || badge.name} // Use badge.id if available, otherwise badge.name
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  textAlign: 'center',
+                  padding: theme.spacing.sm,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)', 
+                  borderRadius: theme.borders.borderRadiusMd,
+                  border: `1px solid ${theme.colors.accentPurple}`,
+                  minWidth: '100px', // Ensure items have a minimum width
+                }}
+              >
+                <Avatar
+                  src={badge.icon || '/default-badge.png'}
+                  alt={badge.name}
+                  sx={{ 
+                    width: 60, 
+                    height: 60, 
+                    mb: 1, 
+                    border: `2px solid ${theme.colors.accentPurple}`,
+                    boxShadow: theme.effects.glowSubtle(theme.colors.accentPurple),
+                  }}
+                  imgProps={{
+                    onError: (e) => {
+                      e.target.onerror = null; 
+                      e.target.src = '/default-badge.png';
+                    }
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyBase }}>
+                  {badge.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* Command Module Panel */}
+      <Box sx={{ ...panelStyle, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent, width: '100%', textAlign: 'center', mb:1 }}>
+          Command Module
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={handleSaveProfile}
+          sx={{
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              backgroundColor: theme.colors.accentBlue,
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+            }
+          }}
+        >
+          Save Profile
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={goToDashboard}
+          sx={{
+            borderColor: theme.colors.secondary,
+            color: theme.colors.secondary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.secondary),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              borderColor: theme.colors.accentPink, 
+              color: theme.colors.accentPink,
+              backgroundColor: 'rgba(255, 92, 162, 0.1)',
+              boxShadow: theme.effects.glowStrong(theme.colors.secondary),
+            }
+          }}
+        >
+          Dashboard
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={() => logout({ returnTo: window.location.origin })}
+          sx={{ 
+            backgroundColor: theme.colors.error, 
+            color: theme.colors.textPrimary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.error),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': { 
+              backgroundColor: theme.colors.accentOrange, 
+              boxShadow: theme.effects.glowStrong(theme.colors.error),
+            } 
+          }}
+        >
+          Logout
+        </Button>
+      </Box>
+
+      {/* Resource Form Modal (remains outside the panel structure) */}
       <Modal
         open={isResourceModalOpen}
         onClose={handleCloseResourceModal}
@@ -531,15 +1202,31 @@ const ProfilePage = () => {
           width: { xs: '90%', sm: '75%', md: '600px' },
           maxHeight: '90vh',
           overflowY: 'auto',
-          bgcolor: 'background.paper',
-          boxShadow: 24,
+          bgcolor: theme.colors.backgroundPaper, // Theme background for modal
+          boxShadow: theme.effects.glowStrong(theme.colors.primary),
           p: { xs: 2, sm: 3, md: 4 },
-          borderRadius: 2,
+          borderRadius: theme.borders.borderRadiusLg,
+          border: `1px solid ${theme.colors.primary}`,
+          color: theme.colors.textPrimary, // Default text color for modal content
         }}>
-          <ResourceListingForm
+          <Typography 
+            variant="h6" 
+            component="h2" // Modal title SEO tag
+            sx={{ 
+              color: theme.colors.primary, 
+              fontFamily: theme.typography.fontFamilyAccent,
+              textAlign: 'center',
+              mb: theme.spacing.md, // Margin bottom for title
+              textShadow: `0 0 5px ${theme.colors.primary}7A`,
+            }}
+          >
+            {editingResource ? 'Update Resource Details' : 'List New Resource'}
+          </Typography>
+          <ResourceListingForm 
             initialResourceData={editingResource}
             onSubmit={handleResourceSubmit}
             onCancel={handleCloseResourceModal}
+            theme={theme} // Pass theme to ResourceListingForm
           />
         </Paper>
       </Modal>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000', // Adjust to match your backend URL
+  baseURL: import.meta.env.VITE_BACKEND_URL, // Your backend URL
 });
 
 // Add token to the Authorization header for all requests

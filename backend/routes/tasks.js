@@ -309,27 +309,34 @@ router.put('/:taskId/drop', async (req, res) => {
 
 router.post('/:taskId/submit', async (req, res) => {
   const io = req.app.get('io');
-  const { taskId } = req.params;
-  // Accept both camelCase and snake_case from frontend
-  const proofOfWorkLinks = req.body.proofOfWorkLinks || req.body.proof_of_work_links;
-  const reflection = req.body.reflection;
-
-  if (!proofOfWorkLinks || !Array.isArray(proofOfWorkLinks) || proofOfWorkLinks.length === 0) {
-    return res.status(400).json({ error: 'Proof of work links are required.' });
-  }
-
+  // Pass the full req object to the controller, as it will now handle
+  // extraction of params and body, and also platformUserId from req.body.
+  // The controller will also handle initial validations.
   try {
-    const result = await taskController.submitTask(
-      { params: { taskId }, body: { proofOfWorkLinks, reflection } },
-      res,
-      io
-    );
-    if (!res.headersSent) {
-      res.status(200).json(result);
+    // taskController.submitTask is expected to have the signature (req, res, io)
+    // but per previous subtasks, it's modified to return error/success objects
+    // and should not call res.json() itself for these paths.
+    // The 'res' parameter might still be there if other parts of the controller use it,
+    // but for this flow, we rely on its return value.
+    const result = await taskController.submitTask(req, res, io);
+
+    if (result && result.error) {
+      // If the controller returns an error object, use it to send the response
+      return res.status(result.status || 500).json({ error: result.error });
     }
+
+    // If successful, result should contain { message, task, reviewerIds }
+    // The controller now also provides the success message.
+    res.status(200).json({
+      message: result.message || "Task submitted for approval", // Use message from result if available
+      task: result.task,
+      reviewerIds: result.reviewerIds,
+    });
   } catch (error) {
-    console.error('Error submitting task:', error);
-    res.status(500).json({ error: 'Server error submitting task' });
+    // This catch is for errors not handled by the controller's return path,
+    // e.g., if taskController.submitTask itself throws an unhandled exception.
+    console.error("Unhandled error in submitTask route:", error);
+    res.status(500).json({ error: "An unexpected server error occurred." });
   }
 });
 

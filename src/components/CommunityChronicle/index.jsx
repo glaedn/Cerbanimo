@@ -21,7 +21,7 @@ const CommunityChronicle = ({ communityId }) => {
     try {
       const token = await getAccessTokenSilently();
       const response = await axios.get(
-        `http://localhost:4000/storyChronicles/community/${communityId}/chronicle-feed`,
+        `${import.meta.env.VITE_BACKEND_URL}/storyChronicles/community/${communityId}/chronicle-feed`,
         {
           headers: {
         Authorization: `Bearer ${token}`,
