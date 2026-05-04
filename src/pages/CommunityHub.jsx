@@ -57,6 +57,7 @@ const CommunityHub = () => {
     const [constellationInvites, setConstellationInvites] = useState([]);
     const [proposals, setProposals] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
+    const [communityNeeds, setCommunityNeeds] = useState([]);
     const [communityServices, setCommunityServices] = useState([]);
     const [userId, setUserId] = useState(null);
     const [voteDelegations, setVoteDelegations] = useState({});
@@ -247,6 +248,12 @@ const CommunityHub = () => {
                     const projectResults = await Promise.all(projectPromises);
                     setApprovedProjects(projectResults.map(result => result.data));
                 }
+
+                // Fetch community needs
+                const needsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/community/${communityId}`, {
+                    headers: headers
+                });
+                setCommunityNeeds(needsResponse.data || []);
 
                 // Fetch community services
                 const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/community/${communityId}`, {
@@ -1084,6 +1091,55 @@ const CommunityHub = () => {
                                     ))}
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Community Needs Card - Visible to all */}
+                <div className="hub-grid-item full-width-item">
+                    <Card className="hub-card needs-card" sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                <RocketLaunchIcon className="hub-icon" sx={{ color: '#00F3FF' }} />
+                                <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>Community Needs</Typography>
+                            </Box>
+                            {communityNeeds.length === 0 ? (
+                                <Typography variant="body2" sx={{ color: '#CCC', py: 2 }}>No open needs in this community.</Typography>
+                            ) : (
+                                <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                                    {communityNeeds.filter(n => n.status !== 'fulfilled').slice(0, 6).map(need => (
+                                        <Card
+                                            key={need.id}
+                                            onClick={() => navigate(`/needs/${need.id}`)}
+                                            sx={{
+                                                bgcolor: 'rgba(10, 10, 46, 0.6)',
+                                                border: '1px solid rgba(0, 243, 255, 0.3)',
+                                                cursor: 'pointer',
+                                                '&:hover': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.4)' }
+                                            }}
+                                        >
+                                            <CardContent>
+                                                <Typography variant="h6" sx={{ color: '#00F3FF', fontSize: '1.1rem', mb: 1 }}>{need.name}</Typography>
+                                                <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{need.description}</Typography>
+                                                <Chip
+                                                    label={need.urgency?.toUpperCase() || 'MEDIUM'}
+                                                    size="small"
+                                                    sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF', border: '1px solid #00F3FF' }}
+                                                />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </Box>
+                            )}
+                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => navigate('/needs')}
+                                    sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                                >
+                                    VIEW_ALL_COMMUNITY_NEEDS
+                                </Button>
+                            </Box>
                         </CardContent>
                     </Card>
                 </div>

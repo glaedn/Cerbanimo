@@ -65,6 +65,8 @@ const ProfilePage = () => {
 
   // State for Resources
   const [userResources, setUserResources] = useState([]);
+  const [userNeeds, setUserNeeds] = useState([]);
+  const [needsLoading, setNeedsLoading] = useState(false);
   const [userCommunities, setUserCommunities] = useState([]);
   const [communitiesLoading, setCommunitiesLoading] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
@@ -319,9 +321,26 @@ const ProfilePage = () => {
   useEffect(() => {
     if (profileData.id) {
       fetchUserResources();
+      fetchUserNeeds();
       fetchUserServices();
     }
   }, [profileData.id, fetchUserResources]);
+
+  const fetchUserNeeds = useCallback(async () => {
+    if (!profileData.id) return;
+    setNeedsLoading(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/user/${profileData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserNeeds(response.data);
+    } catch (err) {
+      console.error('Error fetching user needs:', err);
+    } finally {
+      setNeedsLoading(false);
+    }
+  }, [profileData.id, getAccessTokenSilently]);
 
   const fetchUserServices = async () => {
     if (!profileData.id) return;
@@ -1280,6 +1299,79 @@ const ProfilePage = () => {
                   }}
                   secondaryTypographyProps={{ 
                      sx: { fontFamily: theme.typography.fontFamilyBase }
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+
+      {/* My Needs Panel */}
+      <Box
+        className="profile-needs-container"
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.primary,
+          boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+        }}
+      >
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            color: theme.colors.primary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          My Active Needs
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/needs')}
+          sx={{
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            mb: 2,
+            '&:hover': {
+              backgroundColor: theme.colors.accentBlue,
+            }
+          }}
+        >
+          Open Needs Explorer
+        </Button>
+        {needsLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
+        {!needsLoading && userNeeds.length === 0 && (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>No active needs declared.</Typography>
+        )}
+        {!needsLoading && userNeeds.length > 0 && (
+          <List sx={{width: '100%'}}>
+            {userNeeds.slice(0, 3).map((need) => (
+              <ListItem
+                key={need.id}
+                onClick={() => navigate(`/needs/${need.id}`)}
+                sx={{
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  mb: 1,
+                  cursor: 'pointer',
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)',
+                  borderRadius: theme.borders.borderRadiusSm,
+                  '&:hover': {
+                    backgroundColor: 'rgba(28, 28, 30, 0.8)',
+                  }
+                }}
+              >
+                <ListItemText
+                  primary={need.name}
+                  secondary={`Status: ${need.status || 'open'} - Urgency: ${need.urgency || 'medium'}`}
+                  primaryTypographyProps={{
+                    sx: {
+                      color: theme.colors.primary,
+                      fontFamily: theme.typography.fontFamilyAccent,
+                    }
                   }}
                 />
               </ListItem>

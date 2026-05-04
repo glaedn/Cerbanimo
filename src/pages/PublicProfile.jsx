@@ -18,6 +18,8 @@ const PublicProfile = () => {
   const [badges, setBadges] = useState([]);
   const [communities, setCommunities] = useState([]);
   const [services, setServices] = useState([]);
+  const [needs, setNeeds] = useState([]);
+  const [needsLoading, setNeedsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -101,6 +103,22 @@ const PublicProfile = () => {
               } catch (servicesErr) {
                 console.error("Error fetching user services:", servicesErr);
                 setServices([]);
+              }
+
+              // Fetch needs declared by this user
+              try {
+                setNeedsLoading(true);
+                const needsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/user/${userId}`, {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
+                });
+                setNeeds(needsResponse.data || []);
+              } catch (needsErr) {
+                console.error("Error fetching user needs:", needsErr);
+                setNeeds([]);
+              } finally {
+                setNeedsLoading(false);
               }
             }
           } catch (err) {
@@ -382,6 +400,60 @@ const PublicProfile = () => {
             No Services Listed
           </Typography>
         )}
+      </Box>
+
+      {/* Active Needs Section */}
+      <Box sx={{ width: '100%', mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', px: isMobile ? 2 : 0 }}>
+        <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Orbitron', color: '#00f3ff', mb: 3 }}>
+          ACTIVE_NEEDS
+        </Typography>
+        {needsLoading ? (
+          <CircularProgress size={24} />
+        ) : needs && needs.length > 0 ? (
+          <Grid container spacing={2} sx={{ maxWidth: '800px' }}>
+            {needs.filter(n => n.status !== 'fulfilled').map((need) => (
+              <Grid item xs={12} sm={6} key={need.id}>
+                <Card
+                  onClick={() => navigate(`/needs/${need.id}`)}
+                  sx={{
+                    bgcolor: 'rgba(28, 28, 30, 0.85)',
+                    border: '1px solid #00f3ff',
+                    color: 'white',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      boxShadow: '0 0 15px rgba(0, 243, 255, 0.4)',
+                      borderColor: '#ff5ca2'
+                    }
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', mb: 1 }}>{need.name}</Typography>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)', height: '3em', overflow: 'hidden' }}>{need.description}</Typography>
+                    <Chip
+                      label={need.urgency?.toUpperCase() || 'MEDIUM'}
+                      size="small"
+                      sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00f3ff', border: '1px solid #00f3ff' }}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Orbitron' }}>
+            No Active Needs
+          </Typography>
+        )}
+        <Button
+          sx={{ mt: 2, color: '#00f3ff', fontFamily: 'Orbitron' }}
+          onClick={() => navigate('/needs')}
+        >
+          VIEW_ALL_NEEDS_IN_EXPLORER
+        </Button>
       </Box>
 
       <UserPortfolio userId={userId} accessToken={portfolioToken} />
