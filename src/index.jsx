@@ -5,7 +5,8 @@ import { Auth0Provider } from '@auth0/auth0-react';
 import App from './App.jsx';
 import { ThemeProvider } from '@mui/material/styles';
 import muiTheme from './styles/muiTheme.js';
-import NotificationProvider from './pages/NotificationProvider.jsx';  
+import NotificationProvider from './pages/NotificationProvider.jsx';
+import { CrisisProvider } from './context/CrisisContext.jsx';
 
 const onRedirectCallback = (appState) => {
   window.history.replaceState(
@@ -30,9 +31,11 @@ root.render(
       cacheLocation="localstorage"
     >
       <ThemeProvider theme={muiTheme}>
+        <CrisisProvider>
           <NotificationProvider>
             <App />
           </NotificationProvider>
+        </CrisisProvider>
       </ThemeProvider>
     </Auth0Provider>
 );

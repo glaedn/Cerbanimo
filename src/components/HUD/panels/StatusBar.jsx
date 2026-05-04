@@ -3,6 +3,8 @@ import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 // Removed useNotifications hook
 import useSkillData from '../../../hooks/useSkillData';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useCrisis } from '../../../context/CrisisContext';
+import { Switch, FormControlLabel } from '@mui/material';
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
 
@@ -11,6 +13,7 @@ const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { user, isAuthenticated } = useAuth0();
+  const { isCrisisMode, toggleCrisisMode } = useCrisis();
 
   const primaryColor = '#00F3FF'; // theme.colors.primary
   const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
@@ -96,6 +99,23 @@ const StatusBar = () => {
 
       <div className="status-item tokens-info">
         <span style={{ fontFamily: accentFont }}>Galactic Credits:</span> {profile.tokens !== undefined ? profile.tokens : 'N/A'}
+      </div>
+
+      <div className="status-item crisis-toggle">
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isCrisisMode}
+              onChange={toggleCrisisMode}
+              size="small"
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#FF4136' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#FF4136' }
+              }}
+            />
+          }
+          label={<span style={{ fontFamily: accentFont, fontSize: '10px', color: isCrisisMode ? '#FF4136' : '#CCC' }}>CRISIS_MODE</span>}
+        />
       </div>
       
       {/* Notifications section removed */}
