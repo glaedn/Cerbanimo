@@ -8,6 +8,7 @@ import '../HUDPanel.css';
 import theme from '../../../styles/theme';
 import { processSkillDataForGalaxy } from '../../../utils/skillUtils';
 import SkillDetailPopup from './SkillDetailPopup';
+import PropTypes from 'prop-types';
 
 const hexToRgb = (hex) => {
   let r = 0, g = 0, b = 0;
@@ -75,13 +76,6 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     setIsMinimized((prev) => !prev);
   };
 
-  const getStarColor = React.useCallback((level) => {
-    if (level >= 20) return theme.colors.accentPurple || '#800080';
-    if (level >= 10) return theme.colors.secondary;
-    if (level >= 5) return theme.colors.accentGreen;
-    return theme.colors.primary;
-  }, []);
-
   const getStarGradientUrl = React.useCallback((level) => {
     if (level >= 20) return 'url(#star-gradient-3)';
     if (level >= 10) return 'url(#star-gradient-2)';
@@ -89,10 +83,11 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     return 'url(#star-gradient-0)';
   }, []);
 
-  const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
-
-  // ── Data processing memo ────────────────────────────────────────────────
-  const { d3Nodes, d3Links, processedSkills } = React.useMemo(() => {
+  // ── Data processing effect ────────────────────────────────────────────────
+  // FIX: Removed forceDataUpdate from deps. fixedStarPositionsRef.current is
+  // always current (it's a ref), so re-running this effect to "pick up" new
+  // fixed positions is unnecessary and was the trigger for loop 2.
+  useEffect(() => {
     if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && (user?.sub || propUserId)) {
       const userId = propUserId || profile?.id || user?.sub;
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
@@ -494,6 +489,11 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
       )}
     </div>
   );
+};
+
+SkillGalaxyPanel.propTypes = {
+  isFullPage: PropTypes.bool,
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default SkillGalaxyPanel;
