@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import PropTypes from 'prop-types';
 import useSkillData from '../../../hooks/useSkillData';
@@ -15,9 +15,6 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { profile } = useUserProfile();
 
-  const [processedSkills, setProcessedSkills] = useState([]);
-  const [galaxyNodes, setGalaxyNodes] = useState([]);
-  const [galaxyLinks, setGalaxyLinks] = useState([]);
   const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -26,6 +23,9 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   const fixedStarPositionsRef = useRef(new Map());
   const initialZoomAppliedRef = useRef(false);
   const panelRef = useRef(null);
+
+  // Use correct keys in the ref to match the return structure of useMemo
+  const lastGalaxyDataRef = useRef({ galaxyNodes: [], galaxyLinks: [], processedSkills: [] });
 
   const toggleMinimize = useCallback((e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
@@ -41,12 +41,12 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     return 'url(#star-gradient-0)';
   }, []);
 
-  // ── Data processing effect ────────────────────────────────────────────────
-  useEffect(() => {
+  // ── Data processing memo ──────────────────────────────────────────────────
+  // Refactor to useMemo to resolve ReferenceErrors and ensure stable data for D3
+  const { galaxyNodes, galaxyLinks, processedSkills } = useMemo(() => {
     if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && (user?.sub || propUserId)) {
       const userId = propUserId || profile?.id || user?.sub;
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
-
       const validSkills = skillsForGalaxy.filter((skill) => skill && skill.id != null);
 
       const nodes = validSkills.map((skill) => {
@@ -90,20 +90,25 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         }
       });
 
-      setGalaxyNodes((prev) => {
-        const isSame = prev.length === newNodes.length && prev.every((n, i) => n.id === newNodes[i].id);
-        return isSame ? prev : newNodes;
-      });
-      setGalaxyLinks((prev) => {
-        const isSame = prev.length === newLinks.length && prev.every((l, i) => l.id === newLinks[i].id);
-        return isSame ? prev : newLinks;
-      });
-      setProcessedSkills(skillsForGalaxy);
-    } else {
-      setGalaxyNodes((prev) => (prev.length > 0 ? [] : prev));
-      setGalaxyLinks((prev) => (prev.length > 0 ? [] : prev));
-      setProcessedSkills((prev) => (prev.length > 0 ? [] : prev));
+      // Structural identity check to prevent D3 restarts if nodes/links are effectively the same.
+      // This preserves object identity so React dependencies (like in useEffect) don't trigger unnecessarily.
+      const prev = lastGalaxyDataRef.current;
+      const nodesSame = prev.galaxyNodes.length === newNodes.length &&
+                        prev.galaxyNodes.every((n, i) => n.id === newNodes[i].id);
+      const linksSame = prev.galaxyLinks.length === newLinks.length &&
+                        prev.galaxyLinks.every((l, i) => l.id === newLinks[i].id);
+
+      if (nodesSame && linksSame) {
+        return prev;
+      }
+
+      const newData = { galaxyNodes: newNodes, galaxyLinks: newLinks, processedSkills: skillsForGalaxy };
+      lastGalaxyDataRef.current = newData;
+      return newData;
     }
+
+    // Default empty state
+    return { galaxyNodes: [], galaxyLinks: [], processedSkills: [] };
   }, [allSkills, skillsLoading, isAuthenticated, user?.sub, profile?.id, propUserId]);
 
   // ── D3 rendering effect ───────────────────────────────────────────────────
@@ -115,6 +120,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
+    // Use clientWidth/Height for better measurement during initialization
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 600;
 
@@ -146,6 +152,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
     const mainGroup = svg.append('g').attr('class', 'everything');
 
+    // Clean up previous simulation
     simulationRef.current?.stop();
     const sim = d3.forceSimulation()
       .nodes(galaxyNodes)
@@ -345,6 +352,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         initialZoomAppliedRef.current = true;
       }
 
+      // Persist star positions in the ref for the next useMemo run
       galaxyNodes.forEach((dNode) => {
         if (dNode.category === 'star') {
           fixedStarPositionsRef.current.set(dNode.id, { fx: dNode.x, fy: dNode.y });
