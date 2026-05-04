@@ -93,8 +93,8 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
       // Structural identity check to prevent D3 restarts if nodes/links are effectively the same.
       // This preserves object identity so React dependencies (like in useEffect) don't trigger unnecessarily.
       const prev = lastGalaxyDataRef.current;
-      const nodesSame = prev.galaxyNodes.length === newNodes.length &&
-                        prev.galaxyNodes.every((n, i) => n.id === newNodes[i].id);
+      const nodesSame = prev.galaxyNodes.length === nodes.length &&
+                        prev.galaxyNodes.every((n, i) => n.id === nodes[i].id);
       const linksSame = prev.galaxyLinks.length === newLinks.length &&
                         prev.galaxyLinks.every((l, i) => l.id === newLinks[i].id);
 
@@ -102,7 +102,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         return prev;
       }
 
-      const newData = { galaxyNodes: newNodes, galaxyLinks: newLinks, processedSkills: skillsForGalaxy };
+      const newData = { galaxyNodes: nodes, galaxyLinks: newLinks, processedSkills: skillsForGalaxy };
       lastGalaxyDataRef.current = newData;
       return newData;
     }
