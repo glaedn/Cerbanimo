@@ -235,7 +235,7 @@ class DiscordBotService {
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
             const embed = new EmbedBuilder()
               .setTitle('🔗 Link your Cerbanimo Account')
-              .setDescription(`To link your Discord account, please visit your Cerbanimo profile and enter your Discord ID: \`${interaction.user.id}\`\n\n[Go to Cerbanimo Profile](${frontendUrl}/profile)`)
+              .setDescription(`To link your Discord account, please visit your Cerbanimo profile. Your Discord ID (\`${interaction.user.id}\`) will be automatically filled in.\n\n[Go to Cerbanimo Profile](${frontendUrl}/profile?discord_id=${interaction.user.id})`)
               .setColor(0x0099FF);
             return interaction.reply({ embeds: [embed], ephemeral: true });
           }

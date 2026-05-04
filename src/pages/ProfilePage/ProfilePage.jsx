@@ -9,7 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import theme from '../../styles/theme'; // Import the theme
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -27,6 +27,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { profile: dynamicProfile, loading: profileLoading } = useUserProfile();
   const [userChronicle, setUserChronicle] = useState([]);
@@ -153,6 +154,14 @@ const ProfilePage = () => {
             capacity_status: capacityStatus,
             discord_user_id: profileResponse.data.discord_user_id || '',
             };
+
+          // Auto-populate Discord ID if provided in query params
+          const queryParams = new URLSearchParams(location.search);
+          const discordIdFromUrl = queryParams.get('discord_id');
+          if (discordIdFromUrl) {
+            fetchedProfileData.discord_user_id = discordIdFromUrl;
+          }
+
           setProfileData(fetchedProfileData);
 
 
