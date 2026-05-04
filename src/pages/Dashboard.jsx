@@ -77,7 +77,7 @@ const Dashboard = () => {
 
   return (
     <SpaceshipHUD>
-
+      <GalacticActivityMap />
     </SpaceshipHUD>
   );
 };
