@@ -72,7 +72,18 @@ console.log("RUNTIME:", typeof process);
                         { name: 'Medium', value: 'medium' },
                         { name: 'High', value: 'high' },
                         { name: 'Critical', value: 'critical' }
-                    ))
+                    )),
+        new SlashCommandBuilder()
+            .setName('help-offer')
+            .setDescription('Offer help for a specific need')
+            .addStringOption(option =>
+                option.setName('need_id')
+                    .setDescription('The ID of the need you want to help with')
+                    .setRequired(true))
+            .addStringOption(option =>
+                option.setName('message')
+                    .setDescription('Optional message to the requestor')
+                    .setRequired(false))
     ].map(command => command.toJSON());
 
     const rest = new REST({ version: '10' }).setToken(this.token);
@@ -90,6 +101,33 @@ console.log("RUNTIME:", typeof process);
   }
 
   setupEventListeners() {
+    this.client.on(Events.MessageCreate, async (message) => {
+      if (message.author.bot) return;
+      if (message.channel.isThread()) {
+        // Check if this thread belongs to a need
+        const needResult = await pool.query('SELECT id FROM needs WHERE discord_thread_id = $1', [message.channel.id]);
+        if (needResult.rows.length > 0) {
+          const needId = needResult.rows[0].id;
+
+          // Try to find Cerbanimo user by Discord ID
+          const userResult = await pool.query('SELECT id FROM users WHERE discord_id = $1', [message.author.id]);
+          let userId = userResult.rows[0]?.id;
+
+          // Fallback to a system user or handle as anonymous if mapping doesn't exist
+          if (!userId) {
+            console.log(`No Cerbanimo user found for Discord ID ${message.author.id}. Message will not be synced to need_comments.`);
+            return;
+          }
+
+          await pool.query(
+            'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
+            [needId, userId, `[Discord] ${message.content}`]
+          );
+          console.log(`Synced message from Discord thread ${message.channel.id} to need ${needId}`);
+        }
+      }
+    });
+
     this.client.on(Events.MessageReactionAdd, async (reaction, user) => {
       if (user.bot) return;
       if (reaction.partial) {
@@ -118,7 +156,32 @@ console.log("RUNTIME:", typeof process);
     this.client.on(Events.InteractionCreate, async (interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
-      if (interaction.commandName === 'need') {
+      if (interaction.commandName === 'help-offer') {
+        const needId = interaction.options.getString('need_id');
+        const message = interaction.options.getString('message') || "I'd like to help!";
+
+        try {
+          const userResult = await pool.query('SELECT id FROM users WHERE discord_id = $1', [interaction.user.id]);
+          const userId = userResult.rows[0]?.id;
+
+          if (!userId) {
+            return interaction.reply({
+              content: "You need to link your Cerbanimo account to use this command. Please visit the dashboard to link Discord.",
+              ephemeral: true
+            });
+          }
+
+          await pool.query(
+            'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
+            [needId, userId, `[Discord Help Offer] ${message}`]
+          );
+
+          await interaction.reply({ content: "Your help offer has been recorded and synced to Cerbanimo!", ephemeral: true });
+        } catch (err) {
+          console.error('Error in help-offer command:', err);
+          await interaction.reply({ content: "Failed to record help offer.", ephemeral: true });
+        }
+      } else if (interaction.commandName === 'need') {
         const description = interaction.options.getString('description');
         const urgency = interaction.options.getString('urgency') || 'medium';
         const guildId = interaction.guildId;
