@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import PropTypes from 'prop-types';
 import useSkillData from '../../../hooks/useSkillData';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import * as d3 from 'd3';
@@ -8,69 +9,32 @@ import '../HUDPanel.css';
 import theme from '../../../styles/theme';
 import { processSkillDataForGalaxy } from '../../../utils/skillUtils';
 import SkillDetailPopup from './SkillDetailPopup';
-import PropTypes from 'prop-types';
-
-const hexToRgb = (hex) => {
-  let r = 0, g = 0, b = 0;
-  if (hex.length === 4) {
-    r = parseInt(hex[1] + hex[1], 16);
-    g = parseInt(hex[2] + hex[2], 16);
-    b = parseInt(hex[3] + hex[3], 16);
-  } else if (hex.length === 7) {
-    r = parseInt(hex[1] + hex[2], 16);
-    g = parseInt(hex[3] + hex[4], 16);
-    b = parseInt(hex[5] + hex[6], 16);
-  }
-  return { r, g, b };
-};
-
-const getPastelColor = (hexColor, lightnessFactor = 0.8) => {
-  const { r, g, b } = hexToRgb(hexColor);
-  const pr = Math.round((1 - lightnessFactor) * r + lightnessFactor * 255);
-  const pg = Math.round((1 - lightnessFactor) * g + lightnessFactor * 255);
-  const pb = Math.round((1 - lightnessFactor) * b + lightnessFactor * 255);
-  return `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '0')}`;
-};
 
 const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   const { user, isAuthenticated } = useAuth0();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { profile } = useUserProfile();
+
   const [processedSkills, setProcessedSkills] = useState([]);
-  const [d3Nodes, setD3Nodes] = useState([]);
-  const [d3Links, setD3Links] = useState([]);
-  const svgRef = useRef(null);
-
-  // FIX (Infinite Loop 1): Store the simulation in a REF, not state.
-  // When simulation was state, calling setSimulation() inside the D3 effect
-  // caused the effect to re-run (simulation was in its deps), which called
-  // setSimulation() again → infinite loop.
-  const simulationRef = useRef(null);
-
-  const fixedStarPositionsRef = useRef(new Map());
-  const initialZoomAppliedRef = useRef(false);
-
-  // FIX (Infinite Loop 2): Removed the forceDataUpdate state entirely.
-  // It was toggled inside the simulation's 'end' handler, which put it into
-  // the data-processing effect's deps, which re-ran that effect, which
-  // updated d3Nodes, which re-ran the D3 effect, which started a new
-  // simulation, which ended and toggled forceDataUpdate again → infinite loop.
-  //
-  // fixedStarPositionsRef is a ref — its .current is always up-to-date and
-  // is read directly during data processing. No state toggle needed.
-
+  const [galaxyNodes, setGalaxyNodes] = useState([]);
+  const [galaxyLinks, setGalaxyLinks] = useState([]);
   const [selectedSkillForPopup, setSelectedSkillForPopup] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  const svgRef = useRef(null);
+  const simulationRef = useRef(null);
+  const fixedStarPositionsRef = useRef(new Map());
+  const initialZoomAppliedRef = useRef(false);
   const panelRef = useRef(null);
 
-  const toggleMinimize = (e) => {
+  const toggleMinimize = useCallback((e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
       e.stopPropagation();
     }
     setIsMinimized((prev) => !prev);
-  };
+  }, []);
 
-  const getStarGradientUrl = React.useCallback((level) => {
+  const getStarGradientUrl = useCallback((level) => {
     if (level >= 20) return 'url(#star-gradient-3)';
     if (level >= 10) return 'url(#star-gradient-2)';
     if (level >= 5) return 'url(#star-gradient-1)';
@@ -78,19 +42,12 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   }, []);
 
   // ── Data processing effect ────────────────────────────────────────────────
-  // FIX: Removed forceDataUpdate from deps. fixedStarPositionsRef.current is
-  // always current (it's a ref), so re-running this effect to "pick up" new
-  // fixed positions is unnecessary and was the trigger for loop 2.
   useEffect(() => {
     if (!skillsLoading && allSkills && allSkills.length > 0 && isAuthenticated && (user?.sub || propUserId)) {
       const userId = propUserId || profile?.id || user?.sub;
       const skillsForGalaxy = processSkillDataForGalaxy(allSkills, userId);
 
-      const validSkills = skillsForGalaxy.filter((skill) => {
-        if (skill && skill.id != null) return true;
-        console.warn('[SkillGalaxy] Filtered out skill with missing ID:', skill);
-        return false;
-      });
+      const validSkills = skillsForGalaxy.filter((skill) => skill && skill.id != null);
 
       const newNodes = validSkills.map((skill) => {
         let fx = null, fy = null;
@@ -133,32 +90,25 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         }
       });
 
-      // Avoid unnecessary state updates if data hasn't changed.
-      // We compare IDs to see if the structure is the same.
-      setD3Nodes((prev) => {
+      setGalaxyNodes((prev) => {
         const isSame = prev.length === newNodes.length && prev.every((n, i) => n.id === newNodes[i].id);
         return isSame ? prev : newNodes;
       });
-      setD3Links((prev) => {
+      setGalaxyLinks((prev) => {
         const isSame = prev.length === newLinks.length && prev.every((l, i) => l.id === newLinks[i].id);
         return isSame ? prev : newLinks;
       });
       setProcessedSkills(skillsForGalaxy);
     } else {
-      if (d3Nodes.length > 0) setD3Nodes([]);
-      if (d3Links.length > 0) setD3Links([]);
-      if (processedSkills.length > 0) setProcessedSkills([]);
+      setGalaxyNodes((prev) => (prev.length > 0 ? [] : prev));
+      setGalaxyLinks((prev) => (prev.length > 0 ? [] : prev));
+      setProcessedSkills((prev) => (prev.length > 0 ? [] : prev));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSkills, skillsLoading, isAuthenticated, user?.sub, profile?.id, propUserId]);
-  // Note: user?.sub and profile?.id (primitives) instead of user/profile objects
-  // to avoid re-running when Auth0 recreates the user object reference.
 
   // ── D3 rendering effect ───────────────────────────────────────────────────
-  // FIX: simulation is now a ref (simulationRef) — not in deps, not state.
-  // This effect only re-runs when the actual data (nodes/links) changes.
   useEffect(() => {
-    if (d3Nodes.length === 0 || !svgRef.current) {
+    if (galaxyNodes.length === 0 || !svgRef.current) {
       if (svgRef.current) d3.select(svgRef.current).selectAll('.everything').remove();
       simulationRef.current?.stop();
       return;
@@ -166,9 +116,8 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
-    const containerRect = container.getBoundingClientRect();
-    const width = containerRect.width || 800;
-    const height = containerRect.height || 600;
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 600;
 
     svg.attr('width', width).attr('height', height);
     svg.select('.everything').remove();
@@ -176,14 +125,14 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     let defs = svg.select('defs');
     if (defs.empty()) defs = svg.append('defs');
 
-    const newStarColors = [
+    const starColors = [
       theme.colors.primary,
       theme.colors.accentGreen,
       theme.colors.secondary,
       theme.colors.accentPurple || '#800080',
     ];
 
-    newStarColors.forEach((color, i) => {
+    starColors.forEach((color, i) => {
       const gradientId = `star-gradient-${i}`;
       if (defs.select(`#${gradientId}`).empty()) {
         const gradient = defs.append('radialGradient')
@@ -199,24 +148,20 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
     const mainGroup = svg.append('g').attr('class', 'everything');
 
-    // FIX: Stop and discard previous simulation before creating a new one.
-    // Previously, the old simulation was kept running while a new one was
-    // started, causing both to mutate the same node positions simultaneously.
     simulationRef.current?.stop();
-    const sim = d3.forceSimulation();
-    simulationRef.current = sim;
-
-    sim
-      .nodes(d3Nodes)
-      .force('link', d3.forceLink(d3Links).id((d) => d.id).distance(80).strength(0.3))
+    const sim = d3.forceSimulation()
+      .nodes(galaxyNodes)
+      .force('link', d3.forceLink(galaxyLinks).id((d) => d.id).distance(80).strength(0.3))
       .force('charge', d3.forceManyBody().strength(-800))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collide', d3.forceCollide().radius(30));
 
+    simulationRef.current = sim;
+
     const link = mainGroup.append('g')
       .attr('class', 'links')
       .selectAll('line')
-      .data(d3Links, (d) => d.id)
+      .data(galaxyLinks, (d) => d.id)
       .join('line')
       .attr('stroke', theme.colors.border || '#666')
       .attr('stroke-width', 1.5)
@@ -225,7 +170,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     const node = mainGroup.append('g')
       .attr('class', 'nodes')
       .selectAll('g.node-group')
-      .data(d3Nodes, (d) => d.id)
+      .data(galaxyNodes, (d) => d.id)
       .join(
         (enter) => {
           const group = enter.append('g')
@@ -268,7 +213,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
           )
             .append('text')
             .attr('class', 'level-label')
-            .text((d) => d.category === 'star' ? `Lvl ${d.levelForColor}` : `Lvl ${d.userLevel}`)
+            .text((d) => (d.category === 'star' ? `Lvl ${d.levelForColor}` : `Lvl ${d.userLevel}`))
             .attr('dy', (d) => {
               if (d.category === 'star') return 35;
               if (d.category === 'planet') return 25;
@@ -276,63 +221,55 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
               return 13;
             });
 
-          const attachHover = (sel) => {
-            sel
-              .on('mouseenter', (event, d_hovered) => {
-                const constellationIds = new Set();
-
-                // Optimized collection using a pre-built map would be better,
-                // but at minimum let's avoid redundant searches.
-                const nodesMap = new Map(d3Nodes.map(n => [n.id, n]));
-                const childrenMap = new Map();
-                d3Nodes.forEach(n => {
-                  if (n.parent) {
-                    if (!childrenMap.has(n.parent)) childrenMap.set(n.parent, []);
-                    childrenMap.get(n.parent).push(n.id);
-                  }
-                });
-
-                const collect = (nodeId) => {
-                  if (constellationIds.has(nodeId)) return;
-                  constellationIds.add(nodeId);
-
-                  const n = nodesMap.get(nodeId);
-                  if (n?.parent) collect(n.parent);
-
-                  const children = childrenMap.get(nodeId);
-                  if (children) children.forEach(childId => collect(childId));
-                };
-                collect(d_hovered.id);
-
-                mainGroup.selectAll('.links line')
-                  .style('stroke', (l) => {
-                    const s = l.source.id || l.source;
-                    const t = l.target.id || l.target;
-                    return constellationIds.has(s) && constellationIds.has(t) ? 'white' : (theme.colors.border || '#666');
-                  })
-                  .style('stroke-width', (l) => {
-                    const s = l.source.id || l.source;
-                    const t = l.target.id || l.target;
-                    return constellationIds.has(s) && constellationIds.has(t) ? 3 : 1.5;
-                  })
-                  .style('stroke-opacity', (l) => {
-                    const s = l.source.id || l.source;
-                    const t = l.target.id || l.target;
-                    return constellationIds.has(s) && constellationIds.has(t) ? 1 : 0.6;
-                  });
-                mainGroup.selectAll('.nodes .node-group')
-                  .style('opacity', (n) => constellationIds.has(n.id) ? 1 : 0.3);
-              })
-              .on('mouseleave', () => {
-                mainGroup.selectAll('.links line')
-                  .style('stroke', theme.colors.border || '#666')
-                  .style('stroke-width', 1.5)
-                  .style('stroke-opacity', 0.6);
-                mainGroup.selectAll('.nodes .node-group').style('opacity', 1);
+          group
+            .on('mouseenter', (event, d_hovered) => {
+              const constellationIds = new Set();
+              const nodesMap = new Map(galaxyNodes.map((n) => [n.id, n]));
+              const childrenMap = new Map();
+              galaxyNodes.forEach((n) => {
+                if (n.parent) {
+                  if (!childrenMap.has(n.parent)) childrenMap.set(n.parent, []);
+                  childrenMap.get(n.parent).push(n.id);
+                }
               });
-          };
 
-          attachHover(group);
+              const collect = (nodeId) => {
+                if (constellationIds.has(nodeId)) return;
+                constellationIds.add(nodeId);
+                const n = nodesMap.get(nodeId);
+                if (n?.parent) collect(n.parent);
+                const children = childrenMap.get(nodeId);
+                if (children) children.forEach((childId) => collect(childId));
+              };
+              collect(d_hovered.id);
+
+              mainGroup.selectAll('.links line')
+                .style('stroke', (l) => {
+                  const s = l.source.id || l.source;
+                  const t = l.target.id || l.target;
+                  return constellationIds.has(s) && constellationIds.has(t) ? 'white' : (theme.colors.border || '#666');
+                })
+                .style('stroke-width', (l) => {
+                  const s = l.source.id || l.source;
+                  const t = l.target.id || l.target;
+                  return constellationIds.has(s) && constellationIds.has(t) ? 3 : 1.5;
+                })
+                .style('stroke-opacity', (l) => {
+                  const s = l.source.id || l.source;
+                  const t = l.target.id || l.target;
+                  return constellationIds.has(s) && constellationIds.has(t) ? 1 : 0.6;
+                });
+              mainGroup.selectAll('.nodes .node-group')
+                .style('opacity', (n) => (constellationIds.has(n.id) ? 1 : 0.3));
+            })
+            .on('mouseleave', () => {
+              mainGroup.selectAll('.links line')
+                .style('stroke', theme.colors.border || '#666')
+                .style('stroke-width', 1.5)
+                .style('stroke-opacity', 0.6);
+              mainGroup.selectAll('.nodes .node-group').style('opacity', 1);
+            });
+
           return group;
         },
         (update) => {
@@ -341,7 +278,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
               (d.category === 'star' && d.levelForColor > 0) ||
               (['planet', 'moon', 'satellite'].includes(d.category) && d.userLevel > 0)
             )
-            .text((d) => d.category === 'star' ? `Lvl ${d.levelForColor}` : `Lvl ${d.userLevel}`);
+            .text((d) => (d.category === 'star' ? `Lvl ${d.levelForColor}` : `Lvl ${d.userLevel}`));
 
           update.select('circle').style('fill', (d) => {
             const cat = d.category || 'star';
@@ -368,10 +305,10 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         mainGroup.selectAll('.node-label, .level-label')
           .style('font-size', function (d) {
             const isLevel = d3.select(this).classed('level-label');
-            let base = isLevel ? 9 : (d.category === 'star' ? 14 : 10);
+            const base = isLevel ? 9 : (d.category === 'star' ? 14 : 10);
             return Math.max(base / k, base * (isLevel ? 0.4 : d.category === 'star' ? 0.7 : 0.5)) + 'px';
           })
-          .style('display', function (d) {
+          .style('display', (d) => {
             if (d.category === 'star') return k < 0.125 ? 'none' : 'block';
             return k < 0.5 ? 'none' : 'block';
           });
@@ -379,16 +316,12 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
 
     svg.call(zoomBehavior);
 
-    // FIX: The 'end' handler no longer calls setForceDataUpdate.
-    // It updates fixedStarPositionsRef and mutates node fx/fy in place.
-    // That's sufficient — the next data processing run will read from
-    // fixedStarPositionsRef.current directly (ref is always current).
     sim.on('end.fixStars', () => {
       const svgWidth = parseFloat(svg.attr('width'));
       const svgHeight = parseFloat(svg.attr('height'));
 
       if (!initialZoomAppliedRef.current) {
-        const starNodes = d3Nodes.filter((d) => d.category === 'star');
+        const starNodes = galaxyNodes.filter((d) => d.category === 'star');
         if (starNodes.length > 0) {
           let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
           starNodes.forEach((d) => {
@@ -414,8 +347,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         initialZoomAppliedRef.current = true;
       }
 
-      // Persist fixed positions for next data processing run (no state update needed)
-      d3Nodes.forEach((dNode) => {
+      galaxyNodes.forEach((dNode) => {
         if (dNode.category === 'star') {
           fixedStarPositionsRef.current.set(dNode.id, { fx: dNode.x, fy: dNode.y });
           dNode.fx = dNode.x;
@@ -429,13 +361,8 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     return () => {
       sim.stop();
       sim.on('end.fixStars', null);
-      // Don't null simulationRef here — just stop it. The ref is cleaned up
-      // at the top of the next run.
     };
-  }, [d3Nodes, d3Links, getStarGradientUrl, theme.colors]);
-  // FIX: Removed `simulation` (now a ref) and `forceDataUpdate` (removed entirely)
-  // from deps. Also removed memoizedGetPastelColor (unused in current render logic)
-  // and fixedStarPositionsRef (refs don't need to be in deps).
+  }, [galaxyNodes, galaxyLinks, getStarGradientUrl, theme.colors]);
 
   if (skillsLoading) {
     return <div className="skill-galaxy-panel-loading" style={{ color: theme.colors.textSecondary }}>Loading Skill Data...</div>;
@@ -443,7 +370,7 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
   if (skillsError) {
     return <div className="skill-galaxy-panel-error" style={{ color: theme.colors.error }}>Error loading skills: {skillsError.message || skillsError.toString()}</div>;
   }
-  if (processedSkills.length === 0 && d3Nodes.length === 0 && !skillsLoading && !skillsError) {
+  if (processedSkills.length === 0 && galaxyNodes.length === 0 && !skillsLoading && !skillsError) {
     return (
       <div className={`hud-panel skill-galaxy-panel ${isMinimized ? 'minimized' : ''}`}>
         <h2 style={{ color: theme.colors.textPrimary }}>Skill Constellations</h2>
