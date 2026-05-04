@@ -1,0 +1,21 @@
+.needs-page-container {
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, rgba(0, 243, 255, 0.05), transparent),
+              radial-gradient(circle at bottom left, rgba(255, 92, 162, 0.05), transparent);
+}
+
+.need-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(0, 243, 255, 0.3); }
+  50% { border-color: rgba(0, 243, 255, 0.8); }
+  100% { border-color: rgba(0, 243, 255, 0.3); }
+}
+
+.need-card:hover {
+  animation: pulse-border 2s infinite;
+}

@@ -57,6 +57,7 @@ const CoordinatorHUD = React.lazy(() => import("./pages/CoordinatorHUD.jsx"));
 const ImpactAtlas = React.lazy(() => import("./pages/ImpactAtlas.jsx"));
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
+const NeedsPage = React.lazy(() => import("./pages/NeedsPage/NeedsPage.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
@@ -132,6 +133,14 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><SkillConstellation /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/needs/:needId?"
+            element={
+              <PrivateRoute>
+                <PageWrapper><NeedsPage /></PageWrapper>
               </PrivateRoute>
             }
           />
