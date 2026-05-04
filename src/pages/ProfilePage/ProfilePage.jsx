@@ -53,8 +53,9 @@ const ProfilePage = () => {
     interests: [],
     experience: [],
     profile_picture: '', // This will hold the file path or URL of the profile picture
-    contact_links: ['', '', ''], // Initialize with 3 empty strings
+    contact_links: ['', ''], // Initialize with 2 empty strings
     capacity_status: 'active',
+    discord_user_id: '',
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -147,9 +148,10 @@ const ProfilePage = () => {
             experience: profileResponse.data.experience || [],
             profile_picture: profileResponse.data.profile_picture || '',
             contact_links: Array.isArray(profileResponse.data.contact_links)
-              ? [...profileResponse.data.contact_links.slice(0, 3), '', '', ''].slice(0, 3)
-              : ['', '', ''],
+              ? [...profileResponse.data.contact_links.slice(0, 2), '', '', ''].slice(0, 2)
+              : ['', ''],
             capacity_status: capacityStatus,
+            discord_user_id: profileResponse.data.discord_user_id || '',
             };
           setProfileData(fetchedProfileData);
 
@@ -459,6 +461,7 @@ const ProfilePage = () => {
       formData.append('skills', JSON.stringify(profileData.skills));
       formData.append('interests', JSON.stringify(profileData.interests));
       formData.append('capacity_status', profileData.capacity_status);
+      formData.append('discord_user_id', profileData.discord_user_id);
 
       // Handle contact_links
       const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
@@ -501,7 +504,10 @@ const ProfilePage = () => {
           skills: (updatedProfile.skills || []).map(skill => typeof skill === 'string' ? JSON.parse(skill) : skill),
           interests: (updatedProfile.interests || []).map(interest => typeof interest === 'string' ? JSON.parse(interest) : interest),
           profile_picture: updatedProfile.profile_picture || prev.profile_picture,
-          contact_links: updatedProfile.contact_links || prev.contact_links,
+          contact_links: Array.isArray(updatedProfile.contact_links)
+            ? [...updatedProfile.contact_links.slice(0, 2), '', ''].slice(0, 2)
+            : ['', ''],
+          discord_user_id: updatedProfile.discord_user_id || prev.discord_user_id,
         }));
       }
 
@@ -676,7 +682,65 @@ const ProfilePage = () => {
           <MenuItem value="unavailable">Unavailable</MenuItem>
         </Select>
       </FormControl>
-      {[0, 1, 2].map((index) => (
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '400px', gap: 1, mb: 1 }}>
+        <TextField
+          label="Discord User ID"
+          value={profileData.discord_user_id || ''}
+          onChange={(e) => handleInputChange('discord_user_id', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            flexGrow: 1,
+            '& .MuiInputLabel-root': {
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: theme.colors.primary,
+            },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': {
+                borderColor: theme.colors.border,
+                borderRadius: theme.borders.borderRadiusMd,
+              },
+              '&:hover fieldset': {
+                borderColor: theme.colors.primary,
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: theme.colors.primary,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+              },
+            },
+            '& .MuiInputBase-input': {
+              color: theme.colors.textPrimary,
+              fontFamily: theme.typography.fontFamilyAccent,
+            },
+          }}
+        />
+        <Button
+          variant="contained"
+          onClick={handleSaveProfile}
+          sx={{
+            minWidth: '120px',
+            height: '56px',
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+            borderRadius: theme.borders.borderRadiusMd,
+            '&:hover': {
+              backgroundColor: theme.colors.accentBlue,
+              boxShadow: theme.effects.glowStrong(theme.colors.primary),
+            }
+          }}
+        >
+          Link Accounts
+        </Button>
+      </Box>
+      {[0, 1].map((index) => (
         <TextField
           key={index}
           label={`Contact Link ${index + 1}`}
@@ -686,7 +750,7 @@ const ProfilePage = () => {
           fullWidth
           sx={{
             maxWidth: '400px',
-            mt: index === 0 ? 1 : 1, // Add margin top for spacing between fields
+            mt: 1,
             '& .MuiInputLabel-root': { 
               color: theme.colors.textSecondary,
               fontFamily: theme.typography.fontFamilyAccent,

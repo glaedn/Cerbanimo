@@ -33,7 +33,7 @@ router.get("/public/:userId",
       // For now, let's fetch the user and then filter interests based on their status in the interests table.
 
       const result = await pool.query(
-        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status FROM users WHERE id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status, discord_user_id FROM users WHERE id = $1`,
         [userId]
       );
 
@@ -232,7 +232,7 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -272,7 +272,7 @@ router.get('/', async (req, res) => {
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
-  let { username, skills, interests, user_id, contact_links, capacity_status } = req.body;
+  let { username, skills, interests, user_id, contact_links, capacity_status, discord_user_id } = req.body;
   const auth0Id = req.auth.payload.sub;
   // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
   let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
@@ -319,9 +319,10 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
         interests = $3,
         profile_picture = COALESCE($4, profile_picture),
         contact_links = $5,
-        capacity_status = COALESCE($6, capacity_status)
-      WHERE id = $7
-      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status;
+        capacity_status = COALESCE($6, capacity_status),
+        discord_user_id = $7
+      WHERE id = $8
+      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status, discord_user_id;
     `;
 
     // Validate and truncate contact_links
@@ -350,6 +351,7 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       valueForProfilePictureColumn,
       contact_links,
       capacity_status,
+      discord_user_id,
       userId,
     ];
     const result = await pool.query(query, values);
