@@ -1,5 +1,6 @@
 import express from 'express';
 import ResourceService from '../services/ResourceService.js';
+import DiscordBotService from '../services/DiscordBotService.js';
 
 const router = express.Router();
 
@@ -25,6 +26,14 @@ router.post('/add', async (req, res) => {
   const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText, resourceType, availabilitySchedule, conditions } = req.body;
   try {
     const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText, resourceType, availabilitySchedule, conditions);
+
+    // Broadcast to Discord if it's a community resource
+    if (resource.owner_community_id) {
+        DiscordBotService.broadcastResource(resource)
+          .then(() => DiscordBotService.matchAndPing(resource, 'resource'))
+          .catch(err => console.error('Discord resource broadcast/ping failed:', err));
+    }
+
     res.status(201).json(resource);
   } catch (err) {
     res.status(500).json({ error: err.message });

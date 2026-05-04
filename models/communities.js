@@ -11,6 +11,8 @@ const createCommunitiesTable = async () => {
         proposals INTEGER[] DEFAULT '{}', -- Array of project IDs, FK to projects.id
         approved_projects INTEGER[] DEFAULT '{}', -- Array of project IDs, FK to projects.id
         vote_delegations JSONB DEFAULT '{}'::jsonb,
+        cross_community_enabled BOOLEAN DEFAULT FALSE,
+        discord_guild_id VARCHAR(50),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );

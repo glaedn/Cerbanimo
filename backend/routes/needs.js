@@ -1,112 +1,27 @@
 import express from 'express';
 import pool from '../db.js'; // Assuming db.js is in the backend directory
 import DiscordBotService from '../services/DiscordBotService.js';
-import { findMatchesForNeed } from '../services/matchingService.js';
-import { sendNotification } from '../services/NotificationService.js';
 import ProjectConversionService from '../services/ProjectConversionService.js';
+import NeedService from '../services/NeedService.js';
 
 const router = express.Router();
 
 // POST /needs - Declare a new need
 router.post('/', async (req, res) => {
-  let {
-    name,
-    description,
-    category,
-    quantity_needed,
-    urgency,
-    urgency_level,
-    is_recurring,
-    recurrence_pattern,
-    location,
-    mobility_required,
-    requestor_user_id, // Can be provided, or taken from req.user.id
-    requestor_community_id,
-    required_before_date,
-    location_text,
-    latitude,
-    longitude,
-    status // Default is 'open' in schema
-  } = req.body;
-  console.log('Received data:', req.body);
-  console.log('id passed in the req:', req.user.id);
-  // If requestor_user_id is not provided, and it's not a community request, set it to the logged-in user.
-  if (!requestor_user_id && !requestor_community_id) {
-    console.log('No requestor_user_id or requestor_community_id provided, using logged-in user id:', req.user.id);
-    requestor_user_id = req.user.id;
-  } else if (requestor_user_id && Number(requestor_user_id) !== Number(req.user.id)) {
-    // A user is trying to post a need for another user
-    if (!requestor_community_id) {
-      return res.status(403).json({ error: 'You can only declare needs for yourself unless it is a community need.' });
-    }
-  }
-
-
-  if (!name) {
-    return res.status(400).json({ error: 'Need name is required.' });
-  }
-  if (!requestor_user_id && !requestor_community_id) {
-    return res.status(400).json({ error: 'Either requestor_user_id or requestor_community_id must be provided.' });
-  }
-
   try {
-    const result = await pool.query(
-      `INSERT INTO needs (name, description, category, quantity_needed, urgency, 
-                          urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
-                          requestor_user_id, requestor_community_id, required_before_date, 
-                          location_text, latitude, longitude, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-       RETURNING *`,
-      [
-        name, description, category, quantity_needed, urgency,
-        urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
-        requestor_user_id, requestor_community_id, required_before_date,
-        location_text, latitude, longitude, status
-      ]
-    );
-    const newNeed = result.rows[0];
+    const newNeed = await NeedService.createNeed(req.body, req.user);
 
     // Broadcast to Discord if it's a community need
     if (newNeed.requestor_community_id) {
-      DiscordBotService.broadcastNeed(newNeed).catch(err => console.error('Discord broadcast failed:', err));
+      DiscordBotService.broadcastNeed(newNeed)
+        .then(() => DiscordBotService.matchAndPing(newNeed, 'need'))
+        .catch(err => console.error('Discord broadcast/ping failed:', err));
     }
-
-    // Trigger Matching and Notifications (Non-blocking)
-    findMatchesForNeed(newNeed.id, pool).then(matches => {
-      const notifications = [];
-
-      // Notify matched users
-      for (const user of matches.users) {
-        if (user.id === newNeed.requestor_user_id) continue;
-        notifications.push(
-          sendNotification(user.id, {
-            message: `A new need matching your skills has been posted: ${newNeed.name}`,
-            type: 'need_match'
-          })
-        );
-      }
-
-      // Notify owners of matched resources
-      for (const resource of matches.resources) {
-        if (resource.owner_user_id && resource.owner_user_id !== newNeed.requestor_user_id) {
-          notifications.push(
-            sendNotification(resource.owner_user_id, {
-              message: `A new need matching your resource "${resource.name}" has been posted: ${newNeed.name}`,
-              type: 'resource_match'
-            })
-          );
-        }
-      }
-
-      return Promise.all(notifications);
-    }).catch(matchErr => {
-      console.error('Error during automated matching/notification:', matchErr);
-    });
 
     res.status(201).json(newNeed);
   } catch (err) {
     console.error('Error creating need:', err);
-    res.status(500).json({ error: 'Failed to create need' });
+    res.status(err.message.includes('required') || err.message.includes('must be provided') ? 400 : 500).json({ error: err.message });
   }
 });
 
@@ -222,6 +137,17 @@ router.put('/:needId', async (req, res) => {
     if (need.requestor_user_id !== currentUserId && !need.requestor_community_id) { // Simple check for user-owned needs
       return res.status(403).json({ error: 'User not authorized to update this need.' });
     }
+
+    if (status === 'fulfilled' && need.requestor_user_id !== currentUserId) {
+      return res.status(403).json({ error: 'Only the need creator can mark it as fulfilled.' });
+    }
+
+    let fulfilled_at = null;
+    let fulfilled_via = null;
+    if (status === 'fulfilled') {
+      fulfilled_at = new Date();
+      fulfilled_via = 'web';
+    }
     // If it's a community need (need.requestor_community_id is not null),
     // currentUserId should be an admin of that community. This logic needs to be implemented.
     // For now, only the original user requestor can update if it's not a community need.
@@ -230,15 +156,17 @@ router.put('/:needId', async (req, res) => {
       UPDATE needs 
       SET name = $1, description = $2, category = $3, quantity_needed = $4, urgency = $5,
           urgency_level = $6, is_recurring = $7, recurrence_pattern = $8, location = $9, mobility_required = $10,
-          required_before_date = $11, location_text = $12, latitude = $13, longitude = $14, status = $15
+          required_before_date = $11, location_text = $12, latitude = $13, longitude = $14, status = $15,
+          fulfilled_at = COALESCE($16, fulfilled_at), fulfilled_via = COALESCE($17, fulfilled_via)
           -- updated_at is handled by the trigger
-      WHERE id = $16
+      WHERE id = $18
       RETURNING *
     `;
     const values = [
       name, description, category, quantity_needed, urgency,
       urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
       required_before_date, location_text, latitude, longitude, status,
+      fulfilled_at, fulfilled_via,
       needId
     ];
 

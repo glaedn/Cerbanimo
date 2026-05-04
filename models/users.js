@@ -20,6 +20,7 @@ const createUserTable = async () => {
       contact_links TEXT[] DEFAULT '{}'::TEXT[],
       alpha BOOLEAN DEFAULT FALSE,
       capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
+      discord_user_id VARCHAR(50),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

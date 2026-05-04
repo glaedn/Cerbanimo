@@ -1,5 +1,9 @@
-import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, ThreadAutoArchiveDuration, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, ThreadAutoArchiveDuration, REST, Routes, SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
 import pool from '../db.js';
+import { findMatchesForNeed, findMatchesForResource } from './matchingService.js';
+import { PermissionFlagsBits } from 'discord.js';
+import NeedService from './NeedService.js';
+import ResourceService from './ResourceService.js';
 
 class DiscordBotService {
   constructor() {
@@ -27,8 +31,19 @@ class DiscordBotService {
       });
 
       this.setupEventListeners();
+      this.setupGuildEvents();
     } else {
       console.warn('DISCORD_TOKEN not found in environment variables. Discord bot is disabled.');
+    }
+  }
+
+  async getLinkedUser(discordUserId) {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE discord_user_id = $1', [discordUserId]);
+      return result.rows[0] || null;
+    } catch (err) {
+      console.error('Error fetching linked user:', err);
+      return null;
     }
   }
 
@@ -58,20 +73,45 @@ class DiscordBotService {
     const commands = [
         new SlashCommandBuilder()
             .setName('need')
-            .setDescription('Declare a new need in Cerbanimo')
-            .addStringOption(option =>
-                option.setName('description')
-                    .setDescription('What do you need help with?')
-                    .setRequired(true))
-            .addStringOption(option =>
-                option.setName('urgency')
-                    .setDescription('How urgent is this?')
-                    .addChoices(
-                        { name: 'Low', value: 'low' },
-                        { name: 'Medium', value: 'medium' },
-                        { name: 'High', value: 'high' },
-                        { name: 'Critical', value: 'critical' }
-                    )),
+            .setDescription('Need management commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('create')
+                    .setDescription('Declare a new need in Cerbanimo'))
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('fulfill')
+                    .setDescription('Mark one of your needs as fulfilled')),
+        new SlashCommandBuilder()
+            .setName('resource')
+            .setDescription('Resource management commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('create')
+                    .setDescription('Post a new resource in Cerbanimo')),
+        new SlashCommandBuilder()
+            .setName('account')
+            .setDescription('Account management commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('link')
+                    .setDescription('Link your Discord account to Cerbanimo')),
+        new SlashCommandBuilder()
+            .setName('help')
+            .setDescription('Show information about Cerbanimo and available commands'),
+        new SlashCommandBuilder()
+            .setName('community')
+            .setDescription('Community management commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('configure')
+                    .setDescription('Configure Discord channels for Cerbanimo')
+                    .addChannelOption(option =>
+                        option.setName('need_channel')
+                            .setDescription('Channel for new need broadcasts'))
+                    .addChannelOption(option =>
+                        option.setName('alert_channel')
+                            .setDescription('Channel for cross-community alerts'))),
         new SlashCommandBuilder()
             .setName('help-offer')
             .setDescription('Offer help for a specific need')
@@ -99,6 +139,32 @@ class DiscordBotService {
     }
   }
 
+  setupGuildEvents() {
+    this.client.on(Events.GuildCreate, async (guild) => {
+      console.log(`Joined new guild: ${guild.name}`);
+      try {
+        // Try to find the first text channel the bot can send to
+        const channel = guild.channels.cache.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
+        if (channel) {
+          const embed = new EmbedBuilder()
+            .setTitle('🌍 Welcome to Cerbanimo!')
+            .setDescription('Thank you for adding Cerbanimo to your server. We are here to help your community coordinate mutual aid and share resources effectively.')
+            .addFields(
+              { name: '🚀 Getting Started', value: '1. Link your account: Use `/account link`\n2. Need help? Use `/need create` to post a request.\n3. Have something to share? Use `/resource create` to offer it.' },
+              { name: '🧭 Available Commands', value: '`/need`, `/resource`, `/account`, `/help`, `/help-offer`' },
+              { name: '🔗 Platform Access', value: `[Visit Cerbanimo](${process.env.FRONTEND_URL || 'http://localhost:3000'})` }
+            )
+            .setColor(0x00FF00)
+            .setTimestamp();
+
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (err) {
+        console.error('Error sending welcome message:', err);
+      }
+    });
+  }
+
   setupEventListeners() {
     this.client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
@@ -109,7 +175,7 @@ class DiscordBotService {
           const needId = needResult.rows[0].id;
 
           // Try to find Cerbanimo user by Discord ID
-          const userResult = await pool.query('SELECT id FROM users WHERE discord_id = $1', [message.author.id]);
+          const userResult = await pool.query('SELECT id FROM users WHERE discord_user_id = $1', [message.author.id]);
           let userId = userResult.rows[0]?.id;
 
           // Fallback to a system user or handle as anonymous if mapping doesn't exist
@@ -153,70 +219,313 @@ class DiscordBotService {
     });
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
+      if (interaction.isChatInputCommand()) {
+        const linkedUser = await this.getLinkedUser(interaction.user.id);
 
-      if (interaction.commandName === 'help-offer') {
-        const needId = interaction.options.getString('need_id');
-        const message = interaction.options.getString('message') || "I'd like to help!";
+        if (!linkedUser && interaction.commandName !== 'account' && interaction.commandName !== 'help') {
+          return interaction.reply({
+            content: "❌ You need to link your Cerbanimo account to use this command. Use `/account link` to get started.",
+            ephemeral: true
+          });
+        }
 
-        try {
-          const userResult = await pool.query('SELECT id FROM users WHERE discord_id = $1', [interaction.user.id]);
-          const userId = userResult.rows[0]?.id;
+        if (interaction.commandName === 'account') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'link') {
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const embed = new EmbedBuilder()
+              .setTitle('🔗 Link your Cerbanimo Account')
+              .setDescription(`To link your Discord account, please visit your Cerbanimo profile and enter your Discord ID: \`${interaction.user.id}\`\n\n[Go to Cerbanimo Profile](${frontendUrl}/profile)`)
+              .setColor(0x0099FF);
+            return interaction.reply({ embeds: [embed], ephemeral: true });
+          }
+        }
 
-          if (!userId) {
-            return interaction.reply({
-              content: "You need to link your Cerbanimo account to use this command. Please visit the dashboard to link Discord.",
-              ephemeral: true
-            });
+        if (interaction.commandName === 'community') {
+          if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return interaction.reply({ content: "❌ Only server administrators can configure community settings.", ephemeral: true });
           }
 
-          await pool.query(
-            'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
-            [needId, userId, `[Discord Help Offer] ${message}`]
-          );
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'configure') {
+            const needChannel = interaction.options.getChannel('need_channel');
+            const alertChannel = interaction.options.getChannel('alert_channel');
 
-          await interaction.reply({ content: "Your help offer has been recorded and synced to Cerbanimo!", ephemeral: true });
-        } catch (err) {
-          console.error('Error in help-offer command:', err);
-          await interaction.reply({ content: "Failed to record help offer.", ephemeral: true });
-        }
-      } else if (interaction.commandName === 'need') {
-        const description = interaction.options.getString('description');
-        const urgency = interaction.options.getString('urgency') || 'medium';
-        const guildId = interaction.guildId;
+            try {
+              const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [interaction.guildId]);
+              if (configResult.rows.length === 0) {
+                return interaction.reply({ content: "❌ This server is not yet linked to a Cerbanimo community via the web dashboard.", ephemeral: true });
+              }
 
-        try {
-            // Find community associated with this guild
-            const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
+              const communityId = configResult.rows[0].community_id;
 
-            if (configResult.rows.length === 0) {
-                return interaction.reply({ content: "This Discord server is not connected to a Cerbanimo community.", ephemeral: true });
+              if (needChannel) {
+                await pool.query('UPDATE community_discord_config SET need_channel_id = $1 WHERE community_id = $2', [needChannel.id, communityId]);
+              }
+              if (alertChannel) {
+                await pool.query('UPDATE community_discord_config SET alert_channel_id = $1 WHERE community_id = $2', [alertChannel.id, communityId]);
+              }
+
+              return interaction.reply({ content: `✅ Community configuration updated for ${needChannel ? 'Need Channel: <#'+needChannel.id+'>' : ''} ${alertChannel ? 'Alert Channel: <#'+alertChannel.id+'>' : ''}`, ephemeral: true });
+            } catch (err) {
+              console.error('Error configuring community:', err);
+              return interaction.reply({ content: "❌ Failed to update community configuration.", ephemeral: true });
             }
+          }
+        }
 
-            const communityId = configResult.rows[0].community_id;
+        if (interaction.commandName === 'help') {
+          const embed = new EmbedBuilder()
+            .setTitle('🌍 Welcome to Cerbanimo')
+            .setDescription('Cerbanimo is a mutual aid platform for sharing needs and resources.')
+            .addFields(
+              { name: '🆘 /need create', value: 'Declare a new need in the community.' },
+              { name: '✅ /need fulfill', value: 'Mark one of your needs as fulfilled.' },
+              { name: '📦 /resource create', value: 'Post a new resource you can share.' },
+              { name: '🔗 /account link', value: 'Link your Discord to Cerbanimo.' },
+              { name: '🤝 /help-offer', value: 'Offer help for a specific need.' }
+            )
+            .setColor(0x00FF00);
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
 
-            // Create the need in Cerbanimo
-            // Note: We don't have the user mapping yet, so we mark it as a community-requested need
-            const result = await pool.query(
-                `INSERT INTO needs (name, description, urgency, requestor_community_id, status)
-                 VALUES ($1, $2, $3, $4, 'open')
-                 RETURNING *`,
-                [description.substring(0, 50), description, urgency, communityId]
+        if (interaction.commandName === 'help-offer') {
+          const needId = interaction.options.getString('need_id');
+          const message = interaction.options.getString('message') || "I'd like to help!";
+
+          try {
+            await pool.query(
+              'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
+              [needId, linkedUser.id, `[Discord Help Offer] ${message}`]
             );
 
-            const newNeed = result.rows[0];
+            await interaction.reply({ content: "Your help offer has been recorded and synced to Cerbanimo!", ephemeral: true });
+          } catch (err) {
+            console.error('Error in help-offer command:', err);
+            await interaction.reply({ content: "Failed to record help offer.", ephemeral: true });
+          }
+        } else if (interaction.commandName === 'need') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'create') {
+            const modal = new ModalBuilder()
+              .setCustomId('need_create_modal')
+              .setTitle('🆘 Create a New Need');
 
-            // Broadcast the newly created need back to Discord (this will create the thread)
-            await this.broadcastNeed(newNeed);
+            const titleInput = new TextInputBuilder()
+              .setCustomId('need_title')
+              .setLabel('Title')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('Short title for your need')
+              .setRequired(true);
 
-            await interaction.reply({
-              content: `Need created! Coordination thread started in the designated channel.`,
-              ephemeral: true
-            });
-        } catch (err) {
-            console.error('Error creating need from Discord:', err);
-            await interaction.reply({ content: "Failed to create need in Cerbanimo.", ephemeral: true });
+            const descriptionInput = new TextInputBuilder()
+              .setCustomId('need_description')
+              .setLabel('Description')
+              .setStyle(TextInputStyle.Paragraph)
+              .setPlaceholder('Describe what you need help with')
+              .setRequired(true);
+
+            const urgencyInput = new TextInputBuilder()
+              .setCustomId('need_urgency')
+              .setLabel('Urgency (low, medium, high, critical)')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('medium')
+              .setRequired(false);
+
+            const categoryInput = new TextInputBuilder()
+                .setCustomId('need_category')
+                .setLabel('Category (Goods, Services, Info)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Goods')
+                .setRequired(false);
+
+            const locationInput = new TextInputBuilder()
+                .setCustomId('need_location')
+                .setLabel('Location')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Where is this needed?')
+                .setRequired(false);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(titleInput),
+              new ActionRowBuilder().addComponents(descriptionInput),
+              new ActionRowBuilder().addComponents(urgencyInput),
+              new ActionRowBuilder().addComponents(categoryInput),
+              new ActionRowBuilder().addComponents(locationInput)
+            );
+
+            await interaction.showModal(modal);
+          } else if (subcommand === 'fulfill') {
+            try {
+                const needsResult = await pool.query(
+                    "SELECT id, name FROM needs WHERE requestor_user_id = $1 AND status = 'open' LIMIT 25",
+                    [linkedUser.id]
+                );
+
+                if (needsResult.rows.length === 0) {
+                    return interaction.reply({ content: "You have no open needs to fulfill.", ephemeral: true });
+                }
+
+                const select = new StringSelectMenuBuilder()
+                    .setCustomId('need_fulfill_select')
+                    .setPlaceholder('Select a need to mark as fulfilled')
+                    .addOptions(
+                        needsResult.rows.map(need =>
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(need.name.substring(0, 100))
+                                .setValue(need.id.toString())
+                        )
+                    );
+
+                const row = new ActionRowBuilder().addComponents(select);
+
+                await interaction.reply({
+                    content: 'Choose a need to fulfill:',
+                    components: [row],
+                    ephemeral: true
+                });
+            } catch (err) {
+                console.error('Error fetching needs for fulfillment:', err);
+                await interaction.reply({ content: "❌ Failed to fetch your needs.", ephemeral: true });
+            }
+          }
+        } else if (interaction.commandName === 'resource') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'create') {
+            const modal = new ModalBuilder()
+              .setCustomId('resource_create_modal')
+              .setTitle('📦 Post a New Resource');
+
+            const nameInput = new TextInputBuilder()
+              .setCustomId('resource_name')
+              .setLabel('Name')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('e.g., Power Drill, 10 hours of coding')
+              .setRequired(true);
+
+            const descriptionInput = new TextInputBuilder()
+              .setCustomId('resource_description')
+              .setLabel('Description')
+              .setStyle(TextInputStyle.Paragraph)
+              .setPlaceholder('Describe your resource and how it can be used')
+              .setRequired(true);
+
+            const categoryInput = new TextInputBuilder()
+              .setCustomId('resource_category')
+              .setLabel('Category')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('e.g., Tools, Time, Skills')
+              .setRequired(true);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(nameInput),
+              new ActionRowBuilder().addComponents(descriptionInput),
+              new ActionRowBuilder().addComponents(categoryInput)
+            );
+
+            await interaction.showModal(modal);
+          }
         }
+      } else if (interaction.isModalSubmit()) {
+          const linkedUser = await this.getLinkedUser(interaction.user.id);
+          const guildId = interaction.guildId;
+
+          if (interaction.customId === 'need_create_modal') {
+              const name = interaction.fields.getTextInputValue('need_title');
+              const description = interaction.fields.getTextInputValue('need_description');
+              const urgency = interaction.fields.getTextInputValue('need_urgency') || 'medium';
+              const category = interaction.fields.getTextInputValue('need_category');
+
+              try {
+                  const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
+                  const communityId = configResult.rows[0]?.community_id;
+
+                  const newNeed = await NeedService.createNeed({
+                    name,
+                    description,
+                    urgency,
+                    category,
+                    location_text: interaction.fields.getTextInputValue('need_location'),
+                    requestor_user_id: linkedUser.id,
+                    requestor_community_id: communityId,
+                    source: 'discord'
+                  });
+
+                  await interaction.reply({ content: `✅ Need "${name}" created successfully!`, ephemeral: true });
+                  await this.broadcastNeed(newNeed);
+                  this.matchAndPing(newNeed, 'need').catch(console.error);
+
+              } catch (err) {
+                  console.error('Error creating need from modal:', err);
+                  await interaction.reply({ content: "❌ Failed to create need.", ephemeral: true });
+              }
+          } else if (interaction.customId === 'resource_create_modal') {
+              const name = interaction.fields.getTextInputValue('resource_name');
+              const description = interaction.fields.getTextInputValue('resource_description');
+              const category = interaction.fields.getTextInputValue('resource_category');
+
+              try {
+                  const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
+                  const communityId = configResult.rows[0]?.community_id;
+
+                  const newResource = await ResourceService.addResource(
+                    linkedUser.id,
+                    communityId,
+                    name,
+                    description,
+                    category,
+                    'new', // condition
+                    1, // quantity
+                    'item', // unit
+                    'available',
+                    [], // skillIds
+                    '', // locationText
+                    null, // resourceType
+                    null, // availabilitySchedule
+                    null // conditions
+                  );
+
+                  // Add source to resource as addResource doesn't support it yet in the args
+                  await pool.query('UPDATE resources SET source = \'discord\' WHERE id = $1', [newResource.id]);
+                  newResource.source = 'discord';
+
+                  await interaction.reply({ content: `✅ Resource "${name}" posted successfully!`, ephemeral: true });
+                  await this.broadcastResource(newResource);
+                  this.matchAndPing(newResource, 'resource').catch(console.error);
+
+              } catch (err) {
+                  console.error('Error creating resource from modal:', err);
+                  await interaction.reply({ content: "❌ Failed to post resource.", ephemeral: true });
+              }
+          }
+      } else if (interaction.isStringSelectMenu()) {
+          const linkedUser = await this.getLinkedUser(interaction.user.id);
+
+          if (interaction.customId === 'need_fulfill_select') {
+              const needId = interaction.values[0];
+              try {
+                  const result = await pool.query(
+                      "UPDATE needs SET status = 'fulfilled', fulfilled_at = NOW(), fulfilled_via = 'discord', updated_at = NOW() WHERE id = $1 AND requestor_user_id = $2 RETURNING *",
+                      [needId, linkedUser.id]
+                  );
+
+                  if (result.rows.length === 0) {
+                      return interaction.reply({ content: "❌ Failed to fulfill need. You may not be the creator.", ephemeral: true });
+                  }
+
+                  const fulfilledNeed = result.rows[0];
+                  await interaction.reply({ content: `🎉 Need "${fulfilledNeed.name}" has been marked as fulfilled!`, ephemeral: true });
+
+                  // Update original Discord message if it exists
+                  if (fulfilledNeed.discord_message_id && fulfilledNeed.discord_thread_id) {
+                      await this.syncNeedUpdate(fulfilledNeed);
+                  }
+
+              } catch (err) {
+                  console.error('Error fulfilling need from select:', err);
+                  await interaction.reply({ content: "❌ Failed to fulfill need.", ephemeral: true });
+              }
+          }
       }
     });
   }
@@ -264,7 +573,7 @@ class DiscordBotService {
         autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
       });
 
-      await pool.query('UPDATE needs SET discord_message_id = $1, discord_thread_id = $2 WHERE id = $3', [message.id, thread.id, need.id]);
+      await pool.query('UPDATE needs SET discord_message_id = $1, discord_channel_id = $2, discord_thread_id = $3 WHERE id = $4', [message.id, channel.id, thread.id, need.id]);
 
       return { messageId: message.id, threadId: thread.id };
     } catch (err) {
@@ -272,18 +581,152 @@ class DiscordBotService {
     }
   }
 
-  async syncNeedUpdate(need) {
-    if (!this.isReady || !need.discord_thread_id) return;
+  async broadcastResource(resource) {
+    if (!this.isReady || (!resource.owner_community_id && !resource.community_id)) return;
 
     try {
-      const thread = await this.client.channels.fetch(need.discord_thread_id);
-      if (thread && thread.isThread()) {
-        await thread.send(`🔄 **Update**: Status changed to **${need.status}**`);
+      const communityId = resource.owner_community_id || resource.community_id;
+      const configResult = await pool.query('SELECT guild_id, need_channel_id FROM community_discord_config WHERE community_id = $1', [communityId]);
+      if (configResult.rows.length === 0) return;
 
-        if (need.status === 'fulfilled' || need.status === 'closed') {
-          await thread.setArchived(true);
+      const { need_channel_id } = configResult.rows[0];
+      const channel = await this.client.channels.fetch(need_channel_id);
+
+      if (!channel) return;
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📦 New Resource: ${resource.name}`)
+        .setDescription(resource.description)
+        .addFields(
+          { name: 'Category', value: resource.category || 'Not specified', inline: true },
+          { name: 'Type', value: resource.resource_type || 'Not specified', inline: true },
+        )
+        .setColor(0x00FF00)
+        .setTimestamp();
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setLabel('View in Cerbanimo')
+            .setURL(`${frontendUrl}/resources/${resource.id}`)
+            .setStyle(ButtonStyle.Link)
+        );
+
+      const message = await channel.send({ embeds: [embed], components: [row] });
+      await pool.query('UPDATE resources SET discord_message_id = $1, discord_channel_id = $2 WHERE id = $3', [message.id, channel.id, resource.id]);
+
+      return { messageId: message.id, channelId: channel.id };
+    } catch (err) {
+      console.error('Error broadcasting resource to Discord:', err);
+    }
+  }
+
+  async matchAndPing(entity, type) {
+    if (!this.isReady) return;
+
+    try {
+        let matches;
+        if (type === 'need') {
+            matches = await findMatchesForNeed(entity.id, pool);
+        } else {
+            const result = await findMatchesForResource(entity.id, pool);
+            matches = { needs: result };
+        }
+
+        // Find unique communities involved in matches
+        const communityIds = new Set();
+        if (type === 'need') {
+            matches.resources.forEach(r => {
+                if (r.owner_community_id) communityIds.add(r.owner_community_id);
+                if (r.community_id) communityIds.add(r.community_id);
+            });
+        } else {
+            matches.needs.forEach(n => {
+                if (n.requestor_community_id) communityIds.add(n.requestor_community_id);
+            });
+        }
+
+        // Remove the origin community
+        const originCommunityId = type === 'need' ? entity.requestor_community_id : (entity.owner_community_id || entity.community_id);
+        if (originCommunityId) communityIds.delete(originCommunityId);
+
+        if (communityIds.size === 0) return;
+
+        // Fetch configs for these communities that have cross-community enabled
+        const configsResult = await pool.query(
+            'SELECT cdc.*, c.name FROM community_discord_config cdc JOIN communities c ON cdc.community_id = c.id WHERE cdc.community_id = ANY($1) AND c.cross_community_enabled = TRUE',
+            [Array.from(communityIds)]
+        );
+
+        for (const config of configsResult.rows) {
+            if (!config.alert_channel_id) continue;
+
+            const channel = await this.client.channels.fetch(config.alert_channel_id);
+            if (!channel) continue;
+
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const embed = new EmbedBuilder()
+                .setTitle(`🌐 Cross-Community Alert: Potential Match!`)
+                .setDescription(`A neighboring community is requesting something you might have, or offering something you need.`)
+                .addFields(
+                    { name: type === 'need' ? '🆘 Need' : '📦 Resource', value: entity.name },
+                    { name: 'Description', value: entity.description.substring(0, 100) + '...' },
+                    { name: 'Action', value: `[View in Cerbanimo](${frontendUrl}/${type === 'need' ? 'needs' : 'resources'}/${entity.id})` }
+                )
+                .setColor(0xFFA500)
+                .setTimestamp();
+
+            await channel.send({ embeds: [embed] });
+        }
+    } catch (err) {
+        console.error('Error in matchAndPing:', err);
+    }
+  }
+
+  async syncNeedUpdate(need) {
+    if (!this.isReady) return;
+
+    try {
+      if (need.discord_thread_id) {
+        const thread = await this.client.channels.fetch(need.discord_thread_id);
+        if (thread && thread.isThread()) {
+          const statusEmoji = need.status === 'fulfilled' ? '🎉' : '🔄';
+          await thread.send(`${statusEmoji} **Update**: Status changed to **${need.status}**`);
+
+          if (need.status === 'fulfilled' || need.status === 'closed') {
+            await thread.setArchived(true);
+          }
         }
       }
+
+      // Also update original message embed if possible
+      if (need.discord_message_id && need.discord_channel_id) {
+        const channel = await this.client.channels.fetch(need.discord_channel_id);
+        if (channel) {
+          const message = await channel.messages.fetch(need.discord_message_id);
+          if (message) {
+            const embed = EmbedBuilder.from(message.embeds[0]);
+            embed.setTitle(`${need.status === 'fulfilled' ? '✅' : '🚨'} Need: ${need.name} (${need.status.toUpperCase()})`);
+            await message.edit({ embeds: [embed] });
+          }
+        }
+      } else if (need.discord_message_id) {
+          // Fallback to config if discord_channel_id is missing on the need record
+          const configResult = await pool.query('SELECT need_channel_id FROM community_discord_config WHERE community_id = $1', [need.requestor_community_id]);
+          if (configResult.rows.length > 0) {
+              const channel = await this.client.channels.fetch(configResult.rows[0].need_channel_id);
+              if (channel) {
+                const message = await channel.messages.fetch(need.discord_message_id);
+                if (message) {
+                    const embed = EmbedBuilder.from(message.embeds[0]);
+                    embed.setTitle(`${need.status === 'fulfilled' ? '✅' : '🚨'} Need: ${need.name} (${need.status.toUpperCase()})`);
+                    await message.edit({ embeds: [embed] });
+                }
+              }
+          }
+      }
+
     } catch (err) {
       console.error('Error syncing need update to Discord:', err);
     }

@@ -24,10 +24,17 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE;
   `;
 
+  const alterCommunitiesQuery = `
+    ALTER TABLE communities
+    ADD COLUMN IF NOT EXISTS cross_community_enabled BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(50);
+  `;
+
   const alterUsersQuery = `
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable'));
+    ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
+    ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50);
   `;
 
   const alterSkillsQuery = `
@@ -74,7 +81,10 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS mobility_required BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS pickup_location JSONB,
     ADD COLUMN IF NOT EXISTS dropoff_location JSONB,
-    ADD COLUMN IF NOT EXISTS time_slots JSONB;
+    ADD COLUMN IF NOT EXISTS time_slots JSONB,
+    ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web',
+    ADD COLUMN IF NOT EXISTS fulfilled_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS fulfilled_via VARCHAR(20);
   `;
 
   const alterResourcesQuery = `
@@ -84,18 +94,30 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS conditions TEXT,
     ADD COLUMN IF NOT EXISTS inventory_tracking BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web',
+    ADD COLUMN IF NOT EXISTS discord_message_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS discord_channel_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50);
   `;
 
   try {
     await pool.query(alterTasksQuery);
     await pool.query(alterSkillsQuery);
     await pool.query(alterProjectsQuery);
+    await pool.query(alterCommunitiesQuery);
     await pool.query(alterUsersQuery);
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
     await pool.query(alterNeedsQuery);
     await pool.query(alterResourcesQuery);
+
+    // Ensure community_discord_config has necessary columns
+    await pool.query(`
+      ALTER TABLE community_discord_config
+      ADD COLUMN IF NOT EXISTS need_channel_id TEXT,
+      ADD COLUMN IF NOT EXISTS alert_channel_id TEXT
+    `);
 
     // Add new columns to tasks
     await pool.query(`
@@ -107,6 +129,7 @@ const alterExistingTables = async () => {
     await pool.query(`
       ALTER TABLE needs
       ADD COLUMN IF NOT EXISTS discord_message_id VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS discord_channel_id VARCHAR(50),
       ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50)
     `);
 
