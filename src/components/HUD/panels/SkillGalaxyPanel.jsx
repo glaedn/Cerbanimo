@@ -8,6 +8,7 @@ import '../HUDPanel.css';
 import theme from '../../../styles/theme';
 import { processSkillDataForGalaxy } from '../../../utils/skillUtils';
 import SkillDetailPopup from './SkillDetailPopup';
+import PropTypes from 'prop-types';
 
 const hexToRgb = (hex) => {
   let r = 0, g = 0, b = 0;
@@ -69,21 +70,12 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
     setIsMinimized((prev) => !prev);
   };
 
-  const getStarColor = React.useCallback((level) => {
-    if (level >= 20) return theme.colors.accentPurple || '#800080';
-    if (level >= 10) return theme.colors.secondary;
-    if (level >= 5) return theme.colors.accentGreen;
-    return theme.colors.primary;
-  }, []);
-
   const getStarGradientUrl = React.useCallback((level) => {
     if (level >= 20) return 'url(#star-gradient-3)';
     if (level >= 10) return 'url(#star-gradient-2)';
     if (level >= 5) return 'url(#star-gradient-1)';
     return 'url(#star-gradient-0)';
   }, []);
-
-  const memoizedGetPastelColor = React.useCallback(getPastelColor, []);
 
   // ── Data processing effect ────────────────────────────────────────────────
   // FIX: Removed forceDataUpdate from deps. fixedStarPositionsRef.current is
@@ -498,6 +490,11 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
       )}
     </div>
   );
+};
+
+SkillGalaxyPanel.propTypes = {
+  isFullPage: PropTypes.bool,
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default SkillGalaxyPanel;
