@@ -4,6 +4,7 @@ import "./GalacticActivityMap.css";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from 'react-router-dom';
 import axios from "axios";
+import { useCrisis } from "../../context/CrisisContext";
 
 // Performance Note:
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
@@ -12,6 +13,7 @@ import axios from "axios";
 
 const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
+  const { isCrisisMode } = useCrisis();
   // const tooltipRef = useRef(null); // Removed: Tooltip will be managed by D3 and appended to body
   const [starData, setStarData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -171,7 +173,15 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           });
         });
 
-        setStarData(processedData);
+        const filteredData = isCrisisMode
+          ? processedData.filter(d =>
+              (d.type === 'need' && (d.status.toLowerCase().includes('urgent') || d.status.toLowerCase().includes('critical') || d.status.toLowerCase().includes('high'))) ||
+              (d.type === 'resource' && d.status.toLowerCase() === 'available') ||
+              (d.type === 'task' && d.status.toLowerCase().includes('urgent'))
+            )
+          : processedData;
+
+        setStarData(filteredData);
       } catch (err) {
         setError(err.message || "Failed to fetch data");
       } finally {
@@ -179,7 +189,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       }
     };
     fetchData();
-  }, []);
+  }, [getAccessTokenSilently, isCrisisMode]);
 
   // useEffect for D3 rendering
   useEffect(() => {

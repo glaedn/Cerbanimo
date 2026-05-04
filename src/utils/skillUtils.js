@@ -128,38 +128,43 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
     }
   });
 
-  // Add necessary parent skills for hierarchy completion
-  // Iterate over a copy of keys if modifying the map during iteration, or use a temporary array.
-  const skillsToConsiderForParents = Array.from(skillsToProcess.values());
-  skillsToConsiderForParents.forEach(skill => {
-    let current = skill;
-    while (
-      current &&
-      current.parent_skill_id &&
-      current.parent_skill_id !== current.id // 🚫 stop self-loop
-    ) {
-      if (!skillsToProcess.has(current.parent_skill_id)) {
-        const parentSkill = allSkillsMap.get(current.parent_skill_id);
+  // Add necessary parent skills for hierarchy completion iteratively to guarantee termination and efficiency.
+  let newlyAdded = true;
+  let safetyCounter = 0;
+  const MAX_ITERATIONS = 20; // Maximum hierarchy depth support
+
+  while (newlyAdded && safetyCounter < MAX_ITERATIONS) {
+    newlyAdded = false;
+    safetyCounter++;
+
+    // Iterate over the current snapshot of skills to process to find their parents
+    for (const skill of Array.from(skillsToProcess.values())) {
+      const pid = skill.parent_skill_id;
+
+      // If there's a parent that isn't ourselves and hasn't been added yet
+      if (pid && pid !== skill.id && !skillsToProcess.has(pid)) {
+        const parentSkill = allSkillsMap.get(pid);
         if (parentSkill) {
           skillsToProcess.set(parentSkill.id, {
             ...parentSkill,
-            userLevel: 0, // Default for structural parents not unlocked by user
+            userLevel: 0,
             userExperience: 0,
             experienceNeededForNextLevel: calculateExperienceNeeded(0),
             isUnlockedByUser: false,
           });
-          current = parentSkill; // Move up to the next parent
+          newlyAdded = true;
         } else {
-          console.warn(`Parent skill with ID ${current.parent_skill_id} not found in allSkillsMap.`);
-          break; // Parent not found, stop ascending
+          // Parent ID exists but the skill record is missing from allSkills
+          // Mark as orphan internally by clearing parent_skill_id for the categorization pass
+          skill.parent_skill_id = null;
         }
-      } else {
-        // Parent already in skillsToProcess, stop ascending this path
-        current = skillsToProcess.get(current.parent_skill_id); // ensure current is updated from the map for next iteration
-        // break; // This was causing issues if a parent was added by another branch earlier
       }
     }
-  });
+  }
+
+  if (safetyCounter >= MAX_ITERATIONS) {
+    console.error('[SkillUtils] Safety limit reached during parent discovery. Possible deep circular dependency.');
+  }
   
 
   const processedSkillsArray = Array.from(skillsToProcess.values());
@@ -233,35 +238,46 @@ export const processSkillDataForGalaxy = (allSkills, currentUserId) => {
   });
 
 
-  // Calculate levelForColor
+  // Calculate levelForColor using a more efficient bottom-up or memoized approach
+  // Since the hierarchy is shallow (stars -> planets -> moons -> satellites), simple traversal is fine,
+  // but we can optimize it slightly.
   const finalOutputSkills = [];
+
   skillHierarchy.forEach(skill => {
-    let calculatedLevel = skill.userLevel || 0; // Default to its own level
+    let calculatedLevel = skill.userLevel || 0;
 
     if (skill.category === 'star') {
-      let starLevelSum = skill.isUnlockedByUser ? skill.userLevel : 0; // Start with star's own level if unlocked
+      // For stars, the level is the sum of itself and ALL its descendants' levels
+      let starLevelSum = skill.isUnlockedByUser ? skill.userLevel : 0;
 
-      // Traverse children (planets) and grandchildren (moons)
-      skill.children.forEach(planet => { // planets
-        if (planet.isUnlockedByUser) {
-          starLevelSum += planet.userLevel;
-        }
-        const planetNode = skillHierarchy.get(planet.id); // Get full planet node with its children
-        planetNode.children.forEach(moon => { // moons
-          if (moon.isUnlockedByUser) {
-            starLevelSum += moon.userLevel;
+      // Recursive sum of child levels with cycle detection
+      const visited = new Set();
+      const sumDescendants = (node) => {
+        if (visited.has(node.id)) return 0;
+        visited.add(node.id);
+
+        let sum = 0;
+        node.children.forEach(child => {
+          if (child.isUnlockedByUser) {
+            sum += (child.userLevel || 0);
+          }
+          // Recursively add grandchildren levels if they are also part of the hierarchy
+          const fullChild = skillHierarchy.get(child.id);
+          if (fullChild) {
+            sum += sumDescendants(fullChild);
           }
         });
-      });
+        return sum;
+      };
+
+      starLevelSum += sumDescendants(skill);
       calculatedLevel = starLevelSum;
     }
     
     finalOutputSkills.push({
-      ...skill, // includes original properties, userLevel, userExperience, etc.
-      category: skill.category || 'unknown', // Ensure category is set
+      ...skill,
+      category: skill.category || 'unknown',
       levelForColor: calculatedLevel,
-      // Remove children property from final output as it was for calculation internal to this function
-      children: undefined 
     });
   });
   
