@@ -167,6 +167,22 @@ class ImpactGraphService {
     return { nodes: [], links: [] };
   }
 
+  async getUnmetNeedsAtlas(communityId = null) {
+    let query = `
+      SELECT id, name, category, urgency, location, created_at
+      FROM needs
+      WHERE status = 'open'
+    `;
+    const params = [];
+    if (communityId) {
+      query += ' AND requestor_community_id = $1';
+      params.push(communityId);
+    }
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  }
+
   async calculateImpactDepth(taskId) {
     // Find the shortest distance from a task impact node to any outcome impact node.
     // Base case: Find the impact node for the task.

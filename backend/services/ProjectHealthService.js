@@ -7,7 +7,8 @@ class ProjectHealthService {
       SELECT p.id, p.created_at, p.status,
              (SELECT count(*) FROM tasks WHERE project_id = $1 AND status = 'completed') as completed_count,
              (SELECT count(*) FROM tasks WHERE project_id = $1) as total_count,
-             (SELECT count(*) FROM tasks WHERE project_id = $1 AND updated_at > NOW() - INTERVAL '7 days') as recent_activity
+             (SELECT count(*) FROM tasks WHERE project_id = $1 AND updated_at > NOW() - INTERVAL '7 days') as recent_activity,
+             (SELECT AVG(EXTRACT(EPOCH FROM (accepted_at - created_at))) FROM tasks WHERE project_id = $1 AND accepted_at IS NOT NULL) as avg_response_time
       FROM projects p
       WHERE p.id = $1;
     `;
@@ -15,10 +16,15 @@ class ProjectHealthService {
     const project = result.rows[0];
 
     // Health Score Formula:
-    // (CompletedCount/TotalCount) * (1 + RecentActivity/5)
+    // (CompletedCount/TotalCount) * (1 + RecentActivity/5) - (ResponseTimePenalty)
     let health = 0;
     if (project.total_count > 0) {
       health = (project.completed_count / project.total_count) * (1 + project.recent_activity / 5);
+
+      // Penalty for slow response (over 24h average)
+      if (project.avg_response_time > 86400) {
+        health -= 0.1;
+      }
     }
 
     await pool.query(
@@ -58,6 +64,16 @@ class ProjectHealthService {
     } finally {
       client.release();
     }
+  }
+
+  async getContributorLoad(userId) {
+    const query = `
+      SELECT count(*) as active_tasks
+      FROM tasks
+      WHERE assignee_id = $1 AND status = 'assigned';
+    `;
+    const result = await pool.query(query, [userId]);
+    return parseInt(result.rows[0].active_tasks);
   }
 
   async reviveProject(projectId, reviverId) {

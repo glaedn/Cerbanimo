@@ -71,14 +71,20 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS recurrence_pattern JSONB,
     ADD COLUMN IF NOT EXISTS location JSONB,
-    ADD COLUMN IF NOT EXISTS mobility_required BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS mobility_required BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS pickup_location JSONB,
+    ADD COLUMN IF NOT EXISTS dropoff_location JSONB,
+    ADD COLUMN IF NOT EXISTS time_slots JSONB;
   `;
 
   const alterResourcesQuery = `
     ALTER TABLE resources
     ADD COLUMN IF NOT EXISTS resource_type TEXT,
     ADD COLUMN IF NOT EXISTS availability_schedule JSONB,
-    ADD COLUMN IF NOT EXISTS conditions TEXT;
+    ADD COLUMN IF NOT EXISTS conditions TEXT,
+    ADD COLUMN IF NOT EXISTS inventory_tracking BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL;
   `;
 
   try {
@@ -88,6 +94,14 @@ const alterExistingTables = async () => {
     await pool.query(alterUsersQuery);
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
+    await pool.query(alterNeedsQuery);
+    await pool.query(alterResourcesQuery);
+
+    // Add new columns to tasks
+    await pool.query(`
+      ALTER TABLE tasks
+      ADD COLUMN IF NOT EXISTS time_slots JSONB
+    `);
 
     // Add Discord columns to needs table
     await pool.query(`

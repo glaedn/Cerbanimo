@@ -129,23 +129,38 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
         };
       });
 
-      const links = [];
-      skillsForGalaxy.forEach((skill) => {
+      const skillsMap = new Map(validSkills.map((s) => [s.id.toString(), s]));
+      const newLinks = [];
+      validSkills.forEach((skill) => {
         if (skill.parent_skill_id) {
-          const parentExists = skillsForGalaxy.find((s) => s.id === skill.parent_skill_id);
-          if (parentExists) {
-            links.push({
-              source: skill.parent_skill_id.toString(),
+          const pid = skill.parent_skill_id.toString();
+          if (skillsMap.has(pid)) {
+            newLinks.push({
+              source: pid,
               target: skill.id.toString(),
-              id: `link-${skill.parent_skill_id}-${skill.id}`,
+              id: `link-${pid}-${skill.id}`,
             });
           }
         }
       });
 
-      return { d3Nodes: nodes, d3Links: links, processedSkills: skillsForGalaxy };
+      // Avoid unnecessary state updates if data hasn't changed.
+      // We compare IDs to see if the structure is the same.
+      setD3Nodes((prev) => {
+        const isSame = prev.length === newNodes.length && prev.every((n, i) => n.id === newNodes[i].id);
+        return isSame ? prev : newNodes;
+      });
+      setD3Links((prev) => {
+        const isSame = prev.length === newLinks.length && prev.every((l, i) => l.id === newLinks[i].id);
+        return isSame ? prev : newLinks;
+      });
+      setProcessedSkills(skillsForGalaxy);
+    } else {
+      if (d3Nodes.length > 0) setD3Nodes([]);
+      if (d3Links.length > 0) setD3Links([]);
+      if (processedSkills.length > 0) setProcessedSkills([]);
     }
-    return { d3Nodes: [], d3Links: [], processedSkills: [] };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSkills, skillsLoading, isAuthenticated, user?.sub, profile?.id, propUserId]);
 
   // Update simulation instead of recreating
@@ -274,30 +289,45 @@ const SkillGalaxyPanel = ({ isFullPage = false, userId: propUserId }) => {
             sel
               .on('mouseenter', (event, d_hovered) => {
                 const constellationIds = new Set();
+
+                // Optimized collection using a pre-built map would be better,
+                // but at minimum let's avoid redundant searches.
+                const nodesMap = new Map(d3Nodes.map(n => [n.id, n]));
+                const childrenMap = new Map();
+                d3Nodes.forEach(n => {
+                  if (n.parent) {
+                    if (!childrenMap.has(n.parent)) childrenMap.set(n.parent, []);
+                    childrenMap.get(n.parent).push(n.id);
+                  }
+                });
+
                 const collect = (nodeId) => {
-                  const n = d3Nodes.find((x) => x.id === nodeId);
-                  if (!n || constellationIds.has(nodeId)) return;
+                  if (constellationIds.has(nodeId)) return;
                   constellationIds.add(nodeId);
-                  if (n.parent) collect(n.parent);
-                  d3Nodes.forEach((x) => { if (x.parent === nodeId) collect(x.id); });
+
+                  const n = nodesMap.get(nodeId);
+                  if (n?.parent) collect(n.parent);
+
+                  const children = childrenMap.get(nodeId);
+                  if (children) children.forEach(childId => collect(childId));
                 };
                 collect(d_hovered.id);
 
                 mainGroup.selectAll('.links line')
                   .style('stroke', (l) => {
-                    const s = constellationIds.has(l.source.id || l.source);
-                    const t = constellationIds.has(l.target.id || l.target);
-                    return s && t ? 'white' : (theme.colors.border || '#666');
+                    const s = l.source.id || l.source;
+                    const t = l.target.id || l.target;
+                    return constellationIds.has(s) && constellationIds.has(t) ? 'white' : (theme.colors.border || '#666');
                   })
                   .style('stroke-width', (l) => {
-                    const s = constellationIds.has(l.source.id || l.source);
-                    const t = constellationIds.has(l.target.id || l.target);
-                    return s && t ? 3 : 1.5;
+                    const s = l.source.id || l.source;
+                    const t = l.target.id || l.target;
+                    return constellationIds.has(s) && constellationIds.has(t) ? 3 : 1.5;
                   })
                   .style('stroke-opacity', (l) => {
-                    const s = constellationIds.has(l.source.id || l.source);
-                    const t = constellationIds.has(l.target.id || l.target);
-                    return s && t ? 1 : 0.6;
+                    const s = l.source.id || l.source;
+                    const t = l.target.id || l.target;
+                    return constellationIds.has(s) && constellationIds.has(t) ? 1 : 0.6;
                   });
                 mainGroup.selectAll('.nodes .node-group')
                   .style('opacity', (n) => constellationIds.has(n.id) ? 1 : 0.3);

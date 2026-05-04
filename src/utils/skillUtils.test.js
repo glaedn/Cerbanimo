@@ -46,8 +46,8 @@ describe('skillUtils', () => {
       const satellite1 = processed.find(s => s.id === 'sat1');
 
       // Star levelForColor = star's own level + planet children levels + moon grandchildren levels.
-      // s1 (5) + p1 (3) + m1 (2) = 10. Sat1 (1) is not included in star's sum based on current logic.
-      expect(star1?.levelForColor).toBe(10); 
+      // s1 (5) + p1 (3) + m1 (2) + sat1 (1) = 11.
+      expect(star1?.levelForColor).toBe(11);
 
       // Dependencies use their own userLevel for their levelForColor
       expect(planet1?.levelForColor).toBe(planet1?.userLevel);
