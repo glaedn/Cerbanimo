@@ -65,6 +65,7 @@ class TaskRoutingService {
   }
 
   async getMatchingTasksForUser(userId) {
+    try {
     const userQuery = 'SELECT skills FROM users WHERE id = $1';
     const userResult = await pool.query(userQuery, [userId]);
 
@@ -72,7 +73,10 @@ class TaskRoutingService {
       return [];
     }
 
-    const userSkills = userResult.rows[0].skills || []; // Assuming skill IDs or names
+    const userSkillsRaw = userResult.rows[0].skills || []; // Assuming skill objects {id, name}
+    const userSkills = Array.isArray(userSkillsRaw)
+      ? userSkillsRaw.map(s => typeof s === 'object' ? s.id : s).filter(id => id != null)
+      : [];
 
     // Phase 4: Matching with Impact Alignment
     // Boost tasks that are linked to outcomes the user has successfully contributed to before.
@@ -93,9 +97,9 @@ class TaskRoutingService {
              ) THEN 1.2 ELSE 1.0 END as impact_alignment_boost
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
-      WHERE (t.skill_id = ANY($2) OR t.skill_id IS NULL)
+      WHERE (t.skill_id = ANY($2::int[]) OR t.skill_id IS NULL)
       AND t.status::text LIKE $3
-      ORDER BY (t.priority_score * (
+      ORDER BY (COALESCE(t.priority_score, 0) * (
              CASE WHEN EXISTS (
                SELECT 1 FROM impact_nodes tn
                JOIN impact_edges te ON tn.id = te.from_node_id
@@ -109,8 +113,28 @@ class TaskRoutingService {
     // Note: Applying the boost in ORDER BY would be ideal:
     // ORDER BY (t.priority_score * (CASE WHEN ... THEN 1.2 ELSE 1.0 END)) DESC
 
-    const result = await pool.query(matchingTasksQuery, [userId, userSkills, '%unassigned']);
-    return result.rows;
+    try {
+      const result = await pool.query(matchingTasksQuery, [parseInt(userId), userSkills, '%unassigned']);
+      return result.rows;
+    } catch (queryErr) {
+      console.error(`Complex matching query failed for userId ${userId}, attempting fallback:`, queryErr.message);
+      // Fallback to a simpler query that doesn't rely on Phase 4 impact tables
+      const fallbackQuery = `
+        SELECT t.*, p.name as project_name
+        FROM tasks t
+        JOIN projects p ON t.project_id = p.id
+        WHERE (t.skill_id = ANY($1::int[]) OR t.skill_id IS NULL)
+        AND t.status::text LIKE $2
+        ORDER BY COALESCE(t.priority_score, 0) DESC
+        LIMIT 20;
+      `;
+      const fallbackResult = await pool.query(fallbackQuery, [userSkills, '%unassigned']);
+      return fallbackResult.rows;
+    }
+    } catch (err) {
+      console.error(`Critical error in getMatchingTasksForUser for userId ${userId}:`, err);
+      throw err;
+    }
   }
 
   async applyDynamicRewardAdjustment() {

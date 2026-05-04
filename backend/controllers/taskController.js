@@ -13,7 +13,7 @@ const getAllTasks = async () => {
       tasks.*,
       skills.name as skill_name
     FROM tasks
-    JOIN skills ON tasks.skill_id = skills.id;
+    LEFT JOIN skills ON tasks.skill_id = skills.id;
   `;
   const result = await pool.query(query);
   return result.rows;
