@@ -404,6 +404,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             navigate(`/communityhub/${idOnly}`);
           }
         });
+      }
 
       // Create sonar ping effect for urgent tasks and all needs
       const urgentStarsData = randomizedStarData.filter(d =>

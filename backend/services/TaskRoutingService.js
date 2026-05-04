@@ -67,6 +67,11 @@ class TaskRoutingService {
   async getMatchingTasksForUser(userId) {
     const userQuery = 'SELECT skills FROM users WHERE id = $1';
     const userResult = await pool.query(userQuery, [userId]);
+
+    if (userResult.rows.length === 0) {
+      return [];
+    }
+
     const userSkills = userResult.rows[0].skills || []; // Assuming skill IDs or names
 
     // Phase 4: Matching with Impact Alignment
