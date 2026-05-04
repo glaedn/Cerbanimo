@@ -464,7 +464,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         window.twinkleTimeoutIds = []; 
       }
     };
-  }}, [starData, isLoading, error, navigate, enableTooltips, enableClicks]);
+  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks]);
 
   if (isLoading) {
     if (showLoadingText) {
