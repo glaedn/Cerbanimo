@@ -28,7 +28,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const [error, setError] = useState(null);
   const { getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
-  const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
+  const hasWarped = useRef(false);
   // Helper functions (getStarColor, getStarRadius, getStarBrightness)
   // Performance Note: These functions are called per star during rendering or updates.
   // They are currently simple and efficient. Avoid complex computations here if possible,
@@ -67,7 +67,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   // useEffect for fetching data (remains the same)
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
+      if (starData.length === 0) setIsLoading(true);
       setError(null);
       try {
         let token = null;
@@ -341,7 +341,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       }
     };
     fetchData();
-  }, [getAccessTokenSilently, isCrisisMode, profile]);
+  }, [getAccessTokenSilently, isCrisisMode, profile?.id]);
 
   // useEffect for D3 rendering
   useEffect(() => {
@@ -363,7 +363,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     if (d3Container.current && !isLoading && !error && starData.length > 0) {
       const { clientWidth, clientHeight } = d3Container.current;
       if (clientWidth === 0 || clientHeight === 0) return;
-      setMapDimensions({ width: clientWidth, height: clientHeight });
       let svg = d3.select(d3Container.current).select("svg");
 
       // Clear previous content but keep the SVG if it exists
@@ -391,14 +390,17 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       svg.call(zoom);
 
       // Warp drive effect: start far away and zoom in
-      const initialTransform = d3.zoomIdentity
-        .translate(clientWidth / 2, clientHeight / 2)
-        .scale(0.1)
-        .translate(-clientWidth / 2, -clientHeight / 2);
+      if (!hasWarped.current) {
+        const initialTransform = d3.zoomIdentity
+          .translate(clientWidth / 2, clientHeight / 2)
+          .scale(0.1)
+          .translate(-clientWidth / 2, -clientHeight / 2);
 
-      svg.call(zoom.transform, initialTransform);
-      svg.transition().duration(2500).ease(d3.easeExpOut)
-        .call(zoom.transform, d3.zoomIdentity);
+        svg.call(zoom.transform, initialTransform);
+        svg.transition().duration(2500).ease(d3.easeExpOut)
+          .call(zoom.transform, d3.zoomIdentity);
+        hasWarped.current = true;
+      }
 
       // Back button for mobile fullscreen (outside of zoom group)
       if (isFullscreenMobile) {
@@ -510,7 +512,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .stop();
 
       // Manually run simulation for a few ticks to reach stable state
-      const ticks = isMobile ? 40 : 100;
+      const ticks = isMobile ? 30 : 100;
       for (let i = 0; i < ticks; ++i) simulation.tick();
 
       // Draw constellation links
