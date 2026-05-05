@@ -155,26 +155,34 @@ app.use('/profile', (req, res, next) => {
 }, profileRoutes);
 
 app.use('/tasks', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, taskRoutes);
 
 app.use('/skills', jwtCheck, resolveUser, skillsRoutes);
 
 app.use('/projects', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, projectRoutes);
 
 app.use('/communities', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
 app.use('/storyChronicles', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, storyChronicleRoutes);
 
@@ -182,12 +190,16 @@ app.use('/endorsements', jwtCheck, resolveUser, endorsementsRoutes);
 
 // Mount new resource and need routes
 app.use('/resources', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, resourceRoutesV2);
 
 app.use('/needs', (req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    return jwtCheck(req, res, (err) => next());
+  }
   return jwtCheck(req, res, next);
 }, resolveUser, needRoutes);
 

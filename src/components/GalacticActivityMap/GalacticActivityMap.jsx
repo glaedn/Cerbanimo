@@ -128,7 +128,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           let parentId = null;
           if (need.requestor_community_id) {
             parentId = `community-${need.requestor_community_id}`;
-          } else if (needsBoardProject && tasks.some(t => t.project_id === needsBoardProject.id && t.related_need_id === need.id)) {
+          } else if (needsBoardProject) {
             parentId = `project-${needsBoardProject.id}`;
           }
 
@@ -183,13 +183,17 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         tasks.forEach((task) => {
           let parentId = null;
           // Hierarchy: Project -> Task -> subtask
-          // Also Simple Need -> Task
-          if (task.related_need_id) {
-            parentId = `need-${task.related_need_id}`;
-          } else if (task.dependencies && task.dependencies.length > 0) {
+          // Also Needs Board -> Simple Need -> Task
+          if (task.dependencies && task.dependencies.length > 0) {
             parentId = `task-${task.dependencies[0]}`;
           } else if (task.project_id) {
-            parentId = `project-${task.project_id}`;
+            if (needsBoardProject && task.project_id === needsBoardProject.id && task.related_need_id) {
+              parentId = `need-${task.related_need_id}`;
+            } else {
+              parentId = `project-${task.project_id}`;
+            }
+          } else if (task.related_need_id) {
+            parentId = `need-${task.related_need_id}`;
           }
 
           processedData.push({
@@ -210,12 +214,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           // User Resource (no constellation)
           let parentId = null;
           if (resource.owner_community_id) {
-             // Find if there's a need linked to this resource?
-             // Requirement says Community -> Need -> Resource
-             // Let's see if we can find a need in that community that might be related.
-             // For now, if community owned, link to community if no need found.
-             // If we want exact Community -> Need -> Resource, we need a link.
-             // Checking if any need in the same community has this resource category.
              const relatedNeed = needs.find(n => n.requestor_community_id === resource.owner_community_id && n.category === resource.category);
              parentId = relatedNeed ? `need-${relatedNeed.id}` : `community-${resource.owner_community_id}`;
           }
@@ -259,21 +257,20 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
               if (userCommunityIds.has(item.raw_data.id)) isRelevant = true;
             } else if (item.type === 'project') {
               if (userCommunityIds.has(item.raw_data.community_id)) isRelevant = true;
-              if (isAvailable && isRecent) {
+              if (isRecent) {
                 const linkedNeed = needs.find(n => n.linked_project_id === item.raw_data.id || n.project_id === item.raw_data.id);
-                if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+                if (linkedNeed) isRelevant = true;
               }
             } else if (item.type === 'task') {
               if (userSkillIds.has(item.raw_data.skill_id)) isRelevant = true;
               const project = projects.find(p => p.id === item.raw_data.project_id);
               if (project && userCommunityIds.has(project.community_id)) isRelevant = true;
-              if (isAvailable && isRecent) {
+              if (isRecent) {
                 if (item.raw_data.related_need_id) {
-                   const linkedNeed = needs.find(n => n.id === item.raw_data.related_need_id);
-                   if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+                   isRelevant = true;
                 } else if (project) {
                    const linkedNeed = needs.find(n => n.linked_project_id === project.id || n.project_id === project.id);
-                   if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+                   if (linkedNeed) isRelevant = true;
                 }
               }
             } else if (item.type === 'need') {
@@ -381,7 +378,28 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .attr("width", "100%")
         .attr("height", "100%");
 
-      // Back button for mobile fullscreen
+      const g = svg.append("g").attr("class", "map-content");
+
+      // D3 Zoom implementation
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 5])
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+        });
+
+      svg.call(zoom);
+
+      // Warp drive effect: start far away and zoom in
+      const initialTransform = d3.zoomIdentity
+        .translate(clientWidth / 2, clientHeight / 2)
+        .scale(0.1)
+        .translate(-clientWidth / 2, -clientHeight / 2);
+
+      svg.call(zoom.transform, initialTransform);
+      svg.transition().duration(2500).ease(d3.easeExpOut)
+        .call(zoom.transform, d3.zoomIdentity);
+
+      // Back button for mobile fullscreen (outside of zoom group)
       if (isFullscreenMobile) {
         const backBtn = svg.append("g")
           .attr("class", "back-button")
@@ -438,11 +456,25 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
       // Constellation Force Simulation
-      const nodes = starData.map(d => ({
-        ...d,
-        x: d.parentId ? 0 : Math.random() * clientWidth,
-        y: d.parentId ? 0 : Math.random() * clientHeight
-      }));
+      // Deterministic seeded positioning
+      const getSeededPos = (id, width, height) => {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) {
+          hash = id.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const x = (Math.abs(hash) % width);
+        const y = (Math.abs(hash * 13) % height);
+        return { x, y };
+      };
+
+      const nodes = starData.map(d => {
+        const seeded = getSeededPos(d.id, clientWidth, clientHeight);
+        return {
+          ...d,
+          x: seeded.x,
+          y: seeded.y
+        };
+      });
 
       const constellationLinks = links.map(l => ({
         source: nodes.find(n => n.id === l.source),
@@ -452,22 +484,35 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       const padding = 20;
       const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(constellationLinks).id(d => d.id).distance(isFullscreenMobile ? 100 : 40).strength(1))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -100 : -30))
-        .force("center", d3.forceCenter(clientWidth / 2, clientHeight / 2))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)))
+        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -150 : -60))
+        .force("x", d3.forceX(clientWidth / 2).strength(d => {
+           let s = 0.05;
+           if (d.status.toLowerCase().includes('urgent')) s += 0.15;
+           const daysOld = (new Date() - new Date(d.lastActivity)) / (1000 * 60 * 60 * 24);
+           if (daysOld < 15) s += 0.1;
+           return s;
+        }))
+        .force("y", d3.forceY(clientHeight / 2).strength(d => {
+           let s = 0.05;
+           if (d.status.toLowerCase().includes('urgent')) s += 0.15;
+           const daysOld = (new Date() - new Date(d.lastActivity)) / (1000 * 60 * 60 * 24);
+           if (daysOld < 15) s += 0.1;
+           return s;
+        }))
+        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 40 : 20)))
         .force("box", () => {
           for (const node of nodes) {
-            node.x = Math.max(padding, Math.min(clientWidth - padding, node.x));
-            node.y = Math.max(padding, Math.min(clientHeight - padding, node.y));
+            node.x = Math.max(-clientWidth, Math.min(clientWidth * 2, node.x));
+            node.y = Math.max(-clientHeight, Math.min(clientHeight * 2, node.y));
           }
         })
         .stop();
 
       // Manually run simulation for a few ticks to reach stable state
-      for (let i = 0; i < 150; ++i) simulation.tick();
+      for (let i = 0; i < 200; ++i) simulation.tick();
 
       // Draw constellation links
-      svg.selectAll(".constellation-link")
+      g.selectAll(".constellation-link")
         .data(constellationLinks)
         .enter()
         .insert("line", ":first-child")
@@ -497,7 +542,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         }
       });
 
-      svg.selectAll(".help-route")
+      g.selectAll(".help-route")
          .data(routes, d => d.id)
          .enter()
          .insert("line", ":first-child")
@@ -511,7 +556,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
          .attr("stroke-dasharray", "5,5")
          .attr("opacity", 0.5);
 
-      const visualStars = svg
+      const visualStars = g
         .selectAll(".star")
         .data(nodes, (d) => d.id)
         .enter()
@@ -533,7 +578,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
       const tooltip = tooltipD3;
 
-      const eventCircles = svg
+      const eventCircles = g
         .selectAll(".star-event-radius") 
         .data(nodes, (d) => d.id)
         .enter()
@@ -743,7 +788,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         d.type === "need"
       );
 
-      svg.selectAll(".sonar-ping-effect")
+      g.selectAll(".sonar-ping-effect")
          .data(urgentStarsData, (d) => d.id) // Use urgent stars data
          .enter()
          .append("circle")
