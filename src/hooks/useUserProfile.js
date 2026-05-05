@@ -97,7 +97,7 @@ const useUserProfile = () => {
     };
 
     fetchUserProfileData();
-  }, [user, isAuthenticated, getAccessTokenSilently]); // Dependencies
+  }, [user?.sub, isAuthenticated]); // Dependencies
 
   return { profile, loading, error };
 };

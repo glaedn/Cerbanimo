@@ -33,6 +33,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const { getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const hasWarped = useRef(false);
+  const isFetching = useRef(false);
   // Helper functions (getStarColor, getStarRadius, getStarBrightness)
   // Performance Note: These functions are called per star during rendering or updates.
   // They are currently simple and efficient. Avoid complex computations here if possible,
@@ -71,6 +72,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   // useEffect for fetching data (remains the same)
   useEffect(() => {
     const fetchData = async () => {
+      if (isFetching.current) return;
+      isFetching.current = true;
       setMapState(prev => ({ ...prev, isLoading: prev.starData.length === 0, error: null }));
       try {
         let token = null;
@@ -80,7 +83,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
               audience: `${import.meta.env.VITE_BACKEND_URL}`,
               scope: "openid profile email",
             },
-            cacheMode: "off",
           });
         } catch (authErr) {
           console.warn("Auth token fetch failed, proceeding with public access:", authErr.message);
@@ -288,9 +290,11 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
               relevantIds.add(item.id);
               // Trace up to include parents for visual consistency
               let current = item;
-              while (current && current.parentId) {
+              let depth = 0;
+              while (current && current.parentId && depth < 10) {
                 relevantIds.add(current.parentId);
                 current = filteredData.find(d => d.id === current.parentId);
+                depth++;
               }
             }
           });
@@ -316,9 +320,11 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             if (isRelevant) {
               relevantIds.add(item.id);
               let current = item;
-              while (current && current.parentId) {
+              let depth = 0;
+              while (current && current.parentId && depth < 10) {
                 relevantIds.add(current.parentId);
                 current = filteredData.find(d => d.id === current.parentId);
+                depth++;
               }
             }
           });
@@ -343,10 +349,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         });
       } catch (err) {
         setMapState(prev => ({ ...prev, error: err.message || "Failed to fetch data", isLoading: false }));
+      } finally {
+        isFetching.current = false;
       }
     };
     fetchData();
-  }, [getAccessTokenSilently, isCrisisMode, profile?.id]);
+  }, [isCrisisMode, profile?.id]);
 
   // useEffect for D3 rendering
   useEffect(() => {

@@ -51,7 +51,7 @@ const useSkillData = () => {
     };
 
     fetchAllSkills();
-  }, [isAuthenticated, getAccessTokenSilently]); // Dependencies
+  }, [isAuthenticated]); // Dependencies
 
   return { allSkills, loading, error };
 };

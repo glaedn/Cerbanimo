@@ -67,7 +67,7 @@ const MobileDashboard = () => {
       }
     };
     fetchData();
-  }, [profile?.id, getAccessTokenSilently]);
+  }, [profile?.id]);
 
   const handleAcceptTask = async (taskId) => {
     const originalSuggested = [...suggestedTasks];
