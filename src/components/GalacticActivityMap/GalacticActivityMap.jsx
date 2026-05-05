@@ -22,10 +22,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const isFullscreenMobile = location.pathname === '/activity-map';
 
   // const tooltipRef = useRef(null); // Removed: Tooltip will be managed by D3 and appended to body
-  const [starData, setStarData] = useState([]);
-  const [links, setLinks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [mapState, setMapState] = useState({
+    starData: [],
+    links: [],
+    isLoading: true,
+    error: null,
+  });
+  const { starData, links, isLoading, error } = mapState;
+
   const { getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const hasWarped = useRef(false);
@@ -67,8 +71,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   // useEffect for fetching data (remains the same)
   useEffect(() => {
     const fetchData = async () => {
-      if (starData.length === 0) setIsLoading(true);
-      setError(null);
+      setMapState(prev => ({ ...prev, isLoading: prev.starData.length === 0, error: null }));
       try {
         let token = null;
         try {
@@ -332,12 +335,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           }
         });
 
-        setLinks(newLinks);
-        setStarData(filteredData);
+        setMapState({
+          starData: filteredData,
+          links: newLinks,
+          isLoading: false,
+          error: null,
+        });
       } catch (err) {
-        setError(err.message || "Failed to fetch data");
-      } finally {
-        setIsLoading(false);
+        setMapState(prev => ({ ...prev, error: err.message || "Failed to fetch data", isLoading: false }));
       }
     };
     fetchData();
@@ -843,7 +848,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         window.twinkleTimeoutIds = []; 
       }
     };
-  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks]);
+  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks, isMobile, isFullscreenMobile]);
 
   if (isLoading) {
     if (showLoadingText) {
