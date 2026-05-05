@@ -169,13 +169,13 @@ class DiscordBotService {
     this.client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       if (message.channel.isThread()) {
-        // Check if this thread belongs to a need
-        const needResult = await pool.query('SELECT id FROM needs WHERE discord_thread_id = $1', [message.channel.id]);
-        if (needResult.rows.length > 0) {
-          const needId = needResult.rows[0].id;
+        // Check if this thread belongs to a need (Cross-Guild Support)
+        const threadResult = await pool.query('SELECT need_id FROM need_discord_threads WHERE thread_id = $1', [message.channel.id]);
+        if (threadResult.rows.length > 0) {
+          const needId = threadResult.rows[0].need_id;
 
           // Try to find Cerbanimo user by Discord ID
-          const userResult = await pool.query('SELECT id FROM users WHERE discord_user_id = $1', [message.author.id]);
+          const userResult = await pool.query('SELECT id, username FROM users WHERE discord_user_id = $1', [message.author.id]);
           let userId = userResult.rows[0]?.id;
 
           // Fallback to a system user or handle as anonymous if mapping doesn't exist
@@ -184,11 +184,15 @@ class DiscordBotService {
             return;
           }
 
+          // 1. Sync to Cerbanimo
           await pool.query(
             'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
             [needId, userId, `[Discord] ${message.content}`]
           );
           console.log(`Synced message from Discord thread ${message.channel.id} to need ${needId}`);
+
+          // 2. Relay to OTHER Discord guilds (Cross-Guild Communication)
+          this.relayDiscordMessage(needId, message.channel.id, userResult.rows[0].username, message.content);
         }
       }
     });
@@ -575,6 +579,12 @@ class DiscordBotService {
 
       await pool.query('UPDATE needs SET discord_message_id = $1, discord_channel_id = $2, discord_thread_id = $3 WHERE id = $4', [message.id, channel.id, thread.id, need.id]);
 
+      // Also record in mapping table
+      await pool.query(
+        'INSERT INTO need_discord_threads (need_id, guild_id, channel_id, thread_id, is_primary) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (need_id, thread_id) DO NOTHING',
+        [need.id, guild_id, channel.id, thread.id]
+      );
+
       return { messageId: message.id, threadId: thread.id };
     } catch (err) {
       console.error('Error broadcasting need to Discord:', err);
@@ -677,10 +687,69 @@ class DiscordBotService {
                 .setColor(0xFFA500)
                 .setTimestamp();
 
-            await channel.send({ embeds: [embed] });
+            const alertMsg = await channel.send({ embeds: [embed] });
+
+            // Create a thread on the alert for cross-guild coordination
+            const alertThread = await alertMsg.startThread({
+                name: `Alert Coordination: ${entity.name}`,
+                autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+            });
+
+            // Record this thread for cross-guild sync
+            if (type === 'need') {
+              await pool.query(
+                'INSERT INTO need_discord_threads (need_id, guild_id, channel_id, thread_id, is_primary) VALUES ($1, $2, $3, $4, FALSE) ON CONFLICT (need_id, thread_id) DO NOTHING',
+                [entity.id, config.guild_id, config.need_channel_id, alertThread.id]
+              );
+            }
         }
     } catch (err) {
         console.error('Error in matchAndPing:', err);
+    }
+  }
+
+  async syncCommentToDiscord(needId, comment) {
+    if (!this.isReady) return;
+
+    try {
+      const threadsResult = await pool.query('SELECT thread_id FROM need_discord_threads WHERE need_id = $1', [needId]);
+
+      for (const row of threadsResult.rows) {
+        try {
+          const thread = await this.client.channels.fetch(row.thread_id);
+          if (thread && thread.isThread()) {
+            await thread.send(`**${comment.username}** (via Cerbanimo): ${comment.content}`);
+          }
+        } catch (threadErr) {
+          console.error(`Failed to sync comment to thread ${row.thread_id}:`, threadErr);
+        }
+      }
+    } catch (err) {
+      console.error('Error syncing comment to Discord:', err);
+    }
+  }
+
+  async relayDiscordMessage(needId, sourceThreadId, username, content) {
+    if (!this.isReady) return;
+
+    try {
+      const threadsResult = await pool.query(
+        'SELECT thread_id FROM need_discord_threads WHERE need_id = $1 AND thread_id != $2',
+        [needId, sourceThreadId]
+      );
+
+      for (const row of threadsResult.rows) {
+        try {
+          const thread = await this.client.channels.fetch(row.thread_id);
+          if (thread && thread.isThread()) {
+            await thread.send(`**${username}** (via neighbor guild): ${content}`);
+          }
+        } catch (threadErr) {
+          console.error(`Failed to relay message to thread ${row.thread_id}:`, threadErr);
+        }
+      }
+    } catch (err) {
+      console.error('Error relaying Discord message:', err);
     }
   }
 

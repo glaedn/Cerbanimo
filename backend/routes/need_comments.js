@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { sendNotification } from '../services/NotificationService.js';
+import DiscordBotService from '../services/DiscordBotService.js';
 
 const router = express.Router();
 
@@ -58,6 +59,9 @@ router.post('/', async (req, res) => {
         needId: need_id
       }).catch(err => console.error('Failed to send help offer notification:', err));
     }
+
+    // Sync to Discord
+    DiscordBotService.syncCommentToDiscord(need_id, comment).catch(err => console.error('Discord comment sync failed:', err));
 
     res.status(201).json(comment);
   } catch (err) {

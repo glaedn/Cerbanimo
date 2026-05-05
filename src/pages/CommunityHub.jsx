@@ -38,6 +38,7 @@ import CommunityResourceManagement from '../components/CommunityResourceManageme
 import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
+import NeedDeclarationForm from '../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -58,6 +59,7 @@ const CommunityHub = () => {
     const [proposals, setProposals] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
     const [communityNeeds, setCommunityNeeds] = useState([]);
+    const [isNeedDeclareModalOpen, setIsNeedDeclareModalOpen] = useState(false);
     const [communityServices, setCommunityServices] = useState([]);
     const [userId, setUserId] = useState(null);
     const [voteDelegations, setVoteDelegations] = useState({});
@@ -491,6 +493,24 @@ const CommunityHub = () => {
         } catch (error) {
             console.error('Failed to vote on constellation invite:', error);
             toast.error('Failed to submit your vote.');
+        }
+    };
+
+    const handleNeedSubmit = async (needData) => {
+        try {
+            const token = await getAccessTokenSilently();
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, {
+                ...needData,
+                requestor_community_id: communityId
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            showNotification('Community need declared successfully!');
+            setIsNeedDeclareModalOpen(false);
+            fetchCommunityData(false);
+        } catch (error) {
+            console.error('Error declaring community need:', error);
+            toast.error('Failed to declare need.');
         }
     };
 
@@ -1131,13 +1151,22 @@ const CommunityHub = () => {
                                     ))}
                                 </Box>
                             )}
-                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                                {isMember && (
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => setIsNeedDeclareModalOpen(true)}
+                                        sx={{ bgcolor: '#00F3FF', color: 'black', fontFamily: 'Orbitron', fontWeight: 'bold' }}
+                                    >
+                                        DECLARE NEED
+                                    </Button>
+                                )}
                                 <Button
                                     variant="outlined"
                                     onClick={() => navigate('/needs')}
                                     sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                                 >
-                                    VIEW_ALL_COMMUNITY_NEEDS
+                                    EXPLORER
                                 </Button>
                             </Box>
                         </CardContent>
@@ -1203,6 +1232,36 @@ const CommunityHub = () => {
             </Box>
 
             <CommunityResourceManagement communityId={communityId} />
+
+            {/* Community Need Form Modal */}
+            <Modal
+                open={isNeedDeclareModalOpen}
+                onClose={() => setIsNeedDeclareModalOpen(false)}
+            >
+                <Paper sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: { xs: '90%', sm: '600px' },
+                    p: 4,
+                    bgcolor: 'rgba(28, 28, 30, 0.95)',
+                    border: '1px solid #00F3FF',
+                    color: 'white',
+                    maxHeight: '90vh',
+                    overflowY: 'auto'
+                }}>
+                    <Typography variant="h5" sx={{ mb: 3, fontFamily: 'Orbitron', color: '#00F3FF', textAlign: 'center' }}>
+                        DECLARE COMMUNITY NEED
+                    </Typography>
+                    <NeedDeclarationForm
+                        onSubmit={handleNeedSubmit}
+                        onCancel={() => setIsNeedDeclareModalOpen(false)}
+                        loggedInUserId={userId}
+                        communityId={communityId}
+                    />
+                </Paper>
+            </Modal>
             <CommunityChronicle communityId={communityId} />
 
             {/* Discord Configuration Modal */}

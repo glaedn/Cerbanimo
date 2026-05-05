@@ -133,7 +133,30 @@ const alterExistingTables = async () => {
       ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50)
     `);
 
-    console.log('PostgreSQL: Existing tables (tasks, projects, users, needs) altered with new fields.');
+    // Create mapping table for multiple Discord threads (Cross-Guild Support)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS need_discord_threads (
+        id SERIAL PRIMARY KEY,
+        need_id INTEGER REFERENCES needs(id) ON DELETE CASCADE,
+        guild_id VARCHAR(50),
+        channel_id VARCHAR(50),
+        thread_id VARCHAR(50),
+        is_primary BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(need_id, thread_id)
+      )
+    `);
+
+    // Backfill need_discord_threads from needs table
+    await pool.query(`
+      INSERT INTO need_discord_threads (need_id, thread_id, channel_id, is_primary)
+      SELECT id, discord_thread_id, discord_channel_id, TRUE
+      FROM needs
+      WHERE discord_thread_id IS NOT NULL
+      ON CONFLICT (need_id, thread_id) DO NOTHING
+    `);
+
+    console.log('PostgreSQL: Existing tables (tasks, projects, users, needs) altered and need_discord_threads created.');
   } catch (err) {
     console.error('PostgreSQL: Error altering existing tables:', err);
   }

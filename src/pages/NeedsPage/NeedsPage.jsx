@@ -23,6 +23,7 @@ import theme from '../../styles/theme';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import NeedComments from '../../components/NeedComments/NeedComments';
+import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm';
 import Modal from '@mui/material/Modal';
 import { toast } from 'react-hot-toast';
 import './NeedsPage.css';
@@ -42,6 +43,7 @@ const NeedsPage = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isDeclareModalOpen, setIsDeclareModalOpen] = useState(false);
 
   const fetchNeeds = useCallback(async () => {
     setLoading(true);
@@ -90,6 +92,24 @@ const NeedsPage = () => {
   const handleOpenComments = (need) => {
     setSelectedNeed(need);
     setIsCommentModalOpen(true);
+  };
+
+  const handleNeedSubmit = async (needData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, {
+        ...needData,
+        requestor_user_id: profile.id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Need declared successfully! 🆘');
+      setIsDeclareModalOpen(false);
+      fetchNeeds();
+    } catch (err) {
+      console.error('Error declaring need:', err);
+      toast.error('Failed to declare need.');
+    }
   };
 
   const handleMarkFulfilled = async (id) => {
@@ -408,15 +428,29 @@ const NeedsPage = () => {
 
   return (
     <Box className="needs-page-container" sx={{ p: isMobile ? 2 : 4, pb: isMobile ? 12 : 4 }}>
-      <Typography variant="h4" sx={{
-        color: theme.colors.primary,
-        fontFamily: 'Orbitron',
-        mb: 4,
-        textAlign: isMobile ? 'center' : 'left',
-        textShadow: theme.effects.glowSubtle(theme.colors.primary)
-      }}>
-        NEEDS_EXPLORER
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Typography variant="h4" sx={{
+          color: theme.colors.primary,
+          fontFamily: 'Orbitron',
+          textAlign: isMobile ? 'center' : 'left',
+          textShadow: theme.effects.glowSubtle(theme.colors.primary)
+        }}>
+          NEEDS_EXPLORER
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => setIsDeclareModalOpen(true)}
+          sx={{
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.backgroundDefault,
+            fontFamily: 'Orbitron',
+            px: 3,
+            '&:hover': { backgroundColor: theme.colors.accentBlue }
+          }}
+        >
+          DECLARE A NEED
+        </Button>
+      </Box>
 
       <Box sx={{ mb: 4, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2, alignItems: 'center' }}>
         <TextField
@@ -507,6 +541,35 @@ const NeedsPage = () => {
             </>
           )}
         </Box>
+      </Modal>
+
+      <Modal
+        open={isDeclareModalOpen}
+        onClose={() => setIsDeclareModalOpen(false)}
+      >
+        <Paper sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '75%', md: '600px' },
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          bgcolor: theme.colors.backgroundPaper,
+          boxShadow: theme.effects.glowStrong(theme.colors.primary),
+          p: 4,
+          borderRadius: theme.borders.borderRadiusLg,
+          border: `1px solid ${theme.colors.primary}`,
+        }}>
+          <Typography variant="h5" sx={{ color: theme.colors.primary, fontFamily: 'Orbitron', mb: 3, textAlign: 'center' }}>
+            DECLARE NEW NEED
+          </Typography>
+          <NeedDeclarationForm
+            onSubmit={handleNeedSubmit}
+            onCancel={() => setIsDeclareModalOpen(false)}
+            loggedInUserId={profile?.id}
+          />
+        </Paper>
       </Modal>
 
     </Box>

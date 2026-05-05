@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import ShareIcon from '@mui/icons-material/Share';
 import { toast } from 'react-hot-toast';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
+import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
 import UserPortfolio from '../UserPortfolio.jsx';
 import UserSearch from '../../components/UserSearch.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -71,6 +72,7 @@ const ProfilePage = () => {
   const [communitiesLoading, setCommunitiesLoading] = useState(false);
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
+  const [isNeedModalOpen, setIsNeedModalOpen] = useState(false);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceError, setResourceError] = useState(null);
 
@@ -341,6 +343,24 @@ const ProfilePage = () => {
       setNeedsLoading(false);
     }
   }, [profileData.id, getAccessTokenSilently]);
+
+  const handleNeedSubmit = async (needData) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, {
+        ...needData,
+        requestor_user_id: profileData.id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Need declared successfully!');
+      setIsNeedModalOpen(false);
+      fetchUserNeeds();
+    } catch (err) {
+      console.error('Error declaring need:', err);
+      toast.error('Failed to declare need.');
+    }
+  };
 
   const fetchUserServices = async () => {
     if (!profileData.id) return;
@@ -1328,21 +1348,32 @@ const ProfilePage = () => {
         >
           My Active Needs
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/needs')}
-          sx={{
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.backgroundDefault,
-            fontFamily: theme.typography.fontFamilyAccent,
-            mb: 2,
-            '&:hover': {
-              backgroundColor: theme.colors.accentBlue,
-            }
-          }}
-        >
-          Open Needs Explorer
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setIsNeedModalOpen(true)}
+            sx={{
+              backgroundColor: theme.colors.accentGreen,
+              color: theme.colors.backgroundDefault,
+              fontFamily: theme.typography.fontFamilyAccent,
+              '&:hover': { backgroundColor: '#00b870' }
+            }}
+          >
+            Declare Need
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/needs')}
+            sx={{
+              borderColor: theme.colors.primary,
+              color: theme.colors.primary,
+              fontFamily: theme.typography.fontFamilyAccent,
+              '&:hover': { borderColor: theme.colors.accentBlue, color: theme.colors.accentBlue }
+            }}
+          >
+            Explorer
+          </Button>
+        </Box>
         {needsLoading && <CircularProgress sx={{ color: theme.colors.primary, display: 'block', margin: 'auto' }} />}
         {!needsLoading && userNeeds.length === 0 && (
           <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary}}>No active needs declared.</Typography>
@@ -1602,6 +1633,36 @@ const ProfilePage = () => {
           Logout
         </Button>
       </Box>
+
+      {/* Need Form Modal */}
+      <Modal
+        open={isNeedModalOpen}
+        onClose={() => setIsNeedModalOpen(false)}
+      >
+        <Paper sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '75%', md: '600px' },
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          bgcolor: theme.colors.backgroundPaper,
+          boxShadow: theme.effects.glowStrong(theme.colors.primary),
+          p: 4,
+          borderRadius: theme.borders.borderRadiusLg,
+          border: `1px solid ${theme.colors.primary}`,
+        }}>
+          <Typography variant="h5" sx={{ color: theme.colors.primary, fontFamily: 'Orbitron', mb: 3, textAlign: 'center' }}>
+            DECLARE NEW NEED
+          </Typography>
+          <NeedDeclarationForm
+            onSubmit={handleNeedSubmit}
+            onCancel={() => setIsNeedModalOpen(false)}
+            loggedInUserId={profileData.id}
+          />
+        </Paper>
+      </Modal>
 
       {/* Resource Form Modal (remains outside the panel structure) */}
       <Modal
