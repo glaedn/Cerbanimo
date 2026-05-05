@@ -155,18 +155,21 @@ app.use('/profile', (req, res, next) => {
 }, profileRoutes);
 
 app.use('/tasks', (req, res, next) => {
-  if (/^\/\d+\/?$/.test(req.path)) return next();
+  if (req.method === 'GET') return next();
   return jwtCheck(req, res, next);
-}, taskRoutes);
+}, resolveUser, taskRoutes);
 
 app.use('/skills', jwtCheck, resolveUser, skillsRoutes);
 
 app.use('/projects', (req, res, next) => {
-  if (req.path.match(/^\/\d+$/)) return next();
+  if (req.method === 'GET') return next();
   return jwtCheck(req, res, next);
-}, projectRoutes);
+}, resolveUser, projectRoutes);
 
-app.use('/communities', jwtCheck, communitiesRoutes);
+app.use('/communities', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, communitiesRoutes);
 
 app.use('/rewards', jwtCheck, rewardsRoutes);
 
