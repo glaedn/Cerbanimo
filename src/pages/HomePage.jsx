@@ -32,7 +32,7 @@ export default function Homepage() {
     <div className={`homepage ${isMobile ? 'mobile-view' : ''}`}>
       <section className="hero">
         <div className="galactic-activity-map-container">
-            <GalacticActivityMap />
+            <GalacticActivityMap enableTooltips={false} enableClicks={false} />
         </div>
         <motion.h1
           initial={{ opacity: 0, scale: 0.9 }}
