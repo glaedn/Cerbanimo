@@ -5,6 +5,7 @@ const createVerificationTables = async () => {
     CREATE TABLE IF NOT EXISTS verification_events (
       id SERIAL PRIMARY KEY,
       task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+      need_id INTEGER REFERENCES needs(id) ON DELETE CASCADE,
       verifier_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
       verification_type VARCHAR(50), -- 'recipient_confirmed', 'peer_confirmed', 'oracle_confirmed'

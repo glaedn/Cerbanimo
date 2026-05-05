@@ -36,6 +36,7 @@ const NeedsPage = () => {
 
   const [needs, setNeeds] = useState([]);
   const [singleNeed, setSingleNeed] = useState(null);
+  const [singleNeedComments, setSingleNeedComments] = useState([]);
   const [selectedNeed, setSelectedNeed] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -48,10 +49,16 @@ const NeedsPage = () => {
       const token = await getAccessTokenSilently();
 
       if (needId) {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/${needId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSingleNeed(response.data);
+        const [needRes, commentsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/${needId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/need-comments/${needId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        setSingleNeed(needRes.data);
+        setSingleNeedComments(commentsRes.data);
       } else {
         const endpoint = tabValue === 0
           ? `${import.meta.env.VITE_BACKEND_URL}/needs`
@@ -83,6 +90,59 @@ const NeedsPage = () => {
   const handleOpenComments = (need) => {
     setSelectedNeed(need);
     setIsCommentModalOpen(true);
+  };
+
+  const handleMarkFulfilled = async (id) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/needs/${id}`, {
+        ... (singleNeed || needs.find(n => n.id === id)),
+        status: 'fulfilled'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Need marked as fulfilled! 🎉');
+      fetchNeeds();
+    } catch (err) {
+      console.error('Error fulfilling need:', err);
+      toast.error('Failed to update need status.');
+    }
+  };
+
+  const handleOfferHelp = async (need) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/need-comments`, {
+        need_id: need.id,
+        content: `[OFFER] I can help with this! Let's coordinate.`
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Help offer sent! Coordination thread updated.');
+      fetchNeeds();
+    } catch (err) {
+      console.error('Error offering help:', err);
+      toast.error('Failed to send help offer.');
+    }
+  };
+
+  const handleVerifyCompletion = async (need) => {
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verification_v2/events`, {
+        taskId: null, // This is a need verification, might need backend support for null taskId if it's strict
+        verifierId: profile.id,
+        status: 'approved',
+        verificationType: 'recipient_confirmed', // Using this type as the meeter confirms it's done
+        needId: need.id // Adding needId to the payload
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Completion verified! Trust metrics updated.');
+    } catch (err) {
+      console.error('Error verifying completion:', err);
+      toast.error('Failed to record verification.');
+    }
   };
 
   const getUrgencyColor = (urgency) => {
@@ -172,20 +232,39 @@ const NeedsPage = () => {
         </Box>
       </CardContent>
       <CardActions sx={{ p: 2, pt: 0 }}>
-        <Button
-          fullWidth
-          variant="contained"
-          startIcon={<VolunteerIcon />}
-          sx={{
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.backgroundDefault,
-            fontFamily: 'Orbitron',
-            '&:hover': { backgroundColor: theme.colors.accentBlue }
-          }}
-          onClick={() => toast.success('Help offer functionality coming soon!')}
-        >
-          OFFER HELP
-        </Button>
+        {profile?.id === need.requestor_user_id ? (
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<FulfilledIcon />}
+            disabled={need.status === 'fulfilled'}
+            sx={{
+              backgroundColor: theme.colors.accentGreen,
+              color: theme.colors.backgroundDefault,
+              fontFamily: 'Orbitron',
+              '&:hover': { backgroundColor: '#00b870' }
+            }}
+            onClick={(e) => { e.stopPropagation(); handleMarkFulfilled(need.id); }}
+          >
+            {need.status === 'fulfilled' ? 'FULFILLED' : 'MARK FULFILLED'}
+          </Button>
+        ) : (
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<VolunteerIcon />}
+            disabled={need.status === 'fulfilled'}
+            sx={{
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.backgroundDefault,
+              fontFamily: 'Orbitron',
+              '&:hover': { backgroundColor: theme.colors.accentBlue }
+            }}
+            onClick={(e) => { e.stopPropagation(); handleOfferHelp(need); }}
+          >
+            {need.status === 'fulfilled' ? 'CLOSED' : 'OFFER HELP'}
+          </Button>
+        )}
       </CardActions>
     </Card>
   );
@@ -258,22 +337,69 @@ const NeedsPage = () => {
           <NeedComments needId={singleNeed.id} />
 
           <Box mt={4}>
-            <Button
-              fullWidth
-              variant="contained"
-              size="large"
-              startIcon={<VolunteerIcon />}
-              sx={{
-                backgroundColor: theme.colors.primary,
-                color: theme.colors.backgroundDefault,
-                fontFamily: 'Orbitron',
-                py: 2,
-                '&:hover': { backgroundColor: theme.colors.accentBlue }
-              }}
-              onClick={() => toast.success('Help offer recorded!')}
-            >
-              SIGNAL_AVAILABILITY
-            </Button>
+            {profile?.id === singleNeed.requestor_user_id ? (
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<FulfilledIcon />}
+                disabled={singleNeed.status === 'fulfilled'}
+                sx={{
+                  backgroundColor: theme.colors.accentGreen,
+                  color: theme.colors.backgroundDefault,
+                  fontFamily: 'Orbitron',
+                  py: 2,
+                  '&:hover': { backgroundColor: '#00b870' }
+                }}
+                onClick={() => handleMarkFulfilled(singleNeed.id)}
+              >
+                {singleNeed.status === 'fulfilled' ? 'MISSION_ACCOMPLISHED' : 'MARK_AS_FULFILLED'}
+              </Button>
+            ) : singleNeed.status === 'fulfilled' ? (
+              // Check if user has offered help
+              singleNeedComments.some(c => c.user_id === profile?.id && c.content.includes('[OFFER]')) ? (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  startIcon={<FulfilledIcon />}
+                  sx={{
+                    backgroundColor: theme.colors.secondary,
+                    color: theme.colors.textPrimary,
+                    fontFamily: 'Orbitron',
+                    py: 2,
+                    '&:hover': { backgroundColor: theme.colors.accentPink }
+                  }}
+                  onClick={() => handleVerifyCompletion(singleNeed)}
+                >
+                  VERIFY_COMPLETION
+                </Button>
+              ) : (
+                <Button fullWidth disabled variant="outlined" sx={{ py: 2, fontFamily: 'Orbitron' }}>
+                  NEED_FULFILLED
+                </Button>
+              )
+            ) : (
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<VolunteerIcon />}
+                sx={{
+                  backgroundColor: theme.colors.primary,
+                  color: theme.colors.backgroundDefault,
+                  fontFamily: 'Orbitron',
+                  py: 2,
+                  '&:hover': { backgroundColor: theme.colors.accentBlue }
+                }}
+                onClick={() => handleOfferHelp(singleNeed)}
+              >
+                {singleNeedComments.some(c => c.user_id === profile?.id && c.content.includes('[OFFER]'))
+                  ? 'HELP_OFFERED'
+                  : 'SIGNAL_AVAILABILITY'
+                }
+              </Button>
+            )}
           </Box>
         </Paper>
       </Container>

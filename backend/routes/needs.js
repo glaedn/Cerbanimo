@@ -3,6 +3,7 @@ import pool from '../db.js'; // Assuming db.js is in the backend directory
 import DiscordBotService from '../services/DiscordBotService.js';
 import ProjectConversionService from '../services/ProjectConversionService.js';
 import NeedService from '../services/NeedService.js';
+import { sendNotification } from '../services/NotificationService.js';
 
 const router = express.Router();
 
@@ -179,6 +180,27 @@ router.put('/:needId', async (req, res) => {
     // Sync update to Discord
     if (updatedNeed.discord_thread_id) {
       DiscordBotService.syncNeedUpdate(updatedNeed).catch(err => console.error('Discord sync failed:', err));
+    }
+
+    // Notify users who offered help about fulfillment
+    if (status === 'fulfilled') {
+      try {
+        const commenters = await pool.query(
+          "SELECT DISTINCT user_id FROM need_comments WHERE need_id = $1 AND content LIKE '%[OFFER]%'",
+          [needId]
+        );
+        for (const row of commenters.rows) {
+          if (row.user_id !== currentUserId) {
+            sendNotification(row.user_id, {
+              message: `The need "${updatedNeed.name}" you offered help for has been marked as fulfilled. Please verify completion.`,
+              type: 'need_fulfilled',
+              needId: needId
+            }).catch(err => console.error('Failed to send fulfillment notification:', err));
+          }
+        }
+      } catch (notifyErr) {
+        console.error('Error fetching commenters for fulfillment notification:', notifyErr);
+      }
     }
 
     res.json(updatedNeed);

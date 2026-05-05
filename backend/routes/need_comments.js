@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
+import { sendNotification } from '../services/NotificationService.js';
 
 const router = express.Router();
 
@@ -39,14 +40,26 @@ router.post('/', async (req, res) => {
 
     // Fetch the username for the response
     const commentWithUser = await pool.query(
-        `SELECT nc.*, u.username, u.profile_picture
+        `SELECT nc.*, u.username, u.profile_picture, n.name as need_name, n.requestor_user_id
          FROM need_comments nc
          JOIN users u ON nc.user_id = u.id
+         JOIN needs n ON nc.need_id = n.id
          WHERE nc.id = $1`,
         [result.rows[0].id]
     );
 
-    res.status(201).json(commentWithUser.rows[0]);
+    const comment = commentWithUser.rows[0];
+
+    // Trigger notification if it's an help offer
+    if (content.startsWith('[OFFER]') && comment.requestor_user_id !== user_id) {
+      sendNotification(comment.requestor_user_id, {
+        message: `New help offer from ${comment.username} for "${comment.need_name}"`,
+        type: 'help_offer',
+        needId: need_id
+      }).catch(err => console.error('Failed to send help offer notification:', err));
+    }
+
+    res.status(201).json(comment);
   } catch (err) {
     console.error('Error creating need comment:', err);
     res.status(500).json({ error: 'Failed to create comment' });

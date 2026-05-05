@@ -5,9 +5,9 @@ import pool from '../db.js';
 const router = express.Router();
 
 router.post('/events', async (req, res) => {
-  const { taskId, verifierId, status, proofOfWorkLink, verificationType } = req.body;
+  const { taskId, verifierId, status, proofOfWorkLink, verificationType, needId } = req.body;
   try {
-    const event = await verificationService.recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink, verificationType);
+    const event = await verificationService.recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink, verificationType, needId);
     res.status(201).json(event);
   } catch (err) {
     res.status(500).json({ error: err.message });
