@@ -341,7 +341,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       }
     };
     fetchData();
-  }, [getAccessTokenSilently, isCrisisMode]);
+  }, [getAccessTokenSilently, isCrisisMode, profile]);
 
   // useEffect for D3 rendering
   useEffect(() => {
@@ -362,6 +362,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
     if (d3Container.current && !isLoading && !error && starData.length > 0) {
       const { clientWidth, clientHeight } = d3Container.current;
+      if (clientWidth === 0 || clientHeight === 0) return;
       setMapDimensions({ width: clientWidth, height: clientHeight });
       let svg = d3.select(d3Container.current).select("svg");
 
@@ -509,7 +510,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .stop();
 
       // Manually run simulation for a few ticks to reach stable state
-      for (let i = 0; i < 200; ++i) simulation.tick();
+      const ticks = isMobile ? 40 : 100;
+      for (let i = 0; i < ticks; ++i) simulation.tick();
 
       // Draw constellation links
       g.selectAll(".constellation-link")

@@ -21,7 +21,7 @@ const TokenAndSkillSummary = ({ tokens = 0, skills = [] }) => {
       color: '#FFFFFF' // theme.colors.textPrimary for default text
     }}>
       <Typography variant="h6" sx={{ color: '#00F3FF', mb: '1rem' }}> {/* theme.colors.primary, added margin bottom */}
-        Tokens Earned: {tokens}
+        Hours Worked: {(tokens / 10).toFixed(1)}
       </Typography>
       <Box mt={2}>
         {validSkills.map((skill) => (
@@ -41,7 +41,7 @@ const TokenAndSkillSummary = ({ tokens = 0, skills = [] }) => {
             </Typography>
             {/* Level display removed */}
             <Typography variant="body2" sx={{ color: '#FF5CA2' }}> {/* theme.colors.secondary */}
-              Tokens: {skill.tokens || 0}
+              Hours: {((skill.tokens || 0) / 10).toFixed(1)}
             </Typography>
           </Box>
         ))}
