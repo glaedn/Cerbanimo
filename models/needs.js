@@ -21,6 +21,9 @@ const createNeedsTable = async () => {
       discord_message_id VARCHAR(50), -- Added for Discord integration
       discord_thread_id VARCHAR(50), -- Added for Discord integration
       fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+      complexity_score FLOAT DEFAULT 0,
+      is_expanded BOOLEAN DEFAULT false,
+      linked_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT check_requestor CHECK (requestor_user_id IS NOT NULL OR requestor_community_id IS NOT NULL) -- Added

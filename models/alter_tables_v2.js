@@ -84,7 +84,10 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS time_slots JSONB,
     ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web',
     ADD COLUMN IF NOT EXISTS fulfilled_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS fulfilled_via VARCHAR(20);
+    ADD COLUMN IF NOT EXISTS fulfilled_via VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS complexity_score FLOAT DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS linked_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
   `;
 
   const alterResourcesQuery = `

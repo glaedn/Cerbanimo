@@ -228,16 +228,60 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
  }
 };
 
+export const NEED_PROMPT = `
+Your objective is to take the given need description and intended outcome and output the tasks and dependencies necessary to fulfill this complex need.
+You will generate output for the following database tables: projects and tasks.
+
+The "project" in this case is a hidden coordination structure for the need.
+
+Rules:
+- All IDs (project IDs, task IDs) must be unique integers starting at 1.
+- "project_id" in tasks must match the corresponding project's new ID.
+- "skill_name" in tasks must be the name of a skill.
+- "dependencies" in tasks must reference the correct new task IDs.
+- Timeline Awareness: Distribute tasks logically.
+- Output data in JSON format, with one array per table (projects, tasks).
+- For every task, include:
+  - "impact_label": how this task helps fulfill the need.
+  - "impact_weight": integer 0-100.
+- The sum of all task impact_weight values must equal 100.
+- Reward Scaling: Assign base reward tokens (50-150 range). Note: these will be scaled later.
+`;
+
 export const autoGenerateTasks = async (
   projectName,
   projectDescription,
   tags,
   creator_id,
   project_due_date = null,
-  outcomeStatement = ''
+  outcomeStatement = '',
+  context = 'project_generation'
 ) => {
   const now = new Date().toISOString();
-  const userPrompt = `
+  let userPrompt = '';
+
+  if (context === 'need_fulfillment') {
+    userPrompt = `
+${NEED_PROMPT}
+
+Current Date/Time: ${now}
+Need Title: ${projectName}
+Description: ${projectDescription}
+Required Before: ${project_due_date || 'None provided'}
+Intended Outcome: ${outcomeStatement || 'None provided'}
+
+Expected Output Format:
+{
+  "projects": [
+    { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["${tags}"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
+  ],
+  "tasks": [
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "${now}", "due_date": "${project_due_date || ''}", "impact_label": "...", "impact_weight": 50 }
+  ]
+}
+`;
+  } else {
+    userPrompt = `
 Your objective is to take the given project name, description, and intended outcome and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
 
 Current Date/Time: ${now}
@@ -306,6 +350,7 @@ Notes:
 ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. There can be multiple.
 `;
+  }
   //const systemPrompt = "You are an expert Project Manager AI.";
 
   try {

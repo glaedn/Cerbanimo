@@ -4,6 +4,8 @@ import {
   autoGenerateSubtasks,
 } from "../services/taskGenerator.js";
 import StoryEngineService from "../services/StoryEngineService.js";
+import NeedService from "../services/NeedService.js";
+import NeedExpansionService from "../services/NeedExpansionService.js";
 import GuildService from "../services/GuildService.js";
 import ResourceService from "../services/ResourceService.js";
 
@@ -676,6 +678,28 @@ const approveTask = async (taskId, io, client) => {
 
     // Set completed_at
     await localClient.query("UPDATE tasks SET completed_at = NOW() WHERE id = $1", [taskId]);
+
+    // Check for linked need fulfillment
+    try {
+      const taskMetaResult = await localClient.query('SELECT project_id, related_need_id FROM tasks WHERE id = $1', [taskId]);
+      const { project_id, related_need_id } = taskMetaResult.rows[0];
+
+      if (related_need_id) {
+        // Direct link (simple need)
+        await NeedService.markNeedComplete(related_need_id);
+      } else if (project_id) {
+        // Check if this project was expanded from a need
+        const needResult = await localClient.query('SELECT id FROM needs WHERE linked_project_id = $1', [project_id]);
+        if (needResult.rows.length > 0) {
+          const isComplete = await NeedExpansionService.checkProjectCompletion(project_id);
+          if (isComplete) {
+            await NeedService.markNeedComplete(needResult.rows[0].id);
+          }
+        }
+      }
+    } catch (needErr) {
+      console.error("Error during linked need fulfillment check:", needErr);
+    }
 
     // Phase 6: Resource Layer - Complete Allocations
     try {

@@ -175,6 +175,18 @@ class StoryEngineService {
 
     return content;
   }
+
+  async createFromNeed({ needId, projectId, complexity }) {
+    const needResult = await pool.query('SELECT * FROM needs WHERE id = $1', [needId]);
+    const need = needResult.rows[0];
+
+    const insertQuery = `
+      INSERT INTO story_units (user_id, project_id, role, complexity, task_type)
+      VALUES ($1, $2, 'originator', $3, 'need_expansion')
+      RETURNING *;
+    `;
+    return pool.query(insertQuery, [need.requestor_user_id, projectId, complexity]);
+  }
 }
 
 export default new StoryEngineService();
