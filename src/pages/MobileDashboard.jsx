@@ -5,11 +5,13 @@ import axios from 'axios';
 import MobileTaskCard from '../components/MobileTaskCard';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import useSkillData from '../hooks/useSkillData';
 
 const MobileDashboard = () => {
   const { user, getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   const { profile, loading: profileLoading } = useUserProfile();
   const { allSkills, loading: skillsLoading } = useSkillData();
   const [activeTasks, setActiveTasks] = useState([]);
@@ -190,18 +192,32 @@ const MobileDashboard = () => {
         border: '1px solid #00F3FF',
         borderRadius: '12px'
       }}>
-        <Box display="flex" alignItems="center" gap={2} mb={1}>
-          <Avatar src={user.picture} sx={{ border: '2px solid #00F3FF' }} />
-          <Box>
-            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 'bold' }}>
-              Welcome, {user.given_name || user.name}
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#00F3FF' }}>
-              Level {currentLevel} Architect
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#00F3FF', mt: 0.5, display: 'block' }}>
-              Galactic Credits: {profile.tokens !== undefined ? profile.tokens : 'N/A'}
-            </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Box display="flex" alignItems="center" gap={2} mb={1}>
+            <Avatar src={user.picture} sx={{ border: '2px solid #00F3FF' }} />
+            <Box>
+              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                Welcome, {user.given_name || user.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#00F3FF' }}>
+                Level {currentLevel} Architect
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#00F3FF', mt: 0.5, display: 'block' }}>
+                Galactic Credits: {profile.tokens !== undefined ? profile.tokens : 'N/A'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box
+            onClick={() => navigate('/activity-map')}
+            sx={{
+              color: '#00F3FF',
+              fontSize: '0.7rem',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontFamily: 'Orbitron'
+            }}
+          >
+            VIEW_MAP
           </Box>
         </Box>
         <Box mt={2}>

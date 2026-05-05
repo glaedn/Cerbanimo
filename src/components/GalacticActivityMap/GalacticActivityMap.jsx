@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import "./GalacticActivityMap.css";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from "axios";
 import { useCrisis } from "../../context/CrisisContext";
+import { useUserProfile } from "../../hooks/useUserProfile";
 
 // Performance Note:
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
@@ -14,8 +15,13 @@ import { useCrisis } from "../../context/CrisisContext";
 const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   const { isCrisisMode } = useCrisis();
+  const { profile } = useUserProfile();
+  const location = useLocation();
+  const isFullscreenMobile = location.pathname === '/activity-map';
+
   // const tooltipRef = useRef(null); // Removed: Tooltip will be managed by D3 and appended to body
   const [starData, setStarData] = useState([]);
+  const [links, setLinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAccessTokenSilently } = useAuth0();
@@ -45,7 +51,9 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       item.type === "task" ? 0.5 : item.type === "project" ? 1 : 1.75; // downscaled
     if (item.status.toLowerCase().includes("urgent")) baseRadius *= 1.3;
     const ageScale = Math.max(0.4, 1 - ageDays / 60);
-    return baseRadius * ageScale + Math.min(item.contributors / 8, 1); // also scaled
+    let radius = baseRadius * ageScale + Math.min(item.contributors / 8, 1);
+    if (isFullscreenMobile) radius *= 3;
+    return radius;
   };
 
   const getStarBrightness = (item) => {
@@ -101,25 +109,26 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             contributors: task.assigned_user_ids
               ? task.assigned_user_ids.length
               : 0,
+            parentId: task.project_id ? `project-${task.project_id}` : null,
             raw_data: task,
           });
         });
 
         projects.forEach((project) => {
           let projectStatus = "active";
-          const urgentTasksInProject = tasks.filter(
-            (t) =>
-              `project-${t.project_id}` === `project-${project.id}` &&
-              (t.status || "").toLowerCase().includes("urgent")
+          const projectTasks = tasks.filter(t => t.project_id === project.id);
+          const urgentTasksInProject = projectTasks.filter(
+            (t) => (t.status || "").toLowerCase().includes("urgent")
           );
-          const activeTasksInProject = tasks.filter(
-            (t) =>
-              `project-${t.project_id}` === `project-${project.id}` &&
-              (t.status || "").toLowerCase().startsWith("active")
+          const activeTasksInProject = projectTasks.filter(
+            (t) => (t.status || "").toLowerCase().startsWith("active")
           );
 
           if (urgentTasksInProject.length > 0) projectStatus = "urgent";
           else if (activeTasksInProject.length < 1) projectStatus = "inactive";
+
+          // Find if this project is linked to a need
+          const relatedNeed = needs.find(n => n.project_id === project.id);
 
           processedData.push({
             id: `project-${project.id}`,
@@ -130,6 +139,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
               project.updated_at || project.created_at || Date.now()
             ),
             contributors: project.creator_id ? 1 : 0,
+            parentId: relatedNeed ? `need-${relatedNeed.id}` : (project.community_id ? `community-${project.community_id}` : null),
             raw_data: project,
           });
         });
@@ -157,6 +167,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             status: need.urgency_level || need.urgency || "medium",
             lastActivity: new Date(need.updated_at || need.created_at || Date.now()),
             contributors: 0,
+            parentId: need.requestor_community_id ? `community-${need.requestor_community_id}` : null,
             raw_data: need,
           });
         });
@@ -169,11 +180,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             status: resource.status || "available",
             lastActivity: new Date(resource.updated_at || resource.created_at || Date.now()),
             contributors: 0,
+            parentId: resource.owner_community_id ? `community-${resource.owner_community_id}` : null,
             raw_data: resource,
           });
         });
 
-        const filteredData = isCrisisMode
+        let filteredData = isCrisisMode
           ? processedData.filter(d =>
               (d.type === 'need' && (d.status.toLowerCase().includes('urgent') || d.status.toLowerCase().includes('critical') || d.status.toLowerCase().includes('high'))) ||
               (d.type === 'resource' && d.status.toLowerCase() === 'available') ||
@@ -181,6 +193,60 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             )
           : processedData;
 
+        // Task dependencies hierarchy adjustment
+        filteredData.forEach(item => {
+          if (item.type === 'task' && item.raw_data.dependencies && item.raw_data.dependencies.length > 0) {
+            // Take the first dependency as the parent for simplicity in a tree structure
+            // In a real constellation, it could have multiple parents, but D3 tree-like force usually prefers one
+            const depId = `task-${item.raw_data.dependencies[0]}`;
+            if (filteredData.some(d => d.id === depId)) {
+              item.parentId = depId;
+            }
+          }
+        });
+
+        // User relevance filtering for mobile fullscreen
+        if (isFullscreenMobile && profile) {
+          const relevantIds = new Set();
+          filteredData.forEach(item => {
+            let isRelevant = false;
+            if (item.type === 'task') {
+              if (item.raw_data.assigned_user_ids?.includes(profile.id)) isRelevant = true;
+              if (item.raw_data.creator_id === profile.id) isRelevant = true;
+            } else if (item.type === 'resource') {
+              if (item.raw_data.owner_user_id === profile.id) isRelevant = true;
+            } else if (item.type === 'need') {
+              if (item.raw_data.requestor_user_id === profile.id) isRelevant = true;
+            } else if (item.type === 'project') {
+              if (item.raw_data.creator_id === profile.id) isRelevant = true;
+            } else if (item.type === 'community') {
+              if (item.raw_data.members?.includes(profile.id)) isRelevant = true;
+            }
+
+            if (isRelevant) {
+              relevantIds.add(item.id);
+              // Trace up to include parents
+              let current = item;
+              while (current && current.parentId) {
+                relevantIds.add(current.parentId);
+                current = filteredData.find(d => d.id === current.parentId);
+              }
+            }
+          });
+          filteredData = filteredData.filter(d => relevantIds.has(d.id));
+        }
+
+        const newLinks = [];
+        filteredData.forEach(item => {
+          if (item.parentId && filteredData.some(d => d.id === item.parentId)) {
+            newLinks.push({
+              source: item.parentId,
+              target: item.id
+            });
+          }
+        });
+
+        setLinks(newLinks);
         setStarData(filteredData);
       } catch (err) {
         setError(err.message || "Failed to fetch data");
@@ -212,6 +278,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       const { clientWidth, clientHeight } = d3Container.current;
       setMapDimensions({ width: clientWidth, height: clientHeight });
       let svg = d3.select(d3Container.current).select("svg");
+
+      // Clear previous content but keep the SVG if it exists
       svg.selectAll("*").remove();
 
       if (svg.empty()) {
@@ -223,6 +291,31 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .attr("preserveAspectRatio", "xMidYMin meet")
         .attr("width", "100%")
         .attr("height", "100%");
+
+      // Back button for mobile fullscreen
+      if (isFullscreenMobile) {
+        const backBtn = svg.append("g")
+          .attr("class", "back-button")
+          .attr("cursor", "pointer")
+          .on("click", () => navigate('/dashboard'));
+
+        backBtn.append("rect")
+          .attr("x", 20)
+          .attr("y", 20)
+          .attr("width", 100)
+          .attr("height", 40)
+          .attr("rx", 20)
+          .attr("fill", "rgba(0, 243, 255, 0.2)")
+          .attr("stroke", "#00f3ff");
+
+        backBtn.append("text")
+          .attr("x", 70)
+          .attr("y", 45)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#00f3ff")
+          .attr("font-family", "Orbitron")
+          .text("BACK");
+      }
 
       const defs = svg.append("defs");
       const gradient = defs
@@ -255,23 +348,49 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       feMerge.append("feMergeNode").attr("in", "coloredBlur");
       feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-      // Performance Note: Force simulation is run once per data update.
-      // Running it for a fixed number of ticks (e.g., 150) is efficient for static layouts.
-      // Avoid running the simulation continuously if not needed.
-      const randomizedStarData = starData.map((d) => ({
+      // Constellation Force Simulation
+      const nodes = starData.map(d => ({
         ...d,
-        x: Math.random() * clientWidth,
-        y: Math.random() * clientHeight,
-      })); // Important: simulation is stopped after ticks.
+        x: d.parentId ? 0 : Math.random() * clientWidth,
+        y: d.parentId ? 0 : Math.random() * clientHeight
+      }));
+
+      const constellationLinks = links.map(l => ({
+        source: nodes.find(n => n.id === l.source),
+        target: nodes.find(n => n.id === l.target)
+      })).filter(l => l.source && l.target);
+
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(constellationLinks).id(d => d.id).distance(isFullscreenMobile ? 100 : 40).strength(1))
+        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -100 : -30))
+        .force("center", d3.forceCenter(clientWidth / 2, clientHeight / 2))
+        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)))
+        .stop();
+
+      // Manually run simulation for a few ticks to reach stable state
+      for (let i = 0; i < 150; ++i) simulation.tick();
+
+      // Draw constellation links
+      svg.selectAll(".constellation-link")
+        .data(constellationLinks)
+        .enter()
+        .insert("line", ":first-child")
+        .attr("class", "constellation-link")
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y)
+        .attr("stroke", "rgba(255, 255, 255, 0.15)")
+        .attr("stroke-width", 1);
 
       // Active help routes: draw lines between tasks and their related needs
       const routes = [];
-      const tasks = randomizedStarData.filter(d => d.type === "task");
-      const needs = randomizedStarData.filter(d => d.type === "need");
+      const tasks = nodes.filter(d => d.type === "task");
+      const needsDataNodes = nodes.filter(d => d.type === "need");
 
       tasks.forEach(task => {
         if (task.raw_data.related_need_id) {
-          const targetNeed = needs.find(n => n.raw_data.id === task.raw_data.related_need_id);
+          const targetNeed = needsDataNodes.find(n => n.raw_data.id === task.raw_data.related_need_id);
           if (targetNeed) {
             routes.push({
               id: `route-${task.id}-${targetNeed.id}`,
@@ -298,7 +417,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
       const visualStars = svg
         .selectAll(".star")
-        .data(randomizedStarData, (d) => d.id) // Keying data by d.id is good for object constancy.
+        .data(nodes, (d) => d.id)
         .enter()
         .append("circle")
         .attr(
@@ -306,31 +425,29 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           (d) =>
             `star star-${d.type} star-status-${
               d.status.toLowerCase().split("-")[0]
-            }`
+            } ${(!enableTooltips && !enableClicks) ? 'view-only' : ''}`
         )
         .attr("cx", (d) => d.x)
         .attr("cy", (d) => d.y)
         .attr("r", (d) => getStarRadius(d))
-        .attr("fill", "url(#starGradient)")
         .attr("fill", (d) => getStarColor(d))
         .attr("opacity", (d) => getStarBrightness(d))
         .style("filter", "url(#glow)")
         .style("animation-delay", () => `${Math.random() * 3}s`);
 
-      // const tooltip = d3.select(tooltipRef.current); // Replaced by tooltipD3
-      const tooltip = tooltipD3; // Use the D3 managed tooltip
+      const tooltip = tooltipD3;
 
       const eventCircles = svg
         .selectAll(".star-event-radius") 
-        .data(randomizedStarData, (d) => d.id)
+        .data(nodes, (d) => d.id)
         .enter()
         .append("circle")
         .attr("class", "star-event-radius")
         .attr("cx", (d) => d.x)
         .attr("cy", (d) => d.y)
-        .attr("r", (d) => getStarRadius(d) + 10) // Increased radius
+        .attr("r", (d) => getStarRadius(d) + (isFullscreenMobile ? 30 : 10))
         .style("fill", "transparent") 
-        .style("cursor", enableClicks ? "pointer" : "default"); // Conditional cursor
+        .style("cursor", (enableClicks && !isFullscreenMobile) ? "pointer" : "default");
 
       if (enableTooltips) {
         eventCircles.on("mouseover", (event, d) => {          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
@@ -397,7 +514,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         });
       }
 
-      if (enableClicks) {
+      if (enableClicks && !isFullscreenMobile) {
         eventCircles.on("click", (event, d) => {
           const [type, idOnly] = d.id.split('-'); 
 
@@ -416,8 +533,115 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         });
       }
 
+      // Mobile Interactions
+      if (isFullscreenMobile) {
+        let lastTap = 0;
+        let hoveredNode = null;
+
+        const showTooltipForNode = (event, d) => {
+          hoveredNode = d;
+          tooltipD3.transition().duration(200).style("opacity", 0.9);
+          tooltipD3.html(`
+            <div class="tooltip-name">${d.name} (${d.type})</div>
+            <div class="tooltip-status">Status: ${d.status}</div>
+            <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
+            <div class="tooltip-contributors">Contributors: ${d.contributors}</div>
+          `);
+
+          const tooltipNode = tooltipD3.node();
+          const ttWidth = tooltipNode.offsetWidth;
+          const ttHeight = tooltipNode.offsetHeight;
+          const touchX = event.touches[0].pageX;
+          const touchY = event.touches[0].pageY;
+
+          let left = touchX + 20;
+          let top = touchY + 20;
+
+          if (left + ttWidth > window.innerWidth) left = touchX - ttWidth - 20;
+          if (top + ttHeight > window.innerHeight) top = touchY - ttHeight - 20;
+
+          tooltipD3.style("left", `${left}px`).style("top", `${top}px`);
+        };
+
+        const hideTooltip = () => {
+          hoveredNode = null;
+          tooltipD3.transition().duration(500).style("opacity", 0);
+        };
+
+        const navigateToNode = (d) => {
+          const [type, idOnly] = d.id.split('-');
+          if (type === "task") {
+            const projectId = d.raw_data.project_id;
+            if (projectId) navigate(`/visualizer/${projectId}/${idOnly}`);
+          } else if (type === "project") {
+            navigate(`/visualizer/${idOnly}/`);
+          } else if (type === "community") {
+            navigate(`/communityhub/${idOnly}`);
+          }
+        };
+
+        svg.on("touchstart", (event) => {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+
+          // Find if we touched a node
+          const touchX = event.touches[0].clientX;
+          const touchY = event.touches[0].clientY;
+          const pt = svg.node().createSVGPoint();
+          pt.x = touchX;
+          pt.y = touchY;
+          const cursorPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+
+          const touchedNode = nodes.find(n => {
+            const dx = n.x - cursorPt.x;
+            const dy = n.y - cursorPt.y;
+            return Math.sqrt(dx*dx + dy*dy) < (getStarRadius(n) + 30);
+          });
+
+          if (touchedNode) {
+            if (tapLength < 300 && tapLength > 0) {
+              // Double tap
+              navigateToNode(touchedNode);
+            } else {
+              // Single tap - show tooltip
+              showTooltipForNode(event, touchedNode);
+            }
+          } else {
+            hideTooltip();
+          }
+          lastTap = currentTime;
+        });
+
+        svg.on("touchmove", (event) => {
+          const touchX = event.touches[0].clientX;
+          const touchY = event.touches[0].clientY;
+          const pt = svg.node().createSVGPoint();
+          pt.x = touchX;
+          pt.y = touchY;
+          const cursorPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+
+          const overNode = nodes.find(n => {
+            const dx = n.x - cursorPt.x;
+            const dy = n.y - cursorPt.y;
+            return Math.sqrt(dx*dx + dy*dy) < (getStarRadius(n) + 30);
+          });
+
+          if (overNode) {
+            showTooltipForNode(event, overNode);
+          } else {
+            hideTooltip();
+          }
+        });
+
+        svg.on("touchend", () => {
+          // Keep tooltip visible or hide after delay?
+          // Requirements say tap and drag allows browsing, double tap navigates.
+          // Hiding on end might be too aggressive if they want to read.
+        });
+      }
+
       // Create sonar ping effect for urgent tasks and all needs
-      const urgentStarsData = randomizedStarData.filter(d =>
+      const urgentStarsData = nodes.filter(d =>
         d.status.toLowerCase().includes("urgent") ||
         d.status.toLowerCase().includes("critical") ||
         d.type === "need"

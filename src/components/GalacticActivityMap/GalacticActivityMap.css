@@ -46,6 +46,10 @@ body {
   /* stroke-width: 0.5px; */
 }
 
+.star.view-only {
+  pointer-events: none;
+}
+
 /* Specific styles if needed, e.g. different base glow for urgent items */
 .star-status-urgent {
   /* Example: Could have a stronger base for glow via CSS if SVG filter is complex */
