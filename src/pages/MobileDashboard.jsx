@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import MobileTaskCard from '../components/MobileTaskCard';
 import ChronicleTimeline from '../components/ChronicleTimeline';
+import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -190,8 +191,12 @@ const MobileDashboard = () => {
         mb: 3,
         backgroundColor: 'rgba(10, 10, 46, 0.8)',
         border: '1px solid #00F3FF',
-        borderRadius: '12px'
+        borderRadius: '12px',
+        overflow: 'hidden'
       }}>
+        <Box sx={{ height: '200px', width: '100%', mb: 2, position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(0, 243, 255, 0.3)' }}>
+            <GalacticActivityMap showLoadingText={false} enableTooltips={false} enableClicks={true} />
+        </Box>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box display="flex" alignItems="center" gap={2} mb={1}>
             <Avatar src={user.picture} sx={{ border: '2px solid #00F3FF' }} />

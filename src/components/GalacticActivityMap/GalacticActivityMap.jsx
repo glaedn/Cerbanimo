@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from "axios";
 import { useCrisis } from "../../context/CrisisContext";
 import { useUserProfile } from "../../hooks/useUserProfile";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 // Performance Note:
 // MAP_WIDTH and MAP_HEIGHT are calculated once on component load.
@@ -16,6 +17,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const d3Container = useRef(null);
   const { isCrisisMode } = useCrisis();
   const { profile } = useUserProfile();
+  const isMobile = useIsMobile();
   const location = useLocation();
   const isFullscreenMobile = location.pathname === '/activity-map';
 
@@ -68,14 +70,20 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       setIsLoading(true);
       setError(null);
       try {
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: `${import.meta.env.VITE_BACKEND_URL}`,
-            scope: "openid profile email",
-          },
-          cacheMode: "off",
-        });
-        const config = { headers: { Authorization: `Bearer ${token}` } };
+        let token = null;
+        try {
+          token = await getAccessTokenSilently({
+            authorizationParams: {
+              audience: `${import.meta.env.VITE_BACKEND_URL}`,
+              scope: "openid profile email",
+            },
+            cacheMode: "off",
+          });
+        } catch (authErr) {
+          console.warn("Auth token fetch failed, proceeding with public access:", authErr.message);
+        }
+
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
         const fetchWithFallback = async (url) => {
           try {
             const res = await axios.get(url, config);
@@ -99,21 +107,44 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         const needs = Array.isArray(needsData) ? needsData : [];
         const resources = Array.isArray(resourcesData) ? resourcesData : [];
 
-        tasks.forEach((task) => {
+        const needsBoardProject = projects.find(p => p.name === 'Needs Board');
+
+        // 1. Communities
+        const communities = communitiesRaw?.communities || communitiesRaw || [];
+        communities.forEach((community) => {
           processedData.push({
-            id: `task-${task.id}`,
-            type: "task",
-            name: task.name,
-            status: task.status || "inactive",
-            lastActivity: new Date(task.updated_at || task.created_at),
-            contributors: task.assigned_user_ids
-              ? task.assigned_user_ids.length
-              : 0,
-            parentId: task.project_id ? `project-${task.project_id}` : null,
-            raw_data: task,
+            id: `community-${community.id}`,
+            type: "community",
+            name: community.name,
+            status: "active",
+            lastActivity: new Date(community.updated_at || community.created_at || Date.now()),
+            contributors: community.members ? community.members.length : 0,
+            raw_data: community,
           });
         });
 
+        // 2. Needs
+        needs.forEach((need) => {
+          let parentId = null;
+          if (need.requestor_community_id) {
+            parentId = `community-${need.requestor_community_id}`;
+          } else if (needsBoardProject && tasks.some(t => t.project_id === needsBoardProject.id && t.related_need_id === need.id)) {
+            parentId = `project-${needsBoardProject.id}`;
+          }
+
+          processedData.push({
+            id: `need-${need.id}`,
+            type: "need",
+            name: need.name,
+            status: need.urgency_level || need.urgency || "medium",
+            lastActivity: new Date(need.updated_at || need.created_at || Date.now()),
+            contributors: 0,
+            parentId: parentId,
+            raw_data: need,
+          });
+        });
+
+        // 3. Projects
         projects.forEach((project) => {
           let projectStatus = "active";
           const projectTasks = tasks.filter(t => t.project_id === project.id);
@@ -127,52 +158,68 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           if (urgentTasksInProject.length > 0) projectStatus = "urgent";
           else if (activeTasksInProject.length < 1) projectStatus = "inactive";
 
-          // Find if this project is linked to a need
-          const relatedNeed = needs.find(n => n.project_id === project.id);
+          // Hierarchy: Community -> Need -> Project
+          const relatedNeed = needs.find(n => n.linked_project_id === project.id || n.project_id === project.id);
+          let parentId = null;
+          if (relatedNeed) {
+            parentId = `need-${relatedNeed.id}`;
+          } else if (project.community_id) {
+            parentId = `community-${project.community_id}`;
+          }
 
           processedData.push({
             id: `project-${project.id}`,
             type: "project",
             name: project.name,
             status: projectStatus,
-            lastActivity: new Date(
-              project.updated_at || project.created_at || Date.now()
-            ),
+            lastActivity: new Date(project.updated_at || project.created_at || Date.now()),
             contributors: project.creator_id ? 1 : 0,
-            parentId: relatedNeed ? `need-${relatedNeed.id}` : (project.community_id ? `community-${project.community_id}` : null),
+            parentId: parentId,
             raw_data: project,
           });
         });
-        const communities =
-          communitiesRaw?.communities || communitiesRaw || [];
-        communities.forEach((community) => {
+
+        // 4. Tasks
+        tasks.forEach((task) => {
+          let parentId = null;
+          // Hierarchy: Project -> Task -> subtask
+          // Also Simple Need -> Task
+          if (task.related_need_id) {
+            parentId = `need-${task.related_need_id}`;
+          } else if (task.dependencies && task.dependencies.length > 0) {
+            parentId = `task-${task.dependencies[0]}`;
+          } else if (task.project_id) {
+            parentId = `project-${task.project_id}`;
+          }
+
           processedData.push({
-            id: `community-${community.id}`,
-            type: "community",
-            name: community.name,
-            status: "active",
-            lastActivity: new Date(
-              community.updated_at || community.created_at || Date.now()
-            ),
-            contributors: community.members ? community.members.length : 0,
-            raw_data: community,
+            id: `task-${task.id}`,
+            type: "task",
+            name: task.name,
+            status: task.status || "inactive",
+            lastActivity: new Date(task.updated_at || task.created_at),
+            contributors: task.assigned_user_ids ? task.assigned_user_ids.length : 0,
+            parentId: parentId,
+            raw_data: task,
           });
         });
 
-        needs.forEach((need) => {
-          processedData.push({
-            id: `need-${need.id}`,
-            type: "need",
-            name: need.name,
-            status: need.urgency_level || need.urgency || "medium",
-            lastActivity: new Date(need.updated_at || need.created_at || Date.now()),
-            contributors: 0,
-            parentId: need.requestor_community_id ? `community-${need.requestor_community_id}` : null,
-            raw_data: need,
-          });
-        });
-
+        // 5. Resources
         resources.forEach((resource) => {
+          // Hierarchy: Community -> Need -> Resource
+          // User Resource (no constellation)
+          let parentId = null;
+          if (resource.owner_community_id) {
+             // Find if there's a need linked to this resource?
+             // Requirement says Community -> Need -> Resource
+             // Let's see if we can find a need in that community that might be related.
+             // For now, if community owned, link to community if no need found.
+             // If we want exact Community -> Need -> Resource, we need a link.
+             // Checking if any need in the same community has this resource category.
+             const relatedNeed = needs.find(n => n.requestor_community_id === resource.owner_community_id && n.category === resource.category);
+             parentId = relatedNeed ? `need-${relatedNeed.id}` : `community-${resource.owner_community_id}`;
+          }
+
           processedData.push({
             id: `resource-${resource.id}`,
             type: "resource",
@@ -180,7 +227,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             status: resource.status || "available",
             lastActivity: new Date(resource.updated_at || resource.created_at || Date.now()),
             contributors: 0,
-            parentId: resource.owner_community_id ? `community-${resource.owner_community_id}` : null,
+            parentId: parentId,
             raw_data: resource,
           });
         });
@@ -193,20 +240,63 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             )
           : processedData;
 
-        // Task dependencies hierarchy adjustment
-        filteredData.forEach(item => {
-          if (item.type === 'task' && item.raw_data.dependencies && item.raw_data.dependencies.length > 0) {
-            // Take the first dependency as the parent for simplicity in a tree structure
-            // In a real constellation, it could have multiple parents, but D3 tree-like force usually prefers one
-            const depId = `task-${item.raw_data.dependencies[0]}`;
-            if (filteredData.some(d => d.id === depId)) {
-              item.parentId = depId;
-            }
-          }
-        });
+        // Task relevance filtering
+        const isRelevantMode = isMobile && !isFullscreenMobile;
+        if (isRelevantMode && profile) {
+          const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+          const isAvailable = profile.capacity_status === 'available';
+          const userSkillIds = new Set((profile.skills || []).map(s => s.id));
+          const userCommunityIds = new Set(communities.filter(c => c.members?.includes(profile.id)).map(c => c.id));
 
-        // User relevance filtering for mobile fullscreen
-        if (isFullscreenMobile && profile) {
+          const relevantIds = new Set();
+
+          filteredData.forEach(item => {
+            let isRelevant = false;
+            const createdAt = new Date(item.raw_data.created_at || item.raw_data.updated_at);
+            const isRecent = createdAt > fifteenDaysAgo;
+
+            if (item.type === 'community') {
+              if (userCommunityIds.has(item.raw_data.id)) isRelevant = true;
+            } else if (item.type === 'project') {
+              if (userCommunityIds.has(item.raw_data.community_id)) isRelevant = true;
+              if (isAvailable && isRecent) {
+                const linkedNeed = needs.find(n => n.linked_project_id === item.raw_data.id || n.project_id === item.raw_data.id);
+                if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+              }
+            } else if (item.type === 'task') {
+              if (userSkillIds.has(item.raw_data.skill_id)) isRelevant = true;
+              const project = projects.find(p => p.id === item.raw_data.project_id);
+              if (project && userCommunityIds.has(project.community_id)) isRelevant = true;
+              if (isAvailable && isRecent) {
+                if (item.raw_data.related_need_id) {
+                   const linkedNeed = needs.find(n => n.id === item.raw_data.related_need_id);
+                   if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+                } else if (project) {
+                   const linkedNeed = needs.find(n => n.linked_project_id === project.id || n.project_id === project.id);
+                   if (linkedNeed && new Date(linkedNeed.created_at) > fifteenDaysAgo) isRelevant = true;
+                }
+              }
+            } else if (item.type === 'need') {
+              if (isAvailable && isRecent) isRelevant = true;
+              if (userCommunityIds.has(item.raw_data.requestor_community_id)) isRelevant = true;
+            } else if (item.type === 'resource') {
+              if (isAvailable && isRecent) isRelevant = true;
+              if (userCommunityIds.has(item.raw_data.owner_community_id)) isRelevant = true;
+            }
+
+            if (isRelevant) {
+              relevantIds.add(item.id);
+              // Trace up to include parents for visual consistency
+              let current = item;
+              while (current && current.parentId) {
+                relevantIds.add(current.parentId);
+                current = filteredData.find(d => d.id === current.parentId);
+              }
+            }
+          });
+          filteredData = filteredData.filter(d => relevantIds.has(d.id));
+        } else if (isFullscreenMobile && profile) {
+          // Keep existing fullscreen mobile filtering logic
           const relevantIds = new Set();
           filteredData.forEach(item => {
             let isRelevant = false;
@@ -225,7 +315,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
             if (isRelevant) {
               relevantIds.add(item.id);
-              // Trace up to include parents
               let current = item;
               while (current && current.parentId) {
                 relevantIds.add(current.parentId);
@@ -360,11 +449,18 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         target: nodes.find(n => n.id === l.target)
       })).filter(l => l.source && l.target);
 
+      const padding = 20;
       const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(constellationLinks).id(d => d.id).distance(isFullscreenMobile ? 100 : 40).strength(1))
         .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -100 : -30))
         .force("center", d3.forceCenter(clientWidth / 2, clientHeight / 2))
         .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)))
+        .force("box", () => {
+          for (const node of nodes) {
+            node.x = Math.max(padding, Math.min(clientWidth - padding, node.x));
+            node.y = Math.max(padding, Math.min(clientHeight - padding, node.y));
+          }
+        })
         .stop();
 
       // Manually run simulation for a few ticks to reach stable state
