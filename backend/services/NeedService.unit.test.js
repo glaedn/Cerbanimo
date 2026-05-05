@@ -53,4 +53,26 @@ describe('NeedService', () => {
       expect.objectContaining({ message: expect.stringContaining('Match Need') })
     );
   });
+
+  describe('Complexity Score and Urgency', () => {
+    it('calculates higher complexity for higher urgency', async () => {
+      const lowNeed = { description: 'Short', urgency: 'low' };
+      const highNeed = { description: 'Short', urgency: 'high' };
+
+      const lowScore = NeedService.calculateComplexityScore(lowNeed);
+      const highScore = NeedService.calculateComplexityScore(highNeed);
+
+      expect(highScore).toBeGreaterThan(lowScore);
+    });
+
+    it('calculates critical urgency same as high for complexity', async () => {
+      const highNeed = { description: 'Short', urgency: 'high' };
+      const criticalNeed = { description: 'Short', urgency: 'critical' };
+
+      const highScore = NeedService.calculateComplexityScore(highNeed);
+      const criticalScore = NeedService.calculateComplexityScore(criticalNeed);
+
+      expect(criticalScore).toEqual(highScore);
+    });
+  });
 });

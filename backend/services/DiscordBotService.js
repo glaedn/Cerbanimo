@@ -329,11 +329,18 @@ class DiscordBotService {
               .setPlaceholder('Describe what you need help with')
               .setRequired(true);
 
-            const urgencyInput = new TextInputBuilder()
-              .setCustomId('need_urgency')
-              .setLabel('Urgency (low, medium, high, critical)')
+            const daysInput = new TextInputBuilder()
+              .setCustomId('need_days')
+              .setLabel('When is this needed?')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('medium')
+              .setPlaceholder('Number of days')
+              .setRequired(false);
+
+            const hoursInput = new TextInputBuilder()
+              .setCustomId('need_hours')
+              .setLabel('When is this needed?')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('Number hours')
               .setRequired(false);
 
             const categoryInput = new TextInputBuilder()
@@ -343,19 +350,12 @@ class DiscordBotService {
                 .setPlaceholder('Goods')
                 .setRequired(false);
 
-            const locationInput = new TextInputBuilder()
-                .setCustomId('need_location')
-                .setLabel('Location')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Where is this needed?')
-                .setRequired(false);
-
             modal.addComponents(
               new ActionRowBuilder().addComponents(titleInput),
               new ActionRowBuilder().addComponents(descriptionInput),
-              new ActionRowBuilder().addComponents(urgencyInput),
-              new ActionRowBuilder().addComponents(categoryInput),
-              new ActionRowBuilder().addComponents(locationInput)
+              new ActionRowBuilder().addComponents(daysInput),
+              new ActionRowBuilder().addComponents(hoursInput),
+              new ActionRowBuilder().addComponents(categoryInput)
             );
 
             await interaction.showModal(modal);
@@ -437,8 +437,35 @@ class DiscordBotService {
           if (interaction.customId === 'need_create_modal') {
               const name = interaction.fields.getTextInputValue('need_title');
               const description = interaction.fields.getTextInputValue('need_description');
-              const urgency = interaction.fields.getTextInputValue('need_urgency') || 'medium';
+              const days = parseInt(interaction.fields.getTextInputValue('need_days')) || 0;
+              const hours = parseInt(interaction.fields.getTextInputValue('need_hours')) || 0;
               const category = interaction.fields.getTextInputValue('need_category');
+
+              // Calculate required_before_date and urgency
+              let required_before_date;
+              if (days === 0 && hours === 0) {
+                  // Default to 1 week from now
+                  required_before_date = new Date();
+                  required_before_date.setDate(required_before_date.getDate() + 7);
+              } else {
+                  required_before_date = new Date();
+                  required_before_date.setDate(required_before_date.getDate() + days);
+                  required_before_date.setHours(required_before_date.getHours() + hours);
+              }
+
+              const diffMs = required_before_date.getTime() - Date.now();
+              const diffHours = diffMs / (1000 * 60 * 60);
+
+              let urgency = 'medium';
+              if (diffHours < 24) {
+                  urgency = 'critical';
+              } else if (diffHours < 72) { // 3 days
+                  urgency = 'high';
+              } else if (diffHours < 168) { // 7 days
+                  urgency = 'medium';
+              } else {
+                  urgency = 'low';
+              }
 
               try {
                   const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
@@ -448,8 +475,9 @@ class DiscordBotService {
                     name,
                     description,
                     urgency,
+                    urgency_level: urgency,
+                    required_before_date: required_before_date.toISOString(),
                     category,
-                    location_text: interaction.fields.getTextInputValue('need_location'),
                     requestor_user_id: linkedUser.id,
                     requestor_community_id: communityId,
                     source: 'discord'
