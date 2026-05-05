@@ -29,11 +29,33 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     error: null,
   });
   const { starData, links, isLoading, error } = mapState;
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const { getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
   const hasWarped = useRef(false);
   const isFetching = useRef(false);
+
+  // Robust dimension tracking
+  useEffect(() => {
+    if (!d3Container.current) return;
+
+    const updateDims = () => {
+      if (!d3Container.current) return;
+      const { clientWidth, clientHeight } = d3Container.current;
+      setDimensions(prev => {
+        if (Math.abs(prev.width - clientWidth) < 2 && Math.abs(prev.height - clientHeight) < 2) return prev;
+        return { width: clientWidth, height: clientHeight };
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(() => updateDims());
+    resizeObserver.observe(d3Container.current);
+    updateDims();
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
   // Helper functions (getStarColor, getStarRadius, getStarBrightness)
   // Performance Note: These functions are called per star during rendering or updates.
   // They are currently simple and efficient. Avoid complex computations here if possible,
@@ -69,6 +91,29 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       (now - new Date(item.lastActivity)) / (1000 * 60 * 60 * 24);
     return Math.max(0.15, 1 - diffDays / 30); // Fade to 0.15 over 30 days
   };
+
+  const getRelevanceScore = (item) => {
+    let score = 0;
+    const now = new Date();
+    const ageDays = (now - new Date(item.lastActivity)) / (1000 * 60 * 60 * 24);
+
+    // Recency (up to 0.5)
+    score += Math.max(0, 0.5 * (1 - ageDays / 30));
+
+    // Status (up to 0.3)
+    const status = item.status.toLowerCase();
+    if (status.includes('urgent') || status.includes('critical')) score += 0.3;
+    else if (status.includes('active')) score += 0.15;
+
+    // Type (up to 0.2)
+    if (item.type === 'community') score += 0.2;
+    else if (item.type === 'need') score += 0.15;
+    else if (item.type === 'project') score += 0.1;
+    else score += 0.05;
+
+    return Math.min(1, score);
+  };
+
   // useEffect for fetching data (remains the same)
   useEffect(() => {
     const fetchData = async () => {
@@ -298,6 +343,10 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
               }
             }
           });
+          // Ensure we have some fallbacks if relevance is too thin
+          if (relevantIds.size < 5) {
+             filteredData.sort((a, b) => b.lastActivity - a.lastActivity).slice(0, 10).forEach(item => relevantIds.add(item.id));
+          }
           filteredData = filteredData.filter(d => relevantIds.has(d.id));
         } else if (isFullscreenMobile && profile) {
           // Keep existing fullscreen mobile filtering logic
@@ -369,13 +418,36 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       .attr("class", "galactic-tooltip galactic-tooltip-managed-by-d3") // Add a specific class for removal
       .style("opacity", 0)
       .style("position", "absolute") // Crucial: ensure it's absolutely positioned
-      .style("pointer-events", "none") // Crucial: ensure it doesn't intercept mouse events
+      .style("pointer-events", isFullscreenMobile ? "auto" : "none") // Allow interaction on mobile for nav button
       .style("z-index", 1000); // Ensure it's on top
     // --- Tooltip Management with D3 END ---
 
-    if (d3Container.current && !isLoading && !error && starData.length > 0) {
-      const { clientWidth, clientHeight } = d3Container.current;
-      if (clientWidth === 0 || clientHeight === 0) return;
+    const navigateToNode = (d) => {
+      const [type, idOnly] = d.id.split('-');
+      if (type === "task") {
+        const projectId = d.raw_data.project_id;
+        if (projectId) navigate(`/visualizer/${projectId}/${idOnly}`);
+      } else if (type === "project") {
+        navigate(`/visualizer/${idOnly}/`);
+      } else if (type === "community") {
+        navigate(`/communityhub/${idOnly}`);
+      }
+    };
+
+    const handleGlobalNavClick = (e) => {
+       if (e.target.classList.contains('tooltip-nav-btn')) {
+         const id = e.target.getAttribute('data-id');
+         const d = starData.find(n => n.id === id);
+         if (d) {
+           navigateToNode(d);
+           tooltipD3.style("opacity", 0).style("pointer-events", "none");
+         }
+       }
+    };
+    document.addEventListener('click', handleGlobalNavClick);
+
+    if (d3Container.current && !isLoading && !error && starData.length > 0 && dimensions.width > 0) {
+      const { width: clientWidth, height: clientHeight } = dimensions;
       let svg = d3.select(d3Container.current).select("svg");
 
       // Clear previous content but keep the SVG if it exists
@@ -394,13 +466,15 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       const g = svg.append("g").attr("class", "map-content");
 
       // D3 Zoom implementation
-      const zoom = d3.zoom()
-        .scaleExtent([0.1, 5])
-        .on("zoom", (event) => {
-          g.attr("transform", event.transform);
-        });
+      if (enableClicks) {
+        const zoom = d3.zoom()
+          .scaleExtent([0.1, 5])
+          .on("zoom", (event) => {
+            g.attr("transform", event.transform);
+          });
 
-      svg.call(zoom);
+        svg.call(zoom);
+      }
 
       // Warp drive effect: start far away and zoom in
       if (!hasWarped.current) {
@@ -472,15 +546,19 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
       // Constellation Force Simulation
-      // Deterministic seeded positioning
+      // Deterministic seeded positioning (Circular distribution to prevent cylinder squash)
       const getSeededPos = (id, width, height) => {
         let hash = 0;
         for (let i = 0; i < id.length; i++) {
           hash = id.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const x = (Math.abs(hash) % width);
-        const y = (Math.abs(hash * 13) % height);
-        return { x, y };
+        const radius = Math.min(width, height) * 0.4;
+        const angle = (Math.abs(hash) % 360) * (Math.PI / 180);
+        const dist = (Math.abs(hash * 13) % radius);
+        return {
+          x: width / 2 + dist * Math.cos(angle),
+          y: height / 2 + dist * Math.sin(angle)
+        };
       };
 
       const nodes = starData.map(d => {
@@ -498,30 +576,16 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       })).filter(l => l.source && l.target);
 
       const padding = 20;
+      const minDim = Math.min(clientWidth, clientHeight);
       const simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(constellationLinks).id(d => d.id).distance(isFullscreenMobile ? 100 : 40).strength(1))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -150 : -60))
-        .force("x", d3.forceX(clientWidth / 2).strength(d => {
-           let s = 0.05;
-           if (d.status.toLowerCase().includes('urgent')) s += 0.15;
-           const daysOld = (new Date() - new Date(d.lastActivity)) / (1000 * 60 * 60 * 24);
-           if (daysOld < 15) s += 0.1;
-           return s;
-        }))
-        .force("y", d3.forceY(clientHeight / 2).strength(d => {
-           let s = 0.05;
-           if (d.status.toLowerCase().includes('urgent')) s += 0.15;
-           const daysOld = (new Date() - new Date(d.lastActivity)) / (1000 * 60 * 60 * 24);
-           if (daysOld < 15) s += 0.1;
-           return s;
-        }))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 40 : 20)))
-        .force("box", () => {
-          for (const node of nodes) {
-            node.x = Math.max(-clientWidth, Math.min(clientWidth * 2, node.x));
-            node.y = Math.max(-clientHeight, Math.min(clientHeight * 2, node.y));
-          }
-        })
+        .force("link", d3.forceLink(constellationLinks).id(d => d.id).distance(isFullscreenMobile ? 120 : minDim * 0.1).strength(1))
+        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -200 : -minDim * 0.2))
+        .force("radial", d3.forceRadial(d => {
+           const relevance = getRelevanceScore(d);
+           const maxRad = isFullscreenMobile ? minDim * 0.8 : minDim * 0.45;
+           return (1 - relevance) * maxRad;
+        }, clientWidth / 2, clientHeight / 2).strength(1.2))
+        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 50 : 30)))
         .stop();
 
       // Manually run simulation for a few ticks to reach stable state
@@ -605,7 +669,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .attr("cy", (d) => d.y)
         .attr("r", (d) => getStarRadius(d) + (isFullscreenMobile ? 30 : 10))
         .style("fill", "transparent") 
-        .style("cursor", (enableClicks && !isFullscreenMobile) ? "pointer" : "default");
+        .style("cursor", (enableClicks && !isFullscreenMobile) ? "pointer" : "default").style("pointer-events", (!enableClicks && !enableTooltips) ? "none" : "auto");
 
       if (enableTooltips) {
         eventCircles.on("mouseover", (event, d) => {          tooltipD3.transition().duration(200).style("opacity", 0.9); // Use tooltipD3
@@ -692,59 +756,63 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       }
 
       // Mobile Interactions
-      if (isFullscreenMobile) {
+      if (enableClicks && isFullscreenMobile) {
         let lastTap = 0;
         let hoveredNode = null;
 
-        const showTooltipForNode = (event, d) => {
+        const showTooltipForNode = (event, d, touchX, touchY) => {
           hoveredNode = d;
-          tooltipD3.transition().duration(200).style("opacity", 0.9);
+          tooltipD3.transition().duration(200).style("opacity", 0.9).style("pointer-events", "auto");
           tooltipD3.html(`
             <div class="tooltip-name">${d.name} (${d.type})</div>
             <div class="tooltip-status">Status: ${d.status}</div>
             <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
             <div class="tooltip-contributors">Contributors: ${d.contributors}</div>
+            <button class="tooltip-nav-btn" data-id="${d.id}" style="
+              margin-top: 12px;
+              width: 100%;
+              background: #00f3ff;
+              color: #000;
+              border: none;
+              padding: 8px;
+              border-radius: 4px;
+              font-family: Orbitron;
+              font-weight: bold;
+              cursor: pointer;
+            ">VIEW DETAILS</button>
           `);
 
           const tooltipNode = tooltipD3.node();
           const ttWidth = tooltipNode.offsetWidth;
           const ttHeight = tooltipNode.offsetHeight;
-          const touchX = event.touches[0].pageX;
-          const touchY = event.touches[0].pageY;
 
           let left = touchX + 20;
           let top = touchY + 20;
 
           if (left + ttWidth > window.innerWidth) left = touchX - ttWidth - 20;
           if (top + ttHeight > window.innerHeight) top = touchY - ttHeight - 20;
+          if (left < 0) left = 10;
+          if (top < 0) top = 10;
 
           tooltipD3.style("left", `${left}px`).style("top", `${top}px`);
         };
 
         const hideTooltip = () => {
           hoveredNode = null;
-          tooltipD3.transition().duration(500).style("opacity", 0);
-        };
-
-        const navigateToNode = (d) => {
-          const [type, idOnly] = d.id.split('-');
-          if (type === "task") {
-            const projectId = d.raw_data.project_id;
-            if (projectId) navigate(`/visualizer/${projectId}/${idOnly}`);
-          } else if (type === "project") {
-            navigate(`/visualizer/${idOnly}/`);
-          } else if (type === "community") {
-            navigate(`/communityhub/${idOnly}`);
-          }
+          tooltipD3.transition().duration(500).style("opacity", 0).style("pointer-events", "none");
         };
 
         svg.on("touchstart", (event) => {
+          if (!enableClicks) return;
           const currentTime = new Date().getTime();
           const tapLength = currentTime - lastTap;
 
           // Find if we touched a node
           const touchX = event.touches[0].clientX;
           const touchY = event.touches[0].clientY;
+          const pageX = event.touches[0].pageX;
+          const pageY = event.touches[0].pageY;
+
           const pt = svg.node().createSVGPoint();
           pt.x = touchX;
           pt.y = touchY;
@@ -753,42 +821,32 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           const touchedNode = nodes.find(n => {
             const dx = n.x - cursorPt.x;
             const dy = n.y - cursorPt.y;
-            return Math.sqrt(dx*dx + dy*dy) < (getStarRadius(n) + 30);
+            return Math.sqrt(dx*dx + dy*dy) < (getStarRadius(n) + 40);
           });
 
           if (touchedNode) {
             if (tapLength < 300 && tapLength > 0) {
               // Double tap
               navigateToNode(touchedNode);
+              hideTooltip();
             } else {
               // Single tap - show tooltip
-              showTooltipForNode(event, touchedNode);
+              showTooltipForNode(event, touchedNode, pageX, pageY);
             }
           } else {
-            hideTooltip();
+            // Check if we touched inside the existing tooltip before hiding
+            if (!event.target.closest('.galactic-tooltip')) {
+               hideTooltip();
+            }
           }
           lastTap = currentTime;
         });
 
         svg.on("touchmove", (event) => {
-          const touchX = event.touches[0].clientX;
-          const touchY = event.touches[0].clientY;
-          const pt = svg.node().createSVGPoint();
-          pt.x = touchX;
-          pt.y = touchY;
-          const cursorPt = pt.matrixTransform(svg.node().getScreenCTM().inverse());
-
-          const overNode = nodes.find(n => {
-            const dx = n.x - cursorPt.x;
-            const dy = n.y - cursorPt.y;
-            return Math.sqrt(dx*dx + dy*dy) < (getStarRadius(n) + 30);
-          });
-
-          if (overNode) {
-            showTooltipForNode(event, overNode);
-          } else {
-            hideTooltip();
-          }
+          if (!enableClicks) return;
+          // Only show tooltip on move if nothing is currently hovered/selected
+          // or if we are actively dragging to browse.
+          // To prevent constant flickering, we'll favor the single tap for now.
         });
 
         svg.on("touchend", () => {
@@ -846,6 +904,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
     return () => {
       // Clear D3 managed tooltip
       d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
+      document.removeEventListener('click', handleGlobalNavClick);
 
       // Clear general star twinkle interval and timeouts
       if (window.starTwinkleIntervalId) {
@@ -856,7 +915,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         window.twinkleTimeoutIds = []; 
       }
     };
-  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks, isMobile, isFullscreenMobile]);
+  }, [starData, isLoading, error, navigate, enableTooltips, enableClicks, isMobile, isFullscreenMobile, dimensions]);
 
   if (isLoading) {
     if (showLoadingText) {

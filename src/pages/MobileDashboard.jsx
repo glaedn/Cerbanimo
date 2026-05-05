@@ -195,7 +195,7 @@ const MobileDashboard = () => {
         overflow: 'hidden'
       }}>
         <Box sx={{ height: '200px', width: '100%', mb: 2, position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(0, 243, 255, 0.3)' }}>
-            <GalacticActivityMap showLoadingText={false} enableTooltips={false} enableClicks={true} />
+            <GalacticActivityMap showLoadingText={false} enableTooltips={false} enableClicks={false} />
         </Box>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box display="flex" alignItems="center" gap={2} mb={1}>
