@@ -75,7 +75,15 @@ class TaskRoutingService {
 
     const userSkillsRaw = userResult.rows[0].skills || []; // Assuming skill objects {id, name}
     const userSkills = Array.isArray(userSkillsRaw)
-      ? userSkillsRaw.map(s => typeof s === 'object' ? s.id : s).filter(id => id != null)
+      ? userSkillsRaw.map(s => {
+          if (typeof s === 'string' && s.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(s);
+              return parsed.id || parsed;
+            } catch (e) { return s; }
+          }
+          return typeof s === 'object' ? s.id : s;
+        }).map(id => parseInt(id, 10)).filter(id => !isNaN(id))
       : [];
 
     // Phase 4: Matching with Impact Alignment
