@@ -1,4 +1,27 @@
+/**
+ * DiscordBotService integrates Cerbanimo with Discord, enabling mutual aid coordination
+ * and resource sharing across Discord communities. It manages Discord bot login,
+ * slash command registration, event listeners for messages, reactions, and interactions,
+ * and synchronizes needs and resources between Cerbanimo and Discord servers.
+ *
+ * Main Features:
+ * - Registers and handles Discord slash commands for needs, resources, account linking, and community configuration.
+ * - Listens for Discord events (messages, reactions, interactions) to sync with Cerbanimo.
+ * - Broadcasts new needs and resources to Discord channels and threads.
+ * - Supports cross-community alerts and message relaying between Discord guilds.
+ * - Provides utility methods for syncing comments and updates between Cerbanimo and Discord.
+ *
+ * @class
+ */
 import { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, ThreadAutoArchiveDuration, REST, Routes, SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+
+// Use VITE_ variable names for environment variables
+process.env.AUTH0_CLIENT_ID = process.env.VITE_AUTH0_CLIENT_ID;
+process.env.AUTH0_DOMAIN = process.env.VITE_AUTH0_DOMAIN;
+process.env.BACKEND_URL = process.env.VITE_BACKEND_URL;
+process.env.DISCORD_CLIENT_ID = process.env.VITE_DISCORD_CLIENT_ID;
+process.env.DISCORD_TOKEN = process.env.VITE_DISCORD_TOKEN;
+process.env.FRONTEND_URL = process.env.VITE_FRONTEND_URL;
 import pool from '../db.js';
 import { findMatchesForNeed, findMatchesForResource } from './matchingService.js';
 import { PermissionFlagsBits } from 'discord.js';
