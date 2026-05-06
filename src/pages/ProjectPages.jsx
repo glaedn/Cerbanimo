@@ -300,7 +300,7 @@ const ProjectPages = () => {
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{task.description}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {task.status}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>Skill: {skillName} (Level: {task.skill_level})</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {task.reward_tokens} tokens</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>Reward: {(task.reward_tokens || 0)} Tokens</Typography>
                     <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={1}>
                       <Button
                         variant="contained"

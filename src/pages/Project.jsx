@@ -349,7 +349,7 @@ const Project = () => {
                   <AccordionDetails>
                     <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>{task.description}</Typography>
                     <Typography variant="caption" display="block">Skill: {task.skill_name}</Typography>
-                    <Typography variant="caption" display="block">Reward: {task.reward_tokens} coTokens</Typography>
+                    <Typography variant="caption" display="block">Reward: {(task.reward_tokens || 0)} Tokens</Typography>
 
                     <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
                       {task.submitted && isProjectCreator && task.active_ind && (

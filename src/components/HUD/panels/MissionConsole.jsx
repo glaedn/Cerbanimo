@@ -153,7 +153,7 @@ const MissionConsole = () => {
                     <span className="task-name" style={{ fontWeight: 'bold', color: '#ff5ca2', fontSize: isMobile ? '0.85rem' : '1rem' }}>{mission.name}</span> <br/>
                     <span style={{ fontSize: '0.7rem', color: '#888' }}>({mission.project_name})</span>
                     <br />
-                    <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {mission.reward_tokens} Tokens</span>
+                    <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {(mission.reward_tokens || 0)} Tokens</span>
                   </div>
                   <div className="task-actions" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
                     <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>ACCEPT</button>
