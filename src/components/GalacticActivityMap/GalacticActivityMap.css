@@ -1,158 +1,78 @@
-
-body {
-
-  overflow: hidden;
-
-}
-
 .galactic-activity-map-container {
   width: 100%;
-  height: 98%; /* Full viewport height */
-  background-color: #00001a; /* Dark space blue/black */
+  height: 100%;
+  background-color: #00001a;
   color: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center; Removed to allow title at top and map below */
-  overflow: hidden; /* To prevent scrollbars if map is large */
-  padding-top: 20px; /* Add some padding for the title */
+  overflow: hidden;
+  touch-action: none; /* Crucial for mobile */
 }
-
-.galactic-activity-map-container h1 {
-  color: #00ffff; /* Neon cyan for titles */
-  text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
-  margin-bottom: 20px; /* Space between title and map */
-}
-
-/* Styles for the D3 container div */
-/* The ref `d3Container` will point to this div */
-/* Ensure it takes up the necessary space for the SVG */
-/* The style is mostly set inline in the JSX for width/height */
-/* but you can add more specific CSS here if needed */
-
-/* Ensure the d3Container div itself is centered if MAP_WIDTH/HEIGHT are less than 100% */
-/* The style for width/height of d3Container is now set in the JSX based on MAP_WIDTH/MAP_HEIGHT */
 
 .galactic-activity-map-container svg {
   display: block;
-  /* background-color: #050515; */ /* Let parent div handle the absolute background */
-  border-radius: 10px;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
 .star {
-  /* CSS transitions can smooth out attribute changes if not handled by D3 transitions */
-  transition: opacity 0.7s ease-in-out, fill 0.5s ease-in-out; 
-  /* stroke: rgba(255, 255, 255, 0.5); /* Optional: subtle stroke for definition */
-  /* stroke-width: 0.5px; */
-}
-
-.star.view-only {
-  pointer-events: none;
-}
-
-/* Specific styles if needed, e.g. different base glow for urgent items */
-.star-status-urgent {
-  /* Example: Could have a stronger base for glow via CSS if SVG filter is complex */
-  /* For now, glow is uniform via SVG filter */
   transition: opacity 0.7s ease-in-out, fill 0.5s ease-in-out;
 }
 
 .galactic-tooltip {
-  position: absolute; /* Positioned relative to the nearest positioned ancestor or initial containing block */
+  position: absolute;
   text-align: left;
-  padding: 8px 12px;
-  font-size: 13px;
-  background: rgba(40, 40, 60, 0.9); /* Dark semi-transparent background */
+  padding: 12px;
+  font-size: 14px;
+  background: rgba(10, 10, 30, 0.95);
   color: #fff;
-  border: 1px solid #00ffff; /* Neon cyan border */
-  border-radius: 6px;
-  pointer-events: none; /* So it doesn't interfere with mouse events on stars */
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* Neon glow for tooltip box */
-  white-space: nowrap; /* Prevent line breaks in tooltip content */
-  /* MODIFIED PART START */
-  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-  transform: translate(-10px, -10px) scale(0.95); /* Initial state (when opacity is 0) */
-  /* MODIFIED PART END */
-  z-index: 100; /* Ensure it's above other elements */
+  border: 1px solid #00ffff;
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+  white-space: nowrap;
+  z-index: 2000;
+  font-family: 'Orbitron', sans-serif;
 }
 
 .tooltip-name {
   font-weight: bold;
-  color: #00ffff; /* Neon cyan for name */
-  margin-bottom: 5px;
-  font-size: 15px;
+  color: #00ffff;
+  margin-bottom: 8px;
+  font-size: 16px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+  padding-bottom: 4px;
 }
 
-.tooltip-status,
-.tooltip-activity,
-.tooltip-contributors {
-  margin-bottom: 3px;
-  font-size: 12px;
+.tooltip-status, .tooltip-activity, .tooltip-contributors {
+  margin-bottom: 4px;
+  font-size: 13px;
 }
 
-/* Removed starTwinkle animation and its application to .star */
-
-.pulse-ring {
-
-  animation: pulse 3.2s infinite ease-out;
-
+.tooltip-nav-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: #00f3ff;
+  border: none;
+  padding: 10px;
+  font-family: 'Orbitron';
+  font-weight: bold;
+  color: #000;
+  cursor: pointer;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-
-
-@keyframes pulse {
-
-  0% {
-
-    r: 0;
-
-    opacity: 0.6;
-
-  }
-
-  100% {
-
-    r: 20px;
-
-    opacity: 0;
-
-  }
-
-}
-
-@keyframes sonarPing {
-  0% {
-    r: 0; /* Start from a small or zero radius */
-    opacity: 0.8;
-    stroke-width: 3px; /* Initial stroke width */
-  }
-  70% { /* Control point for stroke-width and opacity */
-    opacity: 0.4;
-    stroke-width: 1px;
-  }
-  100% {
-    r: 30px; /* Expand to a larger radius (adjust as needed) */
-    opacity: 0;
-    stroke-width: 0;
-  }
-}
-
-.sonar-ping-effect {
-  fill: none;
-  /* stroke is set dynamically in JS */
-  animation: sonarPing 2s infinite ease-out;
-  /* transform-origin: center; No longer needed if not using transform */
-  pointer-events: none; /* Keep this */
-}
-
-@keyframes starFadeTwinkle {
-  0% { filter: brightness(100%); }
-  25% { filter: brightness(120%); }
-  50% { filter: brightness(125%); }
-  75% { filter: brightness(120%); }
-  100% { filter: brightness(100%); }
-}
-
-.star-is-twinkling {
-  animation: starFadeTwinkle 1.8s ease-in-out;
+.loading-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,26,0.8);
+  z-index: 3000;
 }
