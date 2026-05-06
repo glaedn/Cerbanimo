@@ -190,10 +190,18 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       const g = svg.select(".map-content");
 
       if (enableClicks) {
-        const zoom = d3.zoom().scaleExtent([0.05, 10]).on("zoom", (e) => g.attr("transform", e.transform));
+        const zoom = d3.zoom()
+          .scaleExtent([0.01, 40])
+          .on("zoom", (e) => g.attr("transform", e.transform));
+
         svg.call(zoom);
+        if (isFullscreenMobile) {
+          svg.on("dblclick.zoom", null);
+        }
+
         if (!hasWarped.current) {
-          svg.call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(0.05).translate(-w / 2, -h / 2));
+          const initialScale = isFullscreenMobile ? 0.5 : 0.1;
+          svg.call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(initialScale).translate(-w / 2, -h / 2));
           svg.transition().duration(2500).ease(d3.easeExpOut).call(zoom.transform, d3.zoomIdentity);
           hasWarped.current = true;
         }
@@ -217,14 +225,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       if (simulationRef.current) simulationRef.current.stop();
 
       simulationRef.current = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 150 : 60).strength(0.5))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -400 : -100))
-        .force("radial", d3.forceRadial(d => (1 - getRelevance(d)) * Math.max(w, h) * 0.45, w / 2, h / 2).strength(0.9))
-        .force("center", d3.forceCenter(w / 2, h / 2).strength(0.2))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 50 : 25)))
+        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 200 : 80).strength(0.05))
+        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -2500 : -250))
+        .force("radial", d3.forceRadial(d => (1 - getRelevance(d)) * Math.min(w, h) * (isFullscreenMobile ? 1.2 : 0.45), w / 2, h / 2).strength(isFullscreenMobile ? 4 : 1))
+        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 150 : 50)).strength(1))
+        .alphaDecay(0.01)
         .stop();
 
-      const ticks = isMobile ? 100 : 180;
+      const ticks = isMobile ? 800 : 400;
       for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
 
       const link = g.selectAll(".link").data(lks);
@@ -249,9 +257,12 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       ev.exit().remove();
       const evEnter = ev.enter().append("circle").attr("class", "ev").attr("fill", "transparent");
 
+      let lastT = 0;
+      let tapTimeout;
+
       evEnter.merge(ev)
         .attr("cx", d => d.x).attr("cy", d => d.y)
-        .attr("r", d => getStarRadius(d) + (isFullscreenMobile ? 35 : 12))
+        .attr("r", d => getStarRadius(d) + (isFullscreenMobile ? 100 : 15))
         .style("cursor", (enableClicks && !isFullscreenMobile) ? "pointer" : "default")
         .style("pointer-events", (enableClicks || enableTooltips) ? "auto" : "none")
         .on("mouseover", (event, d) => {
@@ -270,47 +281,45 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           tt.transition().duration(500).style("opacity", 0);
         })
         .on("click", (event, d) => {
-          if (enableClicks && !isFullscreenMobile) nav(d);
-        });
+          if (!enableClicks) return;
+          if (!isFullscreenMobile) nav(d);
+        })
+        .on("touchstart", function(event, d) {
+          if (!enableClicks || !isFullscreenMobile) return;
+          if (event.touches.length > 1) return;
 
-      if (enableClicks && isFullscreenMobile) {
-        let lastT = 0;
-        let tapTimeout;
-        svg.on("touchstart", (event) => {
-          if (event.touches.length > 1) return; // Ignore multi-touch
+          // CRITICAL: Block browser zoom and interaction on these hits
+          event.preventDefault();
+          event.stopPropagation();
+
           const now = Date.now();
           const touch = event.touches[0];
 
-          const pt = svg.node().createSVGPoint();
-          pt.x = touch.clientX; pt.y = touch.clientY;
-          const cursor = pt.matrixTransform(g.node().getScreenCTM().inverse());
-
-          const d = nodes.find(n => Math.hypot(n.x - cursor.x, n.y - cursor.y) < (getStarRadius(n) + 45));
-
-          if (d) {
-            if (now - lastT < 350) {
-              clearTimeout(tapTimeout);
-              nav(d);
-              tt.style("opacity", 0).style("pointer-events", "none");
-            } else {
-              tapTimeout = setTimeout(() => {
-                tt.transition().duration(200).style("opacity", 0.9).style("pointer-events", "auto");
-                tt.html(`
-                  <div class="tooltip-name">${d.name} (${d.type})</div>
-                  <div class="tooltip-status">Status: ${d.status}</div>
-                  <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
-                  <div class="tooltip-contributors">Contributors: ${d.contributors || 0}</div>
-                  <button class="tooltip-nav-btn" data-id="${d.id}" style="margin-top:10px;width:100%;background:#00f3ff;border:none;padding:8px;font-family:Orbitron;font-weight:bold;color:#000;cursor:pointer;">VIEW DETAILS</button>
-                `)
-                  .style("left", Math.min(window.innerWidth - 220, touch.pageX + 10) + "px")
-                  .style("top", (touch.pageY + 10) + "px");
-              }, 350);
-            }
-            lastT = now;
+          if (now - lastT < 350) {
+            clearTimeout(tapTimeout);
+            nav(d);
+            tt.style("opacity", 0).style("pointer-events", "none");
           } else {
-            if (!event.target.closest('.galactic-tooltip')) {
-              tt.transition().duration(500).style("opacity", 0).style("pointer-events", "none");
-            }
+            tapTimeout = setTimeout(() => {
+              tt.transition().duration(200).style("opacity", 1).style("pointer-events", "auto");
+              tt.html(`
+                <div class="tooltip-name">${d.name} (${d.type})</div>
+                <div class="tooltip-status">Status: ${d.status}</div>
+                <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
+                <div class="tooltip-contributors">Contributors: ${d.contributors || 0}</div>
+                <button class="tooltip-nav-btn" data-id="${d.id}" style="margin-top:12px;width:100%;background:#00f3ff;border:none;padding:10px;font-family:Orbitron;font-weight:bold;color:#000;cursor:pointer;border-radius:4px;">VIEW DETAILS</button>
+              `)
+                .style("left", Math.min(window.innerWidth - 240, touch.pageX + 10) + "px")
+                .style("top", Math.max(10, touch.pageY - 150) + "px");
+            }, 350);
+          }
+          lastT = now;
+        }, { passive: false });
+
+      if (enableClicks && isFullscreenMobile) {
+        svg.on("touchstart", (event) => {
+          if (!event.target.closest('.ev') && !event.target.closest('.galactic-tooltip')) {
+            tt.transition().duration(400).style("opacity", 0).style("pointer-events", "none");
           }
         });
       }
