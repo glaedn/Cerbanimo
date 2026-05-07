@@ -218,30 +218,38 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
       const nodes = starData.map(d => ({ ...d, ...getP(d.id, w, h) }));
       const lks = links.map(l => ({
+        id: `link-${(l.source.id || l.source)}-${(l.target.id || l.target)}`,
         source: nodes.find(n => n.id === (l.source.id || l.source)),
         target: nodes.find(n => n.id === (l.target.id || l.target))
       })).filter(l => l.source && l.target);
 
       if (simulationRef.current) simulationRef.current.stop();
 
+      // Constellation Layout: Higher link strength, center gravity, and moderate repulsion
       simulationRef.current = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 200 : 80).strength(0.05))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -2500 : -250))
-        .force("radial", d3.forceRadial(d => (1 - getRelevance(d)) * Math.min(w, h) * (isFullscreenMobile ? 1.2 : 0.45), w / 2, h / 2).strength(isFullscreenMobile ? 4 : 1))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 150 : 50)).strength(1))
-        .alphaDecay(0.01)
+        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 120 : 60).strength(0.4))
+        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -1200 : -150))
+        .force("center", d3.forceCenter(w / 2, h / 2))
+        .force("x", d3.forceX(w / 2).strength(0.1))
+        .force("y", d3.forceY(h / 2).strength(0.1))
+        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)).strength(1))
+        .alphaDecay(0.02)
         .stop();
 
-      const ticks = isMobile ? 800 : 400;
+      // Optimization: drastically reduced ticks to prevent freezing, especially on mobile
+      const ticks = isMobile ? 150 : 300;
       for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
 
-      const link = g.selectAll(".link").data(lks);
+      const link = g.selectAll(".link").data(lks, d => d.id);
       link.exit().remove();
-      link.enter().append("line").attr("class", "link")
+      link.enter().append("line")
+        .attr("class", "link")
+        .attr("id", d => d.id)
         .merge(link)
         .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x).attr("y2", d => d.target.y)
-        .attr("stroke", "rgba(255,255,255,0.06)").attr("stroke-width", 1);
+        .attr("stroke", "rgba(255,255,255,0.12)")
+        .attr("stroke-width", 1);
 
       const star = g.selectAll(".star").data(nodes, d => d.id);
       star.exit().remove();
@@ -266,6 +274,14 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .style("cursor", (enableClicks && !isFullscreenMobile) ? "pointer" : "default")
         .style("pointer-events", (enableClicks || enableTooltips) ? "auto" : "none")
         .on("mouseover", (event, d) => {
+          // Visual Feedback: Highlight connected links
+          g.selectAll(".link")
+            .filter(l => l.source.id === d.id || l.target.id === d.id)
+            .transition().duration(200)
+            .attr("stroke", "#00f3ff")
+            .attr("stroke-width", 3)
+            .attr("stroke-opacity", 1);
+
           if (!enableTooltips || isFullscreenMobile) return;
           tt.transition().duration(200).style("opacity", 0.9);
           tt.html(`
@@ -277,6 +293,13 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             .style("left", (event.pageX + 10) + "px").style("top", (event.pageY + 10) + "px");
         })
         .on("mouseout", () => {
+          // Reset highlights
+          g.selectAll(".link")
+            .transition().duration(500)
+            .attr("stroke", "rgba(255,255,255,0.12)")
+            .attr("stroke-width", 1)
+            .attr("stroke-opacity", 0.6);
+
           if (!enableTooltips || isFullscreenMobile) return;
           tt.transition().duration(500).style("opacity", 0);
         })
@@ -285,12 +308,25 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
           if (!isFullscreenMobile) nav(d);
         })
         .on("touchstart", function(event, d) {
-          if (!enableClicks || !isFullscreenMobile) return;
+          if (!enableClicks) return;
           if (event.touches.length > 1) return;
 
           // CRITICAL: Block browser zoom and interaction on these hits
           event.preventDefault();
           event.stopPropagation();
+
+          // Reset previous highlights
+          g.selectAll(".link")
+            .attr("stroke", "rgba(255,255,255,0.12)")
+            .attr("stroke-width", 1)
+            .attr("stroke-opacity", 0.6);
+
+          // Highlight connected links
+          g.selectAll(".link")
+            .filter(l => l.source.id === d.id || l.target.id === d.id)
+            .attr("stroke", "#00f3ff")
+            .attr("stroke-width", 3)
+            .attr("stroke-opacity", 1);
 
           const now = Date.now();
           const touch = event.touches[0];
@@ -300,18 +336,20 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
             nav(d);
             tt.style("opacity", 0).style("pointer-events", "none");
           } else {
-            tapTimeout = setTimeout(() => {
-              tt.transition().duration(200).style("opacity", 1).style("pointer-events", "auto");
-              tt.html(`
-                <div class="tooltip-name">${d.name} (${d.type})</div>
-                <div class="tooltip-status">Status: ${d.status}</div>
-                <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
-                <div class="tooltip-contributors">Contributors: ${d.contributors || 0}</div>
-                <button class="tooltip-nav-btn" data-id="${d.id}" style="margin-top:12px;width:100%;background:#00f3ff;border:none;padding:10px;font-family:Orbitron;font-weight:bold;color:#000;cursor:pointer;border-radius:4px;">VIEW DETAILS</button>
-              `)
-                .style("left", Math.min(window.innerWidth - 240, touch.pageX + 10) + "px")
-                .style("top", Math.max(10, touch.pageY - 150) + "px");
-            }, 350);
+            if (enableTooltips) {
+                tapTimeout = setTimeout(() => {
+                  tt.transition().duration(200).style("opacity", 1).style("pointer-events", "auto");
+                  tt.html(`
+                    <div class="tooltip-name">${d.name} (${d.type})</div>
+                    <div class="tooltip-status">Status: ${d.status}</div>
+                    <div class="tooltip-activity">Last Active: ${new Date(d.lastActivity).toLocaleDateString()}</div>
+                    <div class="tooltip-contributors">Contributors: ${d.contributors || 0}</div>
+                    <button class="tooltip-nav-btn" data-id="${d.id}" style="margin-top:12px;width:100%;background:#00f3ff;border:none;padding:10px;font-family:Orbitron;font-weight:bold;color:#000;cursor:pointer;border-radius:4px;">VIEW DETAILS</button>
+                  `)
+                    .style("left", Math.min(window.innerWidth - 240, touch.pageX + 10) + "px")
+                    .style("top", Math.max(10, touch.pageY - 150) + "px");
+                }, 350);
+            }
           }
           lastT = now;
         }, { passive: false });
