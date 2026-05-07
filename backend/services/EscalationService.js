@@ -2,6 +2,7 @@ import pool from '../db.js';
 import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import ProjectConversionService from './ProjectConversionService.js';
+import CivicEventService from './CivicEventService.js';
 
 class EscalationService {
   async checkAndEscalateNeeds() {
@@ -64,6 +65,34 @@ class EscalationService {
       }
 
       await Promise.all(notifications);
+
+      // Record Event
+      await CivicEventService.recordEvent({
+        eventType: 'mission.escalated',
+        actorId: need.requestor_user_id,
+        entityType: 'need',
+        entityId: need.id,
+        payload: {
+          matchCount: matches.users.length + matches.resources.length,
+          urgencyLevel: need.urgency_level || need.urgency
+        },
+        correlationId: `need:${need.id}`
+      }).catch(err => console.error('Failed to record mission.escalated event:', err));
+
+      // Community Alert Event
+      if (need.requestor_community_id) {
+        await CivicEventService.recordEvent({
+          eventType: 'community.alert',
+          entityType: 'community',
+          entityId: need.requestor_community_id,
+          payload: {
+            alertType: 'need_escalation',
+            needId: need.id,
+            needName: need.name
+          },
+          correlationId: `need:${need.id}`
+        }).catch(err => console.error('Failed to record community.alert event:', err));
+      }
 
       // 3. Auto-convert if high urgency
       const urgency = (need.urgency_level || need.urgency || '').toLowerCase();

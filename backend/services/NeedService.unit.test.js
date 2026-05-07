@@ -3,6 +3,8 @@ import NeedService from './NeedService.js';
 import pool from '../db.js';
 import * as matchingService from './matchingService.js';
 import * as NotificationService from './NotificationService.js';
+import EventBusService from './EventBusService.js';
+import EventRouter from './EventRouter.js';
 
 vi.mock('../db.js');
 vi.mock('./matchingService.js');
@@ -33,8 +35,8 @@ describe('NeedService', () => {
       .rejects.toThrow('Need name is required.');
   });
 
-  it('triggers notifications for matched users', async () => {
-    const mockNeed = { id: 1, name: 'Match Need', requestor_user_id: 101 };
+  it('triggers notifications for matched users through event router', async () => {
+    const mockNeed = { id: 1, name: 'Match Need', requestor_user_id: 101, complexity_score: 1.0 };
     const matchedUser = { id: 202 };
 
     pool.query.mockResolvedValue({ rows: [mockNeed] });
@@ -43,10 +45,12 @@ describe('NeedService', () => {
       resources: []
     });
 
-    await NeedService.createNeed({ name: 'Match Need', requestor_user_id: 101 });
-
-    // Wait for the async processMatches to run
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Manually trigger the event router handler as it would be by the worker
+    await EventRouter.handleEvent({
+      eventType: 'need.created',
+      entityId: mockNeed.id,
+      actorId: 101
+    });
 
     expect(NotificationService.sendNotification).toHaveBeenCalledWith(
       202,

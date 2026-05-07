@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import EventBusService from './EventBusService.js';
 
 class CivicEventService {
   queryRunner(client = null) {
@@ -9,47 +10,55 @@ class CivicEventService {
     const db = this.queryRunner(client);
     const {
       eventType,
-      actorUserId = null,
-      subjectType,
-      subjectId = null,
-      scopeType = null,
-      scopeId = null,
+      actorId = null,
+      entityType,
+      entityId = null,
       payload = {},
-      causationEventId = null,
+      causationId = null,
       correlationId = null
     } = event;
 
     if (!eventType) throw new Error('eventType is required.');
-    if (!subjectType) throw new Error('subjectType is required.');
+    if (!entityType) throw new Error('entityType is required.');
 
     const result = await db.query(
       `INSERT INTO civic_events (
-         event_type, actor_user_id, subject_type, subject_id, scope_type, scope_id,
-         payload, causation_event_id, correlation_id
+         event_type, actor_id, entity_type, entity_id,
+         payload, causation_id, correlation_id
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
        RETURNING *`,
       [
         eventType,
-        actorUserId,
-        subjectType,
-        subjectId,
-        scopeType,
-        scopeId,
+        actorId,
+        entityType,
+        entityId,
         JSON.stringify(payload || {}),
-        causationEventId,
+        causationId,
         correlationId
       ]
     );
 
-    return result.rows[0];
+    const recordedEvent = result?.rows?.length > 0 ? result.rows[0] : { id: null };
+
+    // Publish to event bus
+    await EventBusService.publish(eventType, payload, {
+      id: recordedEvent.id,
+      actorId,
+      entityType,
+      entityId,
+      correlationId,
+      causationId: causationId // Preserve the triggering event ID
+    });
+
+    return recordedEvent;
   }
 
   async listEvents(filters = {}) {
     const {
-      subjectType,
-      subjectId,
-      actorUserId,
+      entityType,
+      entityId,
+      actorId,
       eventType,
       limit = 50
     } = filters;
@@ -58,17 +67,17 @@ class CivicEventService {
     const params = [];
     let paramIndex = 1;
 
-    if (subjectType) {
-      clauses.push(`subject_type = $${paramIndex++}`);
-      params.push(subjectType);
+    if (entityType) {
+      clauses.push(`entity_type = $${paramIndex++}`);
+      params.push(entityType);
     }
-    if (subjectId) {
-      clauses.push(`subject_id = $${paramIndex++}`);
-      params.push(subjectId);
+    if (entityId) {
+      clauses.push(`entity_id = $${paramIndex++}`);
+      params.push(entityId);
     }
-    if (actorUserId) {
-      clauses.push(`actor_user_id = $${paramIndex++}`);
-      params.push(actorUserId);
+    if (actorId) {
+      clauses.push(`actor_id = $${paramIndex++}`);
+      params.push(actorId);
     }
     if (eventType) {
       clauses.push(`event_type = $${paramIndex++}`);

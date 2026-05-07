@@ -48,6 +48,8 @@ import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
 import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
 import EscalationService from './services/EscalationService.js';
+import EventBusService from './services/EventBusService.js';
+import { startEventWorker } from './workers/eventWorker.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -418,6 +420,10 @@ async function initializeDatabase() {
 }
 
 initializeDatabase().then(async () => {
+  // Initialize Event System
+  await EventBusService.initialize();
+  startEventWorker();
+
   // Post-initialization synchronization
   try {
     await GuildService.syncGuildsWithSkills();

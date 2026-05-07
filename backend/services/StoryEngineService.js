@@ -1,5 +1,6 @@
 import pool from '../db.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import CivicEventService from './CivicEventService.js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -45,6 +46,21 @@ class StoryEngineService {
       userId, taskId, task.project_id, skillTags, role, complexity, impactWeight, dependenciesUnblocked, task.task_type, completionTime
     ]);
     const unit = unitResult.rows[0];
+
+    // Record Event
+    await CivicEventService.recordEvent({
+      eventType: 'story.created',
+      actorId: userId,
+      entityType: 'story_unit',
+      entityId: unit.id,
+      payload: {
+        taskId,
+        role,
+        complexity,
+        impactWeight
+      },
+      correlationId: `task:${taskId}`
+    }).catch(err => console.error('Failed to record story.created event:', err));
 
     // Resource Attribution Story Units
     try {

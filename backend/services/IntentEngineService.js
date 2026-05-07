@@ -64,16 +64,16 @@ class IntentEngineService {
     return result.rows[0];
   }
 
-  async registerNeedCreated(need, user = null, client = null) {
+  async registerNeedCreated(need, user = null, client = null, causationId = null) {
     const classification = this.classifyNeed(need);
     const priorityScore = this.calculatePriorityScore(need, classification);
-    const actorUserId = user?.id || need.requestor_user_id || null;
+    const actorId = user?.id || need.requestor_user_id || null;
 
     const intent = await this.createIntentRecord({
       intentType: 'need',
       sourceType: 'need',
       sourceId: need.id,
-      actorUserId,
+      actorUserId: actorId,
       title: need.name,
       body: need.description,
       classification,
@@ -83,11 +83,9 @@ class IntentEngineService {
 
     const event = await CivicEventService.recordEvent({
       eventType: 'intent.need.declared',
-      actorUserId,
-      subjectType: 'need',
-      subjectId: need.id,
-      scopeType: need.requestor_community_id ? 'community' : 'user',
-      scopeId: need.requestor_community_id || need.requestor_user_id,
+      actorId,
+      entityType: 'need',
+      entityId: need.id,
       payload: {
         intentId: intent.id,
         name: need.name,
@@ -96,7 +94,8 @@ class IntentEngineService {
         priorityScore,
         complexityScore: need.complexity_score
       },
-      correlationId: `need:${need.id}`
+      correlationId: `need:${need.id}`,
+      causationId
     }, client);
 
     const needNode = await WorldGraphService.upsertNode({
@@ -167,21 +166,20 @@ class IntentEngineService {
     return { intent, event, node: needNode };
   }
 
-  async registerNeedExpansion(need, project, tasks = [], client = null) {
+  async registerNeedExpansion(need, project, tasks = [], client = null, causationId = null) {
     const event = await CivicEventService.recordEvent({
       eventType: 'mission.spawned.from_need',
-      actorUserId: need.requestor_user_id || project.creator_id || null,
-      subjectType: 'project',
-      subjectId: project.id,
-      scopeType: need.requestor_community_id ? 'community' : 'need',
-      scopeId: need.requestor_community_id || need.id,
+      actorId: need.requestor_user_id || project.creator_id || null,
+      entityType: 'project',
+      entityId: project.id,
       payload: {
         needId: need.id,
         projectId: project.id,
         taskCount: tasks.length,
         dueDate: project.due_date || need.required_before_date || null
       },
-      correlationId: `need:${need.id}`
+      correlationId: `need:${need.id}`,
+      causationId
     }, client);
 
     await WorldGraphService.linkEntities(

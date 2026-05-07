@@ -5,16 +5,31 @@ const createCivicKernelTables = async () => {
     CREATE TABLE IF NOT EXISTS civic_events (
       id BIGSERIAL PRIMARY KEY,
       event_type VARCHAR(120) NOT NULL,
-      actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      subject_type VARCHAR(80) NOT NULL,
-      subject_id INTEGER,
-      scope_type VARCHAR(80),
-      scope_id INTEGER,
+      actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      entity_type VARCHAR(80) NOT NULL,
+      entity_id INTEGER,
       payload JSONB DEFAULT '{}'::jsonb,
-      causation_event_id BIGINT REFERENCES civic_events(id) ON DELETE SET NULL,
       correlation_id VARCHAR(120),
+      causation_id BIGINT REFERENCES civic_events(id) ON DELETE SET NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Migration for existing tables if necessary
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='civic_events' AND column_name='actor_user_id') THEN
+        ALTER TABLE civic_events RENAME COLUMN actor_user_id TO actor_id;
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='civic_events' AND column_name='subject_type') THEN
+        ALTER TABLE civic_events RENAME COLUMN subject_type TO entity_type;
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='civic_events' AND column_name='subject_id') THEN
+        ALTER TABLE civic_events RENAME COLUMN subject_id TO entity_id;
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='civic_events' AND column_name='causation_event_id') THEN
+        ALTER TABLE civic_events RENAME COLUMN causation_event_id TO causation_id;
+      END IF;
+    END $$;
   `;
 
   const worldNodesTableQuery = `
@@ -96,8 +111,8 @@ const createCivicKernelTables = async () => {
 
   const indexesQuery = `
     CREATE INDEX IF NOT EXISTS idx_civic_events_type ON civic_events(event_type);
-    CREATE INDEX IF NOT EXISTS idx_civic_events_subject ON civic_events(subject_type, subject_id);
-    CREATE INDEX IF NOT EXISTS idx_civic_events_actor ON civic_events(actor_user_id);
+    CREATE INDEX IF NOT EXISTS idx_civic_events_entity ON civic_events(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_civic_events_actor ON civic_events(actor_id);
     CREATE INDEX IF NOT EXISTS idx_civic_events_created_at ON civic_events(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_civic_events_payload ON civic_events USING GIN(payload);
 

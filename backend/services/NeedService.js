@@ -3,6 +3,7 @@ import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import NeedExpansionService from './NeedExpansionService.js';
 import IntentEngineService from './IntentEngineService.js';
+import CivicEventService from './CivicEventService.js';
 
 class NeedService {
   calculateComplexityScore(need) {
@@ -94,17 +95,28 @@ class NeedService {
     await pool.query('UPDATE needs SET complexity_score = $1 WHERE id = $2', [complexityScore, newNeed.id]);
     newNeed.complexity_score = complexityScore;
 
-    IntentEngineService.registerNeedCreated(newNeed, user)
-      .catch(err => console.error('Civic kernel need registration failed:', err));
+    // Transformation: Moving from direct service coupling to event-driven
+    // IntentEngineService.registerNeedCreated(newNeed, user)
+    //   .catch(err => console.error('Civic kernel need registration failed:', err));
 
-    const EXPANSION_THRESHOLD = 2.5;
-    if (complexityScore >= EXPANSION_THRESHOLD) {
-      NeedExpansionService.expandNeed(newNeed).catch(err => console.error('Need expansion failed:', err));
-    } else {
-      this.addTaskToNeedsBoard(newNeed).catch(err => console.error('Failed to add need to Needs Board:', err));
-    }
+    // Instead, we record a civic event, which will trigger the EventRouter
+    CivicEventService.recordEvent({
+      eventType: 'need.created',
+      actorId: user?.id || newNeed.requestor_user_id,
+      entityType: 'need',
+      entityId: newNeed.id,
+      payload: {
+        name: newNeed.name,
+        complexityScore: newNeed.complexity_score,
+        urgency: newNeed.urgency,
+        category: newNeed.category
+      },
+      correlationId: `need:${newNeed.id}`
+    }).catch(err => console.error('Failed to record need.created event:', err));
 
-    this.processMatches(newNeed).catch(err => console.error('Error processing matches for new need:', err));
+    // Transformation: Moving from direct service coupling to event-driven
+    // Matches will be processed by the EventRouter or background workers
+    // this.processMatches(newNeed).catch(err => console.error('Error processing matches for new need:', err));
 
     return newNeed;
   }
@@ -127,7 +139,7 @@ class NeedService {
     ]);
   }
 
-  async markNeedComplete(needId) {
+  async markNeedComplete(needId, causationId = null) {
     const result = await pool.query(
       `UPDATE needs
        SET status = 'fulfilled', fulfilled_at = NOW(), fulfilled_via = 'system'
@@ -138,7 +150,7 @@ class NeedService {
     return result.rows[0];
   }
 
-  async processMatches(need) {
+  async processMatches(need, causationId = null) {
     const matches = await findMatchesForNeed(need.id, pool);
     const notifications = [];
 
@@ -160,6 +172,20 @@ class NeedService {
             type: 'resource_match'
           })
         );
+
+        // Record resource matching event
+        CivicEventService.recordEvent({
+          eventType: 'resource.matched',
+          actorId: resource.owner_user_id,
+          entityType: 'resource',
+          entityId: resource.id,
+          payload: {
+            needId: need.id,
+            matchScore: resource.match_score
+          },
+          correlationId: `need:${need.id}`,
+          causationId
+        }).catch(err => console.error('Failed to record resource.matched event:', err));
       }
     }
 

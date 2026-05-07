@@ -8,6 +8,7 @@ import NeedService from "../services/NeedService.js";
 import NeedExpansionService from "../services/NeedExpansionService.js";
 import GuildService from "../services/GuildService.js";
 import ResourceService from "../services/ResourceService.js";
+import CivicEventService from "../services/CivicEventService.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -885,6 +886,22 @@ const approveTask = async (taskId, io, client) => {
       [finalUpdatedSkillEntries, skill_id]
     );
 
+    // Record Trust Updated Events
+    for (const userId of assigned_user_ids) {
+      await CivicEventService.recordEvent({
+        eventType: 'trust.updated',
+        actorId: userId,
+        entityType: 'user',
+        entityId: userId,
+        payload: {
+          skillId: skill_id,
+          xpEarned: rewardPerUser,
+          newLevel: skillEntryMap.get(userId)?.level
+        },
+        correlationId: `task:${taskId}`
+      }, localClient).catch(err => console.error('Failed to record trust.updated event:', err));
+    }
+
     // Update Guild XP and Member Status
     try {
         const guildResult = await localClient.query('SELECT id FROM guilds WHERE skill_id = $1', [skill_id]);
@@ -1003,7 +1020,21 @@ const approveTask = async (taskId, io, client) => {
       [reward_tokens, project_id]
     );
 
-    // Step 8: Notify users
+    // Step 8: Record Event
+    await CivicEventService.recordEvent({
+      eventType: 'task.completed',
+      actorId: submitted_by,
+      entityType: 'task',
+      entityId: taskId,
+      payload: {
+        reward_tokens,
+        project_id,
+        community_id
+      },
+      correlationId: `project:${project_id}`
+    }, localClient);
+
+    // Step 9: Notify users
     // This section seems redundant as notifications are already created above.
     // However, if it's intended for a different purpose or audience, it should also be updated.
     // For now, assuming the earlier notification is the primary one.
@@ -2156,6 +2187,20 @@ const approveByPM = async (req, res, io) => {
     );
 
     const finalizeResult = await finalizeTask(taskId, client, io);
+
+    // Record event
+    await CivicEventService.recordEvent({
+      eventType: 'task.completed',
+      actorId: finalizeResult.task.submitted_by,
+      entityType: 'task',
+      entityId: taskId,
+      payload: {
+        reward_tokens: finalizeResult.task.reward_tokens,
+        project_id: finalizeResult.task.project_id,
+        community_id: finalizeResult.task.community_id
+      },
+      correlationId: `project:${finalizeResult.task.project_id}`
+    }, client);
     if (finalizeResult.error) {
         await client.query('ROLLBACK');
         return res.status(finalizeResult.status || 500).json({ error: finalizeResult.error });
