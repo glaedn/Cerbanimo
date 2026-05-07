@@ -40,7 +40,7 @@ class CivicKernelSummaryService {
         ORDER BY count DESC, intent_type ASC
       `),
       pool.query(`
-        SELECT id, event_type, subject_type, subject_id, scope_type, scope_id, payload, created_at
+        SELECT id, event_type, scope_type, scope_id, payload, created_at
         FROM civic_events
         ORDER BY created_at DESC
         LIMIT 15
