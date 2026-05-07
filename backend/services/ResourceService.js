@@ -8,7 +8,20 @@ class ResourceService {
       RETURNING *;
     `;
     const result = await pool.query(query, [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions]);
-    return result.rows[0];
+    const resource = result.rows[0];
+
+    // Emit resource.created event
+    const CivicEventService = (await import('./CivicEventService.js')).default;
+    CivicEventService.recordEvent({
+      eventType: 'resource.created',
+      actorId: ownerUserId,
+      entityType: 'resource',
+      entityId: resource.id,
+      payload: { name, category },
+      correlationId: `resource:${resource.id}`
+    }).catch(err => console.error('Failed to record resource.created event:', err));
+
+    return resource;
   }
 
   async allocateResource(resourceId, taskId, userId, startTime, endTime) {

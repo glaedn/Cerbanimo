@@ -160,6 +160,17 @@ router.post("/", async (req, res) => {
     const result = await client.query(query, values);
     const communityId = result.rows[0].id;
 
+    // Emit community.joined event for the creator
+    const CivicEventService = (await import('../services/CivicEventService.js')).default;
+    await CivicEventService.recordEvent({
+      eventType: 'community.joined',
+      actorId: id,
+      entityType: 'community',
+      entityId: communityId,
+      payload: { role: 'creator' },
+      correlationId: `community:${communityId}`
+    }, client);
+
     await client.query("COMMIT");
     res.status(201).json({ message: "Community created", communityId });
   } catch (err) {
@@ -324,6 +335,18 @@ router.post("/:communityId/vote/member/:requestUserId", async (req, res) => {
         `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
         [requestUserId, communityId]
       );
+
+      // Emit community.joined event
+      const CivicEventService = (await import('../services/CivicEventService.js')).default;
+      await CivicEventService.recordEvent({
+        eventType: 'community.joined',
+        actorId: requestUserId,
+        entityType: 'community',
+        entityId: communityId,
+        payload: { role: 'member' },
+        correlationId: `community:${communityId}`
+      }, client);
+
       await client.query(
         `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
         [communityId, requestUserId]

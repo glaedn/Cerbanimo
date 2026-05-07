@@ -369,6 +369,7 @@ const updateTask = async (
     const dataQuery = `
       SELECT t.reward_tokens AS task_reward, 
              t.status AS task_status, 
+             t.dependencies,
              p.token_pool, 
              p.used_tokens,
              p.reserved_tokens
@@ -387,6 +388,7 @@ const updateTask = async (
     const {
       task_reward,
       task_status,
+      dependencies: oldDeps = [],
       token_pool = 250,
       used_tokens = 0,
       reserved_tokens = 0,
@@ -486,6 +488,31 @@ const updateTask = async (
       due_date,
       taskId,
     ]);
+
+    // Check for blocked/unblocked events
+    const newDeps = dependencies || [];
+    const addedDeps = newDeps.filter(d => !oldDeps.includes(d));
+    const removedDeps = oldDeps.filter(d => !newDeps.includes(d));
+
+    for (const depId of addedDeps) {
+      CivicEventService.recordEvent({
+        eventType: 'task.blocked',
+        entityType: 'task',
+        entityId: taskId,
+        payload: { blockedByTaskId: depId },
+        correlationId: `task:${taskId}`
+      }).catch(err => console.error('Failed to record task.blocked event:', err));
+    }
+
+    for (const depId of removedDeps) {
+      CivicEventService.recordEvent({
+        eventType: 'task.unblocked',
+        entityType: 'task',
+        entityId: taskId,
+        payload: { unblockedByTaskId: depId },
+        correlationId: `task:${taskId}`
+      }).catch(err => console.error('Failed to record task.unblocked event:', err));
+    }
 
     // Only update project reserved tokens if there's an adjustment needed
     // if (reservationAdjustment !== 0) {

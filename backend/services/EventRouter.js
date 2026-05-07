@@ -3,6 +3,7 @@ import IntentEngineService from './IntentEngineService.js';
 import NeedExpansionService from './NeedExpansionService.js';
 import StoryEngineService from './StoryEngineService.js';
 import NeedService from './NeedService.js';
+import WorldGraphPopulator from './WorldGraphPopulator.js';
 
 class EventRouter {
   async handleEvent(event) {
@@ -12,14 +13,17 @@ class EventRouter {
     try {
       switch (eventType) {
         case 'need.created':
+          await WorldGraphPopulator.handleNeedCreated(event);
           await this.handleNeedCreated(event);
           break;
 
         case 'task.completed':
+          await WorldGraphPopulator.handleTaskCompleted(event);
           await this.handleTaskCompleted(event);
           break;
 
         case 'task.generated':
+          await WorldGraphPopulator.handleTaskGenerated(event);
           await this.handleTaskGenerated(event);
           break;
 
@@ -32,6 +36,7 @@ class EventRouter {
           break;
 
         case 'trust.updated':
+          await WorldGraphPopulator.handleTrustUpdated(event);
           await this.handleTrustUpdated(event);
           break;
 
@@ -40,11 +45,24 @@ class EventRouter {
           break;
 
         case 'impact.verified':
+          await WorldGraphPopulator.handleImpactVerified(event);
           await this.handleImpactVerified(event);
           break;
 
         case 'mission.escalated':
           await this.handleMissionEscalated(event);
+          break;
+
+        case 'community.joined':
+          await WorldGraphPopulator.handleCommunityJoined(event);
+          break;
+
+        case 'task.blocked':
+          await WorldGraphPopulator.handleTaskBlocked(event);
+          break;
+
+        case 'resource.created':
+          await WorldGraphPopulator.handleResourceCreated(event);
           break;
 
         default:

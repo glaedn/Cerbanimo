@@ -1,12 +1,82 @@
 import pool from '../db.js';
 
+export const RELATIONSHIPS = {
+  CONTRIBUTES_TO: 'CONTRIBUTES_TO',
+  TRUSTS: 'TRUSTS',
+  BLOCKED_BY: 'BLOCKED_BY',
+  LOCATED_NEAR: 'LOCATED_NEAR',
+  MEMBER_OF: 'MEMBER_OF',
+  ESCALATED_FROM: 'ESCALATED_FROM',
+  DEPENDS_ON: 'DEPENDS_ON',
+  MENTORS: 'MENTORS',
+  FULFILLS: 'FULFILLS',
+  DECLARED: 'DECLARED',
+  HOSTS: 'HOSTS',
+  SPAWNED: 'SPAWNED'
+};
+
 class WorldGraphService {
+  constructor() {
+    this.graphName = 'world_graph';
+    this.initialized = false;
+    this.initPromise = null;
+  }
+
   queryRunner(client = null) {
     return client || pool;
   }
 
-  async upsertNode(node, client = null) {
+  async initializeGraph() {
+    if (this.initialized) return;
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      let client;
+      try {
+        client = await pool.connect();
+        if (!client) throw new Error('Failed to obtain client from pool');
+
+        await client.query('CREATE EXTENSION IF NOT EXISTS age');
+
+        // Check if graph exists - using explicit schema qualification
+        const checkGraph = await client.query(`SELECT count(*) FROM ag_catalog.ag_graph WHERE name = $1`, [this.graphName]);
+        if (parseInt(checkGraph.rows[0].count) === 0) {
+          await client.query(`SELECT ag_catalog.create_graph($1)`, [this.graphName]);
+        }
+        this.initialized = true;
+        console.log(`Apache AGE: Graph "${this.graphName}" initialized.`);
+      } catch (err) {
+        console.error('Apache AGE initialization failed. Falling back to relational queries if necessary.', err.message);
+      } finally {
+        if (client && client.release) client.release();
+        this.initPromise = null;
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  async executeCypher(query, params = {}, client = null) {
+    await this.initializeGraph();
     const db = this.queryRunner(client);
+
+    // Explicitly qualify cypher function with ag_catalog schema
+    const cypherQuery = `
+      SELECT * FROM ag_catalog.cypher($1, $$
+        ${query}
+      $$, $2) AS (result ag_catalog.agtype);
+    `;
+
+    try {
+      const result = await db.query(cypherQuery, [this.graphName, JSON.stringify(params)]);
+      return result.rows || [];
+    } catch (err) {
+      console.error('Cypher execution error:', err.message, '\nQuery:', query);
+      return [];
+    }
+  }
+
+  async upsertNode(node, client = null) {
     const {
       nodeType,
       entityType = null,
@@ -20,129 +90,117 @@ class WorldGraphService {
     if (!nodeType) throw new Error('nodeType is required.');
     if (!label) throw new Error('label is required.');
 
-    if (entityType && entityId) {
-      const result = await db.query(
-        `INSERT INTO world_nodes (node_type, entity_type, entity_id, label, description, status, properties)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
-         ON CONFLICT (node_type, entity_type, entity_id)
-         WHERE entity_type IS NOT NULL AND entity_id IS NOT NULL
-         DO UPDATE SET
-           label = EXCLUDED.label,
-           description = COALESCE(EXCLUDED.description, world_nodes.description),
-           status = COALESCE(EXCLUDED.status, world_nodes.status),
-           properties = world_nodes.properties || EXCLUDED.properties
-         RETURNING *`,
-        [
-          nodeType,
-          entityType,
-          entityId,
-          label,
-          description,
-          status,
-          JSON.stringify(properties || {})
-        ]
-      );
-      return result.rows[0];
-    }
+    const cypher = `
+      MERGE (n:${nodeType} { entityType: $entityType, entityId: $entityId })
+      SET n.label = $label,
+          n.description = $description,
+          n.status = $status,
+          n.properties = $properties
+      RETURN n
+    `;
 
-    const result = await db.query(
-      `INSERT INTO world_nodes (node_type, entity_type, entity_id, label, description, status, properties)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
-       RETURNING *`,
-      [
-        nodeType,
-        entityType,
-        entityId,
-        label,
-        description,
-        status,
-        JSON.stringify(properties || {})
-      ]
-    );
-    return result.rows[0];
+    const params = {
+      entityType,
+      entityId,
+      label,
+      description,
+      status,
+      properties: properties || {}
+    };
+
+    const result = await this.executeCypher(cypher, params, client);
+    return result[0]?.result;
   }
 
-  async linkNodes(fromNodeId, toNodeId, relationshipType, properties = {}, confidence = 1, client = null) {
-    const db = this.queryRunner(client);
-
-    if (!fromNodeId || !toNodeId) throw new Error('fromNodeId and toNodeId are required.');
+  async linkNodes(fromNodeFilter, toNodeFilter, relationshipType, properties = {}, confidence = 1, client = null) {
+    if (!fromNodeFilter || !toNodeFilter) throw new Error('Source and target filters are required.');
     if (!relationshipType) throw new Error('relationshipType is required.');
 
-    const result = await db.query(
-      `INSERT INTO world_edges (from_node_id, to_node_id, relationship_type, confidence, properties)
-       VALUES ($1, $2, $3, $4, $5::jsonb)
-       ON CONFLICT (from_node_id, to_node_id, relationship_type)
-       DO UPDATE SET
-         confidence = GREATEST(world_edges.confidence, EXCLUDED.confidence),
-         properties = world_edges.properties || EXCLUDED.properties
-       RETURNING *`,
-      [
-        fromNodeId,
-        toNodeId,
-        relationshipType,
-        confidence,
-        JSON.stringify(properties || {})
-      ]
-    );
+    const cypher = `
+      MATCH (a { entityType: $fromET, entityId: $fromEID })
+      MATCH (b { entityType: $toET, entityId: $toEID })
+      MERGE (a)-[r:${relationshipType}]->(b)
+      SET r.confidence = $confidence,
+          r.properties = $properties
+      RETURN r
+    `;
 
-    return result.rows[0];
+    const params = {
+      fromET: fromNodeFilter.entityType,
+      fromEID: fromNodeFilter.entityId,
+      toET: toNodeFilter.entityType,
+      toEID: toNodeFilter.entityId,
+      confidence,
+      properties: properties || {}
+    };
+
+    const result = await this.executeCypher(cypher, params, client);
+    return result[0]?.result;
   }
 
   async linkEntities(fromEntity, toEntity, relationshipType, properties = {}, confidence = 1, client = null) {
-    const fromNode = await this.upsertNode(fromEntity, client);
-    const toNode = await this.upsertNode(toEntity, client);
-    const edge = await this.linkNodes(fromNode.id, toNode.id, relationshipType, properties, confidence, client);
-    return { fromNode, toNode, edge };
+    await this.upsertNode(fromEntity, client);
+    await this.upsertNode(toEntity, client);
+
+    const fromFilter = { entityType: fromEntity.entityType, entityId: fromEntity.entityId };
+    const toFilter = { entityType: toEntity.entityType, entityId: toEntity.entityId };
+
+    const edge = await this.linkNodes(fromFilter, toFilter, relationshipType, properties, confidence, client);
+    return { edge };
   }
 
+  // Legacy support or relational bridge
   async getEntityNeighborhood(entityType, entityId, depth = 1) {
-    const maxDepth = Math.min(Number(depth) || 1, 3);
-    const result = await pool.query(
-      `WITH RECURSIVE neighborhood AS (
-         SELECT n.*, 0 AS depth
-         FROM world_nodes n
-         WHERE n.entity_type = $1 AND n.entity_id = $2
+    const cypher = `
+      MATCH (n { entityType: $entityType, entityId: $entityId })-[r*1..${Math.min(depth, 3)}]-(m)
+      RETURN n, r, m
+    `;
+    const params = { entityType, entityId };
+    return this.executeCypher(cypher, params);
+  }
 
-         UNION
+  // Cognition Substrate Methods
 
-         SELECT next_node.*, neighborhood.depth + 1 AS depth
-         FROM neighborhood
-         JOIN world_edges e
-           ON e.from_node_id = neighborhood.id OR e.to_node_id = neighborhood.id
-         JOIN world_nodes next_node
-           ON next_node.id = CASE
-             WHEN e.from_node_id = neighborhood.id THEN e.to_node_id
-             ELSE e.from_node_id
-           END
-         WHERE neighborhood.depth < $3
-       )
-       SELECT DISTINCT * FROM neighborhood ORDER BY depth ASC, id ASC`,
-      [entityType, entityId, maxDepth]
-    );
+  async findTrustedVolunteersNear(locationText, radius = 0) {
+    const cypher = `
+      MATCH (p:person)-[:TRUSTS*1..2]-(peer:person)
+      WHERE peer.properties.locationText = $locationText
+      RETURN DISTINCT peer
+    `;
+    return this.executeCypher(cypher, { locationText });
+  }
 
-    const nodeIds = result.rows.map((node) => node.id);
-    if (nodeIds.length === 0) {
-      return { nodes: [], links: [] };
-    }
+  async findAdjacentNeeds(needId) {
+    const cypher = `
+      MATCH (n:need { entityId: $needId })
+      MATCH (adjacent:need)
+      WHERE adjacent.entityId <> $needId
+        AND (adjacent.properties.category = n.properties.category
+             OR EXISTS((n)-[:HOSTS|DECLARED]-(:community)-[:HOSTS|DECLARED]-(adjacent)))
+      RETURN DISTINCT adjacent
+    `;
+    return this.executeCypher(cypher, { needId });
+  }
 
-    const edges = await pool.query(
-      `SELECT *
-       FROM world_edges
-       WHERE from_node_id = ANY($1) AND to_node_id = ANY($1)
-       ORDER BY id ASC`,
-      [nodeIds]
-    );
+  async findBurnoutPropagation(userId) {
+    const cypher = `
+      MATCH (p:person { entityId: $userId })-[:CONTRIBUTES_TO]->(t:task)
+      MATCH path = (t)-[:DEPENDS_ON|BLOCKED_BY*1..5]->(dep:task)
+      RETURN path
+    `;
+    return this.executeCypher(cypher, { userId });
+  }
 
-    return {
-      nodes: result.rows,
-      links: edges.rows.map((edge) => ({
-        source: edge.from_node_id,
-        target: edge.to_node_id,
-        relationship: edge.relationship_type,
-        confidence: edge.confidence,
-        properties: edge.properties
-      }))
-    };
+  async findSkillBottlenecks(communityId) {
+    const cypher = `
+      MATCH (c:community { entityId: $communityId })-[:HOSTS]->(n:need)
+      WHERE n.status = 'open'
+      MATCH (n)-[:SPAWNED]->(m:mission)-[:CONTRIBUTES_TO]->(t:task)
+      WHERE t.status CONTAINS 'unassigned'
+      RETURN t.properties.skill_name as skill, count(t) as gap
+      ORDER BY gap DESC
+    `;
+    return this.executeCypher(cypher, { communityId });
   }
 }
 
