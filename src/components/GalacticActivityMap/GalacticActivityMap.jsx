@@ -5,12 +5,15 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from "axios";
 import { useCrisis } from "../../context/CrisisContext";
+import { useLoFi } from "../../context/LoFiContext";
 import { useUserProfile } from "../../hooks/useUserProfile";
+import LoFiActivityList from "./LoFiActivityList";
 import { useIsMobile } from "../../hooks/useIsMobile";
 
 const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   const { isCrisisMode } = useCrisis();
+  const { isLoFiMode } = useLoFi();
   const { profile } = useUserProfile();
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -372,7 +375,11 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   return (
     <div className="galactic-activity-map-container">
       {isLoading && starData.length === 0 && showLoadingText && <div className="loading-overlay"><h1>Galactic Activity Map</h1><p>Loading...</p></div>}
-      <div ref={d3Container} style={{ width: "100%", height: "100%", position: "relative", boxSizing: "border-box" }} />
+      {isLoFiMode ? (
+        <LoFiActivityList starData={starData} />
+      ) : (
+        <div ref={d3Container} style={{ width: "100%", height: "100%", position: "relative", boxSizing: "border-box" }} />
+      )}
     </div>
   );
 };

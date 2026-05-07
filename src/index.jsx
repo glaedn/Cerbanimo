@@ -7,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import muiTheme from './styles/muiTheme.js';
 import NotificationProvider from './pages/NotificationProvider.jsx';
 import { CrisisProvider } from './context/CrisisContext.jsx';
+import { LoFiProvider } from './context/LoFiContext.jsx';
 
 const onRedirectCallback = (appState) => {
   window.history.replaceState(
@@ -32,9 +33,11 @@ root.render(
     >
       <ThemeProvider theme={muiTheme}>
         <CrisisProvider>
-          <NotificationProvider>
-            <App />
-          </NotificationProvider>
+          <LoFiProvider>
+            <NotificationProvider>
+              <App />
+            </NotificationProvider>
+          </LoFiProvider>
         </CrisisProvider>
       </ThemeProvider>
     </Auth0Provider>

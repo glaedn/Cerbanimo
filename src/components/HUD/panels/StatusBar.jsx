@@ -4,6 +4,7 @@ import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import useSkillData from '../../../hooks/useSkillData';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useCrisis } from '../../../context/CrisisContext';
+import { useLoFi } from '../../../context/LoFiContext';
 import { Switch, FormControlLabel } from '@mui/material';
 import '../HUDPanel.css'; // Shared panel styles
 import './StatusBar.css'; // Specific styles for StatusBar
@@ -14,6 +15,7 @@ const StatusBar = () => {
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { user, isAuthenticated } = useAuth0();
   const { isCrisisMode, toggleCrisisMode } = useCrisis();
+  const { isLoFiMode, toggleLoFiMode } = useLoFi();
 
   const primaryColor = '#00F3FF'; // theme.colors.primary
   const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
@@ -115,6 +117,23 @@ const StatusBar = () => {
             />
           }
           label={<span style={{ fontFamily: accentFont, fontSize: '10px', color: isCrisisMode ? '#FF4136' : '#CCC' }}>CRISIS_MODE</span>}
+        />
+      </div>
+
+      <div className="status-item lofi-toggle">
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isLoFiMode}
+              onChange={toggleLoFiMode}
+              size="small"
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#00F3FF' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#00F3FF' }
+              }}
+            />
+          }
+          label={<span style={{ fontFamily: accentFont, fontSize: '10px', color: isLoFiMode ? '#00F3FF' : '#CCC' }}>LO_FI</span>}
         />
       </div>
       
