@@ -2,6 +2,7 @@ import pool from '../db.js';
 import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import NeedExpansionService from './NeedExpansionService.js';
+import IntentEngineService from './IntentEngineService.js';
 
 class NeedService {
   calculateComplexityScore(need) {
@@ -92,6 +93,9 @@ class NeedService {
     const complexityScore = this.calculateComplexityScore(newNeed);
     await pool.query('UPDATE needs SET complexity_score = $1 WHERE id = $2', [complexityScore, newNeed.id]);
     newNeed.complexity_score = complexityScore;
+
+    IntentEngineService.registerNeedCreated(newNeed, user)
+      .catch(err => console.error('Civic kernel need registration failed:', err));
 
     const EXPANSION_THRESHOLD = 2.5;
     if (complexityScore >= EXPANSION_THRESHOLD) {

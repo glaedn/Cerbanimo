@@ -55,6 +55,7 @@ const ProjectPages = React.lazy(() => import("./pages/ProjectPages.jsx"));
 const Project = React.lazy(() => import("./pages/Project.jsx"));
 const CoordinatorHUD = React.lazy(() => import("./pages/CoordinatorHUD.jsx"));
 const ImpactAtlas = React.lazy(() => import("./pages/ImpactAtlas.jsx"));
+const CivicKernelConsole = React.lazy(() => import("./pages/CivicKernelConsole.jsx"));
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 const NeedsPage = React.lazy(() => import("./pages/NeedsPage/NeedsPage.jsx"));
@@ -361,6 +362,14 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><ImpactAtlas /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/civic-kernel"
+            element={
+              <PrivateRoute>
+                <PageWrapper><CivicKernelConsole /></PageWrapper>
               </PrivateRoute>
             }
           />

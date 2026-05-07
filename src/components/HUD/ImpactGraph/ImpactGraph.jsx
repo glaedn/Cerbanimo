@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { useAuth0 } from '@auth0/auth0-react';
 import './ImpactGraph.css';
 
 const ImpactGraph = ({ projectId, realmId, width, height }) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const [data, setData] = useState({ nodes: [], links: [] });
   const graphRef = useRef();
 
@@ -13,13 +15,19 @@ const ImpactGraph = ({ projectId, realmId, width, height }) => {
       if (projectId) params.append('projectId', projectId);
       if (realmId) params.append('realmId', realmId);
 
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}${url}?${params.toString()}`);
+      const headers = {};
+      if (isAuthenticated) {
+        const token = await getAccessTokenSilently();
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}${url}?${params.toString()}`, { headers });
       const json = await res.json();
       setData(json);
     };
 
     fetchData();
-  }, [projectId, realmId]);
+  }, [projectId, realmId, getAccessTokenSilently, isAuthenticated]);
 
   const getNodeColor = (type) => {
     switch (type) {

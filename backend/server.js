@@ -38,6 +38,7 @@ import guildRoutesV2 from './routes/guilds_v2.js';
 import constellationRoutesV2 from './routes/constellations_v2.js';
 import resourceRoutesV2 from './routes/resources_v2.js';
 import storyEngineRoutesV2 from './routes/story_engine_v2.js';
+import civicKernelRoutes from './routes/civic_kernel.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -62,6 +63,7 @@ import { createResourceLayerTables } from '../models/resource_layer_v2.js';
 import { createDiscordConfigTable } from '../models/discord_config.js';
 import { createNeedCommentsTable } from '../models/need_comments.js';
 import { createNeedsTable } from '../models/needs.js';
+import { createCivicKernelTables } from '../models/civic_kernel.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
 
@@ -232,6 +234,8 @@ app.use('/story_engine_v2', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, resolveUser, storyEngineRoutesV2);
 
+app.use('/civic-kernel', jwtCheck, resolveUser, civicKernelRoutes);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
@@ -401,6 +405,7 @@ async function initializeDatabase() {
     await createUserChroniclesTable();
     await createStorySummariesTable();
     await createNeedsTable(); // Ensure needs table exists before dependent tables
+    await createCivicKernelTables();
     await createDiscordConfigTable();
     await createNeedCommentsTable();
     await alterExistingTables();

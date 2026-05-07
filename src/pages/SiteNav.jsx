@@ -366,6 +366,15 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
+                  location.pathname === "/civic-kernel" ? "active" : ""
+                }`}
+                to="/civic-kernel"
+                onClick={closeSidebar}
+              >
+                Civic Kernel
+              </Link>
+              <Link
+                className={`nav-link ${
                   location.pathname.startsWith("/projectcreation")
                     ? "active"
                     : ""
