@@ -1,0 +1,8 @@
+.expo/
+node_modules/
+dist/
+dist-check/
+dist-check-ios/
+.env
+.env.*
+!.env.example
