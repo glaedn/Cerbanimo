@@ -1,13 +1,12 @@
 import React from 'react';
-import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
-// Removed useNotifications hook
+import { useUserProfile } from '../../../hooks/useUserProfile';
 import useSkillData from '../../../hooks/useSkillData';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useCrisis } from '../../../context/CrisisContext';
 import { useLoFi } from '../../../context/LoFiContext';
 import { Switch, FormControlLabel } from '@mui/material';
-import '../HUDPanel.css'; // Shared panel styles
-import './StatusBar.css'; // Specific styles for StatusBar
+import '../HUDPanel.css';
+import './StatusBar.css';
 
 
 const StatusBar = () => {
@@ -17,32 +16,66 @@ const StatusBar = () => {
   const { isCrisisMode, toggleCrisisMode } = useCrisis();
   const { isLoFiMode, toggleLoFiMode } = useLoFi();
 
-  const primaryColor = '#00F3FF'; // theme.colors.primary
-  const accentFont = "'Orbitron', sans-serif"; // theme.typography.fontFamilyAccent
+  const primaryColor = '#00F3FF';
+  const accentFont = "'Orbitron', sans-serif";
 
-  if (profileLoading || skillsLoading) return <div className="hud-panel status-bar">Loading Status...</div>;
-  if (profileError || skillsError) return <div className="hud-panel status-bar">Error: {profileError?.message || skillsError?.message}</div>;
-  if (!profile || !allSkills || !isAuthenticated || !user) return <div className="hud-panel status-bar">User data, skills, or authentication unavailable.</div>;
+  const renderLoFiToggle = () => (
+    <div className="status-item lofi-toggle">
+      <FormControlLabel
+        control={
+          <Switch
+            checked={isLoFiMode}
+            onChange={toggleLoFiMode}
+            size="small"
+            sx={{
+              '& .MuiSwitch-switchBase.Mui-checked': { color: '#00F3FF' },
+              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#00F3FF' }
+            }}
+          />
+        }
+        label={<span style={{ fontFamily: accentFont, fontSize: '10px', color: isLoFiMode ? '#00F3FF' : '#CCC' }}>LO_FI</span>}
+      />
+    </div>
+  );
+
+  if (profileLoading || skillsLoading) {
+    return (
+      <div className="hud-panel status-bar">
+        <div className="status-item">Loading Status...</div>
+        {renderLoFiToggle()}
+      </div>
+    );
+  }
+
+  if (profileError || skillsError) {
+    return (
+      <div className="hud-panel status-bar">
+        <div className="status-item">Error: {profileError?.message || skillsError?.message}</div>
+        {renderLoFiToggle()}
+      </div>
+    );
+  }
+
+  if (!profile || !allSkills || !isAuthenticated || !user) {
+    return (
+      <div className="hud-panel status-bar">
+        {renderLoFiToggle()}
+      </div>
+    );
+  }
   
-  console.log('[StatusBar Debug] allSkills:', allSkills);
-  console.log('[StatusBar Debug] profile.id:', profile ? profile.id : 'Profile or profile.id not available');
   // Calculate Total Global Experience from allSkills
   let totalGlobalExp = 0;
-  if (allSkills && profile && profile.id) { // Ensure data is available
+  if (allSkills && profile && profile.id) {
     allSkills.forEach(skill => {
-      console.log('[StatusBar Debug] Processing skill:', skill.name, skill.unlocked_users);
       if (skill.unlocked_users && Array.isArray(skill.unlocked_users)) {
-        skill.unlocked_users.forEach(userEntry => { // userEntry is now an object
-          console.log('[StatusBar Debug] Checking userEntry:', userEntry);
-          if (userEntry && typeof profile.id !== 'undefined') { // Ensure profile.id is available
+        skill.unlocked_users.forEach(userEntry => {
+          if (userEntry && typeof profile.id !== 'undefined') {
             const entryUserId = parseInt(userEntry.user_id, 10);
             const currentProfileId = parseInt(profile.id, 10);
 
-            console.log(`[StatusBar Debug] Comparing IDs: entryUserId=${entryUserId} (type: ${typeof entryUserId}), currentProfileId=${currentProfileId} (type: ${typeof currentProfileId})`);
-
             if (entryUserId === currentProfileId) {
               const experienceValue = userEntry.experience !== undefined ? userEntry.experience : userEntry.exp;
-              console.log('[StatusBar Debug] Matched user.id:', currentProfileId, 'Found experienceValue:', experienceValue, 'from userEntry:', userEntry);
               if (typeof experienceValue === 'number') {
                 totalGlobalExp += experienceValue;
               }
@@ -53,7 +86,6 @@ const StatusBar = () => {
     });
   }
 
-  console.log('[StatusBar Debug] Final totalGlobalExp:', totalGlobalExp);
   const currentLevel = Math.floor(Math.sqrt(totalGlobalExp / 40)) + 1;
 
   const expForCurrentLevel = 40 * Math.pow(currentLevel - 1, 2);
@@ -66,11 +98,9 @@ const StatusBar = () => {
   if (totalExpNeededForNextLevelSpan > 0) {
       xpPercentage = (currentLevelExpProgress / totalExpNeededForNextLevelSpan) * 100;
   } else if (currentLevelExpProgress >= 0) { 
-      // Handles cases where user might be at max level or exactly at a level threshold
-      // or if totalExpNeededForNextLevelSpan is somehow zero (e.g. currentLevel = 0 from bad data)
       xpPercentage = currentLevel === 1 && totalGlobalExp === 0 ? 0 : 100;
   }
-  xpPercentage = Math.min(Math.max(xpPercentage, 0), 100); // Cap between 0-100
+  xpPercentage = Math.min(Math.max(xpPercentage, 0), 100);
 
   return (
     <div className="hud-panel status-bar">
@@ -80,7 +110,7 @@ const StatusBar = () => {
       </div>
 
       <div className="status-item xp-bar-container">
-        <div className="progress-bar-container" style={{ height: '12px', width: '200px', backgroundColor: 'rgba(0,0,0,0.5)' }}> {/* Increased width for more text */}
+        <div className="progress-bar-container" style={{ height: '12px', width: '200px', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div 
             className="progress-bar shimmer"
             style={{ 
@@ -89,11 +119,10 @@ const StatusBar = () => {
               height: '12px',
               lineHeight: '12px',
               fontSize: '9px',
-              overflow: 'hidden' // Ensure text doesn't overflow the bar itself
+              overflow: 'hidden'
             }}
             title={`${Math.round(currentLevelExpProgress)} / ${Math.round(totalExpNeededForNextLevelSpan)} XP`}
           >
-            {/* Display XP progress text */}
             {`${Math.round(currentLevelExpProgress)} / ${Math.round(totalExpNeededForNextLevelSpan)} XP`}
           </div>
         </div>
@@ -120,24 +149,7 @@ const StatusBar = () => {
         />
       </div>
 
-      <div className="status-item lofi-toggle">
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isLoFiMode}
-              onChange={toggleLoFiMode}
-              size="small"
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: '#00F3FF' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#00F3FF' }
-              }}
-            />
-          }
-          label={<span style={{ fontFamily: accentFont, fontSize: '10px', color: isLoFiMode ? '#00F3FF' : '#CCC' }}>LO_FI</span>}
-        />
-      </div>
-      
-      {/* Notifications section removed */}
+      {renderLoFiToggle()}
     </div>
   );
 };

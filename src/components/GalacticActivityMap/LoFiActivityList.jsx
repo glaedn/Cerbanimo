@@ -79,8 +79,13 @@ const LoFiActivityList = ({ starData = [] }) => {
     const isExpanded = expandedIds.has(node.id);
     const hasChildren = children.length > 0;
 
+    // Limit indentation to prevent items from disappearing off-screen
+    // Resets every 4 levels
+    const indentLevel = depth % 4;
+    const indentWidth = 15; // pixels
+
     return (
-      <div key={node.id} className="lofi-item-container" style={{ marginLeft: `${depth * 20}px` }}>
+      <div key={node.id} className="lofi-item-container" style={{ marginLeft: `${indentLevel * indentWidth}px` }}>
         <div className="lofi-item-row">
           <div
             className={`lofi-item-content ${hasChildren ? 'clickable' : ''}`}
