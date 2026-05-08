@@ -43,7 +43,7 @@ root.render(
               </NotificationProvider>
             </LoFiProvider>
           </CrisisProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
+          <ReactQueryDevtools initialIsOpen={false} position="bottom-left" />
         </QueryClientProvider>
       </ThemeProvider>
     </Auth0Provider>

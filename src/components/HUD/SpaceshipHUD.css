@@ -90,17 +90,16 @@
 
 .hud-map-viewport {
   box-sizing: border-box;
-  border: 2px solid #00F3FF; /* theme.colors.primary for a subtle frame */
-  box-shadow: 0 0 15px #00F3FF, inset 0 0 15px #00F3FF; /* theme.effects.glowStrong(theme.colors.primary) */
-  max-width: 1600px; 
-  max-height: 1000px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
   position: absolute; 
-  top: 70px;
-  bottom: 115px;
-  left: 220px;
-  right: 220px;
-  background: rgba(0,0,0,0.1);
-  /* width, height, and transform removed for new top/bottom/left/right positioning */
+  top: 60px;
+  bottom: 60px;
+  left: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.2);
+  z-index: 1;
+  pointer-events: auto;
 }
 
 /* Styling for StatusBar */

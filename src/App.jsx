@@ -61,6 +61,7 @@ const CivicKernelConsole = React.lazy(() => import("./pages/CivicKernelConsole.j
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 const NeedsPage = React.lazy(() => import("./pages/NeedsPage/NeedsPage.jsx"));
+const AdaptiveHUD = React.lazy(() => import("./components/HUD/AdaptiveHUD.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
