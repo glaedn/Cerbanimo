@@ -21,6 +21,9 @@ const createUserTable = async () => {
       alpha BOOLEAN DEFAULT FALSE,
       capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
       discord_user_id VARCHAR(50),
+      location_point GEOGRAPHY(Point, 4326),
+      mobility_range NUMERIC, -- in meters
+      emergency_response_capable BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

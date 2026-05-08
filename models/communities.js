@@ -13,6 +13,8 @@ const createCommunitiesTable = async () => {
         vote_delegations JSONB DEFAULT '{}'::jsonb,
         cross_community_enabled BOOLEAN DEFAULT FALSE,
         discord_guild_id VARCHAR(50),
+        location_point GEOGRAPHY(Point, 4326),
+        service_radius NUMERIC, -- in meters
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );

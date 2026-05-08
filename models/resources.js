@@ -20,8 +20,10 @@ const createResourcesTable = async () => {
       is_recurring BOOLEAN DEFAULT FALSE, -- Added
       recurring_details TEXT, -- Added: e.g., 'every Monday 9-11am', 'first Sunday of month'
       location_text TEXT, -- Renamed from 'location_description'
-      latitude NUMERIC, -- Added
-      longitude NUMERIC, -- Added
+      latitude NUMERIC, -- Added (Legacy)
+      longitude NUMERIC, -- Added (Legacy)
+      location_point GEOGRAPHY(Point, 4326),
+      availability_radius NUMERIC, -- in meters
       access_instructions TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -57,6 +59,7 @@ const createResourcesTable = async () => {
     CREATE INDEX IF NOT EXISTS idx_resources_status ON resources(status);
     CREATE INDEX IF NOT EXISTS idx_resources_condition ON resources(condition); -- Added
     CREATE INDEX IF NOT EXISTS idx_resources_is_recurring ON resources(is_recurring); -- Added
+    CREATE INDEX IF NOT EXISTS idx_resources_location_point ON resources USING GIST(location_point);
   `;
 
   try {

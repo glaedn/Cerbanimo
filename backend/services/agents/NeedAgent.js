@@ -1,6 +1,7 @@
 import BaseAgent from './BaseAgent.js';
 import pool from '../../db.js';
 import AIGatewayService from '../AIGatewayService.js';
+import SpatialQueryService from '../SpatialQueryService.js';
 
 class NeedAgent extends BaseAgent {
   constructor(scope) {
@@ -10,6 +11,8 @@ class NeedAgent extends BaseAgent {
   async loadContext() {
     const unresolvedNeeds = await pool.query(`
       SELECT n.*,
+             ST_Y(n.location_point::geometry) as lat,
+             ST_X(n.location_point::geometry) as lon,
              (SELECT COUNT(*) FROM tasks t WHERE t.related_need_id = n.id) as task_count,
              (SELECT COUNT(*) FROM need_comments nc WHERE nc.need_id = n.id AND nc.comment_text LIKE '[OFFER]%') as offer_count
       FROM needs n
@@ -18,8 +21,18 @@ class NeedAgent extends BaseAgent {
       LIMIT 20
     `);
 
+    const needsWithSpatialContext = await Promise.all(unresolvedNeeds.rows.map(async (need) => {
+      let spatialContext = {};
+      if (need.lat && need.lon) {
+        const nearbyResponders = await SpatialQueryService.findNearbyCapability(need.lat, need.lon, 10000);
+        const desertStats = await SpatialQueryService.detectResourceDeserts(need.lat, need.lon, 5000);
+        spatialContext = { nearbyRespondersCount: nearbyResponders.length, isDesert: desertStats.isDesert };
+      }
+      return { ...need, spatialContext };
+    }));
+
     return {
-      needs: unresolvedNeeds.rows,
+      needs: needsWithSpatialContext,
       memory: this.instance?.memory || {}
     };
   }

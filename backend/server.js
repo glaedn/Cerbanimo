@@ -26,6 +26,7 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import servicesRoutes from './routes/services.js';
+import spatialOpsRoutes from './routes/spatial_ops.js';
 import onboardingRoutes from './routes/onboarding.js';
 import adminRoutes from './routes/admin.js';
 import discordConfigRoutes from './routes/discord_config.js';
@@ -66,6 +67,8 @@ import { createDiscordConfigTable } from '../models/discord_config.js';
 import { createNeedCommentsTable } from '../models/need_comments.js';
 import { createNeedsTable } from '../models/needs.js';
 import { createCivicKernelTables } from '../models/civic_kernel.js';
+import { createSpatialLayerTables } from '../models/spatial_layer.js';
+import { createSystemStateTable } from '../models/system_state.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
 
@@ -222,6 +225,7 @@ app.use('/services', (req, res, next) => {
 }, servicesRoutes);
 
 app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
+app.use('/spatial-ops', jwtCheck, resolveUser, spatialOpsRoutes);
 app.use('/admin', jwtCheck, resolveUser, adminRoutes);
 app.use('/discord-config', jwtCheck, resolveUser, discordConfigRoutes);
 app.use('/need-comments', jwtCheck, resolveUser, needCommentRoutes);
@@ -408,6 +412,8 @@ async function initializeDatabase() {
     await createStorySummariesTable();
     await createNeedsTable(); // Ensure needs table exists before dependent tables
     await createCivicKernelTables();
+    await createSpatialLayerTables();
+    await createSystemStateTable();
     await createDiscordConfigTable();
     await createNeedCommentsTable();
     await alterExistingTables();

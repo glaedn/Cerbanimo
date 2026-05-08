@@ -21,20 +21,27 @@ const alterExistingTables = async () => {
     ALTER TABLE projects
     ADD COLUMN IF NOT EXISTS health_score NUMERIC DEFAULT 0,
     ADD COLUMN IF NOT EXISTS closure_reason TEXT,
-    ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE;
+    ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE;
   `;
 
   const alterCommunitiesQuery = `
     ALTER TABLE communities
     ADD COLUMN IF NOT EXISTS cross_community_enabled BOOLEAN DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(50);
+    ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS service_radius NUMERIC; -- in meters
   `;
 
   const alterUsersQuery = `
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}',
     ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
-    ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50);
+    ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS mobility_range NUMERIC, -- in meters
+    ADD COLUMN IF NOT EXISTS emergency_response_capable BOOLEAN DEFAULT FALSE;
   `;
 
   const alterSkillsQuery = `
@@ -78,9 +85,13 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS recurrence_pattern JSONB,
     ADD COLUMN IF NOT EXISTS location JSONB,
+    ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS urgency_radius NUMERIC, -- in meters
     ADD COLUMN IF NOT EXISTS mobility_required BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS pickup_location JSONB,
+    ADD COLUMN IF NOT EXISTS pickup_point GEOGRAPHY(Point, 4326),
     ADD COLUMN IF NOT EXISTS dropoff_location JSONB,
+    ADD COLUMN IF NOT EXISTS dropoff_point GEOGRAPHY(Point, 4326),
     ADD COLUMN IF NOT EXISTS time_slots JSONB,
     ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web',
     ADD COLUMN IF NOT EXISTS fulfilled_at TIMESTAMP WITH TIME ZONE,
@@ -93,6 +104,8 @@ const alterExistingTables = async () => {
   const alterResourcesQuery = `
     ALTER TABLE resources
     ADD COLUMN IF NOT EXISTS resource_type TEXT,
+    ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS availability_radius NUMERIC, -- in meters
     ADD COLUMN IF NOT EXISTS availability_schedule JSONB,
     ADD COLUMN IF NOT EXISTS conditions TEXT,
     ADD COLUMN IF NOT EXISTS inventory_tracking BOOLEAN DEFAULT FALSE,

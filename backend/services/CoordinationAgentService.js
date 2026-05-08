@@ -147,14 +147,49 @@ class CoordinationAgentService {
     });
   }
 
+  async getDispatchAgentSignals() {
+    const result = await pool.query(`
+      SELECT
+        dr.id,
+        dr.status,
+        dr.assigned_user_id,
+        u.username,
+        dr.created_at
+      FROM dispatch_routes dr
+      LEFT JOIN users u ON dr.assigned_user_id = u.id
+      WHERE dr.status = 'active'
+      ORDER BY dr.created_at ASC
+      LIMIT 10
+    `);
+
+    return result.rows.map((route) => {
+      const ageHours = (Date.now() - new Date(route.created_at).getTime()) / (1000 * 60 * 60);
+      let severity = 20;
+      if (ageHours > 4) severity += 30;
+      if (ageHours > 24) severity += 40;
+
+      return {
+        agent: 'Dispatch Agent',
+        subjectType: 'dispatch',
+        subjectId: route.id,
+        title: `Route #${route.id} for ${route.username || 'Unassigned'}`,
+        severity: Math.min(Math.round(severity), 100),
+        status: route.status,
+        signal: `Active for ${Math.round(ageHours)}h`,
+        recommendation: ageHours > 4 ? 'Check on volunteer progress and verify if route is blocked.' : 'Monitor delivery chain and ensure smooth handover.'
+      };
+    });
+  }
+
   async getSignals() {
-    const [needs, missions, communities] = await Promise.all([
+    const [needs, missions, communities, dispatch] = await Promise.all([
       this.getNeedAgentSignals(),
       this.getMissionAgentSignals(),
-      this.getCommunityAgentSignals()
+      this.getCommunityAgentSignals(),
+      this.getDispatchAgentSignals()
     ]);
 
-    return [...needs, ...missions, ...communities]
+    return [...needs, ...missions, ...communities, ...dispatch]
       .sort((a, b) => b.severity - a.severity)
       .slice(0, 25);
   }

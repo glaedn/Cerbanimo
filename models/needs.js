@@ -16,8 +16,12 @@ const createNeedsTable = async () => {
       skill_ids INTEGER[] DEFAULT '{}', -- Array of skill IDs (FK to skills.id)
       required_before_date DATE, -- Added
       location_text TEXT, -- Added, replacing/clarifying 'location_requirements'
-      latitude NUMERIC, -- Added
-      longitude NUMERIC, -- Added
+      latitude NUMERIC, -- Added (Legacy)
+      longitude NUMERIC, -- Added (Legacy)
+      location_point GEOGRAPHY(Point, 4326), -- PostGIS point
+      urgency_radius NUMERIC, -- in meters
+      pickup_point GEOGRAPHY(Point, 4326),
+      dropoff_point GEOGRAPHY(Point, 4326),
       discord_message_id VARCHAR(50), -- Added for Discord integration
       discord_thread_id VARCHAR(50), -- Added for Discord integration
       fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
@@ -59,6 +63,7 @@ const createNeedsTable = async () => {
     CREATE INDEX IF NOT EXISTS idx_needs_urgency ON needs(urgency); -- Added
     CREATE INDEX IF NOT EXISTS idx_needs_category ON needs(category); -- Added
     CREATE INDEX IF NOT EXISTS idx_needs_skill_ids ON needs USING GIN(skill_ids);
+    CREATE INDEX IF NOT EXISTS idx_needs_location_point ON needs USING GIST(location_point);
   `;
 
   try {
