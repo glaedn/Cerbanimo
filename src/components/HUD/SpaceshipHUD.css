@@ -68,10 +68,17 @@
 }
 
 .signal-feed-panel {
-  top: 50%;
-  left: 10px;
-  transform: translateY(-50%);
-  max-width: 300px;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  max-width: 90vw;
+  z-index: 150;
+}
+
+.signal-feed-panel .hud-panel {
+  max-width: none!important;
+  margin: 0;
 }
 
 .entity-inspector-panel {
