@@ -18,8 +18,29 @@ export const useAppStore = create((set) => ({
   prioritizedSignals: [],
   presence: {}, // { scope_id: [user_ids] }
 
+  // HUD Customization
+  hudMode: 'normal', // 'normal' or 'operational'
+  activePanels: ['signals', 'pulse', 'river', 'mission'], // Max 6
+  collapsedPanels: [], // ['signals', etc]
+
   // Actions
+  setHudMode: (mode) => set({ hudMode: mode }),
   setActiveContext: (context) => set({ activeContext: context }),
+
+  togglePanel: (panelId) => set((state) => {
+    if (state.activePanels.includes(panelId)) {
+      return { activePanels: state.activePanels.filter(id => id !== panelId) };
+    }
+    if (state.activePanels.length >= 6) return state; // Limit
+    return { activePanels: [...state.activePanels, panelId] };
+  }),
+
+  togglePanelCollapse: (panelId) => set((state) => ({
+    collapsedPanels: state.collapsedPanels.includes(panelId)
+      ? state.collapsedPanels.filter(id => id !== panelId)
+      : [...state.collapsedPanels, panelId]
+  })),
+
   toggleOverlay: (overlay) => set((state) => ({
     activeOverlays: state.activeOverlays.includes(overlay)
       ? state.activeOverlays.filter(o => o !== overlay)

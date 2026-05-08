@@ -50,15 +50,20 @@ describe('AdaptiveHUD', () => {
       realtimeEvents: [],
       selectedEntity: null,
       isCrisisMode: false,
+      hudMode: 'normal',
+      activePanels: ['signals', 'river', 'pulse'],
+      collapsedPanels: [],
       setActiveContext: vi.fn(),
       setCrisisMode: vi.fn(),
+      setHudMode: vi.fn(),
+      togglePanelCollapse: vi.fn(),
     });
 
     render(<AdaptiveHUD />, { wrapper });
 
     expect(screen.getByTestId('event-river')).toBeInTheDocument();
     expect(screen.getByTestId('signal-feed')).toBeInTheDocument();
-    expect(screen.getByTestId('pulse-hud')).toBeInTheDocument();
+    expect(screen.getAllByTestId('pulse-hud').length).toBeGreaterThan(0);
   });
 
   test('renders mission control in mission mode', () => {
@@ -67,8 +72,13 @@ describe('AdaptiveHUD', () => {
       realtimeEvents: [],
       selectedEntity: { type: 'project', id: 1 },
       isCrisisMode: false,
+      hudMode: 'operational',
+      activePanels: ['mission'],
+      collapsedPanels: [],
       setActiveContext: vi.fn(),
       setCrisisMode: vi.fn(),
+      setHudMode: vi.fn(),
+      togglePanelCollapse: vi.fn(),
     });
 
     render(<AdaptiveHUD />, { wrapper });
@@ -82,8 +92,13 @@ describe('AdaptiveHUD', () => {
       realtimeEvents: [],
       selectedEntity: null,
       isCrisisMode: true,
+      hudMode: 'operational',
+      activePanels: ['crisis'],
+      collapsedPanels: [],
       setActiveContext: vi.fn(),
       setCrisisMode: vi.fn(),
+      setHudMode: vi.fn(),
+      togglePanelCollapse: vi.fn(),
     });
 
     render(<AdaptiveHUD />, { wrapper });

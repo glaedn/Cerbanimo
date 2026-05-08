@@ -5,7 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
 import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap.jsx';
-import SpaceshipHUD from '../components/HUD/SpaceshipHUD.jsx'; // Adjusted path
+import AdaptiveHUD from '../components/HUD/AdaptiveHUD.jsx';
 import './Dashboard.css';
 
 
@@ -76,9 +76,9 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <SpaceshipHUD>
+    <AdaptiveHUD>
       <GalacticActivityMap />
-    </SpaceshipHUD>
+    </AdaptiveHUD>
   );
 };
 

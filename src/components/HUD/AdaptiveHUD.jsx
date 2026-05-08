@@ -10,6 +10,7 @@ import StatusBar from './panels/StatusBar';
 import SignalFeed from './panels/SignalFeed';
 import EntityInspector from './panels/EntityInspector';
 import { useWindowSize } from '../../hooks/useWindowSize';
+import { ChevronUp, ChevronDown, Monitor, Layout } from 'lucide-react';
 import './SpaceshipHUD.css'; // Reusing base HUD styles
 
 const AdaptiveHUD = ({ children }) => {
@@ -19,7 +20,12 @@ const AdaptiveHUD = ({ children }) => {
     realtimeEvents,
     selectedEntity,
     isCrisisMode,
-    setCrisisMode
+    setCrisisMode,
+    hudMode,
+    setHudMode,
+    activePanels,
+    collapsedPanels,
+    togglePanelCollapse
   } = useAppStore();
 
   const { width } = useWindowSize();
@@ -46,37 +52,72 @@ const AdaptiveHUD = ({ children }) => {
     }
   }, [realtimeEvents, selectedEntity, isCrisisMode, activeContext, setCrisisMode, setActiveContext]);
 
-  const renderContextualUI = () => {
-    switch (activeContext) {
-      case 'mission':
-        return <MissionControlInterface />;
-      case 'crisis':
-        return <CrisisOpsConsole />;
-      case 'governance':
-        return <div className="governance-overlay">Governance View (TBD)</div>;
-      default:
+  const renderPanel = (panelId) => {
+    const isCollapsed = collapsedPanels.includes(panelId);
+
+    switch (panelId) {
+      case 'signals':
         return (
-          <>
-            <div className="panel-wrapper signal-feed-panel">
-               <div className="hud-panel" style={{ maxWidth: '300px' }}>
-                  <div className="hud-panel-header">
-                    <h4>Ecosystem Signals</h4>
-                  </div>
-                  <SignalFeed />
+          <div className="panel-wrapper signal-feed-panel" key="signals">
+             <div className="hud-panel" style={{ maxWidth: '300px' }}>
+                <div className="hud-panel-header" onClick={() => togglePanelCollapse('signals')} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4>Ecosystem Signals</h4>
+                  {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                 </div>
-            </div>
-            <div className="panel-wrapper event-river-panel">
-               <EventRiver />
-            </div>
-          </>
+                {!isCollapsed && <SignalFeed />}
+              </div>
+          </div>
         );
+      case 'river':
+        return <div className="panel-wrapper event-river-panel" key="river"><EventRiver /></div>;
+      case 'mission':
+        return <div className="panel-wrapper mission-control-panel" key="mission"><MissionControlInterface /></div>;
+      case 'crisis':
+        return <div className="panel-wrapper crisis-ops-panel" key="crisis"><CrisisOpsConsole /></div>;
+      case 'pulse':
+        return <div className="panel-wrapper pulse-hud-panel" key="pulse"><CoordinationPulseHUD /></div>;
+      default:
+        return null;
     }
   };
 
+  const renderContextualUI = () => {
+    if (hudMode === 'operational') {
+      switch (activeContext) {
+        case 'mission':
+          return <MissionControlInterface />;
+        case 'crisis':
+          return <CrisisOpsConsole />;
+        case 'governance':
+          return <div className="governance-overlay">Governance View (TBD)</div>;
+        default:
+          return activePanels.slice(0, 6).map(renderPanel);
+      }
+    }
+
+    // Normal Dashboard HUD: customizable items
+    return (
+      <div className="dashboard-hud-layers">
+        {activePanels.slice(0, 6).map(renderPanel)}
+      </div>
+    );
+  };
+
   return (
-    <div className={`hud-container ${isMobile ? 'mobile-hud' : ''} context-${activeContext}`}>
+    <div className={`hud-container ${isMobile ? 'mobile-hud' : ''} context-${activeContext} mode-${hudMode}`}>
       <PresenceIndicators />
       <OverlayManager />
+
+      {/* Mode Switcher */}
+      <div style={{ position: 'fixed', top: '10px', left: '10px', z_index: 200, display: 'flex', gap: '8px' }}>
+        <button
+          onClick={() => setHudMode(hudMode === 'normal' ? 'operational' : 'normal')}
+          style={{ background: 'rgba(0, 243, 255, 0.2)', border: '1px solid #00f3ff', color: '#00f3ff', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.6rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+        >
+          {hudMode === 'normal' ? <Layout size={12} /> : <Monitor size={12} />}
+          {hudMode === 'normal' ? 'OPERATIONAL HUD' : 'DASHBOARD VIEW'}
+        </button>
+      </div>
 
       {/* Dynamic Operational Content */}
       <div className="hud-operational-layer">

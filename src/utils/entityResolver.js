@@ -24,9 +24,8 @@ const ENTITY_NAV_PATHS = {
   [ENTITY_TYPES.PROJECT]: (id) => `/project/${id}`,
   [ENTITY_TYPES.TASK]: (id) => `/Visualizer/${id}`, // Assuming tasks resolved via Visualizer
   [ENTITY_TYPES.USER]: (id) => `/userportfolio/${id}`,
-  [ENTITY_TYPES.DISPATCH]: (id) => `/coordinator-hud?dispatch=${id}`,
-  [ENTITY_TYPES.GOVERNANCE]: (id) => `/civic-kernel?proposal=${id}`,
-  [ENTITY_TYPES.AGENT]: (id) => `/coordinator-hud?agent=${id}`
+  [ENTITY_TYPES.DISPATCH]: (id) => `/dashboard?dispatch=${id}`,
+  [ENTITY_TYPES.AGENT]: (id) => `/dashboard?agent=${id}`
 };
 
 export const resolveEntityPath = (type, id) => {

@@ -372,14 +372,6 @@ const AppContent = () => {
           />
           <Route path="/rezzler" element={<PageWrapper><Rezzler /></PageWrapper>} />
           <Route
-            path="/coordinator-hud"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CoordinatorHUD /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
             path="/impact-atlas"
             element={
               <PrivateRoute>
