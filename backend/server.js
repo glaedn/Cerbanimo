@@ -72,8 +72,11 @@ import { createCivicKernelTables } from '../models/civic_kernel.js';
 import { createSpatialLayerTables } from '../models/spatial_layer.js';
 import { createSystemStateTable } from '../models/system_state.js';
 import { createGovernanceTables } from '../models/governance.js';
+import { createAgentTables } from '../models/agents.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
+import { create } from 'domain';
+
 
 // Initialize app
 const app = express();
@@ -422,7 +425,9 @@ async function initializeDatabase() {
     await createGovernanceTables();
     await createDiscordConfigTable();
     await createNeedCommentsTable();
+    await createAgentTables();
     await alterExistingTables();
+    
 
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {
