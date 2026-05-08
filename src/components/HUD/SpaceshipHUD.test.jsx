@@ -1,21 +1,41 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import SpaceshipHUD from './SpaceshipHUD';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter as Router } from 'react-router-dom';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+const wrapper = ({ children }) => (
+  <QueryClientProvider client={queryClient}>
+    <Router>
+      {children}
+    </Router>
+  </QueryClientProvider>
+);
 
 // Mock child panel components
-jest.mock('./panels/CommandDeck', () => () => <div data-testid="command-deck-panel">CommandDeck</div>);
-jest.mock('./panels/MissionConsole', () => () => <div data-testid="mission-console-panel">MissionConsole</div>);
-jest.mock('./panels/TargetingScanner', () => () => <div data-testid="targeting-scanner-panel">TargetingScanner</div>);
-jest.mock('./panels/CommsLog', () => () => <div data-testid="comms-log-panel">CommsLog</div>);
-jest.mock('./panels/SkillGalaxyPanel', () => () => <div data-testid="skill-galaxy-panel">SkillGalaxy</div>);
-jest.mock('./panels/StatusBar', () => () => <div data-testid="status-bar">StatusBar</div>);
+vi.mock('./panels/CommandDeck', () => ({ default: () => <div data-testid="command-deck-panel">CommandDeck</div> }));
+vi.mock('./panels/MissionConsole', () => ({ default: () => <div data-testid="mission-console-panel">MissionConsole</div> }));
+vi.mock('./panels/TargetingScanner', () => ({ default: () => <div data-testid="targeting-scanner-panel">TargetingScanner</div> }));
+vi.mock('./panels/CommsLog', () => ({ default: () => <div data-testid="comms-log-panel">CommsLog</div> }));
+vi.mock('./panels/SkillGalaxyPanel', () => ({ default: () => <div data-testid="skill-galaxy-panel">SkillGalaxy</div> }));
+vi.mock('./panels/StatusBar', () => ({ default: () => <div data-testid="status-bar">StatusBar</div> }));
+vi.mock('./panels/SignalFeed', () => ({ default: () => <div data-testid="signal-feed">SignalFeed</div> }));
+vi.mock('./panels/EntityInspector', () => ({ default: () => <div data-testid="entity-inspector">EntityInspector</div> }));
 
 // Mock HUDSettingsPanel (to ensure it's not rendered)
 // jest.mock('./panels/HUDSettingsPanel', () => () => <div data-testid="hud-settings-panel">HUDSettingsPanel</div>); 
 // No need to mock if we are testing it's NOT there. If it was conditionally rendered, we might.
 
 // Mock hooks used by SpaceshipHUD or its direct children if necessary
-jest.mock('../../../hooks/useWindowSize', () => ({
+vi.mock('../../hooks/useWindowSize', () => ({
   useWindowSize: () => ({
     width: 1920, // Default to desktop size
     height: 1080,
@@ -24,20 +44,13 @@ jest.mock('../../../hooks/useWindowSize', () => ({
 
 describe('SpaceshipHUD', () => {
   test('renders the main HUD container', () => {
-    render(<SpaceshipHUD />);
-    const hudContainer = screen.getByRole('main'); // Assuming the main div has a role or we can use a testid
-    // If no specific role, let's find it by class - this is less ideal but works if role isn't set
-    // For this, we'd need to ensure the main div in SpaceshipHUD.jsx has a data-testid or identifiable role.
-    // Let's assume it has a class 'hud-container' for now and we query by that or a testid.
-    // For the sake of this example, let's assume the main div in SpaceshipHUD should have role="main" or data-testid="hud-container"
-    // If SpaceshipHUD's root div is just a div without specific role/testid, this query needs adjustment.
-    // Let's add a data-testid to SpaceshipHUD's main div in the actual component for better testing.
-    // For now, we'll assume it renders *something* and check for children.
-    expect(screen.getByTestId('command-deck-panel')).toBeInTheDocument(); // Check if one child is there
+    const { container } = render(<SpaceshipHUD />, { wrapper });
+    const hudContainer = container.querySelector('.hud-container');
+    expect(hudContainer).toBeInTheDocument();
   });
 
   test('renders all five primary panels and the StatusBar', () => {
-    render(<SpaceshipHUD />);
+    render(<SpaceshipHUD />, { wrapper });
     expect(screen.getByTestId('command-deck-panel')).toBeInTheDocument();
     expect(screen.getByTestId('mission-console-panel')).toBeInTheDocument();
     expect(screen.getByTestId('targeting-scanner-panel')).toBeInTheDocument();
@@ -47,7 +60,7 @@ describe('SpaceshipHUD', () => {
   });
 
   test('does not render HUDSettingsPanel', () => {
-    render(<SpaceshipHUD />);
+    render(<SpaceshipHUD />, { wrapper });
     // HUDSettingsPanel was removed, so queryByTestId should be null
     expect(screen.queryByTestId('hud-settings-panel')).not.toBeInTheDocument();
   });
@@ -56,7 +69,8 @@ describe('SpaceshipHUD', () => {
     render(
       <SpaceshipHUD>
         <div data-testid="map-content">Galactic Map View</div>
-      </SpaceshipHUD>
+      </SpaceshipHUD>,
+      { wrapper }
     );
     expect(screen.getByTestId('map-content')).toBeInTheDocument();
     expect(screen.getByText('Galactic Map View')).toBeInTheDocument();
@@ -66,7 +80,7 @@ describe('SpaceshipHUD', () => {
   // This can be brittle and depends on implementation details.
   // A better way might be snapshot testing for the overall structure if class names are stable.
   test('primary panels have their respective positioning classes', () => {
-    render(<SpaceshipHUD />);
+    render(<SpaceshipHUD />, { wrapper });
     // The panels themselves are mocked, but their wrappers are in SpaceshipHUD.
     // We need to ensure the wrappers generated by SpaceshipHUD have the correct classes.
     

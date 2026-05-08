@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useUserProfile } from '../../../hooks/useUserProfile'; // Adjust path
 import useRelevantTasks from '../../../hooks/useRelevantTasks'; // Adjust path
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css'; // Shared panel styles
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
@@ -9,6 +10,7 @@ import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
 
 const TargetingScanner = () => {
   const isMobile = useIsMobile();
+  const selectEntity = useAppStore(state => state.selectEntity);
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { relevantTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useRelevantTasks(profile?.id);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -59,8 +61,8 @@ const TargetingScanner = () => {
                     <span
                     className="task-name"
                     style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold', color: '#00f3ff', fontSize: isMobile ? '0.85rem' : '1rem' }}
-                    onClick={() => window.open(`${import.meta.env.VITE_FRONTEND_URL}/visualizer/${task.project_id}/${task.id}`, '_blank')}
-                    title="View task in visualizer"
+                    onClick={() => selectEntity({ id: `task-${task.id}`, type: 'task', name: task.name, status: task.status, raw: task })}
+                    title="View task in inspector"
                     >
                     {task.name}
                     </span>

@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useAssignedTasks from '../../../hooks/useAssignedTasks';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css';
 import './MissionConsole.css';
 
@@ -80,8 +81,9 @@ const MissionConsole = () => {
     return '#CCCCCC'; // Default/Other
   };
 
+  const selectEntity = useAppStore(state => state.selectEntity);
   const handleViewTask = (task) => {
-    navigate(`/visualizer/${task.projectId}/${task.id}`);
+    selectEntity({ id: `task-${task.id}`, type: 'task', name: task.name, status: task.status, raw: task });
   };
 
   const handleDropTask = async (taskId) => {
@@ -156,7 +158,7 @@ const MissionConsole = () => {
                     <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {(mission.reward_tokens || 0)} Tokens</span>
                   </div>
                   <div className="task-actions" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
-                    <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>ACCEPT</button>
+                    <button onClick={() => selectEntity({ id: `task-${mission.id}`, type: 'task', name: mission.name, status: mission.status || 'active', raw: mission })} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>VIEW</button>
                   </div>
                 </li>
               ))}

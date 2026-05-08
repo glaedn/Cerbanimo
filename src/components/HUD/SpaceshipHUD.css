@@ -66,6 +66,19 @@
   max-width: 300px;
   max-height: 40vh;
 }
+
+.signal-feed-panel {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  max-width: 300px;
+}
+
+.entity-inspector-panel {
+  top: 70px;
+  right: 10px;
+  z-index: 200;
+}
 /* End Panel Specific Positioning */
 
 .hud-map-viewport {

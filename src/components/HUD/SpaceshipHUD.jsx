@@ -6,10 +6,16 @@ import TargetingScanner from './panels/TargetingScanner';
 import CommsLog from './panels/CommsLog';
 import StatusBar from './panels/StatusBar';
 import SkillGalaxyPanel from './panels/SkillGalaxyPanel'; // Renamed import
+import SignalFeed from './panels/SignalFeed';
+import EntityInspector from './panels/EntityInspector';
+import { useAppStore } from '../../store/useAppStore';
+import { useEcosystemData } from '../../hooks/useEcosystemData';
 // import HUDSettingsPanel from './panels/HUDSettingsPanel'; // Removed
 import { useWindowSize } from '../../hooks/useWindowSize.js'; // Adjust path
 
 const SpaceshipHUD = ({ children }) => {
+  const selectedEntity = useAppStore(state => state.selectedEntity);
+  useEcosystemData(); // Initialize ecosystem data fetching
   const { width } = useWindowSize();
   const isMobile = width <= 768;
 
@@ -62,6 +68,22 @@ const SpaceshipHUD = ({ children }) => {
       <div className={`panel-wrapper skill-galaxy-panel`}>
         <SkillGalaxyPanel />
       </div>
+
+      <div className={`panel-wrapper signal-feed-panel`}>
+        <div className="hud-panel" style={{ maxWidth: '300px' }}>
+          <div className="hud-panel-header">
+            <h4>Ecosystem Signals</h4>
+          </div>
+          <SignalFeed />
+        </div>
+      </div>
+
+      {/* Contextual Entity Inspector */}
+      {selectedEntity && (
+        <div className="panel-wrapper entity-inspector-panel">
+          <EntityInspector />
+        </div>
+      )}
       
       {/* Central Map Viewport */}
       <div className="hud-map-viewport">
