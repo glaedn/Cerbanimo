@@ -13,6 +13,11 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@temporalio/activity": "^1.17.0",
+    "@temporalio/client": "^1.17.0",
+    "@temporalio/common": "^1.17.0",
+    "@temporalio/worker": "^1.17.0",
+    "@temporalio/workflow": "^1.17.0",
     "backblaze-b2": "^1.7.1",
     "bullmq": "^5.76.6",
     "cors": "^2.8.5",
