@@ -10,9 +10,9 @@ import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
 
 const TargetingScanner = () => {
   const isMobile = useIsMobile();
-  const selectEntity = useAppStore(state => state.selectEntity);
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { relevantTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useRelevantTasks(profile?.id);
+  const selectEntity = useAppStore(state => state.selectEntity);
   const [isMinimized, setIsMinimized] = useState(false);
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const toggleMinimize = (e) => {

@@ -12,9 +12,9 @@ const MOCK_PROJECT_TOKENS = true; // Set to false if projects have real token da
 const accentGreen = '#00D787'; // theme.colors.accentGreen
 
 const CommandDeck = () => {
-  const selectEntity = useAppStore(state => state.selectEntity);
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { projects, loading: projectsLoading, error: projectsError } = useUserProjects(profile?.id);
+  const selectEntity = useAppStore(state => state.selectEntity);
   const [isMinimized, setIsMinimized] = useState(false); // Use useState
   const [chronicleData, setChronicleData] = useState([]);
   const [loadingChronicle, setLoadingChronicle] = useState(false);
