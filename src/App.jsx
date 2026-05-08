@@ -18,6 +18,8 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import AuthWrapper from "./AuthWrapper.jsx";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUserProfile } from "./hooks/useUserProfile";
+import { socketService } from "./services/SocketService";
+import { useAuth0 } from "@auth0/auth0-react";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -91,6 +93,26 @@ const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const { profile } = useUserProfile();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+
+  React.useEffect(() => {
+    const initializeSocket = async () => {
+      if (isAuthenticated && profile?.id) {
+        try {
+          const token = await getAccessTokenSilently();
+          socketService.connect(profile.id, token);
+        } catch (err) {
+          console.error("Socket initialization failed:", err);
+        }
+      }
+    };
+
+    initializeSocket();
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [isAuthenticated, profile?.id, getAccessTokenSilently]);
 
   return (
     <div className="App">
