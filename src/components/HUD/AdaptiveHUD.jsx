@@ -159,9 +159,9 @@ const AdaptiveHUD = ({ children }) => {
         {renderContextualUI()}
       </div>
 
-      {/* Persistent Telemetry */}
+      {/* Persistent Telemetry Layer (Container for pinned/global indicators) */}
       <div className="hud-telemetry-layer">
-        <CoordinationPulseHUD />
+        {/* Status bar is global, other telemetry items are now toggleable panels */}
       </div>
 
       {/* Contextual Entity Inspector */}

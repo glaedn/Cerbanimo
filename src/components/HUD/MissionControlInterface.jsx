@@ -5,9 +5,6 @@ import { Target, Users, Clock, AlertTriangle, ChevronRight } from 'lucide-react'
 import theme from '../../styles/theme';
 
 const Container = styled.div`
-  position: absolute;
-  top: 70px;
-  left: 10px;
   width: 340px;
   background: rgba(10, 10, 46, 0.85);
   border: 1px solid ${theme.tokens.colors.brand.primary};

@@ -5,17 +5,12 @@ import theme from '../../styles/theme';
 import { motion } from 'framer-motion';
 
 const Container = styled.div`
-  position: fixed;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 320px;
   height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 15px;
-  z-index: 120;
   pointer-events: none;
 `;
 

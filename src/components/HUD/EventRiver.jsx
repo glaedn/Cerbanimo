@@ -7,16 +7,12 @@ import theme from '../../styles/theme';
 import { Zap, AlertCircle, Info, Activity } from 'lucide-react';
 
 const RiverContainer = styled.div`
-  position: fixed;
-  bottom: 80px;
-  left: 20px;
   width: 320px;
   max-height: 400px;
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
   pointer-events: none;
-  z-index: 100;
 `;
 
 const SignalCard = styled(motion.div)`

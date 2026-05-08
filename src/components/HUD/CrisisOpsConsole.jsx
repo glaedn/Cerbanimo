@@ -5,9 +5,6 @@ import { ShieldAlert, Zap, MapPin, Truck, Activity } from 'lucide-react';
 import theme from '../../styles/theme';
 
 const Container = styled.div`
-  position: absolute;
-  top: 70px;
-  right: 10px;
   width: 360px;
   background: rgba(40, 0, 0, 0.4);
   border: 1px solid ${theme.tokens.colors.status.crisis};
@@ -18,7 +15,6 @@ const Container = styled.div`
   flex-direction: column;
   gap: 16px;
   box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
-  z-index: 110;
 `;
 
 const Header = styled.div`

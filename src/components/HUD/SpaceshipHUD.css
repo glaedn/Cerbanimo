@@ -102,6 +102,69 @@
   pointer-events: auto;
 }
 
+/* F3 Layout Layers */
+.hud-operational-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.hud-operational-layer > * {
+  pointer-events: auto;
+}
+
+.hud-telemetry-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 200;
+}
+
+.hud-telemetry-layer > * {
+  pointer-events: auto;
+}
+
+.dashboard-hud-layers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* F3 Panel Positioning */
+.pulse-hud-panel {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.event-river-panel {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+}
+
+.mission-control-panel {
+  position: absolute;
+  top: 70px;
+  left: 10px;
+}
+
+.crisis-ops-panel {
+  position: absolute;
+  top: 70px;
+  right: 10px;
+}
+
 /* Styling for StatusBar */
 .hud-container > .status-bar {
   width: calc(100% - 20px);
@@ -116,6 +179,8 @@
 @media (max-width: 768px) {
   .hud-container {
     position: relative;
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
@@ -146,6 +211,21 @@
     bottom: auto !important;
     transform: none !important;
     order: -1; /* Put map at top on mobile */
+    overflow: hidden; /* Ensure D3 simulation stays within bounds */
+  }
+
+  .event-river-panel,
+  .mission-control-panel,
+  .crisis-ops-panel,
+  .pulse-hud-panel {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    margin-bottom: 15px;
   }
 
   /* Stack panels in logical order */
