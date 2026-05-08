@@ -181,15 +181,44 @@ class CoordinationAgentService {
     });
   }
 
+  async getGovernanceAgentSignals() {
+    const result = await pool.query(`
+      SELECT
+        ae.payload->>'communityId' as community_id,
+        c.name,
+        COUNT(*) as event_count,
+        MAX(ae.created_at) as last_event
+      FROM agent_events ae
+      JOIN agent_instances ai ON ae.agent_id = ai.id
+      JOIN communities c ON (ae.payload->>'communityId')::int = c.id
+      WHERE ai.type = 'GovernanceAgent'
+      AND ae.created_at > NOW() - INTERVAL '7 days'
+      GROUP BY ae.payload->>'communityId', c.name
+      LIMIT 10
+    `);
+
+    return result.rows.map(row => ({
+      agent: 'Governance Agent',
+      subjectType: 'community',
+      subjectId: row.community_id,
+      title: row.name,
+      severity: 40 + (row.event_count * 10),
+      status: 'review',
+      signal: `${row.event_count} governance risks detected in last 7 days`,
+      recommendation: 'Audit participation rates and delegation structures to ensure adaptive legitimacy.'
+    }));
+  }
+
   async getSignals() {
-    const [needs, missions, communities, dispatch] = await Promise.all([
+    const [needs, missions, communities, dispatch, governance] = await Promise.all([
       this.getNeedAgentSignals(),
       this.getMissionAgentSignals(),
       this.getCommunityAgentSignals(),
-      this.getDispatchAgentSignals()
+      this.getDispatchAgentSignals(),
+      this.getGovernanceAgentSignals()
     ]);
 
-    return [...needs, ...missions, ...communities, ...dispatch]
+    return [...needs, ...missions, ...communities, ...dispatch, ...governance]
       .sort((a, b) => b.severity - a.severity)
       .slice(0, 25);
   }

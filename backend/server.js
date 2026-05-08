@@ -40,6 +40,8 @@ import constellationRoutesV2 from './routes/constellations_v2.js';
 import resourceRoutesV2 from './routes/resources_v2.js';
 import storyEngineRoutesV2 from './routes/story_engine_v2.js';
 import civicKernelRoutes from './routes/civic_kernel.js';
+import governanceRoutes from './routes/governance.js';
+import federationRoutes from './routes/federation.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -69,6 +71,7 @@ import { createNeedsTable } from '../models/needs.js';
 import { createCivicKernelTables } from '../models/civic_kernel.js';
 import { createSpatialLayerTables } from '../models/spatial_layer.js';
 import { createSystemStateTable } from '../models/system_state.js';
+import { createGovernanceTables } from '../models/governance.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
 
@@ -241,6 +244,8 @@ app.use('/story_engine_v2', (req, res, next) => {
 }, resolveUser, storyEngineRoutesV2);
 
 app.use('/civic-kernel', jwtCheck, resolveUser, civicKernelRoutes);
+app.use('/governance', jwtCheck, resolveUser, governanceRoutes);
+app.use('/federation', jwtCheck, resolveUser, federationRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -414,6 +419,7 @@ async function initializeDatabase() {
     await createCivicKernelTables();
     await createSpatialLayerTables();
     await createSystemStateTable();
+    await createGovernanceTables();
     await createDiscordConfigTable();
     await createNeedCommentsTable();
     await alterExistingTables();

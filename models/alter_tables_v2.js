@@ -31,7 +31,16 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS cross_community_enabled BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
-    ADD COLUMN IF NOT EXISTS service_radius NUMERIC; -- in meters
+    ADD COLUMN IF NOT EXISTS service_radius NUMERIC, -- in meters
+    ADD COLUMN IF NOT EXISTS governance_config JSONB DEFAULT '{
+      "votingModel": "direct",
+      "proposalThreshold": 1,
+      "quorum": 0.1,
+      "delegationEnabled": true,
+      "emergencyPowers": false,
+      "constitutionalAmendmentThreshold": 0.66
+    }'::jsonb,
+    ADD COLUMN IF NOT EXISTS active_constitution_id INTEGER;
   `;
 
   const alterUsersQuery = `

@@ -15,6 +15,15 @@ const createCommunitiesTable = async () => {
         discord_guild_id VARCHAR(50),
         location_point GEOGRAPHY(Point, 4326),
         service_radius NUMERIC, -- in meters
+        governance_config JSONB DEFAULT '{
+          "votingModel": "direct",
+          "proposalThreshold": 1,
+          "quorum": 0.1,
+          "delegationEnabled": true,
+          "emergencyPowers": false,
+          "constitutionalAmendmentThreshold": 0.66
+        }'::jsonb,
+        active_constitution_id INTEGER, -- FK to constitutions.id set later
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
