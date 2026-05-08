@@ -1,10 +1,13 @@
 import React from 'react';
-import TabbedHUD from '../components/HUD/TabbedHUD/TabbedHUD';
+import AdaptiveHUD from '../components/HUD/AdaptiveHUD';
+import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap';
 
 const CoordinatorHUD = () => {
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#000' }}>
-      <TabbedHUD />
+      <AdaptiveHUD>
+        <GalacticActivityMap />
+      </AdaptiveHUD>
     </div>
   );
 };

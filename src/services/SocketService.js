@@ -21,9 +21,23 @@ class SocketService {
     this.socket.on('connect', () => {
       console.log('[SocketService] Connected:', this.socket.id);
       this.socket.emit('join', userId);
+      this.startPresenceHeartbeat(userId);
     });
 
     this.setupEventHandlers();
+  }
+
+  startPresenceHeartbeat(userId) {
+    if (this.presenceInterval) clearInterval(this.presenceInterval);
+    this.presenceInterval = setInterval(() => {
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('presence:heartbeat', {
+          userId,
+          context: window.location.pathname,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }, 10000); // 10 seconds
   }
 
   setupEventHandlers() {
@@ -33,6 +47,12 @@ class SocketService {
     this.socket.on('event', (event) => {
       console.log('[SocketService] Received Event:', event);
       this.handleIngestion(event);
+    });
+
+    this.socket.on('presence:update', ({ scopeId, userIds }) => {
+      import('../store/useAppStore').then(module => {
+        module.useAppStore.getState().updatePresence(scopeId, userIds);
+      });
     });
 
     // Legacy/Specific Handlers
@@ -57,16 +77,24 @@ class SocketService {
   handleIngestion(event) {
     const { entity_type, entity_id } = event;
 
-    // Simple invalidation strategy based on entity type
+    // 1. Invalidate Cache
     if (entity_type) {
-      console.log(`[SocketService] Invalidate cache for: ${entity_type}`);
       queryClient.invalidateQueries([entity_type]);
-
-      // If it's a specific entity, we can also invalidate that specific entry
       if (entity_id) {
         queryClient.invalidateQueries([entity_type, entity_id]);
       }
     }
+
+    // 2. Add to Realtime Event Stream in Store
+    // Dynamically import store to avoid circular dependency if any
+    import('../store/useAppStore').then(module => {
+      const store = module.useAppStore.getState();
+      store.addRealtimeEvent({
+        ...event,
+        receivedAt: new Date().toISOString(),
+        id: event.id || Math.random().toString(36).substr(2, 9)
+      });
+    });
   }
 
   disconnect() {

@@ -59,15 +59,30 @@ const AgentFeed = () => {
               }
             </p>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                <Zap className="w-3 h-3 text-amber-500" />
-                Confidence: {Math.round((event.confidence || 0.8) * 100)}%
+            <div className="flex flex-col gap-2 mt-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  Confidence: {Math.round((event.confidence || 0.8) * 100)}%
+                </div>
+                {event.payload?.evidence_links && (
+                   <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                     <MessageSquare className="w-3 h-3 text-indigo-400" />
+                     {event.payload.evidence_links.length} Evidence Links
+                   </div>
+                )}
               </div>
-              <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                <MessageSquare className="w-3 h-3 text-indigo-400" />
-                Evidence Linked
-              </div>
+
+              {event.payload?.reasoning?.logic_steps && (
+                <div className="text-[10px] bg-black/20 p-2 rounded border border-slate-600/30">
+                  <span className="font-bold text-slate-500 uppercase block mb-1">Rationale</span>
+                  <ul className="list-disc list-inside space-y-1">
+                    {event.payload.reasoning.logic_steps.map((step, i) => (
+                      <li key={i} className="text-slate-400">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         ))
