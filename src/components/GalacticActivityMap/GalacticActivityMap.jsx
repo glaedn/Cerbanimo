@@ -11,14 +11,19 @@ import LoFiActivityList from "./LoFiActivityList";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { useAppStore } from "../../store/useAppStore";
 
-const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
+const GalacticActivityMap = React.memo(({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   const { isCrisisMode } = useCrisis();
   const { isLoFiMode } = useLoFi();
   const { profile } = useUserProfile();
   const isMobile = useIsMobile();
   const location = useLocation();
-  const { entities, relationships, selectEntity, selectedEntity } = useAppStore();
+
+  const entities = useAppStore(state => state.entities);
+  const relationships = useAppStore(state => state.relationships);
+  const selectedEntity = useAppStore(state => state.selectedEntity);
+  const selectEntity = useAppStore(state => state.selectEntity);
+
   const isFullscreenMobile = location.pathname === '/activity-map';
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const navigate = useNavigate();
@@ -30,6 +35,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const isFetching = useRef(false);
   const simulationRef = useRef(null);
   const nodesRef = useRef([]);
+  const lastStarDataHash = useRef("");
 
   useEffect(() => {
     const update = () => {
@@ -212,6 +218,10 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         return { x: width / 2 + dist * Math.cos(ang), y: height / 2 + dist * Math.sin(ang) };
       };
 
+      const starDataHash = starData.map(d => d.id).sort().join(",");
+      const isNewData = starDataHash !== lastStarDataHash.current;
+      lastStarDataHash.current = starDataHash;
+
       const nodes = starData.map(d => {
         const existing = nodesRef.current.find(n => n.id === d.id);
         if (existing) {
@@ -227,22 +237,24 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         target: nodes.find(n => n.id === (l.target.id || l.target))
       })).filter(l => l.source && l.target);
 
-      if (simulationRef.current) simulationRef.current.stop();
+      if (isNewData) {
+        if (simulationRef.current) simulationRef.current.stop();
 
-      // Constellation Layout: Higher link strength, center gravity, and moderate repulsion
-      simulationRef.current = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 120 : 60).strength(0.4))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -1200 : -150))
-        .force("center", d3.forceCenter(w / 2, h / 2))
-        .force("x", d3.forceX(w / 2).strength(0.1))
-        .force("y", d3.forceY(h / 2).strength(0.1))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)).strength(1))
-        .alphaDecay(0.02)
-        .stop();
+        // Constellation Layout: Higher link strength, center gravity, and moderate repulsion
+        simulationRef.current = d3.forceSimulation(nodes)
+          .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 120 : 60).strength(0.4))
+          .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -1200 : -150))
+          .force("center", d3.forceCenter(w / 2, h / 2))
+          .force("x", d3.forceX(w / 2).strength(0.1))
+          .force("y", d3.forceY(h / 2).strength(0.1))
+          .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)).strength(1))
+          .alphaDecay(0.02)
+          .stop();
 
-      // Optimization: drastically reduced ticks to prevent freezing, especially on mobile
-      const ticks = isMobile ? 150 : 300;
-      for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
+        // Optimization: drastically reduced ticks to prevent freezing, especially on mobile
+        const ticks = isMobile ? 150 : 300;
+        for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
+      }
 
       const link = g.selectAll(".link").data(lks, d => d.id);
       link.exit().remove();
