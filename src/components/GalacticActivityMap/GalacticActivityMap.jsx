@@ -29,6 +29,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const hasWarped = useRef(false);
   const isFetching = useRef(false);
   const simulationRef = useRef(null);
+  const nodesRef = useRef([]);
 
   useEffect(() => {
     const update = () => {
@@ -211,7 +212,15 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         return { x: width / 2 + dist * Math.cos(ang), y: height / 2 + dist * Math.sin(ang) };
       };
 
-      const nodes = starData.map(d => ({ ...d, ...getP(d.id, w, h) }));
+      const nodes = starData.map(d => {
+        const existing = nodesRef.current.find(n => n.id === d.id);
+        if (existing) {
+          return { ...d, x: existing.x, y: existing.y, vx: existing.vx, vy: existing.vy };
+        }
+        return { ...d, ...getP(d.id, w, h) };
+      });
+      nodesRef.current = nodes;
+
       const lks = links.map(l => ({
         id: `link-${(l.source.id || l.source)}-${(l.target.id || l.target)}`,
         source: nodes.find(n => n.id === (l.source.id || l.source)),
