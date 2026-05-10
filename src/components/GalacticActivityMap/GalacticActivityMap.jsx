@@ -386,7 +386,6 @@ const GalacticActivityMap = React.memo(({ showLoadingText = true, enableTooltips
       document.removeEventListener('click', hClick);
     };
   }, [starData, links, isLoading, error, dimensions, isMobile, isFullscreenMobile, navigate, enableClicks, enableTooltips, getStarRadius, getRelevance]);
-
   return (
     <div className="galactic-activity-map-container">
       {isLoading && starData.length === 0 && showLoadingText && <div className="loading-overlay"><h1>Galactic Activity Map</h1><p>Loading...</p></div>}

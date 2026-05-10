@@ -19,7 +19,7 @@ const AvatarCircle = styled(motion.div)`
   height: 32px;
   border-radius: 50%;
   border: 2px solid ${theme.tokens.colors.brand.primary};
-  background: ${theme.tokens.surface.paper};
+  background: ${theme.tokens.colors.surface.paper};
   display: flex;
   align-items: center;
   justify-content: center;
