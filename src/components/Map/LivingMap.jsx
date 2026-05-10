@@ -1,8 +1,8 @@
 import React, { useMemo, useCallback } from 'react';
 import Map, { NavigationControl, FullscreenControl } from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
-import { ScatterplotLayer, IconLayer, PathLayer, HeatmapLayer, PolygonLayer } from '@deck.gl/layers';
-import { HexagonLayer } from '@deck.gl/aggregation-layers';
+import { ScatterplotLayer, IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
+import { HexagonLayer, HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { useAppStore } from '../../store/useAppStore';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
