@@ -62,6 +62,9 @@ const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 const NeedsPage = React.lazy(() => import("./pages/NeedsPage/NeedsPage.jsx"));
 const AdaptiveHUD = React.lazy(() => import("./components/HUD/AdaptiveHUD.jsx"));
+const GovernanceChamber = React.lazy(() => import("./pages/GovernanceChamber.jsx"));
+const ConstitutionExplorer = React.lazy(() => import("./pages/ConstitutionExplorer.jsx"));
+const FederationAtlas = React.lazy(() => import("./pages/FederationAtlas.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
@@ -158,6 +161,24 @@ const AppContent = () => {
               <PrivateRoute>
                 <PageWrapper><SkillConstellation /></PageWrapper>
               </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId"
+            element={
+                <PageWrapper><GovernanceChamber /></PageWrapper>
+            }
+          />
+          <Route
+            path="/governance/:communityId/constitution"
+            element={
+                <PageWrapper><ConstitutionExplorer /></PageWrapper>
+            }
+          />
+          <Route
+            path="/federation-atlas"
+            element={
+                <PageWrapper><FederationAtlas /></PageWrapper>
             }
           />
           <Route

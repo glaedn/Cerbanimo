@@ -101,7 +101,7 @@ const AdaptiveHUD = ({ children }) => {
         case 'crisis':
           return <CrisisOpsConsole />;
         case 'governance':
-          return <div className="governance-overlay">Governance View (TBD)</div>;
+          return <div className="governance-overlay" style={{ pointerEvents: 'auto' }}><EventRiver /></div>;
         default:
           return activePanels.slice(0, 6).map(renderPanel);
       }

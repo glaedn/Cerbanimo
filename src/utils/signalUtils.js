@@ -40,6 +40,12 @@ export const calculateSignalScore = (event, context = {}) => {
   // 4. Ecosystem Impact (0-15)
   score += (event.impactScore || 0) * 1.5;
 
+  // 5. Governance specific weighting
+  if (event.type === 'governance.participation_collapse') score += 50;
+  if (event.type === 'governance.authority_concentration') score += 45;
+  if (event.type === 'governance.constitutional_drift') score += 40;
+  if (event.type === 'governance.treaty_tension') score += 30;
+
   return Math.min(score, 100);
 };
 
