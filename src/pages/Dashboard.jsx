@@ -5,12 +5,15 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { Button, Box, } from '@mui/material';
 import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap.jsx';
+import LivingMap from '../components/Map/LivingMap.jsx';
 import AdaptiveHUD from '../components/HUD/AdaptiveHUD.jsx';
+import { useAppStore } from '../store/useAppStore';
 import './Dashboard.css';
 
 
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently, logout } = useAuth0();
+  const viewMode = useAppStore(state => state.viewMode);
 
   const navigate = useNavigate(); // Properly declare navigate using useNavigate
 
@@ -77,7 +80,7 @@ const Dashboard = () => {
 
   return (
     <AdaptiveHUD>
-      <GalacticActivityMap />
+      {viewMode === 'map' ? <LivingMap /> : <GalacticActivityMap />}
     </AdaptiveHUD>
   );
 };

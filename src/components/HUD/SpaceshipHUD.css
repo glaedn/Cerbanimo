@@ -216,7 +216,9 @@
   .event-river-panel,
   .mission-control-panel,
   .crisis-ops-panel,
-  .pulse-hud-panel {
+  .pulse-hud-panel,
+  .dispatch-panel,
+  .regional-pulse-panel {
     position: relative !important;
     left: auto !important;
     top: auto !important;

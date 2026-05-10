@@ -20,6 +20,13 @@ export const calculateSignalScore = (event, context = {}) => {
   // 2. Proximity (0-20)
   if (userRegion && event.region === userRegion) {
     score += 20;
+  } else if (context.latitude && context.longitude && event.location) {
+    // Spatial Proximity weighting
+    const dx = context.longitude - event.location.x;
+    const dy = context.latitude - event.location.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < 0.01) score += 20; // ~1km
+    else if (distSq < 0.04) score += 10; // ~2km
   }
 
   // 3. Relevance to active missions/role (0-25)

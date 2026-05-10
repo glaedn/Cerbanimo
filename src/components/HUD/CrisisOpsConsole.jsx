@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import { useAppStore } from '../../store/useAppStore';
-import { ShieldAlert, Zap, MapPin, Truck, Activity } from 'lucide-react';
+import { ShieldAlert, Zap, MapPin, Truck, Activity, Navigation, Crosshair } from 'lucide-react';
 import theme from '../../styles/theme';
 
 const Container = styled.div`
@@ -57,8 +57,20 @@ const HealthIndicator = styled.div`
 `;
 
 const CrisisOpsConsole = () => {
-  const { realtimeEvents } = useAppStore();
+  const { realtimeEvents, setMapState, setViewMode } = useAppStore();
   const crisisEvents = realtimeEvents.filter(e => e.severity > 80 || e.type?.includes('crisis'));
+
+  const jumpToCrisis = (event) => {
+    if (event.location) {
+      setMapState({
+        latitude: event.location.y,
+        longitude: event.location.x,
+        zoom: 15,
+        pitch: 60
+      });
+      setViewMode('map');
+    }
+  };
 
   return (
     <Container>
@@ -96,8 +108,12 @@ const CrisisOpsConsole = () => {
                 <MapPin size={10} /> {event.region || 'Unknown Location'}
               </div>
               <div style={{ marginTop: '4px', display: 'flex', gap: '6px' }}>
-                <button style={{ flex: 1, background: 'rgba(255, 65, 54, 0.2)', border: '1px solid rgba(255, 65, 54, 0.4)', borderRadius: '3px', color: '#fff', fontSize: '0.6rem', padding: '4px' }}>DISPATCH</button>
-                <button style={{ flex: 1, background: 'rgba(255, 255, 255, 0.1)', border: 'none', borderRadius: '3px', color: '#fff', fontSize: '0.6rem', padding: '4px' }}>REROUTE</button>
+                <button
+                  onClick={() => jumpToCrisis(event)}
+                  style={{ flex: 1, background: 'rgba(255, 65, 54, 0.3)', border: '1px solid rgba(255, 65, 54, 0.6)', borderRadius: '3px', color: '#fff', fontSize: '0.6rem', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Crosshair size={10} /> TARGET
+                </button>
+                <button style={{ flex: 1, background: 'rgba(255, 255, 255, 0.1)', border: 'none', borderRadius: '3px', color: '#fff', fontSize: '0.6rem', padding: '6px' }}>RESOLVE</button>
               </div>
             </DispatchItem>
           ))}

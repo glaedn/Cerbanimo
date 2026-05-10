@@ -64,6 +64,7 @@ export const useEcosystemData = () => {
           name: c.name,
           status: 'active',
           lastActivity: c.updated_at || c.created_at,
+          location: c.location_point,
           raw: c
         });
       });
@@ -76,6 +77,7 @@ export const useEcosystemData = () => {
           name: n.name,
           status: n.urgency_level || 'medium',
           lastActivity: n.updated_at || n.created_at,
+          location: n.location_point,
           raw: n
         });
         if (n.requestor_community_id) {
@@ -133,6 +135,7 @@ export const useEcosystemData = () => {
           name: r.name,
           status: r.status,
           lastActivity: r.updated_at || r.created_at,
+          location: r.location_point,
           raw: r
         });
 

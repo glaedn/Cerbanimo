@@ -4,6 +4,8 @@ import EventRiver from './EventRiver';
 import MissionControlInterface from './MissionControlInterface';
 import CrisisOpsConsole from './CrisisOpsConsole';
 import CoordinationPulseHUD from './CoordinationPulseHUD';
+import DispatchCenter from './panels/DispatchCenter';
+import RegionalPulse from './panels/RegionalPulse';
 import PresenceIndicators from './PresenceIndicators';
 import OverlayManager from './OverlayManager';
 import StatusBar from './panels/StatusBar';
@@ -19,6 +21,8 @@ const AdaptiveHUD = ({ children }) => {
   const {
     activeContext,
     setActiveContext,
+    viewMode,
+    setViewMode,
     realtimeEvents,
     selectedEntity,
     isCrisisMode,
@@ -80,6 +84,10 @@ const AdaptiveHUD = ({ children }) => {
         return <div className="panel-wrapper crisis-ops-panel" key="crisis"><CrisisOpsConsole /></div>;
       case 'pulse':
         return <div className="panel-wrapper pulse-hud-panel" key="pulse"><CoordinationPulseHUD /></div>;
+      case 'dispatch':
+        return <div className="panel-wrapper dispatch-panel" key="dispatch"><DispatchCenter /></div>;
+      case 'regional':
+        return <div className="panel-wrapper regional-pulse-panel" key="regional"><RegionalPulse /></div>;
       default:
         return null;
     }
@@ -115,11 +123,19 @@ const AdaptiveHUD = ({ children }) => {
       {/* Mode Switcher & Config */}
       <div style={{ position: 'fixed', bottom: '60px', left: '20px', zIndex: 1000, display: 'flex', gap: '8px' }}>
         <button
+          onClick={() => setViewMode(viewMode === 'graph' ? 'map' : 'graph')}
+          style={{ background: 'rgba(0, 243, 255, 0.3)', border: '2px solid #00f3ff', color: '#fff', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)', fontWeight: 'bold', boxShadow: '0 0 15px rgba(0,243,255,0.4)' }}
+        >
+          <Layout size={14} />
+          {viewMode === 'graph' ? 'WARP TO MAP' : 'WARP TO GRAPH'}
+        </button>
+
+        <button
           onClick={() => setHudMode(hudMode === 'normal' ? 'operational' : 'normal')}
-          style={{ background: 'rgba(0, 243, 255, 0.2)', border: '1px solid #00f3ff', color: '#00f3ff', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)' }}
+          style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)' }}
         >
           {hudMode === 'normal' ? <Layout size={14} /> : <Monitor size={14} />}
-          {hudMode === 'normal' ? 'OPERATIONAL HUD' : 'DASHBOARD VIEW'}
+          {hudMode === 'normal' ? 'OPERATIONAL' : 'DASHBOARD'}
         </button>
         <button
           onClick={() => setShowConfig(!showConfig)}
@@ -138,7 +154,9 @@ const AdaptiveHUD = ({ children }) => {
               { id: 'river', label: 'Event River' },
               { id: 'pulse', label: 'Coordination Pulse' },
               { id: 'mission', label: 'Mission Control' },
-              { id: 'crisis', label: 'Crisis Console' }
+              { id: 'crisis', label: 'Crisis Console' },
+              { id: 'dispatch', label: 'Dispatch Center' },
+              { id: 'regional', label: 'Regional Pulse' }
             ].map(panel => (
               <div
                 key={panel.id}

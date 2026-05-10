@@ -3,6 +3,14 @@ import { create } from 'zustand';
 export const useAppStore = create((set) => ({
   // Navigation & UI Context
   activeContext: 'normal', // 'normal', 'mission', 'crisis', 'governance', 'field'
+  viewMode: 'graph', // 'graph' or 'map'
+  mapState: {
+    latitude: 42.8864, // Default to Buffalo, NY for context
+    longitude: -78.8784,
+    zoom: 12,
+    pitch: 45,
+    bearing: 0
+  },
   isLoFiMode: typeof localStorage !== 'undefined' ? localStorage.getItem('lofiMode') === 'true' : false,
   isCrisisMode: false,
   activeOverlays: [], // ['crisis', 'logistics', 'trust', 'governance', 'resource', 'comms']
@@ -25,6 +33,10 @@ export const useAppStore = create((set) => ({
 
   // Actions
   setHudMode: (mode) => set({ hudMode: mode }),
+  setViewMode: (mode) => set({ viewMode: mode }),
+  setMapState: (newMapState) => set((state) => ({
+    mapState: { ...state.mapState, ...newMapState }
+  })),
   setActiveContext: (context) => set({ activeContext: context }),
 
   togglePanel: (panelId) => set((state) => {
