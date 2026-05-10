@@ -396,6 +396,6 @@ const GalacticActivityMap = React.memo(({ showLoadingText = true, enableTooltips
       )}
     </div>
   );
-};
+});
 
 export default GalacticActivityMap;
