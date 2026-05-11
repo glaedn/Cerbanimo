@@ -13,8 +13,11 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import theme from '../../styles/theme'; // Custom theme
 import './OnboardingPage.css';
 
@@ -43,6 +46,19 @@ const OnboardingPage = () => {
   const [interestsOptions, setInterestsOptions] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Location State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [locationData, setLocationData] = useState({
+    city: '',
+    state: '',
+    country: '',
+    latitude: '',
+    longitude: '',
+    share_location_publicly: false
+  });
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -146,6 +162,40 @@ const OnboardingPage = () => {
     }
   };
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial_ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setLocationData(prev => ({
+        ...prev,
+        city: newValue.address.city || '',
+        state: newValue.address.state || '',
+        country: newValue.address.country || '',
+        latitude: newValue.latitude,
+        longitude: newValue.longitude
+      }));
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
@@ -176,6 +226,14 @@ const OnboardingPage = () => {
 
     formData.append('skills', JSON.stringify(formattedSkills));
     formData.append('interests', JSON.stringify(formattedInterests));
+
+    // Add location data
+    formData.append('city', locationData.city);
+    formData.append('state', locationData.state);
+    formData.append('country', locationData.country);
+    formData.append('latitude', locationData.latitude);
+    formData.append('longitude', locationData.longitude);
+    formData.append('share_location_publicly', locationData.share_location_publicly);
 
     if (profilePicture) {
       formData.append('profilePicture', profilePicture);
@@ -253,6 +311,62 @@ const OnboardingPage = () => {
           inputProps={{ style: { color: theme.colors.textPrimary } }}
           sx={{ mb: 2 }}
         />
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ color: theme.colors.primary, mb: 1, fontSize: '1rem' }}>
+            WHERE ARE YOU JOINING FROM?
+          </Typography>
+          <Autocomplete
+            fullWidth
+            options={locationOptions}
+            getOptionLabel={(option) => option.displayName || ''}
+            loading={isGeocoding}
+            onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+            onChange={handleLocationSelect}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="City, Region, or Address"
+                placeholder="Locating in the ecosystem..."
+                variant="outlined"
+                InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <LocationOnIcon sx={{ color: theme.colors.primary, mr: 1 }} />
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            sx={{ mb: 1 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={locationData.share_location_publicly}
+                onChange={(e) => setLocationData({ ...locationData, share_location_publicly: e.target.checked })}
+                sx={{
+                  color: theme.colors.primary,
+                  '&.Mui-checked': { color: theme.colors.primary },
+                }}
+              />
+            }
+            label={
+              <Typography sx={{ color: theme.colors.textSecondary, fontSize: '0.8rem' }}>
+                Show my general location on the volunteer map
+              </Typography>
+            }
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
           <Autocomplete

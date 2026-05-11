@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGovernanceStore } from '../store/useGovernanceStore';
 import { useAppStore } from '../store/useAppStore';
 import { useAuth0 } from '@auth0/auth0-react';
 import ProposalCard from '../components/Governance/ProposalCard';
 import DeliberationSpace from '../components/Governance/DeliberationSpace';
-import { Plus, Info, Layout, Activity, Shield, Users, Users2, Target, BarChart3, X } from 'lucide-react';
+import { Autocomplete, TextField, CircularProgress } from '@mui/material';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { Plus, Info, Layout, Activity, Shield, Users, Users2, Target, BarChart3, X, MapPin } from 'lucide-react';
 import * as S from '../components/Governance/GovernanceStyles';
 
 const GovernanceChamber = () => {
@@ -52,6 +55,49 @@ const GovernanceChamber = () => {
       risk: 'Low'
     }
   });
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial_ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setNewProposal({
+        ...newProposal,
+        payload: {
+          ...newProposal.payload,
+          city: newValue.address.city || '',
+          state: newValue.address.state || '',
+          country: newValue.address.country || '',
+          latitude: newValue.latitude,
+          longitude: newValue.longitude,
+          formatted_address: newValue.displayName
+        }
+      });
+    }
+  };
 
   const refreshData = async () => {
     try {
@@ -350,66 +396,58 @@ const GovernanceChamber = () => {
                 </S.FormField>
               </div>
               {newProposal.type === 'community.location_change' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <S.FormField>
-                    <S.Label>New Latitude</S.Label>
-                    <S.Input
-                      type="number"
-                      step="any"
-                      required
-                      value={newProposal.payload.latitude || ''}
-                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, latitude: parseFloat(e.target.value)}})}
-                      placeholder="e.g., 34.0522"
-                    />
-                  </S.FormField>
-                  <S.FormField>
-                    <S.Label>New Longitude</S.Label>
-                    <S.Input
-                      type="number"
-                      step="any"
-                      required
-                      value={newProposal.payload.longitude || ''}
-                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, longitude: parseFloat(e.target.value)}})}
-                      placeholder="e.g., -118.2437"
-                    />
-                  </S.FormField>
-                </div>
-              )}
-              {newProposal.type === 'community.location_change' && (
-                <>
-                  <S.FormField>
-                    <S.Label>New City</S.Label>
-                    <S.Input
-                      type="text"
-                      required
-                      value={newProposal.payload.city || ''}
-                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, city: e.target.value}})}
-                      placeholder="e.g., Los Angeles"
-                    />
-                  </S.FormField>
-                  <div className="grid grid-cols-2 gap-4">
-                    <S.FormField>
-                      <S.Label>New State / Region</S.Label>
-                      <S.Input
-                        type="text"
-                        required
-                        value={newProposal.payload.state || ''}
-                        onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, state: e.target.value}})}
-                        placeholder="e.g., CA"
+                <div className="mb-6">
+                  <S.Label>Search New Location</S.Label>
+                  <Autocomplete
+                    fullWidth
+                    options={locationOptions}
+                    getOptionLabel={(option) => option.displayName || ''}
+                    loading={isGeocoding}
+                    onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+                    onChange={handleLocationSelect}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Search city, region, or specific address..."
+                        variant="outlined"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            color: 'white',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: '12px',
+                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '&:hover fieldset': { borderColor: 'cyan' },
+                          }
+                        }}
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <LocationOnIcon sx={{ fontSize: 20, mr: 1, color: '#22d3ee' }} />
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                          endAdornment: (
+                            <>
+                              {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
                       />
-                    </S.FormField>
-                    <S.FormField>
-                      <S.Label>New Country</S.Label>
-                      <S.Input
-                        type="text"
-                        required
-                        value={newProposal.payload.country || ''}
-                        onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, country: e.target.value}})}
-                        placeholder="e.g., USA"
-                      />
-                    </S.FormField>
+                    )}
+                  />
+                  <div className="mt-4 p-4 bg-cyan-950/20 rounded-xl border border-cyan-500/20">
+                    <S.Subtitle className="text-[10px] text-cyan-400 mb-2 uppercase tracking-tighter">Proposed Coordinates</S.Subtitle>
+                    <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                      <div>LAT: {newProposal.payload.latitude || 'N/A'}</div>
+                      <div>LON: {newProposal.payload.longitude || 'N/A'}</div>
+                    </div>
+                    <div className="mt-2 text-xs opacity-60">
+                      Target: {newProposal.payload.city}, {newProposal.payload.state}, {newProposal.payload.country}
+                    </div>
                   </div>
-                </>
+                </div>
               )}
               <S.FormField>
                 <S.Label>Stated Intent</S.Label>

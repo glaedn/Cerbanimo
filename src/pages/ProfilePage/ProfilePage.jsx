@@ -18,6 +18,7 @@ import ChronicleTimeline from '../../components/ChronicleTimeline';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ShareIcon from '@mui/icons-material/Share';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { toast } from 'react-hot-toast';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
 import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
@@ -89,6 +90,11 @@ const ProfilePage = () => {
   const [userBadges, setUserBadges] = useState([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [badgesError, setBadgesError] = useState(null);
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const colorPalette = [
       blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
@@ -268,6 +274,40 @@ const ProfilePage = () => {
       ...prevData,
       [field]: value,
     }));
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial_ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setProfileData(prev => ({
+        ...prev,
+        city: newValue.address.city || '',
+        state: newValue.address.state || '',
+        country: newValue.address.country || '',
+        latitude: newValue.latitude,
+        longitude: newValue.longitude
+      }));
+    }
   };
 
   const handleContactLinkChange = (index, value) => {
@@ -724,6 +764,46 @@ const ProfilePage = () => {
             fontFamily: theme.typography.fontFamilyAccent,
           },
         }}
+      />
+      <Autocomplete
+        fullWidth
+        sx={{ maxWidth: '400px', mb: 2 }}
+        options={locationOptions}
+        getOptionLabel={(option) => option.displayName || ''}
+        loading={isGeocoding}
+        onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+        onChange={handleLocationSelect}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Search Location (City, Address...)"
+            placeholder="Start typing..."
+            sx={{
+              '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+              '& .MuiOutlinedInput-root': {
+                color: theme.colors.textPrimary,
+                backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                '& fieldset': { borderColor: theme.colors.border },
+                '&:hover fieldset': { borderColor: theme.colors.primary },
+              }
+            }}
+            InputProps={{
+              ...params.InputProps,
+              startAdornment: (
+                <>
+                  <LocationOnIcon sx={{ color: theme.colors.primary, mr: 1 }} />
+                  {params.InputProps.startAdornment}
+                </>
+              ),
+              endAdornment: (
+                <>
+                  {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
+          />
+        )}
       />
       <FormControl fullWidth sx={{ maxWidth: '400px', mb: 2 }}>
         <InputLabel sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent }}>Capacity Status</InputLabel>

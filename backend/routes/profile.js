@@ -5,6 +5,7 @@ import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 import { processInterests } from '../services/interestService.js';
 import { processSkills } from '../services/skillService.js';
+import GeocodingService from '../services/GeocodingService.js';
 
 
 // Create a router instance
@@ -323,6 +324,18 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
   }
 
   try {
+    // Step 0: Auto-geocoding fallback if city/state provided but coordinates are missing
+    let finalLat = latitude;
+    let finalLon = longitude;
+    if ((city || state) && (!latitude || !longitude)) {
+      const searchStr = `${city || ''} ${state || ''} ${country || ''}`.trim();
+      const results = await GeocodingService.search(searchStr);
+      if (results.length > 0) {
+        finalLat = results[0].latitude;
+        finalLon = results[0].longitude;
+      }
+    }
+
     // Get user ID if not provided in request
     let userId = user_id;
     if (!userId) {
@@ -396,8 +409,8 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       contact_links,
       capacity_status,
       discord_user_id,
-      latitude || null,
-      longitude || null,
+      finalLat || null,
+      finalLon || null,
       share_location_publicly !== undefined ? share_location_publicly : null,
       city || null,
       state || null,

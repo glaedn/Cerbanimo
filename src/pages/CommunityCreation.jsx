@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox } from '@mui/material';
+import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './CommunityCreation.css';
@@ -21,6 +22,11 @@ const CommunityCreation = () => {
   const [state, setState] = useState('');
   const [country, setCountry] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [userId, setUserId] = useState(null); // State to store user ID
 
   const colorPalette = [
@@ -68,6 +74,37 @@ const CommunityCreation = () => {
         };
         fetchUserId();
     }, [getAccessTokenSilently]);
+
+    useEffect(() => {
+      const delayDebounceFn = setTimeout(async () => {
+        if (locationSearch && locationSearch.length > 2) {
+          setIsGeocoding(true);
+          try {
+            const token = await getAccessTokenSilently();
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial_ops/search-location?q=${locationSearch}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setLocationOptions(response.data);
+          } catch (err) {
+            console.error('Failed to search location:', err);
+          } finally {
+            setIsGeocoding(false);
+          }
+        }
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+    }, [locationSearch, getAccessTokenSilently]);
+
+    const handleLocationSelect = (event, newValue) => {
+      if (newValue) {
+        setCity(newValue.address.city || '');
+        setState(newValue.address.state || '');
+        setCountry(newValue.address.country || '');
+        setLatitude(newValue.latitude);
+        setLongitude(newValue.longitude);
+      }
+    };
 
     const handleCreateCommunity = async () => {
       if (!name.trim()) {
@@ -142,6 +179,41 @@ const CommunityCreation = () => {
         <div className="cosmic-glow"></div>
       </div>
       
+      <div className="cosmic-field-container">
+        <Autocomplete
+          fullWidth
+          options={locationOptions}
+          getOptionLabel={(option) => option.displayName || ''}
+          loading={isGeocoding}
+          onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+          onChange={handleLocationSelect}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Search Anchor Location (City, Address...)"
+              placeholder="Establishing spatial coordinates..."
+              variant="outlined"
+              margin="normal"
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <>
+                    <LocationOnIcon sx={{ color: '#00F3FF', mr: 1 }} />
+                    {params.InputProps.startAdornment}
+                  </>
+                ),
+                endAdornment: (
+                  <>
+                    {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+      </div>
+
       <div className="cosmic-field-container">
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
             <TextField

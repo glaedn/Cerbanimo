@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db.js";
+import GeocodingService from "../services/GeocodingService.js";
 
 const router = express.Router();
 
@@ -140,6 +141,19 @@ router.get("/user/:userId", async (req, res) => {
 //Create a new community
 router.post("/", async (req, res) => {
   const { name, id, description, tags = [], latitude, longitude, city, state, country, formatted_address } = req.body;
+
+  // Auto-geocoding fallback
+  let finalLat = latitude;
+  let finalLon = longitude;
+  if ((city || state) && (!latitude || !longitude)) {
+    const searchStr = `${city || ''} ${state || ''} ${country || ''}`.trim();
+    const results = await GeocodingService.search(searchStr);
+    if (results.length > 0) {
+      finalLat = results[0].latitude;
+      finalLon = results[0].longitude;
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -163,8 +177,8 @@ router.post("/", async (req, res) => {
       description,
       [id],
       tagArray.length > 0 ? tagArray : null, // Use null if empty array
-      latitude || null,
-      longitude || null,
+      finalLat || null,
+      finalLon || null,
       city || null,
       state || null,
       country || null,
