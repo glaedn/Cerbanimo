@@ -44,6 +44,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import InsightsIcon from '@mui/icons-material/Insights';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
 import { useIsMobile } from '../hooks/useIsMobile';
 import { toast } from 'react-hot-toast';
@@ -670,6 +671,15 @@ const CommunityHub = () => {
                 <Typography variant="body1" className="community-description" sx={{ fontSize: isMobile ? '0.9rem' : '1.1rem' }}>
                     {community.description}
                 </Typography>
+
+                {community.location && (
+                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: '#00F3FF', fontFamily: 'Orbitron' }}>
+                        <LocationOnIcon fontSize="small" />
+                        <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
+                            STATIONED AT: {community.location.coordinates[1].toFixed(4)}, {community.location.coordinates[0].toFixed(4)}
+                        </Typography>
+                    </Box>
+                )}
                 <Box className="tag-container" sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
                     {community.interest_tags && community.interest_tags.map((tag, index) => (
                         <Chip key={index} label={tag} size={isMobile ? "small" : "medium"} />

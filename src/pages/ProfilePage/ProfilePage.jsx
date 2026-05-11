@@ -58,6 +58,9 @@ const ProfilePage = () => {
     contact_links: ['', ''], // Initialize with 2 empty strings
     capacity_status: 'active',
     discord_user_id: '',
+    latitude: '',
+    longitude: '',
+    share_location_publicly: false,
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -157,6 +160,9 @@ const ProfilePage = () => {
               : ['', ''],
             capacity_status: capacityStatus,
             discord_user_id: profileResponse.data.discord_user_id || '',
+            latitude: profileResponse.data.location?.coordinates[1] || '',
+            longitude: profileResponse.data.location?.coordinates[0] || '',
+            share_location_publicly: profileResponse.data.share_location_publicly || false,
             };
 
           // Auto-populate Discord ID if provided in query params
@@ -510,6 +516,9 @@ const ProfilePage = () => {
       formData.append('interests', JSON.stringify(profileData.interests));
       formData.append('capacity_status', profileData.capacity_status);
       formData.append('discord_user_id', profileData.discord_user_id);
+      formData.append('latitude', profileData.latitude);
+      formData.append('longitude', profileData.longitude);
+      formData.append('share_location_publicly', profileData.share_location_publicly);
 
       // Handle contact_links
       const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
@@ -556,6 +565,9 @@ const ProfilePage = () => {
             ? [...updatedProfile.contact_links.slice(0, 2), '', ''].slice(0, 2)
             : ['', ''],
           discord_user_id: updatedProfile.discord_user_id || prev.discord_user_id,
+          latitude: updatedProfile.location?.coordinates[1] || prev.latitude,
+          longitude: updatedProfile.location?.coordinates[0] || prev.longitude,
+          share_location_publicly: updatedProfile.share_location_publicly || false,
         }));
       }
 
@@ -730,6 +742,66 @@ const ProfilePage = () => {
           <MenuItem value="unavailable">Unavailable</MenuItem>
         </Select>
       </FormControl>
+      <Box sx={{ display: 'flex', gap: 1, width: '100%', maxWidth: '400px', mb: 2 }}>
+        <TextField
+          label="Latitude"
+          value={profileData.latitude || ''}
+          onChange={(e) => handleInputChange('latitude', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+        <TextField
+          label="Longitude"
+          value={profileData.longitude || ''}
+          onChange={(e) => handleInputChange('longitude', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+      </Box>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={profileData.share_location_publicly}
+            onChange={(e) => handleInputChange('share_location_publicly', e.target.checked)}
+            sx={{
+              color: theme.colors.primary,
+              '&.Mui-checked': { color: theme.colors.primary },
+            }}
+          />
+        }
+        label={
+          <Typography sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent, fontSize: '0.8rem' }}>
+            Share location with community (Enables Volunteer Heatmap)
+          </Typography>
+        }
+        sx={{ width: '100%', maxWidth: '400px', mb: 2 }}
+      />
       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '400px', gap: 1, mb: 1 }}>
         <TextField
           label="Discord User ID"

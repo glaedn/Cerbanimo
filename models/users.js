@@ -24,6 +24,7 @@ const createUserTable = async () => {
       location_point GEOGRAPHY(Point, 4326),
       mobility_range NUMERIC, -- in meters
       emergency_response_capable BOOLEAN DEFAULT FALSE,
+      share_location_publicly BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

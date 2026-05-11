@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
     const query = `
       WITH community_data AS (
         SELECT id, name, description, members, interest_tags, proposals, 
-             approved_projects, vote_delegations
+             approved_projects, vote_delegations, ST_AsGeoJSON(location_point) as location
         FROM communities
         WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
         ORDER BY name
@@ -40,6 +40,7 @@ router.get("/", async (req, res) => {
       ...row,
       interest_tags: row.interest_names,
       interest_names: undefined, // Remove the extra field
+      location: row.location ? JSON.parse(row.location) : null,
     }));
 
     const totalCountQuery = `
@@ -138,7 +139,7 @@ router.get("/user/:userId", async (req, res) => {
 
 //Create a new community
 router.post("/", async (req, res) => {
-  const { name, id, description, tags = [] } = req.body;
+  const { name, id, description, tags = [], latitude, longitude } = req.body;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -147,14 +148,22 @@ router.post("/", async (req, res) => {
     const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
     const query = `
-          INSERT INTO communities (name, description, members, interest_tags)
-          VALUES ($1, $2, $3, $4) RETURNING id
+          INSERT INTO communities (name, description, members, interest_tags, location_point)
+          VALUES ($1, $2, $3, $4,
+            CASE
+              WHEN $5::numeric IS NOT NULL AND $6::numeric IS NOT NULL
+              THEN ST_SetSRID(ST_MakePoint($6::numeric, $5::numeric), 4326)::geography
+              ELSE NULL
+            END
+          ) RETURNING id
       `;
     const values = [
       name,
       description,
       [id],
       tagArray.length > 0 ? tagArray : null, // Use null if empty array
+      latitude || null,
+      longitude || null,
     ];
 
     const result = await client.query(query, values);
@@ -192,7 +201,7 @@ router.get("/:communityId", async (req, res) => {
               SELECT id, name, description, 
                      COALESCE(members, ARRAY[]::integer[]) as members, 
                      interest_tags, proposals, 
-                     approved_projects, vote_delegations
+                     approved_projects, vote_delegations, ST_AsGeoJSON(location_point) as location
               FROM communities 
               WHERE id = $1
           )
@@ -230,6 +239,7 @@ router.get("/:communityId", async (req, res) => {
       ...result.rows[0],
       interest_tags: result.rows[0].interest_names,
       interest_names: undefined,
+      location: result.rows[0].location ? JSON.parse(result.rows[0].location) : null,
     };
 
     res.status(200).json(community);

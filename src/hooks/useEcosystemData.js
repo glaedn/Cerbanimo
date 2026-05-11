@@ -32,17 +32,18 @@ export const useEcosystemData = () => {
       }
     };
 
-    const [tasks, projects, communitiesRaw, needs, resources] = await Promise.all([
+    const [tasks, projects, communitiesRaw, needs, resources, userLocations] = await Promise.all([
       fetchSafe(`${API_BASE}/tasks`),
       fetchSafe(`${API_BASE}/projects`),
       fetchSafe(`${API_BASE}/communities`),
       fetchSafe(`${API_BASE}/needs`),
       fetchSafe(`${API_BASE}/resources/catalog`),
+      fetchSafe(`${API_BASE}/profile/locations`),
     ]);
 
     const communities = communitiesRaw?.communities || communitiesRaw || [];
 
-    return { tasks, projects, communities, needs, resources };
+    return { tasks, projects, communities, needs, resources, userLocations };
   };
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -64,20 +65,27 @@ export const useEcosystemData = () => {
           name: c.name,
           status: 'active',
           lastActivity: c.updated_at || c.created_at,
-          location: c.location_point,
+          location: c.location ? { x: c.location.coordinates[0], y: c.location.coordinates[1] } : null,
           raw: c
         });
       });
 
       // 2. Process Needs
       data.needs.forEach(n => {
+        let location = null;
+        if (n.location_point) {
+            location = typeof n.location_point === 'string' ? JSON.parse(n.location_point) : n.location_point;
+        } else if (n.latitude && n.longitude) {
+            location = { type: 'Point', coordinates: [parseFloat(n.longitude), parseFloat(n.latitude)] };
+        }
+
         nodes.push({
           id: `need-${n.id}`,
           type: 'need',
           name: n.name,
           status: n.urgency_level || 'medium',
           lastActivity: n.updated_at || n.created_at,
-          location: n.location_point,
+          location: location ? { x: location.coordinates[0], y: location.coordinates[1] } : null,
           raw: n
         });
         if (n.requestor_community_id) {
@@ -129,13 +137,21 @@ export const useEcosystemData = () => {
 
       // 5. Process Resources
       data.resources.forEach(r => {
+        let location = null;
+        if (r.location_point) {
+            const loc = typeof r.location_point === 'string' ? JSON.parse(r.location_point) : r.location_point;
+            location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+        } else if (r.latitude && r.longitude) {
+            location = { x: parseFloat(r.longitude), y: parseFloat(r.latitude) };
+        }
+
         nodes.push({
           id: `resource-${r.id}`,
           type: 'resource',
           name: r.name,
           status: r.status,
           lastActivity: r.updated_at || r.created_at,
-          location: r.location_point,
+          location: location,
           raw: r
         });
 
@@ -143,6 +159,20 @@ export const useEcosystemData = () => {
           links.push({ source: `community-${r.owner_community_id}`, target: `resource-${r.id}`, type: 'MEMBER_OF' });
         }
       });
+
+      // 6. Process User Locations
+      if (data.userLocations && Array.isArray(data.userLocations)) {
+        data.userLocations.forEach(ul => {
+          nodes.push({
+            id: `user-${ul.id}`,
+            type: 'user',
+            name: ul.name,
+            status: 'active',
+            location: ul.location ? { x: ul.location.coordinates[0], y: ul.location.coordinates[1] } : null,
+            raw: ul
+          });
+        });
+      }
 
       updateGraph(nodes, links);
     }

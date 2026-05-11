@@ -15,6 +15,8 @@ const CommunityCreation = () => {
   const [description, setDescription] = useState('');
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState(null); // State to store user ID
 
@@ -90,6 +92,8 @@ const CommunityCreation = () => {
           description: description,
           id: userId,
           tags: tagIds,
+          latitude: latitude,
+          longitude: longitude,
         }, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -132,6 +136,28 @@ const CommunityCreation = () => {
         <div className="cosmic-glow"></div>
       </div>
       
+      <div className="cosmic-field-container">
+        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            <TextField
+                label="Latitude"
+                variant="outlined"
+                fullWidth
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                margin="normal"
+            />
+            <TextField
+                label="Longitude"
+                variant="outlined"
+                fullWidth
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                margin="normal"
+            />
+        </Box>
+        <div className="cosmic-glow"></div>
+      </div>
+
       <div className="cosmic-field-container">
         <TextField
           label="Community Description"

@@ -62,7 +62,18 @@ const LivingMap = () => {
       onClick: ({ object }) => selectEntity(object)
     }),
 
-    // 3. Volunteer Layer (Heatmap)
+    // 3. Community Layer
+    spatialEntities.filter(n => n.type === 'community').length > 0 && new ScatterplotLayer({
+      id: 'communities',
+      data: spatialEntities.filter(n => n.type === 'community'),
+      getPosition: d => [d.location.x, d.location.y],
+      getFillColor: [128, 0, 255],
+      getRadius: 100,
+      pickable: true,
+      onClick: ({ object }) => selectEntity(object)
+    }),
+
+    // 4. Volunteer Layer (Heatmap)
     spatialEntities.filter(n => n.type === 'user').length > 0 && new HeatmapLayer({
       id: 'volunteer-density',
       data: spatialEntities.filter(n => n.type === 'user'),
@@ -73,7 +84,7 @@ const LivingMap = () => {
       aggregation: 'SUM'
     }),
 
-    // 4. Mission / Dispatch Layer (Placeholder paths)
+    // 5. Mission / Dispatch Layer (Placeholder paths)
     new PathLayer({
         id: 'dispatch-routes',
         data: [], // To be populated from SpatialDataService

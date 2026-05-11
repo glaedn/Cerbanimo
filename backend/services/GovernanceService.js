@@ -139,6 +139,24 @@ class GovernanceService {
            'UPDATE communities SET governance_config = governance_config || $1 WHERE id = $2',
            [proposal.payload, proposal.community_id]
          );
+      } else if (proposal.proposal_type === 'community.location_change') {
+        const { latitude, longitude } = proposal.payload;
+
+        // Get old location for audit trail
+        const oldLocRes = await client.query('SELECT ST_AsGeoJSON(location_point) as location FROM communities WHERE id = $1', [proposal.community_id]);
+        const oldLocation = oldLocRes.rows[0]?.location;
+
+        await client.query(`
+          UPDATE communities
+          SET location_point = ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+          WHERE id = $3
+        `, [longitude, latitude, proposal.community_id]);
+
+        await this.recordGovernanceEvent(proposal.community_id, 'community.location_updated', {
+          proposalId,
+          oldLocation: oldLocation ? JSON.parse(oldLocation) : null,
+          newLocation: { type: 'Point', coordinates: [longitude, latitude] }
+        });
       }
 
       await client.query("UPDATE proposals SET status = 'executed' WHERE id = $1", [proposalId]);

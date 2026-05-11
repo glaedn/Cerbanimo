@@ -92,6 +92,8 @@ const GovernanceChamber = () => {
         return ['• Protocol Rules', '• Core Identity', '• Rights Ledger', '• Institutional Memory'];
       case 'operational':
         return ['• Task Routing API', '• Mission Control', '• Dispatch Engine', '• Field Telemetry'];
+      case 'community.location_change':
+        return ['• Community Anchor Point', '• Regional Mapping', '• Service Radius', '• Spatial Discovery'];
       default:
         return ['• General Ledger', '• User Metadata', '• Cache Layers', '• Event Bus'];
     }
@@ -332,6 +334,7 @@ const GovernanceChamber = () => {
                     <option value="operational">Operational Change</option>
                     <option value="resource">Resource Allocation</option>
                     <option value="constitution">Constitutional Amendment</option>
+                    <option value="community.location_change">Location Change</option>
                   </S.Select>
                 </S.FormField>
                 <S.FormField>
@@ -346,6 +349,32 @@ const GovernanceChamber = () => {
                   </S.Select>
                 </S.FormField>
               </div>
+              {newProposal.type === 'community.location_change' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <S.FormField>
+                    <S.Label>New Latitude</S.Label>
+                    <S.Input
+                      type="number"
+                      step="any"
+                      required
+                      value={newProposal.payload.latitude || ''}
+                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, latitude: parseFloat(e.target.value)}})}
+                      placeholder="e.g., 34.0522"
+                    />
+                  </S.FormField>
+                  <S.FormField>
+                    <S.Label>New Longitude</S.Label>
+                    <S.Input
+                      type="number"
+                      step="any"
+                      required
+                      value={newProposal.payload.longitude || ''}
+                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, longitude: parseFloat(e.target.value)}})}
+                      placeholder="e.g., -118.2437"
+                    />
+                  </S.FormField>
+                </div>
+              )}
               <S.FormField>
                 <S.Label>Stated Intent</S.Label>
                 <S.Input
