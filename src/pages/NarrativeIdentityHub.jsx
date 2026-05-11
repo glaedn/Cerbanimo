@@ -1,5 +1,6 @@
-import React from 'react';
-import { Box, Typography, Grid, Container, Paper, Tab, Tabs, Stack } from '@mui/material';
+import React, { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { Box, Typography, Grid, Container, Paper, Tab, Tabs, Stack, CircularProgress } from '@mui/material';
 import CivicIdentityConstellation from '../components/Identity/CivicIdentityConstellation';
 import MentorshipLineage from '../components/Identity/MentorshipLineage';
 import ImpactRippleMap from '../components/Identity/ImpactRippleMap';
@@ -7,10 +8,40 @@ import NarrativePlayback from '../components/Identity/NarrativePlayback';
 import CivicMemoryArchive from '../components/Identity/CivicMemoryArchive';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useNarrativeStore } from '../store/useNarrativeStore';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 const NarrativeIdentityHub = () => {
+  const { userId: paramId } = useParams();
+  const { profile } = useUserProfile();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = React.useState(0);
+
+  const userId = paramId || profile?.id;
+
+  const {
+    fetchNarrativeData,
+    storyGraph,
+    mentorshipLineage,
+    impactChains,
+    chronicleArcs,
+    institutionalMemory,
+    loading
+  } = useNarrativeStore();
+
+  useEffect(() => {
+    if (userId) {
+      fetchNarrativeData(userId);
+    }
+  }, [userId, fetchNarrativeData]);
+
+  if (loading && !chronicleArcs.length) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#0A0A2E' }}>
+        <CircularProgress sx={{ color: '#00f3ff' }} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{
@@ -51,15 +82,15 @@ const NarrativeIdentityHub = () => {
               </Tabs>
 
               <Box sx={{ height: '500px', display: activeTab === 0 ? 'block' : 'none' }}>
-                <CivicIdentityConstellation width={700} height={500} />
+                <CivicIdentityConstellation data={storyGraph} width={700} height={500} />
               </Box>
 
               <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
-                <MentorshipLineage />
+                <MentorshipLineage data={mentorshipLineage} />
               </Box>
 
               <Box sx={{ display: activeTab === 2 ? 'block' : 'none' }}>
-                <ImpactRippleMap />
+                <ImpactRippleMap data={impactChains} />
               </Box>
             </Paper>
           </Grid>
@@ -68,14 +99,26 @@ const NarrativeIdentityHub = () => {
           <Grid item xs={12} lg={5}>
             <Stack spacing={4}>
               <NarrativePlayback />
-              <CivicMemoryArchive />
+              <CivicMemoryArchive data={institutionalMemory} />
             </Stack>
           </Grid>
 
           {/* Bottom Row: Layered Chronicle */}
           <Grid item xs={12}>
             <Paper sx={{ bgcolor: 'rgba(0,0,0,0.4)', p: 4, border: '1px solid rgba(0, 243, 255, 0.2)' }}>
-               <ChronicleTimeline stories={[]} />
+               {chronicleArcs.map(arc => (
+                 <Box key={arc.id} sx={{ mb: 6 }}>
+                    <Typography variant="h6" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', mb: 2 }}>
+                      {arc.label} [{arc.type}]
+                    </Typography>
+                    <ChronicleTimeline stories={arc.stories} />
+                 </Box>
+               ))}
+               {chronicleArcs.length === 0 && (
+                 <Typography sx={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', py: 4 }}>
+                   NO_NARRATIVE_ARCS_DETECTED
+                 </Typography>
+               )}
             </Paper>
           </Grid>
         </Grid>

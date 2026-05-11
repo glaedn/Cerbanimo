@@ -2,14 +2,19 @@ import React from 'react';
 import { Box, Typography, Avatar, Stack } from '@mui/material';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
-const MentorshipLineage = ({ lineage }) => {
+const MentorshipLineage = ({ data }) => {
   const defaultLineage = [
     { id: 1, name: 'Sarah Chen', role: 'Mentor', skill: 'Crisis Logistics', avatar: '' },
     { id: 2, name: 'You', role: 'Coordinator', skill: 'Mutual Aid Routing', avatar: '' },
     { id: 3, name: 'Marcus Bell', role: 'Apprentice', skill: 'Community Outreach', avatar: '' }
   ];
 
-  const displayLineage = lineage || defaultLineage;
+  const displayLineage = data && data.length > 0 ? data.map(item => ({
+    id: item.id,
+    name: item.mentor_name || item.mentee_name,
+    skill: item.skill_name || 'General Contribution',
+    avatar: ''
+  })) : defaultLineage;
 
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(0, 215, 135, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 215, 135, 0.2)' }}>

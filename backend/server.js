@@ -42,6 +42,7 @@ import storyEngineRoutesV2 from './routes/story_engine_v2.js';
 import civicKernelRoutes from './routes/civic_kernel.js';
 import governanceRoutes from './routes/governance.js';
 import federationRoutes from './routes/federation.js';
+import narrativeRoutes from './routes/narrative.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -73,9 +74,10 @@ import { createSpatialLayerTables } from '../models/spatial_layer.js';
 import { createSystemStateTable } from '../models/system_state.js';
 import { createGovernanceTables } from '../models/governance.js';
 import { createAgentTables } from '../models/agents.js';
+import { createNarrativeTables } from '../models/narrative_v2.js';
+import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
-import { create } from 'domain';
 
 
 // Initialize app
@@ -249,6 +251,10 @@ app.use('/story_engine_v2', (req, res, next) => {
 app.use('/civic-kernel', jwtCheck, resolveUser, civicKernelRoutes);
 app.use('/governance', jwtCheck, resolveUser, governanceRoutes);
 app.use('/federation', jwtCheck, resolveUser, federationRoutes);
+app.use('/narrative', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, narrativeRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -426,6 +432,8 @@ async function initializeDatabase() {
     await createDiscordConfigTable();
     await createNeedCommentsTable();
     await createAgentTables();
+    await createNarrativeTables();
+    await alterStoryNodesForNarrative();
     await alterExistingTables();
     
 

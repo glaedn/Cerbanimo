@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Divider } from '@mui/material';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
-const CivicMemoryArchive = ({ entries }) => {
+const CivicMemoryArchive = ({ data }) => {
   const defaultEntries = [
     { id: 1, type: 'CRISIS_HISTORY', title: 'The Great Freeze 2026', date: 'Jan 12, 2026' },
     { id: 2, type: 'GOVERNANCE_EVOLUTION', title: 'Ratification of the Mutual Aid Treaty', date: 'Mar 05, 2026' },
@@ -10,7 +10,12 @@ const CivicMemoryArchive = ({ entries }) => {
     { id: 4, type: 'MISSION_LESSON', title: 'Optimizing Urban Foraging Routes', date: 'Aug 15, 2026' }
   ];
 
-  const displayEntries = entries || defaultEntries;
+  const displayEntries = data && data.length > 0 ? data.map(item => ({
+    id: item.id,
+    type: item.type?.toUpperCase() || 'CIVIC_ENTRY',
+    title: item.label,
+    date: new Date(item.date).toLocaleDateString()
+  })) : defaultEntries;
 
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(10, 10, 46, 0.6)', borderRadius: 2, border: '1px solid rgba(156, 39, 176, 0.3)' }}>
