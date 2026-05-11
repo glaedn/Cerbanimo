@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Button, Grid, Card, CardContent, CardActions } from "@mui/material";
+import { Avatar, Typography, Chip, CircularProgress, Box, Link as MuiLink, Button, Grid, Card, CardContent, CardActions, Stack } from "@mui/material";
 import axios from "axios";
 import { useAuth0 } from '@auth0/auth0-react';
 import UserPortfolio from "./UserPortfolio.jsx";
@@ -303,26 +303,45 @@ const PublicProfile = () => {
             {profile.username.toUpperCase()}
         </Typography>
 
-        <Button
-          variant="outlined"
-          onClick={() => navigate(`/profile/skill-constellation/${userId}`)}
-          sx={{
-            borderColor: '#00D787',
-            color: '#00D787',
-            fontFamily: 'Orbitron',
-            mt: 2,
-            mb: 1,
-            boxShadow: '0 0 10px rgba(0, 215, 135, 0.3)',
-            '&:hover': {
-              borderColor: '#00f3ff',
-              color: '#00f3ff',
-              backgroundColor: 'rgba(0, 215, 135, 0.1)',
-              boxShadow: '0 0 15px rgba(0, 215, 135, 0.5)',
-            }
-          }}
-        >
-          SKILL_CONSTELLATION
-        </Button>
+        <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2, mb: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/profile/skill-constellation/${userId}`)}
+            sx={{
+              borderColor: '#00D787',
+              color: '#00D787',
+              fontFamily: 'Orbitron',
+              fontSize: '0.7rem',
+              boxShadow: '0 0 10px rgba(0, 215, 135, 0.3)',
+              '&:hover': {
+                borderColor: '#00f3ff',
+                color: '#00f3ff',
+                backgroundColor: 'rgba(0, 215, 135, 0.1)',
+              }
+            }}
+          >
+            SKILL_CONSTELLATION
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/profile/narrative-hub/${userId}`)}
+            sx={{
+              borderColor: '#ff5ca2',
+              color: '#ff5ca2',
+              fontFamily: 'Orbitron',
+              fontSize: '0.7rem',
+              boxShadow: '0 0 10px rgba(255, 92, 162, 0.3)',
+              '&:hover': {
+                borderColor: '#00f3ff',
+                color: '#00f3ff',
+                backgroundColor: 'rgba(255, 92, 162, 0.1)',
+              }
+            }}
+          >
+            NARRATIVE_HUB
+          </Button>
+        </Stack>
 
         {/* Contact Links Section */}
         {profile.contact_links && profile.contact_links.filter(link => link && link.trim() !== '').length > 0 && (

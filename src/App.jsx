@@ -68,6 +68,7 @@ const FederationAtlas = React.lazy(() => import("./pages/FederationAtlas.jsx"));
 const DelegationMapPage = React.lazy(() => import("./pages/DelegationMapPage.jsx"));
 const CivicSimulator = React.lazy(() => import("./pages/CivicSimulator.jsx"));
 const MediationSpace = React.lazy(() => import("./pages/MediationSpace.jsx"));
+const NarrativeIdentityHub = React.lazy(() => import("./pages/NarrativeIdentityHub.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
@@ -325,6 +326,14 @@ const AppContent = () => {
             }
           />
           <Route path="/profile/public/:userId" element={<PageWrapper><PublicProfile /></PageWrapper>} />
+          <Route
+            path="/profile/narrative-hub/:userId?"
+            element={
+              <PrivateRoute>
+                <PageWrapper><NarrativeIdentityHub /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
 
           <Route
             path="/BadgeCreation"

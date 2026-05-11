@@ -5,11 +5,13 @@ import TokenAndSkillSummary from '../components/TokenAndSkillSummary';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './UserPortfolio.css';
-import { Typography, Box } from '@mui/material';
+import { Typography, Box, Button } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const UserPortfolio = ({ userId: propUserId, accessToken }) => {
   const isMobile = useIsMobile();
   const routeParams = useParams();
+  const navigate = useNavigate();
   const userId = propUserId || routeParams.userId;
 
   const [chronicleData, setChronicleData] = useState([]);
@@ -117,10 +119,23 @@ const UserPortfolio = ({ userId: propUserId, accessToken }) => {
 
   return (
     <Box className={`portfolio-page ${isMobile ? 'mobile-portfolio' : ''}`} sx={{ p: isMobile ? 2 : 3, pb: isMobile ? 10 : 3 }}>
-      <Box className="header-row" mb={isMobile ? 2 : 4}>
+      <Box className="header-row" mb={isMobile ? 2 : 4} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant={isMobile ? "h5" : "h4"} color="primary" sx={{ fontFamily: 'Orbitron' }}>
           {isMobile ? 'RECORD_OF_IMPACT' : 'User Portfolio'}
         </Typography>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => navigate(`/profile/narrative-hub/${userId}`)}
+          sx={{
+            color: '#ff5ca2',
+            borderColor: '#ff5ca2',
+            fontFamily: 'Orbitron',
+            '&:hover': { borderColor: '#00f3ff', color: '#00f3ff' }
+          }}
+        >
+          VIEW_FULL_NARRATIVE
+        </Button>
       </Box>
 
       <Box className="portfolio-section-summary" mb={isMobile ? 3 : 6}>
