@@ -94,8 +94,39 @@ const CoordinationPulse = () => {
               <Heart className="text-rose-500 w-5 h-5" />
               Community Health Clusters
             </h2>
-            <div className="h-64 flex items-center justify-center text-slate-500 italic">
-              Health cluster visualization loading...
+            <div className="h-64 flex items-center justify-around gap-4">
+              {signals.length > 0 ? (
+                Object.entries(
+                  signals.reduce((acc, s) => {
+                    acc[s.agent] = acc[s.agent] || [];
+                    acc[s.agent].push(s);
+                    return acc;
+                  }, {})
+                ).map(([agent, clusterSignals]) => {
+                  const avgSeverity = clusterSignals.reduce((a, b) => a + b.severity, 0) / clusterSignals.length;
+                  const health = 100 - avgSeverity;
+                  return (
+                    <div key={agent} className="flex flex-col items-center gap-3">
+                      <div
+                        className="w-24 h-24 rounded-full border-4 flex items-center justify-center relative shadow-lg"
+                        style={{
+                          borderColor: health > 70 ? '#10b981' : health > 40 ? '#f59e0b' : '#f43f5e',
+                          backgroundColor: `${health > 70 ? '#10b981' : health > 40 ? '#f59e0b' : '#f43f5e'}10`
+                        }}
+                      >
+                        <span className="text-xl font-bold">{Math.round(health)}%</span>
+                        <div
+                          className="absolute inset-0 rounded-full animate-pulse"
+                          style={{ border: `2px solid ${health > 70 ? '#10b981' : health > 40 ? '#f59e0b' : '#f43f5e'}40` }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{agent}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-slate-500 italic">No health data available.</div>
+              )}
             </div>
           </section>
         </div>

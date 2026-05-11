@@ -9,21 +9,27 @@ const NarrativePlayback = ({ events = [] }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const defaultEvents = [
-    { time: 'T-0', label: 'Initial Signal', detail: 'Flood warning issued for North Syracuse.' },
-    { time: 'T+2h', label: 'Mobilization', detail: '4 communities activated mutual aid protocols.' },
-    { time: 'T+12h', label: 'Coordination', detail: 'Logistics hub established at Community Center.' },
-    { time: 'T+48h', label: 'Stabilization', detail: 'Needs fulfilled for 90% of affected households.' },
-    { time: 'T+1w', label: 'Reflection', detail: 'Post-crisis trust index increased by 15%.' }
-  ];
-
   const hasData = events && events.length > 0;
-  const displayEvents = hasData ? events : defaultEvents;
+
+  if (!hasData) {
+    return (
+      <Box sx={{ p: 3, bgcolor: 'rgba(10, 10, 46, 0.8)', borderRadius: 2, border: '1px solid rgba(0, 243, 255, 0.3)', textAlign: 'center' }}>
+         <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 2, mb: 2, display: 'block' }}>
+            CIVIC_MEMORY_PLAYBACK
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'gray', fontStyle: 'italic' }}>
+            No narrative events recorded yet.
+          </Typography>
+      </Box>
+    );
+  }
+
+  const displayEvents = events;
 
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(10, 10, 46, 0.8)', borderRadius: 2, border: '1px solid rgba(0, 243, 255, 0.3)' }}>
       <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 2, mb: 3, display: 'block' }}>
-        CIVIC_MEMORY_PLAYBACK {!hasData && '(DEMO_MODE)'}
+        CIVIC_MEMORY_PLAYBACK
       </Typography>
 
       <Box sx={{ minHeight: '120px', mb: 4, p: 2, bgcolor: 'rgba(0, 243, 255, 0.05)', borderRadius: 1, borderLeft: '4px solid #00f3ff' }}>

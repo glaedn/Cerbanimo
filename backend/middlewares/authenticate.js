@@ -47,8 +47,6 @@ const ensureAuthenticated = (req, res, next) => {
         return res.status(401).json({ message: 'Invalid token', error: err.message });
       }
   
-      console.log('Decoded Token:', decoded);
-  
       // req.user = decoded; // Attach decoded user info to the request
       // Use req.auth for consistency with express-oauth2-jwt-bearer
       req.auth = { payload: decoded };

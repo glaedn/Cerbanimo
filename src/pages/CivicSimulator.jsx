@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
+import axios from 'axios';
 import { Shield, Zap, TrendingUp, AlertTriangle, Play, RefreshCcw } from 'lucide-react';
 import * as d3 from 'd3';
 import * as S from '../components/Governance/GovernanceStyles';
 
 const CivicSimulator = () => {
   const { communityId } = useParams();
+  const { getAccessTokenSilently } = useAuth0();
   const [params, setParams] = useState({
     quorum: 15,
     delegationDepth: 2,
@@ -13,19 +16,39 @@ const CivicSimulator = () => {
     emergencyOverride: false
   });
   const [results, setResults] = useState(null);
+  const [simulating, setSimulating] = useState(false);
   const chartRef = useRef(null);
 
-  const runSimulation = () => {
-    // Logic to simulate outcomes
-    const score = (params.quorum * 0.4) + (params.voteThreshold * 0.2) + (params.delegationDepth * 10);
-    setResults({
-      participation: Math.min(100, params.quorum * 3),
-      stability: 100 - (params.delegationDepth * 15),
-      speed: params.emergencyOverride ? 95 : 45,
-      burnout: (params.quorum > 30 ? 60 : 20) + (params.voteThreshold > 75 ? 25 : 0),
-      strain: params.emergencyOverride ? 85 : 30,
-      legitimacy: score > 50 ? 'High' : 'At Risk'
-    });
+  const runSimulation = async () => {
+    setSimulating(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/governance/community/${communityId}/simulate`,
+        params,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setResults({
+        ...response.data.metrics,
+        insight: response.data.insight,
+        legitimacy: response.data.legitimacy
+      });
+    } catch (err) {
+      console.error("Simulation failed:", err);
+      const score = (params.quorum * 0.4) + (params.voteThreshold * 0.2) + (params.delegationDepth * 10);
+      setResults({
+        participation: Math.min(100, params.quorum * 3),
+        stability: 100 - (params.delegationDepth * 15),
+        speed: params.emergencyOverride ? 95 : 45,
+        burnout: (params.quorum > 30 ? 60 : 20) + (params.voteThreshold > 75 ? 25 : 0),
+        strain: params.emergencyOverride ? 85 : 30,
+        legitimacy: score > 50 ? 'High' : 'At Risk',
+        insight: 'Increasing quorum targets without delegation support may lead to "Governance Gridlock."'
+      });
+    } finally {
+      setSimulating(false);
+    }
   };
 
   useEffect(() => {
@@ -75,7 +98,6 @@ const CivicSimulator = () => {
         .attr("rx", 4)
         .attr("filter", "drop-shadow(0 0 5px rgba(34, 211, 238, 0.4))");
 
-      // Add gradient
       const defs = svg.append("defs");
       const gradient = defs.append("linearGradient")
         .attr("id", "barGradient")
@@ -144,9 +166,11 @@ const CivicSimulator = () => {
 
             <S.NeonButton
               onClick={runSimulation}
+              disabled={simulating}
               className="w-full mt-10 py-4 flex items-center justify-center gap-2"
             >
-              <Play size={14} /> Run Neural Forecast
+              {simulating ? <RefreshCcw className="animate-spin" size={14} /> : <Play size={14} />}
+              {simulating ? 'Simulating...' : 'Run Neural Forecast'}
             </S.NeonButton>
           </S.GlassPanel>
         </S.GridItem>
@@ -197,7 +221,7 @@ const CivicSimulator = () => {
                   <div>
                     <h4 className="text-[10px] font-bold text-white uppercase mb-2 tracking-widest">Simulator Insight</h4>
                     <p className="text-xs text-gray-400 leading-relaxed italic">
-                      Increasing quorum targets without delegation support may lead to "Governance Gridlock." Consider enabling domain-specific delegation to maintain coordination speed in high-urgency scenarios.
+                      {results.insight}
                     </p>
                   </div>
                </div>

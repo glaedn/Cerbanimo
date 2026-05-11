@@ -1,5 +1,6 @@
 import express from 'express';
 import GovernanceService from '../services/GovernanceService.js';
+import AIGatewayService from '../services/AIGatewayService.js';
 import resolveUser from '../middlewares/resolveUser.js';
 import pool from '../db.js';
 
@@ -125,6 +126,52 @@ router.get('/community/:communityId/constitution', async (req, res) => {
       [communityId]
     );
     res.json(result.rows[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Run a neural simulation for a community
+router.post('/community/:communityId/simulate', resolveUser, async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    const { quorum, delegationDepth, voteThreshold, emergencyOverride } = req.body;
+
+    const prompt = `
+      Simulate a governance scenario for community ${communityId} with the following parameters:
+      - Quorum Target: ${quorum}%
+      - Delegation Max Depth: ${delegationDepth}
+      - Passing Threshold: ${voteThreshold}%
+      - Emergency Powers: ${emergencyOverride ? 'Enabled' : 'Disabled'}
+
+      Return a JSON object with:
+      1. "insight": A 2-sentence analytical forecast.
+      2. "metrics": { "participation": number, "stability": number, "speed": number, "burnout": number, "strain": number }
+    `;
+
+    const aiResponse = await AIGatewayService.query(prompt, 'governance-simulator');
+
+    let result;
+    try {
+      result = typeof aiResponse === 'string' ? JSON.parse(aiResponse) : aiResponse;
+    } catch (e) {
+      const score = (quorum * 0.4) + (voteThreshold * 0.2) + (delegationDepth * 10);
+      result = {
+        insight: `Increasing quorum targets without delegation support may lead to "Governance Gridlock." Consider enabling domain-specific delegation.`,
+        metrics: {
+          participation: Math.min(100, quorum * 3),
+          stability: 100 - (delegationDepth * 15),
+          speed: emergencyOverride ? 95 : 45,
+          burnout: (quorum > 30 ? 60 : 20) + (voteThreshold > 75 ? 25 : 0),
+          strain: emergencyOverride ? 85 : 30
+        }
+      };
+    }
+
+    res.json({
+      ...result,
+      legitimacy: (quorum * 0.4 + voteThreshold * 0.2 + delegationDepth * 10) > 50 ? 'High' : 'At Risk'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
