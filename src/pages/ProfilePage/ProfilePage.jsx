@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
   Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress,
-  createFilterOptions, MenuItem, Select, FormControl, InputLabel
+  createFilterOptions, MenuItem, Select, FormControl, InputLabel, FormControlLabel, Checkbox
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
