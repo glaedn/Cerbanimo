@@ -23,10 +23,10 @@ router.get('/user/:userId/constellation', async (req, res) => {
       SELECT
         s.name as domain_label,
         ct.score,
-        u.username as trustee_name
+        u.username as truster_name
       FROM contextual_trust ct
       JOIN skills s ON ct.domain_id = s.id
-      JOIN users u ON ct.trustee_id = u.id
+      JOIN users u ON ct.truster_id = u.id
       WHERE ct.trustee_id = $1
     `, [userId]);
 
@@ -39,9 +39,22 @@ router.get('/user/:userId/constellation', async (req, res) => {
         id: row.label,
         label: row.label,
         type: 'domain',
-        size: Math.min(25, 10 + (row.total_tokens / 10))
+        size: Math.min(25, 10 + (Number(row.total_tokens) / 10))
       });
       links.push({ source: 'core', target: row.label });
+    });
+
+    // 3. Incorporate trust signals into links
+    trustResult.rows.forEach(row => {
+      // Find or create domain node if not present
+      if (!nodes.find(n => n.id === row.domain_label)) {
+        nodes.push({ id: row.domain_label, label: row.domain_label, type: 'domain', size: 15 });
+        links.push({ source: 'core', target: row.domain_label });
+      }
+
+      const trustNodeId = `trust-${row.truster_name}-${row.domain_label}`;
+      nodes.push({ id: trustNodeId, label: `TRUSTED_BY:${row.truster_name}`, type: 'signal', size: 8 });
+      links.push({ source: row.domain_label, target: trustNodeId });
     });
 
     res.json({ nodes, links });
@@ -95,6 +108,28 @@ router.get('/user/:userId/propagation', async (req, res) => {
   }
 });
 
+// GET /narrative/user/:userId/playback
+router.get('/user/:userId/playback', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        title as label,
+        reflection as detail,
+        created_at,
+        'T' || (row_number() over (order by created_at) - 1) as time
+      FROM story_nodes
+      WHERE user_id = $1
+      ORDER BY created_at ASC
+      LIMIT 10
+    `, [userId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /narrative/user/:userId/chronicle-arcs
 // Fetches story nodes grouped into narrative arcs
 router.get('/user/:userId/chronicle-arcs', async (req, res) => {
@@ -118,16 +153,18 @@ router.get('/user/:userId/chronicle-arcs', async (req, res) => {
 
     result.rows.forEach(story => {
       const arcLabel = story.project_name || 'Individual Growth';
-      if (!arcMap.has(arcLabel)) {
-        arcMap.set(arcLabel, {
-          id: arcLabel.toLowerCase().replace(/\s+/g, '-'),
+      const arcId = story.project_id ? `project-${story.project_id}` : 'growth-trail';
+
+      if (!arcMap.has(arcId)) {
+        arcMap.set(arcId, {
+          id: arcId,
           label: arcLabel.toUpperCase(),
           type: story.project_name ? 'mission' : 'growth',
           stories: []
         });
-        arcs.push(arcMap.get(arcLabel));
+        arcs.push(arcMap.get(arcId));
       }
-      arcMap.get(arcLabel).stories.push(story);
+      arcMap.get(arcId).stories.push(story);
     });
 
     res.json(arcs);

@@ -10,7 +10,8 @@ const CivicMemoryArchive = ({ data }) => {
     { id: 4, type: 'MISSION_LESSON', title: 'Optimizing Urban Foraging Routes', date: 'Aug 15, 2026' }
   ];
 
-  const displayEntries = data && data.length > 0 ? data.map(item => ({
+  const hasData = data && data.length > 0;
+  const displayEntries = hasData ? data.map(item => ({
     id: item.id,
     type: item.type?.toUpperCase() || 'CIVIC_ENTRY',
     title: item.label,
@@ -20,7 +21,7 @@ const CivicMemoryArchive = ({ data }) => {
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(10, 10, 46, 0.6)', borderRadius: 2, border: '1px solid rgba(156, 39, 176, 0.3)' }}>
       <Typography variant="overline" sx={{ color: '#9C27B0', letterSpacing: 2, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <AutoStoriesIcon sx={{ fontSize: '1.2rem' }} /> INSTITUTIONAL_MEMORY_ARCHIVE
+        <AutoStoriesIcon sx={{ fontSize: '1.2rem' }} /> INSTITUTIONAL_MEMORY_ARCHIVE {!hasData && '(DEMO_MODE)'}
       </Typography>
 
       <List>

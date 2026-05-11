@@ -7,7 +7,9 @@ const CivicIdentityConstellation = ({ data, width = 600, height = 400 }) => {
   const svgRef = useRef(null);
 
   // Default data for preview if none provided
-  const constellationData = useMemo(() => data || {
+  const constellationData = useMemo(() => {
+    const hasActualNodes = data && data.nodes && data.nodes.length > 1;
+    return hasActualNodes ? data : {
     nodes: [
       { id: 'core', label: 'Civic Core', type: 'core', size: 30 },
       { id: 'mutual-aid', label: 'Mutual Aid', type: 'domain', size: 20 },
@@ -23,7 +25,9 @@ const CivicIdentityConstellation = ({ data, width = 600, height = 400 }) => {
       { source: 'mutual-aid', target: 'trust-1' },
       { source: 'mutual-aid', target: 'mentor-1' },
     ]
-  }, [data]);
+  }}, [data]);
+
+  const hasData = data && data.nodes && data.nodes.length > 1;
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -139,7 +143,7 @@ const CivicIdentityConstellation = ({ data, width = 600, height = 400 }) => {
     }}>
       <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 1 }}>
         <Typography variant="caption" sx={{ color: '#00f3ff', fontFamily: 'Orbitron', letterSpacing: 2 }}>
-          IDENTITY_CONSTELLATION_V2.0
+          IDENTITY_CONSTELLATION_V2.0 {!hasData && '(DEMO_MODE)'}
         </Typography>
       </Box>
       <svg ref={svgRef} width={width} height={height} style={{ maxWidth: '100%', height: 'auto' }} />

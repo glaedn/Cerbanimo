@@ -10,7 +10,8 @@ const ImpactRippleMap = ({ data }) => {
     { id: 4, action: 'Regional Trust Increased by 5%', scope: 'Systemic' }
   ];
 
-  const displayRipples = data && data.length > 0 ? data.map(item => ({
+  const hasData = data && data.length > 0;
+  const displayRipples = hasData ? data.map(item => ({
     id: item.id,
     action: item.description,
     scope: item.propagation_type || 'Secondary'
@@ -19,7 +20,7 @@ const ImpactRippleMap = ({ data }) => {
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(255, 92, 162, 0.05)', borderRadius: 2, border: '1px solid rgba(255, 92, 162, 0.2)' }}>
       <Typography variant="overline" sx={{ color: '#ff5ca2', letterSpacing: 2, mb: 3, display: 'block' }}>
-        IMPACT_PROPAGATION_CHAIN
+        IMPACT_PROPAGATION_CHAIN {!hasData && '(DEMO_MODE)'}
       </Typography>
 
       <Stack spacing={2}>

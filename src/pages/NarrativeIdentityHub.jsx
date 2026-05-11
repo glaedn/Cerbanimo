@@ -26,6 +26,7 @@ const NarrativeIdentityHub = () => {
     impactChains,
     chronicleArcs,
     institutionalMemory,
+    playbackEvents,
     loading
   } = useNarrativeStore();
 
@@ -98,7 +99,7 @@ const NarrativeIdentityHub = () => {
           {/* Right Column: Narrative Arcs & Archive */}
           <Grid item xs={12} lg={5}>
             <Stack spacing={4}>
-              <NarrativePlayback />
+              <NarrativePlayback events={playbackEvents} />
               <CivicMemoryArchive data={institutionalMemory} />
             </Stack>
           </Grid>

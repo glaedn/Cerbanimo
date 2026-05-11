@@ -25,16 +25,19 @@ export const useNarrativeStore = create((set) => ({
   // Institutional Memory Archive
   institutionalMemory: [],
 
+  playbackEvents: [],
+
   // Actions
   fetchNarrativeData: async (userId) => {
     set({ loading: true });
     try {
-      const [constellation, lineage, propagation, arcs, memory] = await Promise.all([
+      const [constellation, lineage, propagation, arcs, memory, playback] = await Promise.all([
         axios.get(`${BACKEND_URL}/narrative/user/${userId}/constellation`),
         axios.get(`${BACKEND_URL}/narrative/user/${userId}/lineage`),
         axios.get(`${BACKEND_URL}/narrative/user/${userId}/propagation`),
         axios.get(`${BACKEND_URL}/narrative/user/${userId}/chronicle-arcs`),
-        axios.get(`${BACKEND_URL}/narrative/institutional-memory`)
+        axios.get(`${BACKEND_URL}/narrative/institutional-memory`),
+        axios.get(`${BACKEND_URL}/narrative/user/${userId}/playback`)
       ]);
 
       set({
@@ -43,6 +46,7 @@ export const useNarrativeStore = create((set) => ({
         impactChains: propagation.data,
         chronicleArcs: arcs.data,
         institutionalMemory: memory.data,
+        playbackEvents: playback.data,
         loading: false
       });
     } catch (err) {

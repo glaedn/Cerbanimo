@@ -17,12 +17,13 @@ const NarrativePlayback = ({ events = [] }) => {
     { time: 'T+1w', label: 'Reflection', detail: 'Post-crisis trust index increased by 15%.' }
   ];
 
-  const displayEvents = events.length > 0 ? events : defaultEvents;
+  const hasData = events && events.length > 0;
+  const displayEvents = hasData ? events : defaultEvents;
 
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(10, 10, 46, 0.8)', borderRadius: 2, border: '1px solid rgba(0, 243, 255, 0.3)' }}>
       <Typography variant="overline" sx={{ color: '#00f3ff', letterSpacing: 2, mb: 3, display: 'block' }}>
-        CIVIC_MEMORY_PLAYBACK
+        CIVIC_MEMORY_PLAYBACK {!hasData && '(DEMO_MODE)'}
       </Typography>
 
       <Box sx={{ minHeight: '120px', mb: 4, p: 2, bgcolor: 'rgba(0, 243, 255, 0.05)', borderRadius: 1, borderLeft: '4px solid #00f3ff' }}>

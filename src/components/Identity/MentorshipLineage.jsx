@@ -9,7 +9,8 @@ const MentorshipLineage = ({ data }) => {
     { id: 3, name: 'Marcus Bell', role: 'Apprentice', skill: 'Community Outreach', avatar: '' }
   ];
 
-  const displayLineage = data && data.length > 0 ? data.map(item => ({
+  const hasData = data && data.length > 0;
+  const displayLineage = hasData ? data.map(item => ({
     id: item.id,
     name: item.mentor_name || item.mentee_name,
     skill: item.skill_name || 'General Contribution',
@@ -19,7 +20,7 @@ const MentorshipLineage = ({ data }) => {
   return (
     <Box sx={{ p: 3, bgcolor: 'rgba(0, 215, 135, 0.05)', borderRadius: 2, border: '1px solid rgba(0, 215, 135, 0.2)' }}>
       <Typography variant="overline" sx={{ color: '#00D787', letterSpacing: 2, mb: 3, display: 'block' }}>
-        KNOWLEDGE_INHERITANCE_LINEAGE
+        KNOWLEDGE_INHERITANCE_LINEAGE {!hasData && '(DEMO_MODE)'}
       </Typography>
 
       <Stack spacing={2} alignItems="center">
