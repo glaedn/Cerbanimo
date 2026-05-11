@@ -189,7 +189,7 @@ const FederationAtlas = () => {
                        </S.SectionLabel>
                        <div className="bg-black/40 p-5 rounded-2xl border border-white/5 mt-4">
                           <p className="text-xs text-gray-400 leading-relaxed italic">
-                             "{selectedTreaty.terms?.summary || 'Formal commitment to shared resource availability and emergency coordination.'}"
+                             "${selectedTreaty.terms?.summary || 'Formal commitment to shared resource availability and emergency coordination.'}"
                           </p>
                        </div>
                     </div>
@@ -197,11 +197,13 @@ const FederationAtlas = () => {
                     <div className="grid grid-cols-2 gap-4">
                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
                           <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Mutual Trust</div>
-                          <div className="text-xs text-cyan-400 font-mono">0.89/1.0</div>
+                          <div className="text-xs text-cyan-400 font-mono">{(selectedTreaty.trust_score || 0).toFixed(2)}/1.0</div>
                        </div>
                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
                           <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Last Update</div>
-                          <div className="text-xs text-gray-400 font-mono">2h ago</div>
+                          <div className="text-xs text-gray-400 font-mono">
+                             {selectedTreaty.updated_at ? `${Math.floor((new Date() - new Date(selectedTreaty.updated_at)) / (1000 * 60 * 60))}h ago` : 'N/A'}
+                          </div>
                        </div>
                     </div>
                  </div>

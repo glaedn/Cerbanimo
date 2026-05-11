@@ -1615,7 +1615,7 @@ const ProfilePage = () => {
         </Button>
         <Button 
           variant="contained" 
-          onClick={() => logout({ returnTo: window.location.origin })}
+          onClick={() => logout({ logoutParams: { returnTo: import.meta.env.VITE_FRONTEND_URL || window.location.origin } })}
           fullWidth={isMobile}
           sx={{ 
             backgroundColor: theme.colors.error, 

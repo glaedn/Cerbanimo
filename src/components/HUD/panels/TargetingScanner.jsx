@@ -6,7 +6,6 @@ import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css'; // Shared panel styles
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react'; // Adjust path if needed
-// import './TargetingScanner.css'; // Optional: For specific TargetingScanner styles
 
 const TargetingScanner = () => {
   const isMobile = useIsMobile();
@@ -14,7 +13,7 @@ const TargetingScanner = () => {
   const { relevantTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useRelevantTasks(profile?.id);
   const selectEntity = useAppStore(state => state.selectEntity);
   const [isMinimized, setIsMinimized] = useState(false);
-  const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
   const toggleMinimize = (e) => {
     if (e && e.currentTarget.tagName === 'BUTTON' && e.target.tagName === 'BUTTON') {
       e.stopPropagation();

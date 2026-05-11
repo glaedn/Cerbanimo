@@ -10,7 +10,8 @@ import * as S from '../components/Governance/GovernanceStyles';
 
 const GovernanceChamber = () => {
   const { communityId } = useParams();
-  const { proposals, activeConstitution, loading, error, fetchCommunityGovernance, castVote, createProposal } = useGovernanceStore();
+  const navigate = useNavigate();
+  const { proposals, activeConstitution, treaties, loading, error, fetchCommunityGovernance, fetchFederationAtlas, castVote, createProposal } = useGovernanceStore();
   const { presence } = useAppStore();
   const { getAccessTokenSilently } = useAuth0();
   const [selectedProposalId, setSelectedProposalId] = useState(null);
@@ -24,8 +25,17 @@ const GovernanceChamber = () => {
     const totalVotes = proposals.reduce((acc, p) => acc + (p.votes?.length || 0), 0);
     const activeProposals = proposals.filter(p => p.status === 'deliberation' || p.status === 'voting').length;
 
+    // Compute consensus as average of support across proposals
+    const supportRatios = proposals
+      .map(p => {
+        if (!p.votes || p.votes.length === 0) return 0.5; // Neutral starting point
+        const support = p.votes.filter(v => v.vote_value === 'support').length;
+        return support / p.votes.length;
+      });
+    const avgConsensus = supportRatios.reduce((a, b) => a + b, 0) / supportRatios.length;
+
     return {
-      consensus: 65 + (Math.random() * 15),
+      consensus: avgConsensus * 100,
       participation: Math.min(100, (totalVotes / 50) * 100),
       density: activeProposals > 0 ? 82 : 12
     };
@@ -55,13 +65,39 @@ const GovernanceChamber = () => {
 
   useEffect(() => {
     refreshData();
-  }, [communityId, fetchCommunityGovernance, getAccessTokenSilently]);
+    const loadFederation = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        fetchFederationAtlas(token);
+      } catch (err) {
+        fetchFederationAtlas();
+      }
+    };
+    loadFederation();
+  }, [communityId, fetchCommunityGovernance, fetchFederationAtlas, getAccessTokenSilently]);
 
   useEffect(() => {
     if (proposals.length > 0 && !selectedProposalId) {
       setSelectedProposalId(proposals[0].id);
     }
   }, [proposals, selectedProposalId]);
+
+  const getAffectedSystems = (type) => {
+    switch (type) {
+      case 'resource':
+        return ['• Resource Ledger', '• Matching API', '• Logistics Hub', '• Supply Chain'];
+      case 'governance':
+        return ['• Trust Topology', '• Member Weights', '• Delegation Graph', '• Voting Quorum'];
+      case 'constitution':
+        return ['• Protocol Rules', '• Core Identity', '• Rights Ledger', '• Institutional Memory'];
+      case 'operational':
+        return ['• Task Routing API', '• Mission Control', '• Dispatch Engine', '• Field Telemetry'];
+      default:
+        return ['• General Ledger', '• User Metadata', '• Cache Layers', '• Event Bus'];
+    }
+  };
+
+  const selectedProposal = proposals.find(p => p.id === selectedProposalId);
 
   const handleVote = async (proposalId, voteValue) => {
     try {
@@ -173,10 +209,9 @@ const GovernanceChamber = () => {
                   <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
                      <S.Subtitle className="mb-3 text-[10px] text-gray-500">Affected Systems</S.Subtitle>
                      <ul className="grid grid-cols-2 gap-2 text-[10px] text-cyan-400 font-mono uppercase">
-                        <li>• Resource Ledger</li>
-                        <li>• Task Routing API</li>
-                        <li>• Trust Topology</li>
-                        <li>• Member Weights</li>
+                        {getAffectedSystems(selectedProposal?.proposal_type).map((sys, idx) => (
+                           <li key={idx}>{sys}</li>
+                        ))}
                      </ul>
                   </div>
                </S.GlassPanel>
@@ -198,9 +233,9 @@ const GovernanceChamber = () => {
               <div className="flex flex-col gap-4 mb-8">
                  {[
                    { label: 'Voting Model', value: activeConstitution?.content?.governance?.votingModel || 'Direct' },
-                   { label: 'Quorum', value: '15%' },
+                   { label: 'Quorum', value: activeConstitution?.content?.governance?.quorum ? `${activeConstitution.content.governance.quorum}%` : 'N/A' },
                    { label: 'Authority', value: 'Distributed' },
-                   { label: 'Federation', value: 'Active Treaties (3)' }
+                   { label: 'Federation', value: `Active Treaties (${treaties.filter(t => t.community_a === communityId || t.community_b === communityId).length})` }
                  ].map((item, i) => (
                    <S.DataRow key={i}>
                      <S.DataLabel>{item.label}</S.DataLabel>
@@ -243,7 +278,7 @@ const GovernanceChamber = () => {
                  </S.MetricItem>
               </div>
 
-              <S.NeonButton variant="outline" className="w-full mt-8">
+              <S.NeonButton variant="outline" className="w-full mt-8" onClick={() => navigate('/delegation-map')}>
                  <Users size={14} /> EXPLORE DELEGATION
               </S.NeonButton>
            </S.GlassPanel>

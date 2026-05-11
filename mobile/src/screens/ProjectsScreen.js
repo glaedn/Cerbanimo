@@ -37,8 +37,8 @@ export function ProjectsScreen() {
   async function openProject(project) {
     setSelected(project);
     try {
-      const rows = await api.get("/tasks");
-      setTasks(Array.isArray(rows) ? rows.filter((task) => Number(task.project_id) === Number(project.id)) : []);
+      const rows = await api.get("/tasks", { projectId: project.id });
+      setTasks(Array.isArray(rows) ? rows : []);
     } catch (error) {
       Alert.alert("Unable to load project tasks", error.message);
     }

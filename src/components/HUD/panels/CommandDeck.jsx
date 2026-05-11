@@ -6,9 +6,6 @@ import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
 
-// Mock data if not available from hooks - REMOVE IF REAL DATA IS PRESENT
-const MOCKED_TOKEN_POOL = 10000; // Example global pool
-const MOCK_PROJECT_TOKENS = true; // Set to false if projects have real token data
 const accentGreen = '#00D787'; // theme.colors.accentGreen
 
 const CommandDeck = () => {

@@ -179,7 +179,7 @@ const ConstellationHub = () => {
                     <Box textAlign="center" p={isMobile ? 1 : 1} sx={{ bgcolor: '#111', borderRadius: 1, display: isMobile ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <AlertTriangle size={16} color="#ff5ca2" />
                       <Typography variant="caption" display="block" sx={{ fontSize: isMobile ? '0.8rem' : 'inherit' }}>DRIFT</Typography>
-                      <Typography variant={isMobile ? "body1" : "h6"} sx={{ ml: isMobile ? 'auto' : 0 }}>LOW</Typography>
+                      <Typography variant={isMobile ? "body1" : "h6"} sx={{ ml: isMobile ? 'auto' : 0 }}>{c.drift_score ? 'HIGH' : 'LOW'}</Typography>
                     </Box>
                   </Grid>
                 </Grid>
