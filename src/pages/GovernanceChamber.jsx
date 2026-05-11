@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { useGovernanceStore } from '../store/useGovernanceStore';
 import { useAppStore } from '../store/useAppStore';
+import { useAuth0 } from '@auth0/auth0-react';
 import ProposalCard from '../components/Governance/ProposalCard';
 import DeliberationSpace from '../components/Governance/DeliberationSpace';
-import { Plus, Info, Layout, Activity, Shield, Users, Users2, Target, BarChart3 } from 'lucide-react';
+import { Plus, Info, Layout, Activity, Shield, Users, Users2, Target, BarChart3, X } from 'lucide-react';
+import * as S from '../components/Governance/GovernanceStyles';
 
 const GovernanceChamber = () => {
   const { communityId } = useParams();
-  const { proposals, activeConstitution, loading, error, fetchCommunityGovernance } = useGovernanceStore();
+  const { proposals, activeConstitution, loading, error, fetchCommunityGovernance, castVote, createProposal } = useGovernanceStore();
   const { presence } = useAppStore();
+  const { getAccessTokenSilently } = useAuth0();
   const [selectedProposalId, setSelectedProposalId] = useState(null);
 
   const localPresence = useMemo(() => {
@@ -19,12 +21,11 @@ const GovernanceChamber = () => {
 
   const chamberMetrics = useMemo(() => {
     if (!proposals.length) return { consensus: 0, participation: 0, density: 0 };
-    // Derived metrics for institutional health
     const totalVotes = proposals.reduce((acc, p) => acc + (p.votes?.length || 0), 0);
     const activeProposals = proposals.filter(p => p.status === 'deliberation' || p.status === 'voting').length;
 
     return {
-      consensus: 65 + (Math.random() * 15), // Mocked for now
+      consensus: 65 + (Math.random() * 15),
       participation: Math.min(100, (totalVotes / 50) * 100),
       density: activeProposals > 0 ? 82 : 12
     };
@@ -42,9 +43,19 @@ const GovernanceChamber = () => {
     }
   });
 
+  const refreshData = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      fetchCommunityGovernance(communityId, token);
+    } catch (err) {
+      console.error("Auth failed:", err);
+      fetchCommunityGovernance(communityId);
+    }
+  };
+
   useEffect(() => {
-    fetchCommunityGovernance(communityId);
-  }, [communityId, fetchCommunityGovernance]);
+    refreshData();
+  }, [communityId, fetchCommunityGovernance, getAccessTokenSilently]);
 
   useEffect(() => {
     if (proposals.length > 0 && !selectedProposalId) {
@@ -54,8 +65,9 @@ const GovernanceChamber = () => {
 
   const handleVote = async (proposalId, voteValue) => {
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/governance/proposals/${proposalId}/vote`, { voteValue });
-      fetchCommunityGovernance(communityId); // Refresh
+      const token = await getAccessTokenSilently();
+      await castVote(proposalId, voteValue, token);
+      refreshData();
     } catch (err) {
       alert('Error casting vote: ' + err.message);
     }
@@ -64,284 +76,270 @@ const GovernanceChamber = () => {
   const handleCreateProposal = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/governance/community/${communityId}/proposals`, newProposal);
+      const token = await getAccessTokenSilently();
+      await createProposal(communityId, newProposal, token);
       setShowModal(false);
-      fetchCommunityGovernance(communityId);
     } catch (err) {
       alert('Error creating proposal: ' + err.message);
     }
   };
 
   if (loading && proposals.length === 0) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-black text-cyan-400 font-mono">
-       <Activity className="animate-spin mb-4" />
-       INITIALIZING CIVIC NEURAL LINK...
-    </div>
+    <S.PageContainer className="flex flex-col items-center justify-center">
+       <Activity className="animate-pulse text-cyan" size={48} />
+       <S.Subtitle className="mt-4">INITIALIZING CIVIC NEURAL LINK...</S.Subtitle>
+    </S.PageContainer>
   );
 
   return (
-    <div className="governance-chamber min-h-screen bg-[#050510] p-6 text-white selection:bg-cyan-500/30">
-      <header className="mb-8 flex justify-between items-end border-b border-white/5 pb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Shield className="text-cyan-400" size={24} />
-            <h1 className="text-3xl font-bold text-white tracking-tight">Governance Chamber</h1>
-          </div>
-          <p className="text-gray-500 font-medium">Community ID: {communityId} | Active Constitutional Layer: v{activeConstitution?.version || 1}</p>
-        </div>
+    <S.PageContainer>
+      <S.Header>
+        <S.TitleBlock>
+          <S.Title>
+            <Shield size={32} /> Governance Chamber
+          </S.Title>
+          <S.Subtitle>Community ID: {communityId} | Active Constitutional Layer: v{activeConstitution?.version || 1}</S.Subtitle>
+        </S.TitleBlock>
 
         <div className="flex items-center gap-6">
-          {/* Live Presence in Chamber */}
-          <div className="flex items-center -space-x-3">
+          <div className="flex items-center">
              {localPresence.slice(0, 3).map((uid, i) => (
-               <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-cyan-950 flex items-center justify-center text-[10px] font-bold text-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.2)]">
-                  {uid.toString().substring(0,1)}
+               <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-cyan-900 flex items-center justify-center text-[10px] font-bold text-cyan-400 -ml-3 first:ml-0 shadow-lg">
+                  {uid.toString().substring(0,1).toUpperCase()}
                </div>
              ))}
              {localPresence.length > 3 && (
-               <div className="w-8 h-8 rounded-full border-2 border-black bg-gray-900 flex items-center justify-center text-[8px] font-bold text-gray-500">
+               <div className="w-8 h-8 rounded-full border-2 border-black bg-[#1c1c1e] flex items-center justify-center text-[8px] font-bold text-gray-500 -ml-3">
                  +{localPresence.length - 3}
                </div>
              )}
-             {localPresence.length > 0 && (
-               <span className="ml-4 text-[9px] font-bold text-cyan-500 uppercase tracking-widest animate-pulse">
-                 {localPresence.length} Active Deliberators
-               </span>
-             )}
           </div>
+          {localPresence.length > 0 && (
+            <S.Subtitle className="animate-pulse text-cyan">
+              {localPresence.length} Active Deliberators
+            </S.Subtitle>
+          )}
 
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition shadow-[0_0_20px_rgba(8,145,178,0.4)] uppercase text-xs tracking-widest"
-          >
+          <S.NeonButton onClick={() => setShowModal(true)}>
             <Plus size={16} /> New Proposal
-          </button>
+          </S.NeonButton>
         </div>
-      </header>
+      </S.Header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+      <S.LayoutGrid>
         {/* Left Sidebar: Proposal Stream */}
-        <div className="xl:col-span-4 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Activity size={14} className="text-cyan-400 animate-pulse" /> Live Proposal Stream
-            </h2>
-            <div className="flex gap-2">
-               <button className="text-[10px] bg-gray-900 border border-gray-800 px-2 py-1 rounded text-gray-500 hover:text-white transition">ALL</button>
-               <button className="text-[10px] bg-gray-900 border border-gray-800 px-2 py-1 rounded text-gray-500 hover:text-white transition">ACTIVE</button>
-            </div>
-          </div>
+        <S.GridItem span={4}>
+          <S.GlassPanel>
+            <S.SectionLabel>
+              <Activity size={14} /> Live Proposal Stream
+            </S.SectionLabel>
 
-          <div className="proposal-stream max-h-[calc(100vh-250px)] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-            {proposals.length === 0 ? (
-              <div className="p-8 text-center bg-gray-900/30 border border-dashed border-gray-800 rounded-xl">
-                 <p className="text-gray-600 italic">No civic activity detected.</p>
-              </div>
-            ) : (
-              proposals.map(proposal => (
-                <div
-                  key={proposal.id}
-                  onClick={() => setSelectedProposalId(proposal.id)}
-                  className={`cursor-pointer transition-all ${selectedProposalId === proposal.id ? 'ring-2 ring-cyan-500 ring-offset-4 ring-offset-black rounded-xl' : ''}`}
-                >
-                  <ProposalCard proposal={proposal} onVote={handleVote} />
+            <div className="flex flex-col gap-4 max-h-[calc(100vh-250px)] overflow-y-auto pr-2 custom-scrollbar">
+              {proposals.length === 0 ? (
+                <div className="text-center p-8 text-gray-600 italic border border-dashed border-white/10 rounded-xl">
+                   No civic activity detected.
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Center/Main: Deliberation & Details */}
-        <div className="xl:col-span-5 space-y-8">
-           {selectedProposalId ? (
-             <>
-               <DeliberationSpace proposalId={selectedProposalId} />
-
-               <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Info size={14} className="text-cyan-400" /> Operational Context
-                  </h3>
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <p className="text-gray-400 leading-relaxed">
-                      This proposal targets the <strong>{proposals.find(p => p.id === selectedProposalId)?.proposal_type}</strong> domain.
-                      Execution will result in automated adjustments to the community's coordination layer.
-                    </p>
-                    <div className="mt-4 p-4 bg-black/40 rounded border border-white/5">
-                       <h4 className="text-[10px] text-gray-500 font-bold uppercase mb-2">Affected Systems</h4>
-                       <ul className="grid grid-cols-2 gap-2 text-[10px] text-cyan-500 font-mono uppercase">
-                          <li>• Resource Ledger</li>
-                          <li>• Task Routing API</li>
-                          <li>• Trust Topology</li>
-                          <li>• Member Weights</li>
-                       </ul>
-                    </div>
+              ) : (
+                proposals.map(proposal => (
+                  <div
+                    key={proposal.id}
+                    onClick={() => setSelectedProposalId(proposal.id)}
+                    className={`cursor-pointer transition-all ${selectedProposalId === proposal.id ? 'ring-2 ring-cyan-500/50 rounded-2xl' : ''}`}
+                  >
+                    <ProposalCard proposal={proposal} onVote={handleVote} />
                   </div>
-               </div>
-             </>
-           ) : (
-             <div className="h-full flex items-center justify-center text-gray-600 italic">
-                Select a proposal to begin civic deliberation.
+                ))
+              )}
+            </div>
+          </S.GlassPanel>
+        </S.GridItem>
+
+        {/* Center: Deliberation & Details */}
+        <S.GridItem span={5}>
+           {selectedProposalId ? (
+             <div className="flex flex-col gap-8 h-full">
+               <S.GlassPanel>
+                  <DeliberationSpace proposalId={selectedProposalId} />
+               </S.GlassPanel>
+
+               <S.GlassPanel>
+                  <S.SectionLabel>
+                    <Info size={14} /> Operational Context
+                  </S.SectionLabel>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-6">
+                    This proposal targets the <strong className="text-white uppercase font-mono tracking-wider">{proposals.find(p => p.id === selectedProposalId)?.proposal_type}</strong> domain.
+                    Execution will result in automated adjustments to the community's coordination layer.
+                  </p>
+                  <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+                     <S.Subtitle className="mb-3 text-[10px] text-gray-500">Affected Systems</S.Subtitle>
+                     <ul className="grid grid-cols-2 gap-2 text-[10px] text-cyan-400 font-mono uppercase">
+                        <li>• Resource Ledger</li>
+                        <li>• Task Routing API</li>
+                        <li>• Trust Topology</li>
+                        <li>• Member Weights</li>
+                     </ul>
+                  </div>
+               </S.GlassPanel>
              </div>
+           ) : (
+             <S.GlassPanel className="flex items-center justify-center text-gray-600 italic text-sm">
+                Select a proposal from the stream to begin civic deliberation.
+             </S.GlassPanel>
            )}
-        </div>
+        </S.GridItem>
 
-        {/* Right Sidebar: Governance Meta & Summary */}
-        <div className="xl:col-span-3 space-y-6">
-           <div className="bg-white/[0.03] border border-white/10 p-6 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-              <h2 className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2 border-b border-white/5 pb-4">
-                <Layout size={14} className="text-cyan-400" /> Civic Schema
-              </h2>
+        {/* Right Sidebar: Governance Meta */}
+        <S.GridItem span={3}>
+           <S.GlassPanel className="mb-8">
+              <S.SectionLabel>
+                <Layout size={14} /> Civic Schema
+              </S.SectionLabel>
 
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4 mb-8">
                  {[
                    { label: 'Voting Model', value: activeConstitution?.content?.governance?.votingModel || 'Direct' },
                    { label: 'Quorum', value: '15%' },
                    { label: 'Authority', value: 'Distributed' },
                    { label: 'Federation', value: 'Active Treaties (3)' }
                  ].map((item, i) => (
-                   <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
-                     <span className="text-[10px] text-gray-500 font-bold uppercase">{item.label}</span>
-                     <span className="text-xs text-cyan-400 font-mono uppercase">{item.value}</span>
-                   </div>
+                   <S.DataRow key={i}>
+                     <S.DataLabel>{item.label}</S.DataLabel>
+                     <S.DataValue>{item.value}</S.DataValue>
+                   </S.DataRow>
                  ))}
               </div>
 
-              <div className="mt-8 space-y-6">
-                 <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mb-4">Institutional Health</h3>
+              <div className="space-y-6">
+                 <S.Subtitle className="text-[10px] mb-2">Institutional Health</S.Subtitle>
 
-                 <div>
+                 <S.MetricItem>
                     <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
-                       <span className="text-gray-500 flex items-center gap-1"><Users2 size={10} /> Participation Breadth</span>
+                       <span className="text-gray-500 flex items-center gap-1"><Users2 size={10} /> Participation</span>
                        <span className="text-cyan-400">{chamberMetrics.participation.toFixed(0)}%</span>
                     </div>
-                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.participation}%` }}></div>
-                    </div>
-                 </div>
+                    <S.ProgressBar>
+                       <S.ProgressFill percent={chamberMetrics.participation} />
+                    </S.ProgressBar>
+                 </S.MetricItem>
 
-                 <div>
+                 <S.MetricItem>
                     <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
-                       <span className="text-gray-500 flex items-center gap-1"><Target size={10} /> Consensus Alignment</span>
+                       <span className="text-gray-500 flex items-center gap-1"><Target size={10} /> Consensus</span>
                        <span className="text-cyan-400">{chamberMetrics.consensus.toFixed(0)}%</span>
                     </div>
-                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.consensus}%` }}></div>
-                    </div>
-                 </div>
+                    <S.ProgressBar>
+                       <S.ProgressFill percent={chamberMetrics.consensus} />
+                    </S.ProgressBar>
+                 </S.MetricItem>
 
-                 <div>
+                 <S.MetricItem>
                     <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
-                       <span className="text-gray-500 flex items-center gap-1"><BarChart3 size={10} /> Argument Density</span>
+                       <span className="text-gray-500 flex items-center gap-1"><BarChart3 size={10} /> Density</span>
                        <span className="text-cyan-400">{chamberMetrics.density}%</span>
                     </div>
-                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.density}%` }}></div>
-                    </div>
-                 </div>
+                    <S.ProgressBar>
+                       <S.ProgressFill percent={chamberMetrics.density} />
+                    </S.ProgressBar>
+                 </S.MetricItem>
               </div>
 
-              <button className="w-full mt-8 py-3 border border-cyan-500/30 text-cyan-400 rounded-lg text-[10px] font-bold uppercase hover:bg-cyan-500/10 transition flex items-center justify-center gap-2">
-                 <Users size={14} /> EXPLORE DELEGATION GRAPH
-              </button>
-           </div>
+              <S.NeonButton variant="outline" className="w-full mt-8">
+                 <Users size={14} /> EXPLORE DELEGATION
+              </S.NeonButton>
+           </S.GlassPanel>
 
-           <div className="bg-gray-900/40 border border-gray-800 p-6 rounded-xl">
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Shield size={14} className="text-cyan-400" /> Constitutional Status
-              </h2>
-              <div className="p-3 bg-black/40 rounded border border-white/5 mb-4">
+           <S.GlassPanel>
+              <S.SectionLabel>
+                <Shield size={14} /> Constitutional Status
+              </S.SectionLabel>
+              <div className="p-4 bg-black/40 rounded-2xl border border-white/5 mb-6">
                  <p className="text-[10px] text-gray-500 italic leading-relaxed">
                    "{activeConstitution?.content?.identity?.purpose || 'Establishing a resilient framework for mutual aid and resource autonomy.'}"
                  </p>
               </div>
-              <button className="text-[10px] text-cyan-600 hover:text-cyan-400 font-bold uppercase transition">
-                View Full Living Constitution →
-              </button>
-           </div>
-        </div>
-      </div>
+              <S.NeonButton variant="outline" className="w-full text-[9px]">
+                View Living Constitution
+              </S.NeonButton>
+           </S.GlassPanel>
+        </S.GridItem>
+      </S.LayoutGrid>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-950 border border-gray-800 p-8 rounded-2xl w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] border-t-cyan-500/50">
-            <div className="flex justify-between items-start mb-6">
+        <S.ModalOverlay>
+          <S.ModalContent>
+            <div className="flex justify-between items-start mb-8">
                <div>
-                 <h2 className="text-2xl font-bold text-white uppercase tracking-tight">New Civic Proposal</h2>
-                 <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">Initializing institutional evolution</p>
+                 <S.Title style={{ fontSize: '1.5rem' }}>New Civic Proposal</S.Title>
+                 <S.Subtitle>Initializing institutional evolution</S.Subtitle>
                </div>
-               <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white transition">&times;</button>
+               <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white transition"><X size={24} /></button>
             </div>
 
-            <form onSubmit={handleCreateProposal} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Proposal Title</label>
-                <input
+            <form onSubmit={handleCreateProposal}>
+              <S.FormField>
+                <S.Label>Proposal Title</S.Label>
+                <S.Input
                   type="text"
                   required
                   value={newProposal.title}
                   onChange={(e) => setNewProposal({...newProposal, title: e.target.value})}
-                  className="w-full bg-black border border-gray-800 p-3 rounded text-white focus:border-cyan-500 outline-none transition text-sm"
                   placeholder="e.g., Establishing Regional Resource Reserve"
                 />
-              </div>
+              </S.FormField>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Primary Domain</label>
-                  <select
+                <S.FormField>
+                  <S.Label>Primary Domain</S.Label>
+                  <S.Select
                     value={newProposal.type}
                     onChange={(e) => setNewProposal({...newProposal, type: e.target.value})}
-                    className="w-full bg-black border border-gray-800 p-3 rounded text-white focus:border-cyan-500 outline-none transition text-sm appearance-none"
                   >
                     <option value="governance">Governance Policy</option>
                     <option value="operational">Operational Change</option>
                     <option value="resource">Resource Allocation</option>
                     <option value="constitution">Constitutional Amendment</option>
-                  </select>
-                </div>
-                <div>
-                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Impact Level</label>
-                   <select
+                  </S.Select>
+                </S.FormField>
+                <S.FormField>
+                   <S.Label>Impact Level</S.Label>
+                   <S.Select
                     value={newProposal.payload.impact}
                     onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, impact: e.target.value}})}
-                    className="w-full bg-black border border-gray-800 p-3 rounded text-white focus:border-cyan-500 outline-none transition text-sm appearance-none"
                   >
                     <option value="Low">Low (Administrative)</option>
                     <option value="Moderate">Moderate (Systemic)</option>
                     <option value="High">High (Constitutional)</option>
-                  </select>
-                </div>
+                  </S.Select>
+                </S.FormField>
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Stated Intent</label>
-                <input
+              <S.FormField>
+                <S.Label>Stated Intent</S.Label>
+                <S.Input
                   type="text"
                   required
                   value={newProposal.payload.intent}
                   onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, intent: e.target.value}})}
-                  className="w-full bg-black border border-gray-800 p-3 rounded text-white focus:border-cyan-500 outline-none transition text-sm"
                   placeholder="Why are you proposing this?"
                 />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Detailed Description</label>
-                <textarea
+              </S.FormField>
+              <S.FormField>
+                <S.Label>Detailed Description</S.Label>
+                <S.TextArea
                   rows="4"
                   required
                   value={newProposal.description}
                   onChange={(e) => setNewProposal({...newProposal, description: e.target.value})}
-                  className="w-full bg-black border border-gray-800 p-3 rounded text-white focus:border-cyan-500 outline-none transition text-sm"
                   placeholder="Provide full context, data points, and expected outcomes..."
-                ></textarea>
-              </div>
+                />
+              </S.FormField>
               <div className="flex gap-4 mt-8 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-xs font-bold text-gray-500 hover:text-white transition uppercase tracking-widest">Discard</button>
-                <button type="submit" className="flex-1 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg shadow-[0_0_15px_rgba(8,145,178,0.4)] uppercase text-xs tracking-widest transition-all active:scale-95">Ratify Proposal</button>
+                <S.NeonButton type="button" variant="outline" onClick={() => setShowModal(false)} className="flex-1">Discard</S.NeonButton>
+                <S.NeonButton type="submit" className="flex-1">Ratify Proposal</S.NeonButton>
               </div>
             </form>
-          </div>
-        </div>
+          </S.ModalContent>
+        </S.ModalOverlay>
       )}
-    </div>
+    </S.PageContainer>
   );
 };
 

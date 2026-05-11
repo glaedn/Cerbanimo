@@ -6,7 +6,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 export const useGovernanceStore = create((set, get) => ({
   proposals: [],
   activeConstitution: null,
-  constitutionHistory: [],
+  constitutionVersions: [],
   delegations: [],
   treaties: [],
   deliberationTrees: {}, // { proposalId: { nodes, links } }
@@ -16,13 +16,14 @@ export const useGovernanceStore = create((set, get) => ({
   error: null,
 
   // Fetching Data
-  fetchCommunityGovernance: async (communityId) => {
+  fetchCommunityGovernance: async (communityId, token) => {
     set({ loading: true, error: null });
     try {
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       const [propRes, constRes, delRes] = await Promise.all([
-        axios.get(`${BACKEND_URL}/governance/community/${communityId}/proposals`),
-        axios.get(`${BACKEND_URL}/governance/community/${communityId}/constitution`),
-        axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`)
+        axios.get(`${BACKEND_URL}/governance/community/${communityId}/proposals`, config),
+        axios.get(`${BACKEND_URL}/governance/community/${communityId}/constitution`, config),
+        axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`, config)
       ]);
 
       set({
@@ -36,9 +37,10 @@ export const useGovernanceStore = create((set, get) => ({
     }
   },
 
-  fetchFederationAtlas: async () => {
+  fetchFederationAtlas: async (token) => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/federation/atlas`);
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${BACKEND_URL}/federation/atlas`, config);
       set({ treaties: res.data });
     } catch (err) {
       console.error('Error fetching federation atlas:', err);
@@ -54,18 +56,38 @@ export const useGovernanceStore = create((set, get) => ({
     proposals: state.proposals.map(p => p.id === proposalId ? { ...p, status } : p)
   })),
 
-  // Deliberation logic (Arguments/Mapping)
-  // In a real system, these would likely be fetched from a dedicated deliberation table
-  fetchDeliberation: async (proposalId) => {
-    // Placeholder for structured reasoning
-    // For now, we'll derive some basic nodes from proposal payload if available
-    // or initialize an empty tree
+  castVote: async (proposalId, voteValue, token) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.post(`${BACKEND_URL}/governance/proposals/${proposalId}/vote`, { voteValue }, config);
+      return true;
+    } catch (err) {
+      console.error('Error casting vote:', err);
+      throw err;
+    }
+  },
+
+  createProposal: async (communityId, proposalData, token) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.post(`${BACKEND_URL}/governance/community/${communityId}/proposals`, proposalData, config);
+      set(state => ({ proposals: [res.data, ...state.proposals] }));
+      return res.data;
+    } catch (err) {
+      console.error('Error creating proposal:', err);
+      throw err;
+    }
+  },
+
+  // Deliberation logic
+  fetchDeliberation: async (proposalId, token) => {
     set((state) => ({
       deliberationTrees: {
         ...state.deliberationTrees,
         [proposalId]: state.deliberationTrees[proposalId] || { nodes: [], links: [] }
       }
     }));
+    // In a real implementation, we would fetch from backend here using token
   },
 
   addArgument: (proposalId, argument) => set((state) => {
@@ -84,12 +106,13 @@ export const useGovernanceStore = create((set, get) => ({
   // Delegation logic
   addDelegation: async (communityId, userId, delegateToId, token) => {
     try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.post(`${BACKEND_URL}/communities/${communityId}/delegate/${userId}`,
         { delegateTo: delegateToId },
-        { headers: { Authorization: `Bearer ${token}` } }
+        config
       );
       // Refresh delegations
-      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`);
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`, config);
       set({ delegations: res.data });
     } catch (err) {
       console.error('Error adding delegation:', err);
@@ -98,12 +121,13 @@ export const useGovernanceStore = create((set, get) => ({
 
   revokeDelegation: async (communityId, userId, token) => {
     try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.post(`${BACKEND_URL}/communities/${communityId}/revoke/${userId}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        config
       );
       // Refresh delegations
-      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`);
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`, config);
       set({ delegations: res.data });
     } catch (err) {
       console.error('Error revoking delegation:', err);
@@ -111,9 +135,10 @@ export const useGovernanceStore = create((set, get) => ({
   },
 
   // Mediation Actions
-  fetchMediationCases: async (communityId) => {
+  fetchMediationCases: async (communityId, token) => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/mediation`);
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/mediation`, config);
       set({ mediationCases: res.data });
     } catch (err) {
       console.error('Error fetching mediation cases:', err);
@@ -121,10 +146,11 @@ export const useGovernanceStore = create((set, get) => ({
   },
 
   // Constitutional history
-  fetchConstitutionHistory: async (communityId) => {
+  fetchConstitutionVersions: async (communityId, token) => {
      try {
-       const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/constitution/history`);
-       set({ constitutionHistory: res.data });
+       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+       const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/constitution/history`, config);
+       set({ constitutionVersions: res.data });
      } catch (err) {
        console.error('Error fetching constitution history:', err);
      }

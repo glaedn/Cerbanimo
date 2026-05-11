@@ -366,12 +366,12 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
-                  location.pathname === "/dispute-court" ? "active" : ""
+                  location.pathname === "/mediation-space" ? "active" : ""
                 }`}
-                to="/dispute-court"
+                to="/mediation-space"
                 onClick={closeSidebar}
               >
-                Dispute Court
+                Mediation Space
               </Link>
               <Link
                 className={`nav-link ${

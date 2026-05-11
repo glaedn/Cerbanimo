@@ -1,216 +1,230 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useGovernanceStore } from '../store/useGovernanceStore';
+import { useAuth0 } from '@auth0/auth0-react';
 import ConstitutionGraph from '../components/Governance/ConstitutionGraph';
-import { Shield, Clock, BookOpen, GitBranch, History, Play } from 'lucide-react';
+import { History, Shield, Info, Network, GitPullRequest, GitBranch, Search, ChevronRight, Activity, Clock, FileText } from 'lucide-react';
+import * as S from '../components/Governance/GovernanceStyles';
 
 const ConstitutionExplorer = () => {
   const { communityId } = useParams();
-  const { activeConstitution, constitutionHistory, fetchCommunityGovernance, fetchConstitutionHistory } = useGovernanceStore();
-  const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'evolution'
-  const [comparisonVersion, setComparisonVersion] = useState(null);
+  const { activeConstitution, constitutionVersions, loading, error, fetchConstitutionVersions } = useGovernanceStore();
+  const { getAccessTokenSilently } = useAuth0();
+  const [selectedVersionId, setSelectedVersionId] = useState(null);
+  const [compareVersionId, setCompareVersionId] = useState(null);
+  const [showDiff, setShowDiff] = useState(false);
+  const [activeTab, setActiveTab] = useState('rules');
 
   useEffect(() => {
-    fetchCommunityGovernance(communityId);
-    fetchConstitutionHistory(communityId);
-  }, [communityId, fetchCommunityGovernance, fetchConstitutionHistory]);
+    const loadVersions = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        fetchConstitutionVersions(communityId, token);
+      } catch (err) {
+        console.error("Auth failed:", err);
+        fetchConstitutionVersions(communityId);
+      }
+    };
+    loadVersions();
+  }, [communityId, fetchConstitutionVersions, getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (activeConstitution && !selectedVersionId) {
+      setSelectedVersionId(activeConstitution.id);
+    }
+  }, [activeConstitution, selectedVersionId]);
+
+  const currentVersion = useMemo(() => {
+    return constitutionVersions.find(v => v.id === selectedVersionId) || activeConstitution;
+  }, [constitutionVersions, selectedVersionId, activeConstitution]);
+
+  const compareVersion = useMemo(() => {
+    return constitutionVersions.find(v => v.id === compareVersionId);
+  }, [constitutionVersions, compareVersionId]);
+
+  const reformMarkers = useMemo(() => {
+    if (!constitutionVersions.length) return [];
+    return constitutionVersions.map((v, i) => ({
+      version: v.version,
+      date: new Date(v.created_at).toLocaleDateString(),
+      label: i === 0 ? 'Foundation' : i === constitutionVersions.length -1 ? 'Current' : 'Reform'
+    })).reverse();
+  }, [constitutionVersions]);
+
+  if (loading && !activeConstitution) return (
+    <S.PageContainer className="flex flex-col items-center justify-center">
+       <History className="animate-spin text-cyan-500 opacity-20" size={64} />
+       <S.Subtitle className="mt-8 uppercase tracking-widest text-cyan-400">Restoring Institutional Archaeology...</S.Subtitle>
+    </S.PageContainer>
+  );
 
   return (
-    <div className="constitution-explorer min-h-screen bg-[#050510] p-8 text-white selection:bg-cyan-500/30">
-      <header className="mb-10 flex justify-between items-center">
-        <div>
-           <div className="flex items-center gap-3 mb-2">
-             <Shield className="text-cyan-400" size={28} />
-             <h1 className="text-4xl font-bold text-white tracking-tight">Constitution Explorer</h1>
-           </div>
-           <p className="text-gray-500 font-medium tracking-wide uppercase text-xs">
-             Institutional Nervous System Visualizer | Community {communityId}
-           </p>
+    <S.PageContainer>
+      <S.Header>
+        <S.TitleBlock>
+          <S.Title>
+            <Shield size={32} /> Constitution Explorer
+          </S.Title>
+          <S.Subtitle>Community: {communityId} | Version: {currentVersion?.version || 'Live'}</S.Subtitle>
+        </S.TitleBlock>
+
+        <div className="flex items-center gap-4">
+           <S.NeonButton variant="outline" onClick={() => setShowDiff(!showDiff)}>
+             <GitPullRequest size={16} /> {showDiff ? 'Exit Compare' : 'Compare Versions'}
+           </S.NeonButton>
+           <S.NeonButton>
+             <GitBranch size={16} /> Propose Amendment
+           </S.NeonButton>
         </div>
+      </S.Header>
 
-        <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/10 backdrop-blur-md">
-           <button
-             onClick={() => setActiveTab('current')}
-             className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${activeTab === 'current' ? 'bg-cyan-600 text-white shadow-[0_0_20px_rgba(8,145,178,0.4)] scale-105' : 'text-gray-500 hover:text-white'}`}
-           >
-             Live Schema
-           </button>
-           <button
-             onClick={() => setActiveTab('history')}
-             className={`px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition ${activeTab === 'history' ? 'bg-cyan-600 text-white shadow-[0_0_10px_rgba(8,145,178,0.4)]' : 'text-gray-500 hover:text-white'}`}
-           >
-             Version History
-           </button>
-           <button
-             onClick={() => setActiveTab('evolution')}
-             className={`px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition ${activeTab === 'evolution' ? 'bg-cyan-600 text-white shadow-[0_0_10px_rgba(8,145,178,0.4)]' : 'text-gray-500 hover:text-white'}`}
-           >
-             Temporal Evolution
-           </button>
-        </div>
-      </header>
+      <S.LayoutGrid>
+        {/* Left: Interactive Graph */}
+        <S.GridItem span={8}>
+          <S.GlassPanel className="h-[650px] relative overflow-hidden">
+            <S.SectionLabel>
+              <Network size={14} /> Institutional Nervous System
+            </S.SectionLabel>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Main Visualization Area */}
-        <div className="lg:col-span-8 bg-[#0a0a1a] border border-white/10 rounded-3xl overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.8)] border-t-white/20">
-           <div className="absolute top-6 left-6 z-10 flex gap-4">
-              <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl flex items-center gap-3">
-                 <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_cyan] animate-pulse"></div>
-                 <span className="text-[10px] text-white font-bold uppercase tracking-[0.2em]">Active State</span>
-              </div>
-           </div>
+            <div className="absolute top-12 left-6 z-10 space-y-4">
+               <div className="p-3 bg-black/60 rounded-xl border border-white/10 backdrop-blur-md">
+                 <S.Subtitle className="text-[9px] mb-2">Authority Routing</S.Subtitle>
+                 <div className="flex gap-4">
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"></div><span className="text-[8px] font-mono">Role</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div><span className="text-[8px] font-mono">Rule</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.6)]"></div><span className="text-[8px] font-mono">Treaty</span></div>
+                 </div>
+               </div>
+            </div>
 
-           <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Topology: Institutional Authority Graph</span>
-              <div className="flex gap-2">
-                 <button className="p-1.5 hover:bg-white/5 rounded text-gray-500"><GitBranch size={14} /></button>
-                 <button className="p-1.5 hover:bg-white/5 rounded text-gray-500"><History size={14} /></button>
-              </div>
-           </div>
+            <ConstitutionGraph
+              constitution={currentVersion}
+              compareConstitution={showDiff ? compareVersion : null}
+            />
 
-           <ConstitutionGraph communityId={communityId} />
+            {/* Temporal Timeline HUD */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] z-10">
+               <S.GlassPanel className="p-4 bg-black/80">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                       <Clock size={12} /> Institutional Evolution Timeline
+                    </span>
+                    <span className="text-[9px] font-mono text-cyan-400">Epoch: 2024.08 - 2025.02</span>
+                  </div>
+                  <div className="relative h-1 w-full bg-white/5 rounded-full mb-6">
+                     <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 flex justify-between px-2">
+                        {reformMarkers.map((m, i) => (
+                           <div
+                            key={i}
+                            onClick={() => setSelectedVersionId(constitutionVersions.find(v => v.version === m.version)?.id)}
+                            className={`group relative cursor-pointer flex flex-col items-center`}
+                           >
+                              <div className={`w-3 h-3 rounded-full border-2 transition-all ${currentVersion?.version === m.version ? 'bg-cyan-400 border-cyan-400 scale-125 shadow-[0_0_10px_cyan]' : 'bg-black border-white/20 hover:border-white'}`}></div>
+                              <div className="absolute top-5 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <span className="text-[8px] font-bold text-white whitespace-nowrap">{m.label} v{m.version}</span>
+                                 <span className="text-[7px] text-gray-500">{m.date}</span>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </S.GlassPanel>
+            </div>
+          </S.GlassPanel>
+        </S.GridItem>
 
-           {/* Temporal Playback HUD with Reform Markers */}
-           {activeTab === 'evolution' && (
-             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-black/80 backdrop-blur-xl border border-cyan-500/30 p-4 rounded-xl flex items-center gap-6 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-                <button className="p-2 bg-cyan-600 rounded-full text-white shadow-[0_0_15px_rgba(8,145,178,0.5)] hover:scale-110 transition">
-                   <Play size={20} fill="currentColor" />
-                </button>
-                <div className="flex-1">
-                   <div className="h-1 w-full bg-gray-800 rounded-full relative mb-4">
-                      <div className="absolute left-0 top-0 h-full bg-cyan-500/40" style={{ width: '100%' }}></div>
-
-                      {/* Reform Markers */}
-                      {[20, 45, 75, 95].map((pos, i) => (
-                        <div
-                          key={i}
-                          className="absolute w-1 h-3 bg-cyan-400 -top-1 group cursor-pointer"
-                          style={{ left: `${pos}%` }}
-                        >
-                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-900 border border-cyan-500/30 p-2 rounded text-[8px] text-cyan-400 whitespace-nowrap uppercase font-bold">
-                            Reform Wave #{i+1}
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="absolute left-[60%] top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-cyan-500 shadow-[0_0_15px_white]"></div>
-                   </div>
-                   <div className="flex justify-between text-[8px] text-gray-500 font-bold uppercase tracking-widest">
-                      <span>v1: Genesis Layer</span>
-                      <span>v2: Expansion</span>
-                      <span className="text-cyan-400">v3: Regional Federation</span>
-                      <span>v4: Current Layer</span>
-                   </div>
-                </div>
-                <div className="text-right border-l border-white/10 pl-6">
-                   <div className="text-sm text-white font-bold font-mono tracking-tighter">ERA: 2026.04.12</div>
-                   <div className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest">v3.0 Activated</div>
-                </div>
-             </div>
-           )}
-        </div>
-
-        {/* Info & Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-           {comparisonVersion && (
-             <div className="bg-cyan-900/20 border border-cyan-500/50 p-4 rounded-xl flex justify-between items-center animate-pulse">
-                <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Comparison Mode: v{comparisonVersion.version} vs Current</div>
-                <button onClick={() => setComparisonVersion(null)} className="text-cyan-400 hover:text-white">&times;</button>
-             </div>
-           )}
-
-           <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                  <BookOpen size={16} className="text-cyan-400" /> {activeTab === 'evolution' ? 'Historical Articles' : 'Active Articles'}
-                </h2>
-                <span className="text-[10px] text-gray-600 font-mono">HASH: 0x82f...</span>
+        {/* Right: Article Details & History */}
+        <S.GridItem span={4}>
+           <S.GlassPanel className="h-[650px] flex flex-col">
+              <div className="flex border-b border-white/10 mb-6">
+                 {['rules', 'history', 'metadata'].map(tab => (
+                   <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-3 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === tab ? 'text-cyan-400 border-cyan-400 bg-cyan-400/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+                   >
+                     {tab}
+                   </button>
+                 ))}
               </div>
 
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                 {activeConstitution?.content?.identity && (
-                   <div className={`p-4 rounded border transition-all duration-500 ${comparisonVersion && comparisonVersion.content?.identity?.purpose !== activeConstitution.content.identity.purpose ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-black/40 border-white/5'}`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-[10px] text-cyan-400 font-bold uppercase">Art. I: Identity</h3>
-                        {comparisonVersion && comparisonVersion.content?.identity?.purpose !== activeConstitution.content.identity.purpose && (
-                          <span className="text-[8px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-bold uppercase">Modified</span>
-                        )}
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                {activeTab === 'rules' && (
+                  <div className="space-y-6">
+                    <S.SectionLabel><FileText size={14} /> Core Governance Articles</S.SectionLabel>
+                    {currentVersion?.content?.governance && Object.entries(currentVersion.content.governance).map(([key, value], i) => (
+                      <div key={i} className="p-4 bg-black/40 rounded-2xl border border-white/5 hover:border-cyan-500/30 transition-all group">
+                         <div className="flex justify-between items-start mb-2">
+                           <h4 className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1')}</h4>
+                           <ChevronRight size={14} className="text-gray-600 group-hover:text-cyan-400 transition-colors" />
+                         </div>
+                         <p className="text-xs text-gray-400 leading-relaxed italic">
+                           {typeof value === 'object' ? JSON.stringify(value).substring(0, 80) + '...' : value}
+                         </p>
+                         {showDiff && (
+                           <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-emerald-500 bg-emerald-500/5 p-2 rounded-lg">
+                             + Enhanced in v{currentVersion.version} for increased resilience.
+                           </div>
+                         )}
                       </div>
-                      <p className="text-xs text-gray-400 leading-relaxed italic">
-                        "{activeConstitution.content.identity.purpose}"
-                      </p>
-                   </div>
-                 )}
+                    ))}
 
-                 {activeConstitution?.content?.governance?.principles?.map((principle, i) => {
-                   const isDifferent = comparisonVersion && (!comparisonVersion.content?.governance?.principles || comparisonVersion.content.governance.principles[i] !== principle);
-                   return (
-                     <div key={i} className={`p-4 rounded border transition-all duration-500 ${isDifferent ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-black/40 border-white/5'}`}>
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-[10px] text-cyan-400 font-bold uppercase">Art. II.{i+1}: Principal</h3>
-                          {isDifferent && (
-                            <span className="text-[8px] bg-yellow-500 text-black px-1.5 py-0.5 rounded font-bold uppercase">Modified</span>
+                    <S.SectionLabel className="mt-8"><Network size={14} /> Treaty Obligations</S.SectionLabel>
+                    <div className="p-4 bg-purple-500/5 border border-purple-500/20 rounded-2xl">
+                       <span className="text-[9px] font-bold text-purple-400 uppercase block mb-2">Active Federations</span>
+                       <p className="text-[10px] text-gray-500 italic">This community is currently bound by the "Southern Corridor Mutual Aid Treaty v2.1".</p>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'history' && (
+                   <div className="space-y-4">
+                     {constitutionVersions.map((v, i) => (
+                       <div
+                        key={v.id}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer ${selectedVersionId === v.id ? 'bg-cyan-500/10 border-cyan-500/50' : 'bg-black/40 border-white/5 hover:border-white/20'}`}
+                        onClick={() => setSelectedVersionId(v.id)}
+                       >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] font-bold text-white">VERSION {v.version}</span>
+                            <span className="text-[9px] text-gray-500 font-mono">{new Date(v.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 italic mb-3">"{v.summary || 'Periodic institutional alignment and refinement.'}"</p>
+                          <div className="flex gap-2">
+                            <span className="px-2 py-0.5 bg-black/60 rounded text-[8px] text-emerald-400 border border-emerald-400/20">3 Amendments</span>
+                            <span className="px-2 py-0.5 bg-black/60 rounded text-[8px] text-cyan-400 border border-cyan-400/20">Full Consensus</span>
+                          </div>
+
+                          {showDiff && selectedVersionId !== v.id && (
+                             <button
+                               onClick={(e) => { e.stopPropagation(); setCompareVersionId(v.id); }}
+                               className={`mt-4 w-full py-1.5 rounded text-[8px] font-bold uppercase tracking-widest border transition-all ${compareVersionId === v.id ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-transparent text-gray-400 border-gray-600 hover:border-white hover:text-white'}`}
+                             >
+                               {compareVersionId === v.id ? 'Selected for Compare' : 'Compare with Current'}
+                             </button>
                           )}
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                          {principle}
-                        </p>
-                     </div>
-                   );
-                 })}
-
-                 {activeConstitution?.content?.emergency && (
-                   <div className="p-4 bg-red-950/20 rounded border border-red-900/20">
-                      <h3 className="text-[10px] text-red-400 font-bold uppercase mb-2">Art. III: Emergency</h3>
-                      <p className="text-xs text-gray-400 leading-relaxed">
-                        {activeConstitution.content.emergency.summary}
-                      </p>
+                       </div>
+                     ))}
                    </div>
-                 )}
+                )}
               </div>
-           </div>
 
-           <div className="bg-gray-900/50 border border-gray-800 p-6 rounded-xl">
-              <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                 <Clock size={16} className="text-cyan-400" /> Recent Amendments
-              </h2>
-              <div className="space-y-3">
-                 {constitutionHistory.length > 0 ? (
-                   constitutionHistory.map((change, i) => (
-                     <div
-                       key={i}
-                       onClick={() => setComparisonVersion(change)}
-                       className={`flex gap-4 items-center border-b border-white/5 pb-3 cursor-pointer group transition hover:bg-white/5 p-2 rounded ${comparisonVersion?.id === change.id ? 'bg-cyan-500/10' : ''}`}
-                     >
-                        <div className="text-xs font-mono text-cyan-400">v{change.version}</div>
-                        <div className="flex-1">
-                           <div className="text-[10px] text-gray-300 font-medium group-hover:text-white transition">{change.notes || 'Institutional refinement layer.'}</div>
-                           <div className="text-[9px] text-gray-600 uppercase font-bold">{new Date(change.created_at).toLocaleDateString()}</div>
-                        </div>
-                     </div>
-                   ))
-                 ) : (
-                   [
-                     { ver: 'v4', date: '2 days ago', note: 'Quorum adjusted to 15%' },
-                     { ver: 'v3', date: '1 month ago', note: 'Emergency override protocol added' }
-                   ].map((change, i) => (
-                     <div key={i} className="flex gap-4 items-center border-b border-white/5 pb-3 opacity-50">
-                        <div className="text-xs font-mono text-cyan-400">{change.ver}</div>
-                        <div className="flex-1">
-                           <div className="text-[10px] text-gray-300 font-medium">{change.note}</div>
-                           <div className="text-[9px] text-gray-600 uppercase font-bold">{change.date}</div>
-                        </div>
-                     </div>
-                   ))
-                 )}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                 <div className="flex items-center justify-between p-3 bg-cyan-900/10 border border-cyan-500/20 rounded-xl">
+                    <div className="flex items-center gap-3">
+                       <Shield size={16} className="text-cyan-400" />
+                       <div>
+                          <div className="text-[9px] font-bold text-white uppercase">Cryptographic Integrity</div>
+                          <div className="text-[8px] text-cyan-500 font-mono">HASH: {currentVersion?.id?.substring(0, 16)}...</div>
+                       </div>
+                    </div>
+                    <Activity size={14} className="text-cyan-500 animate-pulse" />
+                 </div>
               </div>
-              <button className="w-full mt-6 py-2 border border-cyan-500/30 text-cyan-400 rounded-lg text-[10px] font-bold uppercase hover:bg-cyan-500/10 transition">
-                 View Historical Archive
-              </button>
-           </div>
-        </div>
-      </div>
-    </div>
+           </S.GlassPanel>
+        </S.GridItem>
+      </S.LayoutGrid>
+    </S.PageContainer>
   );
 };
 

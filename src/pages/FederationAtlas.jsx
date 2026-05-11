@@ -1,21 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useGovernanceStore } from '../store/useGovernanceStore';
-import { Globe, Shield, Zap, Activity, Filter, Search } from 'lucide-react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { Globe, Shield, Zap, Activity, Filter, Search, X } from 'lucide-react';
+import * as S from '../components/Governance/GovernanceStyles';
 
 const FederationAtlas = () => {
   const d3Container = useRef(null);
   const { treaties, fetchFederationAtlas } = useGovernanceStore();
+  const { getAccessTokenSilently } = useAuth0();
   const [selectedTreaty, setSelectedTreaty] = useState(null);
 
   useEffect(() => {
-    fetchFederationAtlas();
-  }, [fetchFederationAtlas]);
+    const loadAtlas = async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        fetchFederationAtlas(token);
+      } catch (err) {
+        console.error("Auth failed:", err);
+        fetchFederationAtlas();
+      }
+    };
+    loadAtlas();
+  }, [fetchFederationAtlas, getAccessTokenSilently]);
 
   useEffect(() => {
     if (d3Container.current && treaties.length > 0) {
       const width = d3Container.current.clientWidth;
-      const height = 600;
+      const height = d3Container.current.clientHeight || 600;
 
       // Extract communities
       const communitiesMap = new Map();
@@ -47,7 +59,7 @@ const FederationAtlas = () => {
         .selectAll("line")
         .data(links)
         .join("line")
-        .attr("stroke", d => d.type === 'mutual_aid' ? 'rgba(0, 243, 255, 0.4)' : 'rgba(255, 92, 162, 0.4)')
+        .attr("stroke", d => d.type === 'mutual_aid' ? 'rgba(34, 211, 238, 0.4)' : 'rgba(192, 132, 252, 0.4)')
         .attr("stroke-width", 2)
         .attr("stroke-dasharray", d => d.type === 'shared_mission' ? "4,4" : "0");
 
@@ -63,18 +75,20 @@ const FederationAtlas = () => {
 
       node.append("circle")
         .attr("r", 20)
-        .attr("fill", "#0A0A2E")
-        .attr("stroke", "#00F3FF")
+        .attr("fill", "#050510")
+        .attr("stroke", "#22d3ee")
         .attr("stroke-width", 2)
-        .attr("filter", "drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))");
+        .attr("filter", "drop-shadow(0 0 8px rgba(34, 211, 238, 0.6))");
 
       node.append("text")
         .attr("dy", 40)
         .attr("text-anchor", "middle")
         .attr("fill", "#fff")
         .style("font-size", "10px")
-        .style("font-family", "Orbitron")
+        .style("font-family", "Orbitron, sans-serif")
         .style("font-weight", "bold")
+        .style("text-transform", "uppercase")
+        .style("letter-spacing", "0.1em")
         .text(d => d.name);
 
       simulation.on("tick", () => {
@@ -91,88 +105,89 @@ const FederationAtlas = () => {
   }, [treaties]);
 
   return (
-    <div className="federation-atlas min-h-screen bg-[#050510] p-8 overflow-hidden flex flex-col text-white selection:bg-cyan-500/30">
-      <header className="mb-8 flex justify-between items-start">
-        <div>
-           <div className="flex items-center gap-3 mb-2">
-             <Globe className="text-cyan-400" size={32} />
-             <h1 className="text-4xl font-bold text-white tracking-tight">Federation Atlas</h1>
-           </div>
-           <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">Global Treaty Network & Mutual Aid Corridors</p>
-        </div>
+    <S.PageContainer>
+      <S.Header>
+        <S.TitleBlock>
+          <S.Title>
+            <Globe size={32} /> Federation Atlas
+          </S.Title>
+          <S.Subtitle>Global Treaty Network & Mutual Aid Corridors</S.Subtitle>
+        </S.TitleBlock>
 
         <div className="flex gap-4">
            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
-              <input
+              <S.Input
                 type="text"
                 placeholder="Search Alliances..."
-                className="bg-gray-900 border border-gray-800 rounded-full py-2 pl-10 pr-4 text-xs text-white focus:border-cyan-500 outline-none w-64 transition"
+                style={{ paddingLeft: '2.5rem', width: '250px', height: '40px' }}
               />
            </div>
-           <button className="p-2 bg-gray-900 border border-gray-800 rounded-full text-gray-500 hover:text-white transition">
+           <S.NeonButton variant="outline" style={{ padding: '0 12px' }}>
               <Filter size={18} />
-           </button>
+           </S.NeonButton>
         </div>
-      </header>
+      </S.Header>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
+      <S.LayoutGrid>
          {/* Map Visualization */}
-         <div className="lg:col-span-8 bg-[#0a0a1a] border border-white/10 rounded-[2.5rem] overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.8)] border-t-white/20">
-            <div className="absolute top-8 left-8 flex gap-4 z-10">
-               <div className="bg-black/40 backdrop-blur-2xl px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-2xl">
-                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_15px_cyan] animate-pulse"></div>
-                  <span className="text-[11px] text-white font-bold uppercase tracking-[0.2em]">Active Alliances: {treaties.length}</span>
-               </div>
-            </div>
+         <S.GridItem span={8}>
+           <S.GlassPanel className="h-[700px] relative overflow-hidden bg-[#050510]/60">
+              <div className="absolute top-8 left-8 flex gap-4 z-10">
+                 <div className="bg-black/60 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_cyan] animate-pulse"></div>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-widest">Active Treaties: {treaties.length}</span>
+                 </div>
+              </div>
 
-            <div ref={d3Container} className="w-full h-full cursor-grab active:cursor-grabbing"></div>
+              <div ref={d3Container} className="w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-            {/* Floating Legend */}
-            <div className="absolute bottom-6 left-6 p-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 space-y-3">
-               <div className="flex items-center gap-3 text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                  <div className="w-6 h-1 bg-cyan-500"></div> Mutual Aid Treaty
-               </div>
-               <div className="flex items-center gap-3 text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                  <div className="w-6 h-1 border-t-2 border-dashed border-pink-500"></div> Shared Mission
-               </div>
-               <div className="flex items-center gap-3 text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                  <div className="w-3 h-3 rounded-full border-2 border-cyan-500"></div> Community Hub
-               </div>
-            </div>
-         </div>
+              {/* Floating Legend */}
+              <div className="absolute bottom-6 left-6 p-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 space-y-3">
+                 <div className="flex items-center gap-3 text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+                    <div className="w-6 h-0.5 bg-cyan-500"></div> Mutual Aid Treaty
+                 </div>
+                 <div className="flex items-center gap-3 text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+                    <div className="w-6 h-0.5 border-t border-dashed border-purple-500"></div> Shared Mission
+                 </div>
+                 <div className="flex items-center gap-3 text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+                    <div className="w-3 h-3 rounded-full border border-cyan-500"></div> Community Hub
+                 </div>
+              </div>
+           </S.GlassPanel>
+         </S.GridItem>
 
          {/* Detail Sidebar */}
-         <div className="lg:col-span-4 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+         <S.GridItem span={4}>
             {selectedTreaty ? (
-              <div className="bg-gray-900 border border-cyan-500/30 p-8 rounded-3xl animate-in fade-in slide-in-from-right-4 duration-500 shadow-2xl">
+              <S.GlassPanel className="h-[700px] flex flex-col p-8 animate-in fade-in slide-in-from-right-4 duration-500">
                  <div className="flex justify-between items-start mb-8">
-                    <span className="text-[10px] font-bold text-cyan-500 uppercase tracking-[0.2em]">{selectedTreaty.treaty_type.replace('_', ' ')}</span>
-                    <button onClick={() => setSelectedTreaty(null)} className="text-gray-600 hover:text-white transition">&times;</button>
+                    <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em]">{selectedTreaty.treaty_type.replace('_', ' ')}</span>
+                    <button onClick={() => setSelectedTreaty(null)} className="text-gray-500 hover:text-white transition"><X size={20} /></button>
                  </div>
 
-                 <div className="flex items-center justify-between mb-10">
+                 <div className="flex items-center justify-between mb-10 px-4">
                     <div className="text-center flex-1">
-                       <div className="w-16 h-16 bg-black border border-cyan-500/50 rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(0,243,255,0.2)]">
+                       <div className="w-16 h-16 bg-black/60 border border-cyan-500/50 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
                           <Shield className="text-cyan-400" size={24} />
                        </div>
-                       <div className="text-white font-bold text-sm">{selectedTreaty.community_a_name}</div>
+                       <div className="text-white font-bold text-[10px] uppercase tracking-wider">{selectedTreaty.community_a_name}</div>
                     </div>
-                    <div className="px-4 text-cyan-900 font-bold animate-pulse">⟷</div>
+                    <div className="px-2 text-cyan-900 font-bold animate-pulse text-xl">⟷</div>
                     <div className="text-center flex-1">
-                       <div className="w-16 h-16 bg-black border border-pink-500/50 rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(255,92,162,0.2)]">
-                          <Zap className="text-pink-400" size={24} />
+                       <div className="w-16 h-16 bg-black/60 border border-purple-500/50 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(192,132,252,0.2)]">
+                          <Zap className="text-purple-400" size={24} />
                        </div>
-                       <div className="text-white font-bold text-sm">{selectedTreaty.community_b_name}</div>
+                       <div className="text-white font-bold text-[10px] uppercase tracking-wider">{selectedTreaty.community_b_name}</div>
                     </div>
                  </div>
 
-                 <div className="space-y-6">
+                 <div className="space-y-8 flex-1">
                     <div>
-                       <h4 className="text-[10px] text-gray-500 font-bold uppercase mb-3 flex items-center gap-2">
+                       <S.SectionLabel>
                           <Activity size={12} /> Treaty Logistics
-                       </h4>
-                       <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
+                       </S.SectionLabel>
+                       <div className="bg-black/40 p-5 rounded-2xl border border-white/5 mt-4">
                           <p className="text-xs text-gray-400 leading-relaxed italic">
                              "{selectedTreaty.terms?.summary || 'Formal commitment to shared resource availability and emergency coordination.'}"
                           </p>
@@ -181,32 +196,32 @@ const FederationAtlas = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-                          <div className="text-[9px] text-gray-600 font-bold uppercase mb-1">Mutual Trust</div>
+                          <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Mutual Trust</div>
                           <div className="text-xs text-cyan-400 font-mono">0.89/1.0</div>
                        </div>
                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-                          <div className="text-[9px] text-gray-600 font-bold uppercase mb-1">Last Update</div>
+                          <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Last Update</div>
                           <div className="text-xs text-gray-400 font-mono">2h ago</div>
                        </div>
                     </div>
                  </div>
 
-                 <button className="w-full mt-10 py-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(8,145,178,0.4)]">
+                 <S.NeonButton className="w-full mt-8 py-4">
                     ENTER SHARED WORKSPACE
-                 </button>
-              </div>
+                 </S.NeonButton>
+              </S.GlassPanel>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-gray-900/20 border border-dashed border-gray-800 rounded-3xl">
-                 <Globe className="text-gray-800 mb-6" size={64} />
-                 <h3 className="text-white font-bold mb-2">Federation Insights</h3>
-                 <p className="text-gray-600 text-xs leading-relaxed uppercase tracking-widest font-medium">
-                    Select a hub or connection to analyze inter-community coordination flows and treaty specifics.
+              <S.GlassPanel className="h-[700px] flex flex-col items-center justify-center text-center p-12">
+                 <Globe className="text-white/10 mb-8" size={80} />
+                 <h3 className="text-white font-bold mb-3 uppercase tracking-widest">Federation Insights</h3>
+                 <p className="text-gray-500 text-[10px] leading-relaxed uppercase tracking-[0.2em] font-medium max-w-[200px]">
+                    Select a hub or connection to analyze inter-community coordination flows.
                  </p>
-              </div>
+              </S.GlassPanel>
             )}
-         </div>
-      </div>
-    </div>
+         </S.GridItem>
+      </S.LayoutGrid>
+    </S.PageContainer>
   );
 };
 

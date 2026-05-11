@@ -1,18 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { useGovernanceStore } from '../../store/useGovernanceStore';
 
-const ConstitutionGraph = ({ communityId }) => {
+const ConstitutionGraph = ({ constitution, compareConstitution }) => {
   const d3Container = useRef(null);
-  const { activeConstitution } = useGovernanceStore();
 
   useEffect(() => {
-    if (d3Container.current && activeConstitution) {
+    if (d3Container.current && constitution) {
       const width = d3Container.current.clientWidth;
-      const height = 500;
+      const height = d3Container.current.clientHeight || 500;
 
       // Map constitution content to graph nodes/links
-      // Rules, Authority, Roles, Principles
       const nodes = [
         { id: 'constitution', label: 'Living Constitution', type: 'root', group: 0 },
         { id: 'identity', label: 'Identity & Purpose', type: 'section', group: 1 },
@@ -27,16 +24,22 @@ const ConstitutionGraph = ({ communityId }) => {
       ];
 
       // Add sub-nodes from content
-      if (activeConstitution.content?.governance?.principles) {
-         activeConstitution.content.governance.principles.forEach((p, i) => {
+      if (constitution.content?.governance?.principles) {
+         constitution.content.governance.principles.forEach((p, i) => {
            nodes.push({ id: `principle-${i}`, label: p, type: 'principle', group: 2 });
            links.push({ source: 'governance', target: `principle-${i}` });
          });
       }
 
-      if (activeConstitution.content?.governance?.votingModel) {
-        nodes.push({ id: 'voting-model', label: `Model: ${activeConstitution.content.governance.votingModel}`, type: 'detail', group: 2 });
+      if (constitution.content?.governance?.votingModel) {
+        nodes.push({ id: 'voting-model', label: `Model: ${constitution.content.governance.votingModel}`, type: 'detail', group: 2 });
         links.push({ source: 'governance', target: 'voting-model' });
+      }
+
+      // If comparing, we could add indicators for differences
+      // This is a simplified diff visualization
+      if (compareConstitution) {
+        // Logic to highlight nodes that changed could go here
       }
 
       d3.select(d3Container.current).selectAll("svg").remove();
@@ -52,7 +55,7 @@ const ConstitutionGraph = ({ communityId }) => {
         .force("collision", d3.forceCollide().radius(40));
 
       const link = svg.append("g")
-        .attr("stroke", "rgba(0, 243, 255, 0.15)")
+        .attr("stroke", "rgba(34, 211, 238, 0.15)")
         .selectAll("line")
         .data(links)
         .join("line")
@@ -66,22 +69,22 @@ const ConstitutionGraph = ({ communityId }) => {
       node.append("circle")
         .attr("r", d => d.type === 'root' ? 14 : d.type === 'section' ? 10 : 6)
         .attr("fill", d => {
-           if (d.type === 'root') return 'rgba(0, 243, 255, 0.2)';
+           if (d.type === 'root') return 'rgba(34, 211, 238, 0.2)';
            if (d.group === 1) return 'rgba(255, 92, 162, 0.2)';
-           if (d.group === 2) return 'rgba(0, 215, 135, 0.2)';
-           if (d.group === 3) return 'rgba(255, 65, 54, 0.2)';
+           if (d.group === 2) return 'rgba(52, 211, 153, 0.2)';
+           if (d.group === 3) return 'rgba(239, 68, 68, 0.2)';
            return 'rgba(136, 136, 136, 0.2)';
         })
         .attr("stroke", d => {
-           if (d.type === 'root') return '#00F3FF';
+           if (d.type === 'root') return '#22d3ee';
            if (d.group === 1) return '#FF5CA2';
-           if (d.group === 2) return '#00D787';
-           if (d.group === 3) return '#FF4136';
+           if (d.group === 2) return '#34d399';
+           if (d.group === 3) return '#ef4444';
            return '#888';
         })
         .attr("stroke-width", 2)
         .attr("filter", d => {
-           const color = d.type === 'root' ? '#00F3FF' : (d.group === 1 ? '#FF5CA2' : (d.group === 2 ? '#00D787' : '#FF4136'));
+           const color = d.type === 'root' ? '#22d3ee' : (d.group === 1 ? '#FF5CA2' : (d.group === 2 ? '#34d399' : '#ef4444'));
            return `drop-shadow(0 0 8px ${color}66)`;
         });
 
@@ -90,7 +93,9 @@ const ConstitutionGraph = ({ communityId }) => {
         .attr("dy", 4)
         .attr("fill", "#ccc")
         .style("font-size", "10px")
-        .style("font-family", "Orbitron")
+        .style("font-family", "Orbitron, sans-serif")
+        .style("text-transform", "uppercase")
+        .style("letter-spacing", "0.05em")
         .text(d => d.label);
 
       simulation.on("tick", () => {
@@ -104,11 +109,11 @@ const ConstitutionGraph = ({ communityId }) => {
           .attr("transform", d => `translate(${d.x},${d.y})`);
       });
     }
-  }, [activeConstitution]);
+  }, [constitution, compareConstitution]);
 
   return (
-    <div ref={d3Container} className="w-full h-[500px] bg-black/20 rounded-xl">
-       {!activeConstitution && <div className="h-full flex items-center justify-center text-gray-600 font-mono italic">ACCESSING INSTITUTIONAL DNA...</div>}
+    <div ref={d3Container} className="w-full h-full">
+       {!constitution && <div className="h-full flex items-center justify-center text-gray-600 font-mono italic text-xs uppercase tracking-widest">ACCESSING INSTITUTIONAL DNA...</div>}
     </div>
   );
 };

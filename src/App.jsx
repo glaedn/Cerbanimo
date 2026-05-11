@@ -443,10 +443,10 @@ const AppContent = () => {
             }
           />
           <Route
-            path="/dispute-court"
+            path="/mediation-space"
             element={
               <PrivateRoute>
-                <PageWrapper><DisputeCourt /></PageWrapper>
+                <PageWrapper><MediationSpace /></PageWrapper>
               </PrivateRoute>
             }
           />
