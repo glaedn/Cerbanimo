@@ -68,11 +68,16 @@ const GalacticActivityMap = React.memo(({ showLoadingText = true, enableTooltips
   };
 
   const getStarRadius = useCallback((item) => {
-    const age = (Date.now() - new Date(item.lastActivity).getTime()) / 86400000;
+    const activityDate = new Date(item.lastActivity);
+    const isValidDate = !isNaN(activityDate.getTime());
+    const age = isValidDate ? (Date.now() - activityDate.getTime()) / 86400000 : 0;
+
     let r = item.type === "task" ? 1.5 : item.type === "project" ? 3 : 5;
     if ((item.status || "").toLowerCase().includes("urgent")) r *= 1.5;
-    r = r * Math.max(0.5, 1 - age / 90) + Math.min((item.contributors || 0) / 4, 2);
-    return isFullscreenMobile ? r * 1.5 : r;
+    r = r * Math.max(0.5, 1 - (isNaN(age) ? 0 : age) / 90) + Math.min((item.contributors || 0) / 4, 2);
+
+    const finalR = isFullscreenMobile ? r * 1.5 : r;
+    return isNaN(finalR) ? 3 : finalR;
   }, [isFullscreenMobile]);
 
   const getRelevance = useCallback((item) => {

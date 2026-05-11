@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useAppStore } from '../../../store/useAppStore';
 import SpatialDataService from '../../../services/SpatialDataService';
 import { Truck, MapPin, Navigation, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -32,6 +33,7 @@ const RouteCard = styled.div`
 `;
 
 const DispatchCenter = () => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const { activeContext, setViewMode, setMapState } = useAppStore();
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,13 +41,21 @@ const DispatchCenter = () => {
   useEffect(() => {
     const fetchRoutes = async () => {
       setLoading(true);
-      const data = await SpatialDataService.getTacticalOverlay();
+      let token = null;
+      if (isAuthenticated) {
+        try {
+          token = await getAccessTokenSilently();
+        } catch (e) {
+          console.error("Token error in DispatchCenter:", e);
+        }
+      }
+      const data = await SpatialDataService.getTacticalOverlay(token);
       // In a real scenario, we'd have a specific routes endpoint
       setRoutes(data.missions || []);
       setLoading(false);
     };
     fetchRoutes();
-  }, []);
+  }, [getAccessTokenSilently, isAuthenticated]);
 
   const jumpToRoute = (route) => {
       if (route.location) {

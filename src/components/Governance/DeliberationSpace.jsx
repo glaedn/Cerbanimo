@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
-import { MessageSquare, Plus, ThumbsUp, AlertCircle } from 'lucide-react';
+import { MessageSquare, Plus, ThumbsUp, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
 
 const DeliberationSpace = ({ proposalId }) => {
   const d3Container = useRef(null);
@@ -35,13 +35,31 @@ const DeliberationSpace = ({ proposalId }) => {
         .join("line");
 
       const node = svg.append("g")
-        .selectAll("circle")
+        .selectAll("g")
         .data(tree.nodes)
-        .join("circle")
+        .join("g")
+        .on("mouseover", function(event, d) {
+          d3.select(this).select("circle").attr("r", 8).attr("stroke-width", 2);
+        })
+        .on("mouseout", function(event, d) {
+          d3.select(this).select("circle").attr("r", 5).attr("stroke-width", 1);
+        });
+
+      node.append("circle")
         .attr("r", 5)
-        .attr("fill", d => d.type === 'support' ? '#2ECC40' : d.type === 'concern' ? '#FF4136' : '#00F3FF');
+        .attr("fill", d => d.type === 'support' ? '#2ECC40' : d.type === 'concern' ? '#FF4136' : '#00F3FF')
+        .attr("stroke", d => d.evidence ? "#fff" : "none")
+        .attr("stroke-width", 1);
 
       node.append("title").text(d => d.text);
+
+      // Evidence indicators (small satellites)
+      node.filter(d => d.evidence)
+        .append("circle")
+        .attr("r", 2)
+        .attr("cx", 6)
+        .attr("cy", -6)
+        .attr("fill", "#00F3FF");
 
       simulation.on("tick", () => {
         link
@@ -100,15 +118,27 @@ const DeliberationSpace = ({ proposalId }) => {
       </div>
 
       {/* Flat view fallback/summary */}
-      <div className="p-4 border-t border-gray-800 max-h-[200px] overflow-y-auto space-y-3">
+      <div className="p-4 border-t border-gray-800 max-h-[200px] overflow-y-auto space-y-3 custom-scrollbar">
          {tree.nodes.map(node => (
-           <div key={node.id} className="flex gap-3 items-start group">
+           <div key={node.id} className="flex gap-3 items-start group p-2 rounded hover:bg-white/5 transition">
              {node.type === 'support' ? <ThumbsUp size={14} className="text-green-500 mt-0.5" /> : <AlertCircle size={14} className="text-red-500 mt-0.5" />}
              <div className="flex-1">
-               <p className="text-xs text-gray-300 leading-relaxed">{node.text}</p>
-               <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition">
+               <div className="flex justify-between items-start mb-1">
+                 <p className="text-xs text-gray-300 leading-relaxed">{node.text}</p>
+                 {node.evidence && <LinkIcon size={10} className="text-cyan-400" />}
+               </div>
+
+               {node.evidence && (
+                 <div className="mt-2 p-2 bg-cyan-900/10 border border-cyan-500/20 rounded flex items-center gap-2">
+                    <FileText size={10} className="text-cyan-500" />
+                    <span className="text-[9px] text-cyan-400 font-mono uppercase tracking-tighter">Verified Evidence: {node.evidence}</span>
+                 </div>
+               )}
+
+               <div className="flex gap-3 mt-2 opacity-0 group-hover:opacity-100 transition">
                   <button className="text-[10px] text-gray-600 hover:text-cyan-400 font-bold uppercase">Reply</button>
-                  <button className="text-[10px] text-gray-600 hover:text-cyan-400 font-bold uppercase">Verify Evidence</button>
+                  <button className="text-[10px] text-gray-600 hover:text-cyan-400 font-bold uppercase">Endorse</button>
+                  <button className="text-[10px] text-gray-600 hover:text-pink-400 font-bold uppercase">Challenge</button>
                </div>
              </div>
            </div>

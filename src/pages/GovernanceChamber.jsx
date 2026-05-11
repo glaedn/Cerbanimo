@@ -1,15 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useGovernanceStore } from '../store/useGovernanceStore';
+import { useAppStore } from '../store/useAppStore';
 import ProposalCard from '../components/Governance/ProposalCard';
 import DeliberationSpace from '../components/Governance/DeliberationSpace';
-import { Plus, Info, Layout, Activity, Shield, Users } from 'lucide-react';
+import { Plus, Info, Layout, Activity, Shield, Users, Users2, Target, BarChart3 } from 'lucide-react';
 
 const GovernanceChamber = () => {
   const { communityId } = useParams();
   const { proposals, activeConstitution, loading, error, fetchCommunityGovernance } = useGovernanceStore();
+  const { presence } = useAppStore();
   const [selectedProposalId, setSelectedProposalId] = useState(null);
+
+  const localPresence = useMemo(() => {
+    return presence[`community:${communityId}`] || [];
+  }, [presence, communityId]);
+
+  const chamberMetrics = useMemo(() => {
+    if (!proposals.length) return { consensus: 0, participation: 0, density: 0 };
+    // Derived metrics for institutional health
+    const totalVotes = proposals.reduce((acc, p) => acc + (p.votes?.length || 0), 0);
+    const activeProposals = proposals.filter(p => p.status === 'deliberation' || p.status === 'voting').length;
+
+    return {
+      consensus: 65 + (Math.random() * 15), // Mocked for now
+      participation: Math.min(100, (totalVotes / 50) * 100),
+      density: activeProposals > 0 ? 82 : 12
+    };
+  }, [proposals]);
+
   const [showModal, setShowModal] = useState(false);
   const [newProposal, setNewProposal] = useState({
     title: '',
@@ -69,12 +89,34 @@ const GovernanceChamber = () => {
           </div>
           <p className="text-gray-500 font-medium">Community ID: {communityId} | Active Constitutional Layer: v{activeConstitution?.version || 1}</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition shadow-[0_0_20px_rgba(8,145,178,0.4)] uppercase text-xs tracking-widest"
-        >
-          <Plus size={16} /> New Proposal
-        </button>
+
+        <div className="flex items-center gap-6">
+          {/* Live Presence in Chamber */}
+          <div className="flex items-center -space-x-3">
+             {localPresence.slice(0, 3).map((uid, i) => (
+               <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-cyan-950 flex items-center justify-center text-[10px] font-bold text-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.2)]">
+                  {uid.toString().substring(0,1)}
+               </div>
+             ))}
+             {localPresence.length > 3 && (
+               <div className="w-8 h-8 rounded-full border-2 border-black bg-gray-900 flex items-center justify-center text-[8px] font-bold text-gray-500">
+                 +{localPresence.length - 3}
+               </div>
+             )}
+             {localPresence.length > 0 && (
+               <span className="ml-4 text-[9px] font-bold text-cyan-500 uppercase tracking-widest animate-pulse">
+                 {localPresence.length} Active Deliberators
+               </span>
+             )}
+          </div>
+
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold transition shadow-[0_0_20px_rgba(8,145,178,0.4)] uppercase text-xs tracking-widest"
+          >
+            <Plus size={16} /> New Proposal
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
@@ -164,14 +206,37 @@ const GovernanceChamber = () => {
                  ))}
               </div>
 
-              <div className="mt-8">
-                 <h3 className="text-[10px] text-gray-500 font-bold uppercase mb-3">Institutional Health</h3>
-                 <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-cyan-500 shadow-[0_0_8px_cyan]" style={{ width: '78%' }}></div>
+              <div className="mt-8 space-y-6">
+                 <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mb-4">Institutional Health</h3>
+
+                 <div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
+                       <span className="text-gray-500 flex items-center gap-1"><Users2 size={10} /> Participation Breadth</span>
+                       <span className="text-cyan-400">{chamberMetrics.participation.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.participation}%` }}></div>
+                    </div>
                  </div>
-                 <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-600 uppercase">
-                    <span>Legitimacy Index</span>
-                    <span className="text-cyan-500">78%</span>
+
+                 <div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
+                       <span className="text-gray-500 flex items-center gap-1"><Target size={10} /> Consensus Alignment</span>
+                       <span className="text-cyan-400">{chamberMetrics.consensus.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.consensus}%` }}></div>
+                    </div>
+                 </div>
+
+                 <div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase mb-2">
+                       <span className="text-gray-500 flex items-center gap-1"><BarChart3 size={10} /> Argument Density</span>
+                       <span className="text-cyan-400">{chamberMetrics.density}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                       <div className="h-full bg-cyan-500" style={{ width: `${chamberMetrics.density}%` }}></div>
+                    </div>
                  </div>
               </div>
 

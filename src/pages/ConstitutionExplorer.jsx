@@ -8,6 +8,7 @@ const ConstitutionExplorer = () => {
   const { communityId } = useParams();
   const { activeConstitution, constitutionHistory, fetchCommunityGovernance, fetchConstitutionHistory } = useGovernanceStore();
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'evolution'
+  const [comparisonVersion, setComparisonVersion] = useState(null);
 
   useEffect(() => {
     fetchCommunityGovernance(communityId);
@@ -69,25 +70,41 @@ const ConstitutionExplorer = () => {
 
            <ConstitutionGraph communityId={communityId} />
 
-           {/* Temporal Playback HUD */}
+           {/* Temporal Playback HUD with Reform Markers */}
            {activeTab === 'evolution' && (
-             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[80%] bg-black/80 backdrop-blur-xl border border-cyan-500/30 p-4 rounded-xl flex items-center gap-6">
-                <button className="p-2 bg-cyan-600 rounded-full text-white shadow-[0_0_15px_rgba(8,145,178,0.5)]">
+             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-black/80 backdrop-blur-xl border border-cyan-500/30 p-4 rounded-xl flex items-center gap-6 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+                <button className="p-2 bg-cyan-600 rounded-full text-white shadow-[0_0_15px_rgba(8,145,178,0.5)] hover:scale-110 transition">
                    <Play size={20} fill="currentColor" />
                 </button>
-                <div className="flex-1 space-y-2">
-                   <div className="flex justify-between text-[9px] text-gray-500 font-bold uppercase">
-                      <span>v1 (Initial)</span>
-                      <span>v{activeConstitution?.version} (Current)</span>
+                <div className="flex-1">
+                   <div className="h-1 w-full bg-gray-800 rounded-full relative mb-4">
+                      <div className="absolute left-0 top-0 h-full bg-cyan-500/40" style={{ width: '100%' }}></div>
+
+                      {/* Reform Markers */}
+                      {[20, 45, 75, 95].map((pos, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-1 h-3 bg-cyan-400 -top-1 group cursor-pointer"
+                          style={{ left: `${pos}%` }}
+                        >
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-900 border border-cyan-500/30 p-2 rounded text-[8px] text-cyan-400 whitespace-nowrap uppercase font-bold">
+                            Reform Wave #{i+1}
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="absolute left-[60%] top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-cyan-500 shadow-[0_0_15px_white]"></div>
                    </div>
-                   <div className="h-1 w-full bg-gray-800 rounded-full relative">
-                      <div className="absolute left-0 top-0 h-full bg-cyan-500" style={{ width: '60%' }}></div>
-                      <div className="absolute left-[60%] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full border-2 border-cyan-500 shadow-[0_0_8px_white]"></div>
+                   <div className="flex justify-between text-[8px] text-gray-500 font-bold uppercase tracking-widest">
+                      <span>v1: Genesis Layer</span>
+                      <span>v2: Expansion</span>
+                      <span className="text-cyan-400">v3: Regional Federation</span>
+                      <span>v4: Current Layer</span>
                    </div>
                 </div>
-                <div className="text-right">
-                   <div className="text-xs text-white font-bold font-mono">2026-04-12</div>
-                   <div className="text-[9px] text-cyan-400 font-bold uppercase">Reform Wave #2</div>
+                <div className="text-right border-l border-white/10 pl-6">
+                   <div className="text-sm text-white font-bold font-mono tracking-tighter">ERA: 2026.04.12</div>
+                   <div className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest">v3.0 Activated</div>
                 </div>
              </div>
            )}
@@ -95,10 +112,20 @@ const ConstitutionExplorer = () => {
 
         {/* Info & Sidebar */}
         <div className="lg:col-span-4 space-y-6">
+           {comparisonVersion && (
+             <div className="bg-cyan-900/20 border border-cyan-500/50 p-4 rounded-xl flex justify-between items-center animate-pulse">
+                <div className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Comparison Mode: v{comparisonVersion.version} vs Current</div>
+                <button onClick={() => setComparisonVersion(null)} className="text-cyan-400 hover:text-white">&times;</button>
+             </div>
+           )}
+
            <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl">
-              <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                <BookOpen size={16} className="text-cyan-400" /> Active Articles
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                  <BookOpen size={16} className="text-cyan-400" /> {activeTab === 'evolution' ? 'Historical Articles' : 'Active Articles'}
+                </h2>
+                <span className="text-[10px] text-gray-600 font-mono">HASH: 0x82f...</span>
+              </div>
 
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                  {activeConstitution?.content?.identity && (
@@ -135,18 +162,34 @@ const ConstitutionExplorer = () => {
                  <Clock size={16} className="text-cyan-400" /> Recent Amendments
               </h2>
               <div className="space-y-3">
-                 {[
-                   { ver: 'v4', date: '2 days ago', note: 'Quorum adjusted to 15%' },
-                   { ver: 'v3', date: '1 month ago', note: 'Emergency override protocol added' }
-                 ].map((change, i) => (
-                   <div key={i} className="flex gap-3 items-center border-b border-white/5 pb-3">
-                      <div className="text-xs font-mono text-cyan-400">{change.ver}</div>
-                      <div className="flex-1">
-                         <div className="text-[10px] text-gray-300 font-medium">{change.note}</div>
-                         <div className="text-[9px] text-gray-600 uppercase font-bold">{change.date}</div>
-                      </div>
-                   </div>
-                 ))}
+                 {constitutionHistory.length > 0 ? (
+                   constitutionHistory.map((change, i) => (
+                     <div
+                       key={i}
+                       onClick={() => setComparisonVersion(change)}
+                       className={`flex gap-4 items-center border-b border-white/5 pb-3 cursor-pointer group transition hover:bg-white/5 p-2 rounded ${comparisonVersion?.id === change.id ? 'bg-cyan-500/10' : ''}`}
+                     >
+                        <div className="text-xs font-mono text-cyan-400">v{change.version}</div>
+                        <div className="flex-1">
+                           <div className="text-[10px] text-gray-300 font-medium group-hover:text-white transition">{change.notes || 'Institutional refinement layer.'}</div>
+                           <div className="text-[9px] text-gray-600 uppercase font-bold">{new Date(change.created_at).toLocaleDateString()}</div>
+                        </div>
+                     </div>
+                   ))
+                 ) : (
+                   [
+                     { ver: 'v4', date: '2 days ago', note: 'Quorum adjusted to 15%' },
+                     { ver: 'v3', date: '1 month ago', note: 'Emergency override protocol added' }
+                   ].map((change, i) => (
+                     <div key={i} className="flex gap-4 items-center border-b border-white/5 pb-3 opacity-50">
+                        <div className="text-xs font-mono text-cyan-400">{change.ver}</div>
+                        <div className="flex-1">
+                           <div className="text-[10px] text-gray-300 font-medium">{change.note}</div>
+                           <div className="text-[9px] text-gray-600 uppercase font-bold">{change.date}</div>
+                        </div>
+                     </div>
+                   ))
+                 )}
               </div>
               <button className="w-full mt-6 py-2 border border-cyan-500/30 text-cyan-400 rounded-lg text-[10px] font-bold uppercase hover:bg-cyan-500/10 transition">
                  View Historical Archive

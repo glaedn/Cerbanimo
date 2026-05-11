@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useAppStore } from '../../../store/useAppStore';
 import SpatialDataService from '../../../services/SpatialDataService';
 import { Activity, Shield, Users, Zap, Heart, TrendingUp } from 'lucide-react';
@@ -41,13 +42,22 @@ const ProgressFill = styled.div`
 `;
 
 const RegionalPulse = ({ regionId = 1 }) => {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHealth = async () => {
       setLoading(true);
-      const data = await SpatialDataService.getRegionalHealth(regionId);
+      let token = null;
+      if (isAuthenticated) {
+        try {
+          token = await getAccessTokenSilently();
+        } catch (e) {
+          console.error("Token error in RegionalPulse:", e);
+        }
+      }
+      const data = await SpatialDataService.getRegionalHealth(regionId, token);
       setHealth(data);
       setLoading(false);
     };
@@ -55,7 +65,7 @@ const RegionalPulse = ({ regionId = 1 }) => {
 
     const interval = setInterval(fetchHealth, 30000); // Update every 30s
     return () => clearInterval(interval);
-  }, [regionId]);
+  }, [regionId, getAccessTokenSilently, isAuthenticated]);
 
   if (loading && !health) return <PulseContainer>Analyzing Regional Bio-Metrics...</PulseContainer>;
 

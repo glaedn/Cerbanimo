@@ -40,6 +40,10 @@ import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMa
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 import NeedDeclarationForm from '../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
+import GavelIcon from '@mui/icons-material/Gavel';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import InsightsIcon from '@mui/icons-material/Insights';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
 import { useIsMobile } from '../hooks/useIsMobile';
 import { toast } from 'react-hot-toast';
@@ -671,6 +675,52 @@ const CommunityHub = () => {
                         <Chip key={index} label={tag} size={isMobile ? "small" : "medium"} />
                     ))}
                 </Box>
+
+                {/* Governance Quick Links */}
+                {isMember && (
+                    <Box mt={4} sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2 }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<GavelIcon />}
+                            onClick={() => navigate(`/governance/${communityId}`)}
+                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                        >
+                            GOVERNANCE CHAMBER
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<MenuBookIcon />}
+                            onClick={() => navigate(`/governance/${communityId}/constitution`)}
+                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                        >
+                            CONSTITUTION
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<GroupIcon />}
+                            onClick={() => navigate(`/governance/${communityId}/delegation`)}
+                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                        >
+                            DELEGATION MAP
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<InsightsIcon />}
+                            onClick={() => navigate(`/governance/${communityId}/simulator`)}
+                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                        >
+                            SIMULATOR
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<HealthAndSafetyIcon />}
+                            onClick={() => navigate(`/governance/${communityId}/mediation`)}
+                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                        >
+                            MEDIATION
+                        </Button>
+                    </Box>
+                )}
                 
                 {/* Join Request Button for non-members */}
                 {!isMember && (

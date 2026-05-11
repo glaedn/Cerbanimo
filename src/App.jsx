@@ -65,6 +65,9 @@ const AdaptiveHUD = React.lazy(() => import("./components/HUD/AdaptiveHUD.jsx"))
 const GovernanceChamber = React.lazy(() => import("./pages/GovernanceChamber.jsx"));
 const ConstitutionExplorer = React.lazy(() => import("./pages/ConstitutionExplorer.jsx"));
 const FederationAtlas = React.lazy(() => import("./pages/FederationAtlas.jsx"));
+const DelegationMapPage = React.lazy(() => import("./pages/DelegationMapPage.jsx"));
+const CivicSimulator = React.lazy(() => import("./pages/CivicSimulator.jsx"));
+const MediationSpace = React.lazy(() => import("./pages/MediationSpace.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
@@ -164,21 +167,51 @@ const AppContent = () => {
             }
           />
           <Route
+            path="/governance/:communityId/simulator"
+            element={
+              <PrivateRoute>
+                <PageWrapper><CivicSimulator /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/mediation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><MediationSpace /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/governance/:communityId"
             element={
+              <PrivateRoute>
                 <PageWrapper><GovernanceChamber /></PageWrapper>
+              </PrivateRoute>
             }
           />
           <Route
             path="/governance/:communityId/constitution"
             element={
+              <PrivateRoute>
                 <PageWrapper><ConstitutionExplorer /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/delegation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><DelegationMapPage /></PageWrapper>
+              </PrivateRoute>
             }
           />
           <Route
             path="/federation-atlas"
             element={
+              <PrivateRoute>
                 <PageWrapper><FederationAtlas /></PageWrapper>
+              </PrivateRoute>
             }
           />
           <Route

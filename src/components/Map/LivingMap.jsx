@@ -29,7 +29,7 @@ const LivingMap = () => {
 
   const layers = [
     // 1. Need Layer (Hexagon for density, Scatterplot for individual focus)
-    new HexagonLayer({
+    spatialEntities.filter(n => n.type === 'need').length > 0 && new HexagonLayer({
       id: 'need-density',
       data: spatialEntities.filter(n => n.type === 'need'),
       getPosition: d => [d.location.x, d.location.y],
@@ -40,7 +40,7 @@ const LivingMap = () => {
       pickable: true
     }),
 
-    new ScatterplotLayer({
+    spatialEntities.filter(n => n.type === 'need').length > 0 && new ScatterplotLayer({
       id: 'needs-individual',
       data: spatialEntities.filter(n => n.type === 'need'),
       getPosition: d => [d.location.x, d.location.y],
@@ -51,7 +51,7 @@ const LivingMap = () => {
     }),
 
     // 2. Resource Layer
-    new ScatterplotLayer({
+    spatialEntities.filter(n => n.type === 'resource').length > 0 && new ScatterplotLayer({
       id: 'resources',
       data: spatialEntities.filter(n => n.type === 'resource'),
       getPosition: d => [d.location.x, d.location.y],
@@ -63,13 +63,14 @@ const LivingMap = () => {
     }),
 
     // 3. Volunteer Layer (Heatmap)
-    new HeatmapLayer({
+    spatialEntities.filter(n => n.type === 'user').length > 0 && new HeatmapLayer({
       id: 'volunteer-density',
       data: spatialEntities.filter(n => n.type === 'user'),
       getPosition: d => [d.location.x, d.location.y],
       getWeight: 1,
       radiusPixels: 60,
-      visible: activeOverlays.includes('logistics')
+      visible: activeOverlays.includes('logistics'),
+      aggregation: 'SUM'
     }),
 
     // 4. Mission / Dispatch Layer (Placeholder paths)
@@ -82,7 +83,7 @@ const LivingMap = () => {
         pickable: true,
         visible: activeOverlays.includes('logistics')
     })
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="living-map-container" style={{ width: '100%', height: '100%', position: 'relative' }}>

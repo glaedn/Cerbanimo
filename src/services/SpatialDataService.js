@@ -3,9 +3,10 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
 class SpatialDataService {
-  async getTacticalOverlay() {
+  async getTacticalOverlay(token = null) {
     try {
-      const res = await axios.get(`${API_BASE}/spatial-ops/tactical-overlay`);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API_BASE}/spatial-ops/tactical-overlay`, { headers });
       return res.data;
     } catch (err) {
       console.error('Error fetching tactical overlay:', err);
@@ -13,10 +14,12 @@ class SpatialDataService {
     }
   }
 
-  async getNearbyCapabilities(lat, lon, radius = 5000) {
+  async getNearbyCapabilities(lat, lon, radius = 5000, token = null) {
     try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(`${API_BASE}/spatial-ops/nearby-capabilities`, {
-        params: { lat, lon, radius }
+        params: { lat, lon, radius },
+        headers
       });
       return res.data;
     } catch (err) {
@@ -25,9 +28,10 @@ class SpatialDataService {
     }
   }
 
-  async getRegionalHealth(regionId) {
+  async getRegionalHealth(regionId, token = null) {
     try {
-      const res = await axios.get(`${API_BASE}/spatial-ops/regional-health/${regionId}`);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API_BASE}/spatial-ops/regional-health/${regionId}`, { headers });
       return res.data;
     } catch (err) {
       console.error('Error fetching regional health:', err);
@@ -35,10 +39,10 @@ class SpatialDataService {
     }
   }
 
-  async getActiveRoutes() {
-      // Assuming a generic endpoint for all active routes for now, or filtered by user
+  async getActiveRoutes(token = null) {
       try {
-          const res = await axios.get(`${API_BASE}/spatial-ops/active-routes`);
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          const res = await axios.get(`${API_BASE}/spatial-ops/active-routes`, { headers });
           return res.data;
       } catch (err) {
           console.error('Error fetching active routes:', err);

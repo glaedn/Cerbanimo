@@ -7,7 +7,7 @@ import {
   CircularProgress, LinearProgress, Divider, Autocomplete
 } from '@mui/material';
 import Paper from '@mui/material/Paper';
-import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Network, Plus, CheckSquare, TrendingUp, AlertTriangle, Globe } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -112,14 +112,24 @@ const ConstellationHub = () => {
     <Box p={isMobile ? 2 : 4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#e0e0e0', pb: isMobile ? 12 : 4 }}>
       <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'} mb={4} gap={2}>
         <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontFamily: 'Orbitron', color: '#ff5ca2', textAlign: isMobile ? 'center' : 'left' }}>CONSTELLATION HUB</Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Plus size={20} />}
-          onClick={() => setFormModalOpen(true)}
-          sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', minWidth: 'fit-content', height: isMobile ? '48px' : 'auto' }}
-        >
-          FORM ALLIANCE
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<Globe size={20} />}
+            onClick={() => navigate('/federation-atlas')}
+            sx={{ color: '#00f3ff', borderColor: '#00f3ff', minWidth: 'fit-content', height: isMobile ? '48px' : 'auto' }}
+          >
+            FEDERATION ATLAS
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Plus size={20} />}
+            onClick={() => setFormModalOpen(true)}
+            sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', minWidth: 'fit-content', height: isMobile ? '48px' : 'auto' }}
+          >
+            FORM ALLIANCE
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={isMobile ? 2 : 4}>

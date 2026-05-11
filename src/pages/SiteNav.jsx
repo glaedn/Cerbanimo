@@ -357,6 +357,24 @@ const SiteNav = () => {
               </Link>
               <Link
                 className={`nav-link ${
+                  location.pathname === "/federation-atlas" ? "active" : ""
+                }`}
+                to="/federation-atlas"
+                onClick={closeSidebar}
+              >
+                Federation Atlas
+              </Link>
+              <Link
+                className={`nav-link ${
+                  location.pathname === "/dispute-court" ? "active" : ""
+                }`}
+                to="/dispute-court"
+                onClick={closeSidebar}
+              >
+                Dispute Court
+              </Link>
+              <Link
+                className={`nav-link ${
                   location.pathname === "/resources-inventory" ? "active" : ""
                 }`}
                 to="/resources-inventory"

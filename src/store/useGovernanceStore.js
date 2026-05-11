@@ -10,6 +10,8 @@ export const useGovernanceStore = create((set, get) => ({
   delegations: [],
   treaties: [],
   deliberationTrees: {}, // { proposalId: { nodes, links } }
+  simulations: [],
+  mediationCases: [],
   loading: false,
   error: null,
 
@@ -87,6 +89,16 @@ export const useGovernanceStore = create((set, get) => ({
   revokeDelegation: (delegationId) => set((state) => ({
     delegations: state.delegations.filter(d => d.id !== delegationId)
   })),
+
+  // Mediation Actions
+  fetchMediationCases: async (communityId) => {
+    try {
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/mediation`);
+      set({ mediationCases: res.data });
+    } catch (err) {
+      console.error('Error fetching mediation cases:', err);
+    }
+  },
 
   // Constitutional history
   fetchConstitutionHistory: async (communityId) => {
