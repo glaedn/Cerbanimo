@@ -82,13 +82,33 @@ export const useGovernanceStore = create((set, get) => ({
   }),
 
   // Delegation logic
-  addDelegation: (delegation) => set((state) => ({
-    delegations: [...state.delegations, delegation]
-  })),
+  addDelegation: async (communityId, userId, delegateToId, token) => {
+    try {
+      await axios.post(`${BACKEND_URL}/communities/${communityId}/delegate/${userId}`,
+        { delegateTo: delegateToId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Refresh delegations
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`);
+      set({ delegations: res.data });
+    } catch (err) {
+      console.error('Error adding delegation:', err);
+    }
+  },
 
-  revokeDelegation: (delegationId) => set((state) => ({
-    delegations: state.delegations.filter(d => d.id !== delegationId)
-  })),
+  revokeDelegation: async (communityId, userId, token) => {
+    try {
+      await axios.post(`${BACKEND_URL}/communities/${communityId}/revoke/${userId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Refresh delegations
+      const res = await axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`);
+      set({ delegations: res.data });
+    } catch (err) {
+      console.error('Error revoking delegation:', err);
+    }
+  },
 
   // Mediation Actions
   fetchMediationCases: async (communityId) => {

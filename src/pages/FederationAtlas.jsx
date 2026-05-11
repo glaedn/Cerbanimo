@@ -91,7 +91,7 @@ const FederationAtlas = () => {
   }, [treaties]);
 
   return (
-    <div className="federation-atlas min-h-screen bg-black p-8 overflow-hidden flex flex-col">
+    <div className="federation-atlas min-h-screen bg-[#050510] p-8 overflow-hidden flex flex-col text-white selection:bg-cyan-500/30">
       <header className="mb-8 flex justify-between items-start">
         <div>
            <div className="flex items-center gap-3 mb-2">
@@ -118,11 +118,11 @@ const FederationAtlas = () => {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
          {/* Map Visualization */}
-         <div className="lg:col-span-8 bg-gray-950 border border-gray-800 rounded-3xl overflow-hidden relative shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <div className="absolute top-6 left-6 flex gap-4 z-10">
-               <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_cyan]"></div>
-                  <span className="text-[10px] text-white font-bold uppercase tracking-widest">Active Alliances: {treaties.length}</span>
+         <div className="lg:col-span-8 bg-[#0a0a1a] border border-white/10 rounded-[2.5rem] overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.8)] border-t-white/20">
+            <div className="absolute top-8 left-8 flex gap-4 z-10">
+               <div className="bg-black/40 backdrop-blur-2xl px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-2xl">
+                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_15px_cyan] animate-pulse"></div>
+                  <span className="text-[11px] text-white font-bold uppercase tracking-[0.2em]">Active Alliances: {treaties.length}</span>
                </div>
             </div>
 

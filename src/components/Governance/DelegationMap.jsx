@@ -1,13 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as d3 from 'd3';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
-import { Users, Shield, MapPin, Zap, X } from 'lucide-react';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useAuth0 } from '@auth0/auth0-react';
+import { Users, Shield, MapPin, Zap, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 const DelegationMap = ({ communityId }) => {
   const d3Container = useRef(null);
-  const { delegations, fetchCommunityGovernance } = useGovernanceStore();
+  const { delegations, fetchCommunityGovernance, addDelegation, revokeDelegation } = useGovernanceStore();
+  const { profile } = useUserProfile();
+  const { getAccessTokenSilently } = useAuth0();
   const [showModal, setShowModal] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const [newDelegation, setNewDelegation] = useState({
     delegateId: '',
     domain: 'all'
@@ -59,8 +64,9 @@ const DelegationMap = ({ communityId }) => {
 
       const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(120))
-        .force("charge", d3.forceManyBody().strength(-200))
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        .force("charge", d3.forceManyBody().strength(-400))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(30));
 
       const link = svg.append("g")
         .selectAll("path")
@@ -75,6 +81,10 @@ const DelegationMap = ({ communityId }) => {
         .selectAll("g")
         .data(nodes)
         .join("g")
+        .on("click", (event, d) => {
+          setSelectedNode(d);
+        })
+        .style("cursor", "pointer")
         .call(d3.drag()
           .on("start", (event, d) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -93,9 +103,10 @@ const DelegationMap = ({ communityId }) => {
 
       node.append("circle")
         .attr("r", 15)
-        .attr("fill", "#1C1C1E")
-        .attr("stroke", "#00F3FF")
-        .attr("stroke-width", 2);
+        .attr("fill", d => Number(d.id) === Number(profile?.id) ? "rgba(0, 243, 255, 0.2)" : "#1C1C1E")
+        .attr("stroke", d => Number(d.id) === Number(profile?.id) ? "#00F3FF" : "#333")
+        .attr("stroke-width", 2)
+        .attr("filter", d => Number(d.id) === Number(profile?.id) ? "drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))" : "none");
 
       node.append("text")
         .attr("dy", 30)
@@ -114,14 +125,32 @@ const DelegationMap = ({ communityId }) => {
 
   const handleDelegate = async (e) => {
     e.preventDefault();
+    if (!profile?.id) return;
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/governance/delegate`, newDelegation);
+      const token = await getAccessTokenSilently();
+      await addDelegation(communityId, profile.id, newDelegation.delegateId, token);
       setShowModal(false);
-      fetchCommunityGovernance(communityId);
+      setNewDelegation({ delegateId: '', domain: 'all' });
     } catch (err) {
       alert('Error delegating authority: ' + err.message);
     }
   };
+
+  const handleRevoke = async () => {
+    if (!profile?.id) return;
+    try {
+      const token = await getAccessTokenSilently();
+      await revokeDelegation(communityId, profile.id, token);
+      setSelectedNode(null);
+    } catch (err) {
+      alert('Error revoking delegation: ' + err.message);
+    }
+  };
+
+  const currentUserDelegation = useMemo(() => {
+    if (!profile?.id) return null;
+    return delegations.find(d => Number(d.delegator_id) === Number(profile.id));
+  }, [delegations, profile?.id]);
 
   return (
     <div className="delegation-map bg-gray-950/40 p-6 rounded-2xl border border-gray-800 relative shadow-2xl overflow-hidden">
@@ -148,6 +177,37 @@ const DelegationMap = ({ communityId }) => {
           </div>
         ) : (
           <div ref={d3Container} className="h-[400px] cursor-grab active:cursor-grabbing"></div>
+        )}
+
+        {selectedNode && (
+          <div className="absolute top-0 right-0 p-4 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl w-48 animate-in fade-in slide-in-from-right-4 duration-300">
+             <div className="flex justify-between items-start mb-3">
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Selected Actor</div>
+                <button onClick={() => setSelectedNode(null)} className="text-gray-500 hover:text-white"><X size={12} /></button>
+             </div>
+             <div className="text-sm font-bold text-white mb-4">{selectedNode.name}</div>
+
+             {Number(selectedNode.id) === Number(profile?.id) && currentUserDelegation && (
+               <button
+                onClick={handleRevoke}
+                className="w-full py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 rounded text-[10px] font-bold uppercase transition flex items-center justify-center gap-2"
+               >
+                 <Trash2 size={12} /> Revoke My Trust
+               </button>
+             )}
+
+             {Number(selectedNode.id) !== Number(profile?.id) && (
+               <button
+                onClick={() => {
+                  setNewDelegation({...newDelegation, delegateId: selectedNode.id});
+                  setShowModal(true);
+                }}
+                className="w-full py-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 border border-cyan-500/30 rounded text-[10px] font-bold uppercase transition flex items-center justify-center gap-2"
+               >
+                 <Shield size={12} /> Delegate Trust
+               </button>
+             )}
+          </div>
         )}
 
         {/* Legend Overlay */}

@@ -80,8 +80,8 @@ const GovernanceChamber = () => {
   );
 
   return (
-    <div className="governance-chamber min-h-screen bg-black p-6">
-      <header className="mb-8 flex justify-between items-end border-b border-gray-800 pb-8">
+    <div className="governance-chamber min-h-screen bg-[#050510] p-6 text-white selection:bg-cyan-500/30">
+      <header className="mb-8 flex justify-between items-end border-b border-white/5 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="text-cyan-400" size={24} />
@@ -123,8 +123,8 @@ const GovernanceChamber = () => {
         {/* Left Sidebar: Proposal Stream */}
         <div className="xl:col-span-4 space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Activity size={14} className="text-cyan-400" /> Live Proposal Stream
+            <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Activity size={14} className="text-cyan-400 animate-pulse" /> Live Proposal Stream
             </h2>
             <div className="flex gap-2">
                <button className="text-[10px] bg-gray-900 border border-gray-800 px-2 py-1 rounded text-gray-500 hover:text-white transition">ALL</button>
@@ -187,8 +187,8 @@ const GovernanceChamber = () => {
 
         {/* Right Sidebar: Governance Meta & Summary */}
         <div className="xl:col-span-3 space-y-6">
-           <div className="bg-gray-900/80 border border-cyan-500/20 p-6 rounded-xl backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-              <h2 className="text-xs font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+           <div className="bg-white/[0.03] border border-white/10 p-6 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+              <h2 className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2 border-b border-white/5 pb-4">
                 <Layout size={14} className="text-cyan-400" /> Civic Schema
               </h2>
 

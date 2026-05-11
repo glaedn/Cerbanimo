@@ -27,8 +27,8 @@ const ProposalCard = ({ proposal, onVote }) => {
   };
 
   return (
-    <div className={`proposal-card border rounded-xl p-5 mb-4 transition-all hover:shadow-[0_0_20px_rgba(0,243,255,0.1)] ${getStatusColor()}`}>
-      <div className="flex justify-between items-start mb-3">
+    <div className={`proposal-card border rounded-2xl p-6 mb-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl backdrop-blur-md ${getStatusColor()}`}>
+      <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-2">
           <span className="p-1.5 rounded bg-black/40 text-cyan-400">
             {getTypeIcon()}
@@ -38,18 +38,18 @@ const ProposalCard = ({ proposal, onVote }) => {
         <span className="text-[10px] font-bold uppercase tracking-widest">{status}</span>
       </div>
 
-      <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-      <p className="text-sm text-gray-400 mb-4 leading-relaxed">{description}</p>
+      <h3 className="text-xl font-bold text-white mb-3 tracking-tight">{title}</h3>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed line-clamp-3 group-hover:line-clamp-none transition-all">{description}</p>
 
       {/* Impact Indicators */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-black/40 p-2 rounded border border-white/5">
-          <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Ecosystem Impact</div>
-          <div className="text-xs text-cyan-400 font-medium">
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-black/40 p-3 rounded-xl border border-white/5">
+          <div className="text-[9px] text-gray-500 font-bold uppercase mb-1 tracking-widest">Ecosystem Impact</div>
+          <div className="text-xs text-cyan-400 font-bold">
             {payload?.impact || "Moderate systemic change"}
           </div>
         </div>
-        <div className="bg-black/40 p-2 rounded border border-white/5">
+        <div className="bg-black/40 p-3 rounded-xl border border-white/5">
           <div className="text-[9px] text-gray-500 font-bold uppercase mb-1 flex items-center gap-1">
             <AlertTriangle size={10} className="text-orange-500" /> Risk Level
           </div>

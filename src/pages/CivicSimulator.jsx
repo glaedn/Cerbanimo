@@ -63,7 +63,7 @@ const CivicSimulator = () => {
   }, [results]);
 
   return (
-    <div className="civic-simulator min-h-screen bg-black text-white p-8">
+    <div className="civic-simulator min-h-screen bg-[#050510] text-white p-8 selection:bg-cyan-500/30">
       <header className="mb-12">
         <div className="flex items-center gap-4 mb-2">
           <Zap className="text-cyan-400" size={32} />
@@ -73,8 +73,8 @@ const CivicSimulator = () => {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-4 space-y-6 bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
-          <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+        <div className="lg:col-span-4 space-y-6 bg-white/[0.03] p-8 rounded-3xl border border-white/10 backdrop-blur-2xl shadow-2xl">
+          <h2 className="text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2 mb-4 border-b border-white/5 pb-4">
             <Shield size={14} /> Simulation Parameters
           </h2>
 
@@ -107,7 +107,7 @@ const CivicSimulator = () => {
 
         <div className="lg:col-span-8 space-y-6">
           {results ? (
-            <div className="bg-gray-950 border border-gray-800 rounded-2xl p-8 animate-in fade-in zoom-in duration-500">
+            <div className="bg-[#0a0a1a] border border-white/10 rounded-3xl p-10 animate-in fade-in zoom-in duration-500 shadow-[0_0_100px_rgba(0,0,0,0.5)] border-t-white/20">
                <div className="flex justify-between items-start mb-8">
                   <h3 className="text-xl font-bold flex items-center gap-3">
                     <TrendingUp className="text-cyan-400" /> Projected Outcomes

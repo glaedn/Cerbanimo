@@ -12,7 +12,7 @@ const MediationSpace = () => {
   ];
 
   return (
-    <div className="mediation-space min-h-screen bg-black text-white p-8">
+    <div className="mediation-space min-h-screen bg-[#050510] text-white p-8 selection:bg-pink-500/30">
       <header className="mb-12 flex justify-between items-end">
         <div>
           <div className="flex items-center gap-4 mb-2">
@@ -33,13 +33,13 @@ const MediationSpace = () => {
              <button
                key={tab}
                onClick={() => setActiveTab(tab)}
-               className={`w-full text-left px-6 py-4 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition ${activeTab === tab ? 'bg-pink-500/10 border-pink-500 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.1)]' : 'border-gray-800 text-gray-500 hover:border-gray-700'}`}
+               className={`w-full text-left px-6 py-4 rounded-2xl border font-bold text-[10px] uppercase tracking-[0.2em] transition-all duration-300 ${activeTab === tab ? 'bg-pink-500/10 border-pink-500 text-pink-400 shadow-[0_0_30px_rgba(236,72,153,0.2)] scale-105' : 'border-white/5 bg-white/[0.02] text-gray-500 hover:border-white/10 hover:bg-white/[0.04]'}`}
              >
                {tab} Cases
              </button>
            ))}
 
-           <div className="p-6 bg-gray-900/40 rounded-2xl border border-gray-800 mt-8">
+           <div className="p-8 bg-white/[0.03] rounded-3xl border border-white/10 backdrop-blur-2xl mt-8">
               <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
                 <Scale size={14} className="text-pink-400" /> Mediation Principles
               </h3>
@@ -55,7 +55,7 @@ const MediationSpace = () => {
         {/* Case Feed */}
         <div className="lg:col-span-6 space-y-6">
            {mockCases.map(c => (
-             <div key={c.id} className="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 hover:border-pink-500/50 transition cursor-pointer group">
+             <div key={c.id} className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 hover:border-pink-500/50 transition-all duration-500 cursor-pointer group hover:bg-white/[0.05] shadow-2xl">
                 <div className="flex justify-between items-start mb-4">
                    <div className="flex items-center gap-3">
                       <div className="p-2 bg-black rounded border border-white/5">

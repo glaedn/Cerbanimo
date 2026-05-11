@@ -46,9 +46,10 @@ const ConstitutionGraph = ({ communityId }) => {
         .attr("viewBox", [0, 0, width, height]);
 
       const simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+        .force("charge", d3.forceManyBody().strength(-600))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(40));
 
       const link = svg.append("g")
         .attr("stroke", "rgba(0, 243, 255, 0.15)")
@@ -63,15 +64,26 @@ const ConstitutionGraph = ({ communityId }) => {
         .join("g");
 
       node.append("circle")
-        .attr("r", d => d.type === 'root' ? 12 : d.type === 'section' ? 8 : 5)
+        .attr("r", d => d.type === 'root' ? 14 : d.type === 'section' ? 10 : 6)
         .attr("fill", d => {
+           if (d.type === 'root') return 'rgba(0, 243, 255, 0.2)';
+           if (d.group === 1) return 'rgba(255, 92, 162, 0.2)';
+           if (d.group === 2) return 'rgba(0, 215, 135, 0.2)';
+           if (d.group === 3) return 'rgba(255, 65, 54, 0.2)';
+           return 'rgba(136, 136, 136, 0.2)';
+        })
+        .attr("stroke", d => {
            if (d.type === 'root') return '#00F3FF';
            if (d.group === 1) return '#FF5CA2';
            if (d.group === 2) return '#00D787';
            if (d.group === 3) return '#FF4136';
            return '#888';
         })
-        .attr("filter", "drop-shadow(0 0 5px rgba(0, 243, 255, 0.4))");
+        .attr("stroke-width", 2)
+        .attr("filter", d => {
+           const color = d.type === 'root' ? '#00F3FF' : (d.group === 1 ? '#FF5CA2' : (d.group === 2 ? '#00D787' : '#FF4136'));
+           return `drop-shadow(0 0 8px ${color}66)`;
+        });
 
       node.append("text")
         .attr("dx", 12)
