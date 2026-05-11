@@ -174,7 +174,10 @@ router.get('/locations', async (req, res) => {
         id,
         CASE WHEN share_location_publicly THEN username ELSE 'Anonymous Volunteer' END as name,
         ST_AsGeoJSON(location_point) as location,
-        share_location_publicly
+        share_location_publicly,
+        CASE WHEN share_location_publicly THEN city ELSE NULL END as city,
+        CASE WHEN share_location_publicly THEN state ELSE NULL END as state,
+        CASE WHEN share_location_publicly THEN country ELSE NULL END as country
       FROM users
       WHERE location_point IS NOT NULL;
     `;
@@ -183,7 +186,10 @@ router.get('/locations', async (req, res) => {
       id: row.id,
       name: row.name,
       location: JSON.parse(row.location),
-      isPublic: row.share_location_publicly
+      isPublic: row.share_location_publicly,
+      city: row.city,
+      state: row.state,
+      country: row.country
     }));
     res.json(locations);
   } catch (err) {
@@ -258,7 +264,7 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, ST_AsGeoJSON(location_point) as location
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -299,7 +305,7 @@ router.get('/', async (req, res) => {
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
-  let { username, skills, interests, user_id, contact_links, capacity_status, discord_user_id, latitude, longitude, share_location_publicly } = req.body;
+  let { username, skills, interests, user_id, contact_links, capacity_status, discord_user_id, latitude, longitude, share_location_publicly, city, state, region, country, formatted_address } = req.body;
   const auth0Id = req.auth.payload.sub;
   // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
   let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
@@ -353,9 +359,14 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
           THEN ST_SetSRID(ST_MakePoint($9::numeric, $8::numeric), 4326)::geography
           ELSE location_point
         END,
-        share_location_publicly = COALESCE($10::boolean, share_location_publicly)
-      WHERE id = $11
-      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status, discord_user_id, share_location_publicly, ST_AsGeoJSON(location_point) as location;
+        share_location_publicly = COALESCE($10::boolean, share_location_publicly),
+        city = COALESCE($11, city),
+        state = COALESCE($12, state),
+        region = COALESCE($13, region),
+        country = COALESCE($14, country),
+        formatted_address = COALESCE($15, formatted_address)
+      WHERE id = $16
+      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location;
     `;
 
     // Validate and truncate contact_links
@@ -388,6 +399,11 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       latitude || null,
       longitude || null,
       share_location_publicly !== undefined ? share_location_publicly : null,
+      city || null,
+      state || null,
+      region || null,
+      country || null,
+      formatted_address || null,
       userId,
     ];
     const result = await pool.query(query, values);

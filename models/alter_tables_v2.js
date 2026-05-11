@@ -31,6 +31,11 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS cross_community_enabled BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS region VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS country VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS formatted_address TEXT,
     ADD COLUMN IF NOT EXISTS service_radius NUMERIC, -- in meters
     ADD COLUMN IF NOT EXISTS governance_config JSONB DEFAULT '{
       "votingModel": "direct",
@@ -49,8 +54,14 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
     ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),
+    ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS region VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS country VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS formatted_address TEXT,
     ADD COLUMN IF NOT EXISTS mobility_range NUMERIC, -- in meters
-    ADD COLUMN IF NOT EXISTS emergency_response_capable BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS emergency_response_capable BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS share_location_publicly BOOLEAN DEFAULT FALSE;
   `;
 
   const alterSkillsQuery = `

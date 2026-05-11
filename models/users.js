@@ -22,6 +22,11 @@ const createUserTable = async () => {
       capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
       discord_user_id VARCHAR(50),
       location_point GEOGRAPHY(Point, 4326),
+      city VARCHAR(100),
+      state VARCHAR(100),
+      region VARCHAR(100),
+      country VARCHAR(100),
+      formatted_address TEXT,
       mobility_range NUMERIC, -- in meters
       emergency_response_capable BOOLEAN DEFAULT FALSE,
       share_location_publicly BOOLEAN DEFAULT FALSE,

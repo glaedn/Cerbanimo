@@ -108,7 +108,14 @@ const LivingMap = () => {
             touchZoom: true
         }}
         layers={layers}
-        getTooltip={({ object }) => object && `${object.name} (${object.type})`}
+        getTooltip={({ object }) => {
+          if (!object) return null;
+          let locationInfo = '';
+          if (object.city || object.state || object.country) {
+            locationInfo = `\nLocation: ${[object.city, object.state, object.country].filter(Boolean).join(', ')}`;
+          }
+          return `${object.name} (${object.type})${locationInfo}`;
+        }}
       >
         <Map
           mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"

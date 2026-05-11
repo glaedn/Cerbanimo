@@ -17,6 +17,9 @@ const CommunityCreation = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [country, setCountry] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState(null); // State to store user ID
 
@@ -94,6 +97,9 @@ const CommunityCreation = () => {
           tags: tagIds,
           latitude: latitude,
           longitude: longitude,
+          city: city,
+          state: state,
+          country: country,
         }, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -137,7 +143,34 @@ const CommunityCreation = () => {
       </div>
       
       <div className="cosmic-field-container">
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+            <TextField
+                label="City"
+                variant="outlined"
+                fullWidth
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 100%' }}
+            />
+            <TextField
+                label="State / Region"
+                variant="outlined"
+                fullWidth
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
+            <TextField
+                label="Country"
+                variant="outlined"
+                fullWidth
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
             <TextField
                 label="Latitude"
                 variant="outlined"
@@ -145,6 +178,7 @@ const CommunityCreation = () => {
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
                 margin="normal"
+                sx={{ flex: '1 1 45%' }}
             />
             <TextField
                 label="Longitude"
@@ -153,6 +187,7 @@ const CommunityCreation = () => {
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
                 margin="normal"
+                sx={{ flex: '1 1 45%' }}
             />
         </Box>
         <div className="cosmic-glow"></div>

@@ -118,7 +118,11 @@ const Communities = () => {
                     {community.description}
                   </p>
 
-                  {community.location && (
+                  {(community.city || community.state || community.country) ? (
+                    <Typography variant="caption" sx={{ color: '#00f3ff', display: 'block', mb: 1, fontFamily: 'Orbitron', fontSize: '0.7rem' }}>
+                      LOCATION: {[community.city, community.state, community.country].filter(Boolean).join(', ')}
+                    </Typography>
+                  ) : community.location && (
                     <Typography variant="caption" sx={{ color: '#00f3ff', display: 'block', mb: 1, fontFamily: 'Orbitron', fontSize: '0.7rem' }}>
                       LOCATION: {community.location.coordinates[1].toFixed(4)}, {community.location.coordinates[0].toFixed(4)}
                     </Typography>

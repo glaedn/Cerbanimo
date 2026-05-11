@@ -375,6 +375,42 @@ const GovernanceChamber = () => {
                   </S.FormField>
                 </div>
               )}
+              {newProposal.type === 'community.location_change' && (
+                <>
+                  <S.FormField>
+                    <S.Label>New City</S.Label>
+                    <S.Input
+                      type="text"
+                      required
+                      value={newProposal.payload.city || ''}
+                      onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, city: e.target.value}})}
+                      placeholder="e.g., Los Angeles"
+                    />
+                  </S.FormField>
+                  <div className="grid grid-cols-2 gap-4">
+                    <S.FormField>
+                      <S.Label>New State / Region</S.Label>
+                      <S.Input
+                        type="text"
+                        required
+                        value={newProposal.payload.state || ''}
+                        onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, state: e.target.value}})}
+                        placeholder="e.g., CA"
+                      />
+                    </S.FormField>
+                    <S.FormField>
+                      <S.Label>New Country</S.Label>
+                      <S.Input
+                        type="text"
+                        required
+                        value={newProposal.payload.country || ''}
+                        onChange={(e) => setNewProposal({...newProposal, payload: {...newProposal.payload, country: e.target.value}})}
+                        placeholder="e.g., USA"
+                      />
+                    </S.FormField>
+                  </div>
+                </>
+              )}
               <S.FormField>
                 <S.Label>Stated Intent</S.Label>
                 <S.Input

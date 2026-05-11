@@ -672,7 +672,14 @@ const CommunityHub = () => {
                     {community.description}
                 </Typography>
 
-                {community.location && (
+                {(community.city || community.state || community.country) ? (
+                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: '#00F3FF', fontFamily: 'Orbitron' }}>
+                        <LocationOnIcon fontSize="small" />
+                        <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
+                            STATIONED IN: {[community.city, community.state, community.country].filter(Boolean).join(', ')}
+                        </Typography>
+                    </Box>
+                ) : community.location && (
                     <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: '#00F3FF', fontFamily: 'Orbitron' }}>
                         <LocationOnIcon fontSize="small" />
                         <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>

@@ -66,6 +66,9 @@ export const useEcosystemData = () => {
           status: 'active',
           lastActivity: c.updated_at || c.created_at,
           location: c.location ? { x: c.location.coordinates[0], y: c.location.coordinates[1] } : null,
+          city: c.city,
+          state: c.state,
+          country: c.country,
           raw: c
         });
       });
@@ -169,6 +172,9 @@ export const useEcosystemData = () => {
             name: ul.name,
             status: 'active',
             location: ul.location ? { x: ul.location.coordinates[0], y: ul.location.coordinates[1] } : null,
+          city: ul.city,
+          state: ul.state,
+          country: ul.country,
             raw: ul
           });
         });

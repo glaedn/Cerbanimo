@@ -61,6 +61,9 @@ const ProfilePage = () => {
     latitude: '',
     longitude: '',
     share_location_publicly: false,
+    city: '',
+    state: '',
+    country: '',
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -163,6 +166,9 @@ const ProfilePage = () => {
             latitude: profileResponse.data.location?.coordinates[1] || '',
             longitude: profileResponse.data.location?.coordinates[0] || '',
             share_location_publicly: profileResponse.data.share_location_publicly || false,
+            city: profileResponse.data.city || '',
+            state: profileResponse.data.state || '',
+            country: profileResponse.data.country || '',
             };
 
           // Auto-populate Discord ID if provided in query params
@@ -519,6 +525,9 @@ const ProfilePage = () => {
       formData.append('latitude', profileData.latitude);
       formData.append('longitude', profileData.longitude);
       formData.append('share_location_publicly', profileData.share_location_publicly);
+      formData.append('city', profileData.city);
+      formData.append('state', profileData.state);
+      formData.append('country', profileData.country);
 
       // Handle contact_links
       const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
@@ -568,6 +577,9 @@ const ProfilePage = () => {
           latitude: updatedProfile.location?.coordinates[1] || prev.latitude,
           longitude: updatedProfile.location?.coordinates[0] || prev.longitude,
           share_location_publicly: updatedProfile.share_location_publicly || false,
+          city: updatedProfile.city || prev.city,
+          state: updatedProfile.state || prev.state,
+          country: updatedProfile.country || prev.country,
         }));
       }
 
@@ -742,14 +754,15 @@ const ProfilePage = () => {
           <MenuItem value="unavailable">Unavailable</MenuItem>
         </Select>
       </FormControl>
-      <Box sx={{ display: 'flex', gap: 1, width: '100%', maxWidth: '400px', mb: 2 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, width: '100%', maxWidth: '400px', mb: 2 }}>
         <TextField
-          label="Latitude"
-          value={profileData.latitude || ''}
-          onChange={(e) => handleInputChange('latitude', e.target.value)}
+          label="City"
+          value={profileData.city || ''}
+          onChange={(e) => handleInputChange('city', e.target.value)}
           margin="none"
           fullWidth
           sx={{
+            flex: '1 1 100%',
             '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
             '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
             '& .MuiOutlinedInput-root': {
@@ -764,12 +777,13 @@ const ProfilePage = () => {
           }}
         />
         <TextField
-          label="Longitude"
-          value={profileData.longitude || ''}
-          onChange={(e) => handleInputChange('longitude', e.target.value)}
+          label="State / Region"
+          value={profileData.state || ''}
+          onChange={(e) => handleInputChange('state', e.target.value)}
           margin="none"
           fullWidth
           sx={{
+            flex: '1 1 48%',
             '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
             '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
             '& .MuiOutlinedInput-root': {
@@ -783,6 +797,43 @@ const ProfilePage = () => {
             '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
           }}
         />
+        <TextField
+          label="Country"
+          value={profileData.country || ''}
+          onChange={(e) => handleInputChange('country', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            flex: '1 1 48%',
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+        <Box sx={{ width: '100%', mt: 1, display: 'flex', gap: 1 }}>
+          <TextField
+            label="Lat"
+            value={profileData.latitude || ''}
+            onChange={(e) => handleInputChange('latitude', e.target.value)}
+            size="small"
+            sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: '0.7rem' } }}
+          />
+          <TextField
+            label="Lon"
+            value={profileData.longitude || ''}
+            onChange={(e) => handleInputChange('longitude', e.target.value)}
+            size="small"
+            sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: '0.7rem' } }}
+          />
+        </Box>
       </Box>
       <FormControlLabel
         control={

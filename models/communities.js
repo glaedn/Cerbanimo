@@ -14,6 +14,11 @@ const createCommunitiesTable = async () => {
         cross_community_enabled BOOLEAN DEFAULT FALSE,
         discord_guild_id VARCHAR(50),
         location_point GEOGRAPHY(Point, 4326),
+        city VARCHAR(100),
+        state VARCHAR(100),
+        region VARCHAR(100),
+        country VARCHAR(100),
+        formatted_address TEXT,
         service_radius NUMERIC, -- in meters
         governance_config JSONB DEFAULT '{
           "votingModel": "direct",
