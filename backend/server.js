@@ -80,6 +80,7 @@ import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
 
 
+
 // Initialize app
 const app = express();
 app.set('trust proxy', 1);
