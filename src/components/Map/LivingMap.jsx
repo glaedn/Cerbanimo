@@ -29,10 +29,12 @@ const LivingMap = () => {
   }, [nodes]);
 
   const constellationData = useMemo(() => {
-    if (!selectedEntity || selectedEntity.type !== 'community') return { nodes: [], links: [] };
+    if (!selectedEntity || (selectedEntity.type !== 'community' && selectedEntity.type !== 'user')) {
+      return { nodes: [], links: [] };
+    }
 
-    const communityNode = entities[selectedEntity.id];
-    if (!communityNode || !communityNode.location) return { nodes: [], links: [] };
+    const centerNode = entities[selectedEntity.id];
+    if (!centerNode || !centerNode.location) return { nodes: [], links: [] };
 
     const relatedLinks = (relationships || []).filter(r =>
       r.source === selectedEntity.id || r.target === selectedEntity.id
@@ -53,8 +55,8 @@ const LivingMap = () => {
           const angle = (index / relatedLinks.length) * 2 * Math.PI;
           const radius = 0.003; // ~300m in degree-ish units
           pos = [
-            communityNode.location.x + radius * Math.cos(angle),
-            communityNode.location.y + radius * Math.sin(angle)
+            centerNode.location.x + radius * Math.cos(angle),
+            centerNode.location.y + radius * Math.sin(angle)
           ];
         }
 
@@ -65,7 +67,7 @@ const LivingMap = () => {
         });
 
         constellationLinks.push({
-          source: [communityNode.location.x, communityNode.location.y],
+          source: [centerNode.location.x, centerNode.location.y],
           target: pos,
           type: rel.type
         });
@@ -77,7 +79,7 @@ const LivingMap = () => {
 
   const layers = [
     // 0. Constellation Layer (Connections)
-    selectedEntity?.type === 'community' && new LineLayer({
+    (selectedEntity?.type === 'community' || selectedEntity?.type === 'user') && new LineLayer({
       id: 'constellation-links',
       data: constellationData.links,
       getSourcePosition: d => d.source,
@@ -88,7 +90,7 @@ const LivingMap = () => {
     }),
 
     // 0.1 Constellation Nodes
-    selectedEntity?.type === 'community' && new ScatterplotLayer({
+    (selectedEntity?.type === 'community' || selectedEntity?.type === 'user') && new ScatterplotLayer({
       id: 'constellation-nodes',
       data: constellationData.nodes,
       getPosition: d => d.virtualLocation,
@@ -154,7 +156,7 @@ const LivingMap = () => {
       onClick: ({ object }) => selectEntity(object)
     }),
 
-    // 4. Volunteer Layer (Heatmap)
+    // 4. Volunteer Layer (Heatmap & Dots)
     spatialEntities.filter(n => n.type === 'user').length > 0 && new HeatmapLayer({
       id: 'volunteer-density',
       data: spatialEntities.filter(n => n.type === 'user'),
@@ -163,6 +165,19 @@ const LivingMap = () => {
       radiusPixels: 60,
       visible: activeOverlays.includes('logistics'),
       aggregation: 'SUM'
+    }),
+
+    spatialEntities.filter(n => n.type === 'user').length > 0 && new ScatterplotLayer({
+      id: 'volunteers',
+      data: spatialEntities.filter(n => n.type === 'user'),
+      getPosition: d => [d.location.x, d.location.y],
+      getFillColor: d => selectedEntity?.id === d.id ? [0, 243, 255] : [0, 255, 128],
+      getRadius: d => selectedEntity?.id === d.id ? 60 : 40,
+      pickable: true,
+      stroked: true,
+      getLineColor: [255, 255, 255, 200],
+      getLineWidth: d => selectedEntity?.id === d.id ? 3 : 0,
+      onClick: ({ object }) => selectEntity(object)
     }),
 
     // 5. Mission / Dispatch Layer (Placeholder paths)
@@ -180,7 +195,7 @@ const LivingMap = () => {
   return (
     <div className="living-map-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
       <DeckGL
-        initialViewState={mapState}
+        viewState={mapState}
         onViewStateChange={onViewStateChange}
         controller={{
             touchRotate: true,

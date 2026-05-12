@@ -175,17 +175,20 @@ export const useEcosystemData = () => {
       // 6. Process User Locations
       if (data.userLocations && Array.isArray(data.userLocations)) {
         data.userLocations.forEach(ul => {
-          nodes.push({
-            id: `user-${ul.id}`,
-            type: 'user',
-            name: ul.name,
-            status: 'active',
-            location: ul.location ? { x: ul.location.coordinates[0], y: ul.location.coordinates[1] } : null,
-          city: ul.city,
-          state: ul.state,
-          country: ul.country,
-            raw: ul
-          });
+          // Only map users who have a location and are available
+          if (ul.location && ul.capacity_status !== 'unavailable') {
+            nodes.push({
+              id: `user-${ul.id}`,
+              type: 'user',
+              name: ul.name,
+              status: ul.capacity_status || 'active',
+              location: { x: ul.location.coordinates[0], y: ul.location.coordinates[1] },
+              city: ul.city,
+              state: ul.state,
+              country: ul.country,
+              raw: ul
+            });
+          }
         });
       }
 
