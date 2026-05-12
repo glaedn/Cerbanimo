@@ -5,6 +5,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const useGovernanceStore = create((set, get) => ({
   proposals: [],
+  community: null,
   activeConstitution: null,
   constitutionVersions: [],
   delegations: [],
@@ -20,16 +21,18 @@ export const useGovernanceStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-      const [propRes, constRes, delRes] = await Promise.all([
+      const [propRes, constRes, delRes, commRes] = await Promise.all([
         axios.get(`${BACKEND_URL}/governance/community/${communityId}/proposals`, config),
         axios.get(`${BACKEND_URL}/governance/community/${communityId}/constitution`, config),
-        axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`, config)
+        axios.get(`${BACKEND_URL}/governance/community/${communityId}/delegations`, config),
+        axios.get(`${BACKEND_URL}/communities/${communityId}`, config)
       ]);
 
       set({
         proposals: propRes.data,
         activeConstitution: constRes.data,
         delegations: delRes.data,
+        community: commRes.data,
         loading: false
       });
     } catch (err) {
@@ -63,6 +66,17 @@ export const useGovernanceStore = create((set, get) => ({
       return true;
     } catch (err) {
       console.error('Error casting vote:', err);
+      throw err;
+    }
+  },
+
+  executeProposal: async (proposalId, token) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.post(`${BACKEND_URL}/governance/proposals/${proposalId}/execute`, {}, config);
+      return res.data;
+    } catch (err) {
+      console.error('Error executing proposal:', err);
       throw err;
     }
   },

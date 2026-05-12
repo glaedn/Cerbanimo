@@ -139,6 +139,17 @@ class GovernanceService {
            'UPDATE communities SET governance_config = governance_config || $1 WHERE id = $2',
            [proposal.payload, proposal.community_id]
          );
+      } else if (proposal.proposal_type === 'community.location_change') {
+        const { coordinates, city, state, country, formatted_address } = proposal.payload;
+        if (coordinates && coordinates.length === 2) {
+          await client.query(
+            `UPDATE communities
+             SET location_point = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+                 city = $3, state = $4, country = $5, formatted_address = $6
+             WHERE id = $7`,
+            [coordinates[0], coordinates[1], city, state, country, formatted_address, proposal.community_id]
+          );
+        }
       }
 
       await client.query("UPDATE proposals SET status = 'executed' WHERE id = $1", [proposalId]);
