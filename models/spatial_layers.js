@@ -1,5 +1,21 @@
 import pool from '../backend/db.js';
 
+const checkPostGIS = async () => {
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'postgis'
+      );
+    `);
+    return result.rows[0].exists;
+  } catch (err) {
+    console.error('PostgreSQL: Failed checking PostGIS extension:', err);
+    return false;
+  }
+};
+
 const createSpatialLayerTables = async () => {
   const locationsTableQuery = `
     CREATE TABLE IF NOT EXISTS locations (
@@ -92,7 +108,19 @@ const createSpatialLayerTables = async () => {
   `;
 
   try {
-    await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
+    // Attempt to enable PostGIS if permissions allow (often restricted on managed DBs)
+    try {
+      await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
+    } catch (extErr) {
+      console.warn('PostgreSQL: Could not ensure PostGIS extension via code (this is normal on some managed providers):', extErr.message);
+    }
+
+    const hasPostGIS = await checkPostGIS();
+    if (!hasPostGIS) {
+      console.warn('PostgreSQL: PostGIS extension not detected. Skipping spatial layer initialization.');
+      return;
+    }
+
     await pool.query(locationsTableQuery);
     await pool.query(spatialEventsTableQuery);
     await pool.query(dispatchRoutesTableQuery);
@@ -102,7 +130,7 @@ const createSpatialLayerTables = async () => {
     console.log('PostgreSQL: Spatial layer infrastructure initialized successfully.');
   } catch (err) {
     console.error('PostgreSQL: Error initializing spatial layer infrastructure:', err);
-    throw err;
+    // Graceful degradation: we don't rethrow here to allow the rest of the app to start
   }
 };
 

@@ -427,14 +427,43 @@ async function initializeDatabase() {
     await createStorySummariesTable();
     await createNeedsTable(); // Ensure needs table exists before dependent tables
     await createCivicKernelTables();
-    await createSpatialLayerTables();
+
+    // Optional Subsystems - Wrapped in try/catch for resilience
+    try {
+      await createSpatialLayerTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Spatial Layer initialization failed:', err.message);
+    }
+
     await createSystemStateTable();
     await createGovernanceTables();
-    await createDiscordConfigTable();
+
+    try {
+      await createDiscordConfigTable();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Discord Config initialization failed:', err.message);
+    }
+
     await createNeedCommentsTable();
-    await createAgentTables();
-    await createNarrativeTables();
-    await alterStoryNodesForNarrative();
+
+    try {
+      await createAgentTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Agent Tables initialization failed:', err.message);
+    }
+
+    try {
+      await createNarrativeTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Narrative Tables initialization failed:', err.message);
+    }
+
+    try {
+      await alterStoryNodesForNarrative();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Narrative Story Node alteration failed:', err.message);
+    }
+
     await alterExistingTables();
     
 
