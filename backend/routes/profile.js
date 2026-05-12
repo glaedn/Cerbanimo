@@ -176,6 +176,7 @@ router.get('/locations', async (req, res) => {
         CASE WHEN share_location_publicly THEN username ELSE 'Anonymous Volunteer' END as name,
         ST_AsGeoJSON(location_point) as location,
         share_location_publicly,
+        capacity_status,
         CASE WHEN share_location_publicly THEN city ELSE NULL END as city,
         CASE WHEN share_location_publicly THEN state ELSE NULL END as state,
         CASE WHEN share_location_publicly THEN country ELSE NULL END as country
@@ -188,6 +189,7 @@ router.get('/locations', async (req, res) => {
       name: row.name,
       location: JSON.parse(row.location),
       isPublic: row.share_location_publicly,
+      capacity_status: row.capacity_status,
       city: row.city,
       state: row.state,
       country: row.country
