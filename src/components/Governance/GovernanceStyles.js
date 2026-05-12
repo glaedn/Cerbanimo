@@ -299,4 +299,5 @@ export const ButtonGroup = styled.div`
   gap: 1rem;
   width: 100%;
   align-items: center;
+  justify-content: center;
 `;

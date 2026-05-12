@@ -140,37 +140,16 @@ class GovernanceService {
            [proposal.payload, proposal.community_id]
          );
       } else if (proposal.proposal_type === 'community.location_change') {
-        const { latitude, longitude, city, state, country, formatted_address } = proposal.payload;
-
-        // Get old location for audit trail
-        const oldLocRes = await client.query('SELECT city, state, country, formatted_address, ST_AsGeoJSON(location_point) as location FROM communities WHERE id = $1', [proposal.community_id]);
-        const oldData = oldLocRes.rows[0];
-
-        await client.query(`
-          UPDATE communities
-          SET
-            location_point = CASE
-              WHEN $1::numeric IS NOT NULL AND $2::numeric IS NOT NULL
-              THEN ST_SetSRID(ST_MakePoint($2::numeric, $1::numeric), 4326)::geography
-              ELSE location_point
-            END,
-            city = COALESCE($3, city),
-            state = COALESCE($4, state),
-            country = COALESCE($5, country),
-            formatted_address = COALESCE($6, formatted_address)
-          WHERE id = $7
-        `, [latitude, longitude, city, state, country, formatted_address, proposal.community_id]);
-
-        await this.recordGovernanceEvent(proposal.community_id, 'community.location_updated', {
-          proposalId,
-          oldData: {
-            ...oldData,
-            location: oldData.location ? JSON.parse(oldData.location) : null
-          },
-          newData: {
-            latitude, longitude, city, state, country, formatted_address
-          }
-        });
+        const { coordinates, city, state, country, formatted_address } = proposal.payload;
+        if (coordinates && coordinates.length === 2) {
+          await client.query(
+            `UPDATE communities
+             SET location_point = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+                 city = $3, state = $4, country = $5, formatted_address = $6
+             WHERE id = $7`,
+            [coordinates[0], coordinates[1], city, state, country, formatted_address, proposal.community_id]
+          );
+        }
       }
 
       await client.query("UPDATE proposals SET status = 'executed' WHERE id = $1", [proposalId]);

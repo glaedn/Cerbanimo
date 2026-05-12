@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { AlertTriangle, Users, Target, Activity, ShieldCheck, Zap, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, Users, Target, Activity, ShieldCheck, Zap, ThumbsUp, ThumbsDown, Play } from 'lucide-react';
 import * as S from './GovernanceStyles';
 
-const ProposalCard = ({ proposal, onVote }) => {
+const ProposalCard = ({ proposal, onVote, onExecute }) => {
   const { payload, proposal_type, title, description, status, id, votes = [] } = proposal;
   const { profile } = useUserProfile();
 
@@ -103,6 +103,18 @@ const ProposalCard = ({ proposal, onVote }) => {
               <ThumbsDown size={14} /> {opposeCount > 0 ? `Oppose (${opposeCount})` : 'Oppose'}
             </S.NeonButton>
           </S.ButtonGroup>
+        </div>
+      )}
+
+      {status === 'passed' && onExecute && (
+        <div className="mt-4 pt-4 border-t border-white/5">
+           <S.NeonButton
+              onClick={(e) => { e.stopPropagation(); onExecute(id); }}
+              className="w-full"
+              size="compact"
+            >
+              <Play size={14} /> Execute Evolutionary Change
+            </S.NeonButton>
         </div>
       )}
 

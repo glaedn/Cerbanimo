@@ -15,7 +15,7 @@ import * as S from '../components/Governance/GovernanceStyles';
 const GovernanceChamber = () => {
   const { communityId } = useParams();
   const navigate = useNavigate();
-  const { proposals, activeConstitution, treaties, loading, error, fetchCommunityGovernance, fetchFederationAtlas, castVote, createProposal } = useGovernanceStore();
+  const { proposals, community, activeConstitution, treaties, loading, error, fetchCommunityGovernance, fetchFederationAtlas, castVote, createProposal, executeProposal } = useGovernanceStore();
   const { presence } = useAppStore();
   const { getAccessTokenSilently } = useAuth0();
   const [selectedProposalId, setSelectedProposalId] = useState(null);
@@ -27,7 +27,7 @@ const GovernanceChamber = () => {
   const chamberMetrics = useMemo(() => {
     if (!proposals.length) return { consensus: 0, participation: 0, density: 0 };
     const totalVotes = proposals.reduce((acc, p) => acc + (p.votes?.length || 0), 0);
-    const activeProposals = proposals.filter(p => p.status === 'deliberation' || p.status === 'voting').length;
+    const activeProposals = proposals.filter(p => p.status === 'deliberation' || p.status === 'voting' || p.status === 'passed').length;
 
     // Compute consensus as average of support across proposals
     const supportRatios = proposals
@@ -233,7 +233,21 @@ const GovernanceChamber = () => {
                     onClick={() => setSelectedProposalId(proposal.id)}
                     className={`cursor-pointer transition-all ${selectedProposalId === proposal.id ? 'ring-2 ring-cyan-500/50 rounded-2xl' : ''}`}
                   >
-                    <ProposalCard proposal={proposal} onVote={handleVote} />
+        <ProposalCard
+          proposal={proposal}
+          onVote={handleVote}
+          onExecute={async (pid) => {
+            const loadingToast = toast.loading('Executing proposal across civic infrastructure...');
+            try {
+              const token = await getAccessTokenSilently();
+              await executeProposal(pid, token);
+              await refreshData();
+              toast.success('Proposal executed successfully!', { id: loadingToast });
+            } catch (err) {
+              toast.error('Execution failed: ' + err.message, { id: loadingToast });
+            }
+          }}
+        />
                   </div>
                 ))
               )}
@@ -283,8 +297,15 @@ const GovernanceChamber = () => {
 
               <div className="flex flex-col gap-4 mb-8">
                  {[
-                   { label: 'Voting Model', value: activeConstitution?.content?.governance?.votingModel || 'Direct' },
-                   { label: 'Quorum', value: activeConstitution?.content?.governance?.quorum ? `${activeConstitution.content.governance.quorum}%` : 'N/A' },
+                   { label: 'Voting Model', value: community?.governance_config?.votingModel || activeConstitution?.content?.governance?.votingModel || 'Direct' },
+                   {
+                     label: 'Quorum',
+                     value: (() => {
+                        const q = community?.governance_config?.quorum || activeConstitution?.content?.governance?.quorum;
+                        if (q === undefined || q === null) return 'N/A';
+                        return q < 1 ? `${(q * 100).toFixed(0)}%` : `${q}%`;
+                     })()
+                   },
                    { label: 'Authority', value: 'Distributed' },
                    { label: 'Federation', value: `Active Treaties (${treaties.filter(t => t.community_a === communityId || t.community_b === communityId).length})` }
                  ].map((item, i) => (
