@@ -76,13 +76,13 @@ class ResourceService {
   }
 
   async getResourceInventory(ownerUserId) {
-    const query = 'SELECT * FROM resources WHERE owner_user_id = $1';
+    const query = 'SELECT *, ST_AsGeoJSON(location_point) as location_point FROM resources WHERE owner_user_id = $1';
     const result = await pool.query(query, [ownerUserId]);
     return result.rows;
   }
 
   async getCommunityResources(ownerCommunityId) {
-    const query = 'SELECT * FROM resources WHERE owner_community_id = $1';
+    const query = 'SELECT *, ST_AsGeoJSON(location_point) as location_point FROM resources WHERE owner_community_id = $1';
     const result = await pool.query(query, [ownerCommunityId]);
     return result.rows;
   }
@@ -110,7 +110,7 @@ class ResourceService {
   }
 
   async getAllResources(filters = {}) {
-    let query = 'SELECT * FROM resources WHERE status = \'available\'';
+    let query = 'SELECT *, ST_AsGeoJSON(location_point) as location_point FROM resources WHERE status = \'available\'';
     const params = [];
 
     if (filters.category) {

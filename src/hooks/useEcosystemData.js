@@ -77,9 +77,16 @@ export const useEcosystemData = () => {
       data.needs.forEach(n => {
         let location = null;
         if (n.location_point) {
-            location = typeof n.location_point === 'string' ? JSON.parse(n.location_point) : n.location_point;
+          try {
+            const loc = typeof n.location_point === 'string' ? JSON.parse(n.location_point) : n.location_point;
+            if (loc && loc.coordinates) {
+              location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+            }
+          } catch (e) {
+            console.error('Failed to parse location_point for need:', n.id, e);
+          }
         } else if (n.latitude && n.longitude) {
-            location = { type: 'Point', coordinates: [parseFloat(n.longitude), parseFloat(n.latitude)] };
+          location = { x: parseFloat(n.longitude), y: parseFloat(n.latitude) };
         }
 
         nodes.push({
@@ -88,7 +95,7 @@ export const useEcosystemData = () => {
           name: n.name,
           status: n.urgency_level || 'medium',
           lastActivity: n.updated_at || n.created_at,
-          location: location ? { x: location.coordinates[0], y: location.coordinates[1] } : null,
+          location: location,
           raw: n
         });
         if (n.requestor_community_id) {
@@ -100,8 +107,14 @@ export const useEcosystemData = () => {
       data.projects.forEach(p => {
         let location = null;
         if (p.location_point) {
+          try {
             const loc = typeof p.location_point === 'string' ? JSON.parse(p.location_point) : p.location_point;
-            location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+            if (loc && loc.coordinates) {
+              location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+            }
+          } catch (e) {
+            console.error('Failed to parse location_point for project:', p.id, e);
+          }
         } else if (p.latitude && p.longitude) {
             location = { x: parseFloat(p.longitude), y: parseFloat(p.latitude) };
         }
@@ -151,8 +164,14 @@ export const useEcosystemData = () => {
       data.resources.forEach(r => {
         let location = null;
         if (r.location_point) {
+          try {
             const loc = typeof r.location_point === 'string' ? JSON.parse(r.location_point) : r.location_point;
-            location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+            if (loc && loc.coordinates) {
+              location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+            }
+          } catch (e) {
+            console.error('Failed to parse location_point for resource:', r.id, e);
+          }
         } else if (r.latitude && r.longitude) {
             location = { x: parseFloat(r.longitude), y: parseFloat(r.latitude) };
         }

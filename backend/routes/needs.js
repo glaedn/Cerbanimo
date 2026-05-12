@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 // GET /needs - Get all needs with optional filters
 router.get('/', async (req, res) => {
   const { category, urgency, status } = req.query;
-  let query = 'SELECT * FROM needs WHERE 1=1';
+  let query = 'SELECT *, ST_AsGeoJSON(location_point) as location_point FROM needs WHERE 1=1';
   const queryParams = [];
   let paramIndex = 1;
 
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM needs WHERE requestor_user_id = $1 ORDER BY created_at DESC', [userId]);
+    const result = await pool.query('SELECT *, ST_AsGeoJSON(location_point) as location_point FROM needs WHERE requestor_user_id = $1 ORDER BY created_at DESC', [userId]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching user needs:', err);
@@ -76,7 +76,7 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/community/:communityId', async (req, res) => {
   const { communityId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM needs WHERE requestor_community_id = $1 ORDER BY created_at DESC', [communityId]);
+    const result = await pool.query('SELECT *, ST_AsGeoJSON(location_point) as location_point FROM needs WHERE requestor_community_id = $1 ORDER BY created_at DESC', [communityId]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching community needs:', err);
@@ -88,7 +88,7 @@ router.get('/community/:communityId', async (req, res) => {
 router.get('/:needId', async (req, res) => {
   const { needId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM needs WHERE id = $1', [needId]);
+    const result = await pool.query('SELECT *, ST_AsGeoJSON(location_point) as location_point FROM needs WHERE id = $1', [needId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Need not found' });
     }

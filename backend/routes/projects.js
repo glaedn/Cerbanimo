@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM projects');
+    const result = await pool.query('SELECT *, ST_AsGeoJSON(location_point) as location_point FROM projects');
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching projects:', err);
@@ -36,7 +36,7 @@ router.get('/personal', async (req, res) => {
   
       // Fetch projects, prioritizing those created by the user
       const projectsQuery = `
-        SELECT * FROM projects 
+        SELECT *, ST_AsGeoJSON(location_point) as location_point FROM projects
         WHERE 
           LOWER(name) LIKE LOWER($1) OR 
           LOWER(description) LIKE LOWER($1)
@@ -64,7 +64,7 @@ router.get('/userprojects', async (req, res) => {
 
     const query = `
       SELECT
-        p.*,
+        p.*, ST_AsGeoJSON(p.location_point) as location_point,
         c.name AS community_name,
         COUNT(t.id) as task_count,
         COUNT(t.id) FILTER (WHERE t.status::text ILIKE 'completed') as completed_task_count,
@@ -98,7 +98,7 @@ router.get('/:projectId', async (req, res) => {
   const { projectId } = req.params;
   try {
     const query = `
-      SELECT p.*, c.name AS community_name
+      SELECT p.*, ST_AsGeoJSON(p.location_point) as location_point, c.name AS community_name
       FROM projects p
       LEFT JOIN communities c ON p.community_id = c.id
       WHERE p.id = $1
