@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useGovernanceStore } from '../store/useGovernanceStore';
 import { useAppStore } from '../store/useAppStore';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -29,7 +29,7 @@ const GovernanceChamber = () => {
     const supportRatios = proposals
       .map(p => {
         if (!p.votes || p.votes.length === 0) return 0.5; // Neutral starting point
-        const support = p.votes.filter(v => v.vote_value === 'support').length;
+        const support = p.votes.filter(v => v.vote === true || v.vote?.value === true).length;
         return support / p.votes.length;
       });
     const avgConsensus = supportRatios.reduce((a, b) => a + b, 0) / supportRatios.length;
@@ -191,9 +191,9 @@ const GovernanceChamber = () => {
         </S.GridItem>
 
         {/* Center: Deliberation & Details */}
-        <S.GridItem span={5}>
+        <S.GridItem span={5} className="max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar pr-2">
            {selectedProposalId ? (
-             <div className="flex flex-col gap-8 h-full">
+             <div className="flex flex-col gap-8">
                <S.GlassPanel>
                   <DeliberationSpace proposalId={selectedProposalId} />
                </S.GlassPanel>
@@ -224,7 +224,7 @@ const GovernanceChamber = () => {
         </S.GridItem>
 
         {/* Right Sidebar: Governance Meta */}
-        <S.GridItem span={3}>
+        <S.GridItem span={3} className="max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar pr-2">
            <S.GlassPanel className="mb-8">
               <S.SectionLabel>
                 <Layout size={14} /> Civic Schema
@@ -278,7 +278,7 @@ const GovernanceChamber = () => {
                  </S.MetricItem>
               </div>
 
-              <S.NeonButton variant="outline" className="w-full mt-8" onClick={() => navigate('/delegation-map')}>
+              <S.NeonButton variant="outline" className="w-full mt-8" onClick={() => navigate(`/governance/${communityId}/delegation`)}>
                  <Users size={14} /> EXPLORE DELEGATION
               </S.NeonButton>
            </S.GlassPanel>
@@ -292,7 +292,7 @@ const GovernanceChamber = () => {
                    "{activeConstitution?.content?.identity?.purpose || 'Establishing a resilient framework for mutual aid and resource autonomy.'}"
                  </p>
               </div>
-              <S.NeonButton variant="outline" className="w-full text-[9px]">
+              <S.NeonButton variant="outline" className="w-full text-[9px]" onClick={() => navigate(`/governance/${communityId}/constitution`)}>
                 View Living Constitution
               </S.NeonButton>
            </S.GlassPanel>

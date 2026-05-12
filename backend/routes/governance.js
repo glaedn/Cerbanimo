@@ -22,7 +22,12 @@ router.get('/community/:communityId/proposals', async (req, res) => {
   try {
     const { communityId } = req.params;
     const result = await pool.query(
-      'SELECT * FROM proposals WHERE community_id = $1 ORDER BY created_at DESC',
+      `SELECT p.*, COALESCE(json_agg(v.*) FILTER (WHERE v.id IS NOT NULL), '[]') as votes
+       FROM proposals p
+       LEFT JOIN votes v ON p.id = v.proposal_id
+       WHERE p.community_id = $1
+       GROUP BY p.id
+       ORDER BY p.created_at DESC`,
       [communityId]
     );
     res.json(result.rows);
