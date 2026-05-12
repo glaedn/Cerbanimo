@@ -100,8 +100,10 @@ export const generateProjectIdea = async (skills, interests) => {
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
-      //systemInstruction: systemPrompt,
+      model: "gemma-4-31b-it",
+      generationConfig: {
+        thinkingConfig: { includeThoughts: true },
+      },
     });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
@@ -208,8 +210,10 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
 
  try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
-      //systemInstruction: systemPrompt,
+      model: "gemma-4-31b-it",
+      generationConfig: {
+        thinkingConfig: { includeThoughts: true },
+      },
     });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
@@ -355,7 +359,10 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
+      model: "gemma-4-31b-it",
+      generationConfig: {
+        thinkingConfig: { includeThoughts: true },
+      },
       //systemInstruction: systemPrompt,
     });
     const result = await model.generateContent(userPrompt);
