@@ -13,8 +13,12 @@ import {
   Slider,
   Switch,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import axios from 'axios';
 // import './NeedDeclarationForm.css'; // CSS file can be created for additional styling
 
 const NeedDeclarationForm = ({
@@ -46,6 +50,11 @@ const NeedDeclarationForm = ({
   const [formData, setFormData] = useState(getInitialFormData());
   const [error, setError] = useState(null);
   const [browserLocation, setBrowserLocation] = useState(null);
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   useEffect(() => {
     if (!initialNeedData && navigator.geolocation) {
@@ -84,6 +93,58 @@ const NeedDeclarationForm = ({
       setFormData(getInitialFormData()); // Reset for new form
     }
   }, [initialNeedData]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          text: newValue.displayName || '',
+          latitude: newValue.latitude,
+          longitude: newValue.longitude
+        },
+        // Also update top level lat/lon for consistency if needed
+        latitude: newValue.latitude,
+        longitude: newValue.longitude,
+        location_text: newValue.displayName || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          text: '',
+          latitude: null,
+          longitude: null
+        },
+        latitude: null,
+        longitude: null,
+        location_text: ''
+      }));
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -133,6 +194,12 @@ const NeedDeclarationForm = ({
     if (!payload.latitude && !payload.longitude && browserLocation) {
       payload.latitude = browserLocation.latitude;
       payload.longitude = browserLocation.longitude;
+      // Also sync location.latitude/longitude for consistency
+      payload.location = {
+          ...payload.location,
+          latitude: browserLocation.latitude,
+          longitude: browserLocation.longitude
+      };
     }
 
     if (communityId) {
@@ -246,13 +313,38 @@ const NeedDeclarationForm = ({
           />
         </Grid>
         <Grid item xs={12}>
-          <TextField
-            label="Location Description"
-            name="location.text"
-            value={formData.location?.text || ''}
-            onChange={handleChange}
+          <Autocomplete
             fullWidth
-            variant="outlined"
+            options={locationOptions}
+            getOptionLabel={(option) => option.displayName || ''}
+            loading={isGeocoding}
+            onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+            onChange={handleLocationSelect}
+            value={formData.location_text ? { displayName: formData.location_text } : null}
+            isOptionEqualToValue={(option, value) => option.displayName === value.displayName}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Search Location (City, Address...)"
+                placeholder="Start typing..."
+                variant="outlined"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <LocationOnIcon sx={{ color: 'primary.main', mr: 1 }} />
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
         </Grid>
         <Grid item xs={12}>

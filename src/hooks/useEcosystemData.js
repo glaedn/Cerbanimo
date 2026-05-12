@@ -98,12 +98,21 @@ export const useEcosystemData = () => {
 
       // 3. Process Projects
       data.projects.forEach(p => {
+        let location = null;
+        if (p.location_point) {
+            const loc = typeof p.location_point === 'string' ? JSON.parse(p.location_point) : p.location_point;
+            location = { x: loc.coordinates[0], y: loc.coordinates[1] };
+        } else if (p.latitude && p.longitude) {
+            location = { x: parseFloat(p.longitude), y: parseFloat(p.latitude) };
+        }
+
         nodes.push({
           id: `project-${p.id}`,
           type: 'project',
           name: p.name,
           status: 'active',
           lastActivity: p.updated_at || p.created_at,
+          location: location,
           raw: p
         });
 
