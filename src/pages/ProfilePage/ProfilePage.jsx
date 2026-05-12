@@ -614,8 +614,8 @@ const ProfilePage = () => {
             ? [...updatedProfile.contact_links.slice(0, 2), '', ''].slice(0, 2)
             : ['', ''],
           discord_user_id: updatedProfile.discord_user_id || prev.discord_user_id,
-          latitude: updatedProfile.location?.coordinates[1] || prev.latitude,
-          longitude: updatedProfile.location?.coordinates[0] || prev.longitude,
+          latitude: updatedProfile.location?.coordinates?.[1] || prev.latitude,
+          longitude: updatedProfile.location?.coordinates?.[0] || prev.longitude,
           share_location_publicly: updatedProfile.share_location_publicly || false,
           city: updatedProfile.city || prev.city,
           state: updatedProfile.state || prev.state,

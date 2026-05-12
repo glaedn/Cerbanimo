@@ -14,6 +14,7 @@ import './Dashboard.css';
 const Dashboard = () => {
   const { isAuthenticated, user, getAccessTokenSilently, logout } = useAuth0();
   const viewMode = useAppStore(state => state.viewMode);
+  const setMapState = useAppStore(state => state.setMapState);
 
   const navigate = useNavigate(); // Properly declare navigate using useNavigate
 
@@ -37,7 +38,7 @@ const Dashboard = () => {
           localStorage.setItem('token', token);
 
           // Send user data and token to the backend
-          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/save-user`, {
+          const saveResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/save-user`, {
             sub: user.sub, // Auth0 user ID
             email: user.email,
             name: user.name,
@@ -50,6 +51,16 @@ const Dashboard = () => {
           });
 
           console.log('User saved successfully!');
+
+          // If the response contains location data, center the map
+          const dbUser = saveResponse.data.user;
+          if (dbUser?.location?.coordinates) {
+            setMapState({
+              latitude: dbUser.location.coordinates[1],
+              longitude: dbUser.location.coordinates[0],
+              zoom: 12
+            });
+          }
         }
       } catch (err) {
         console.error('Error saving user token or sending data:', err.response?.data || err.message);
