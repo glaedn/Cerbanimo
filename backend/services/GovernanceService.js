@@ -39,7 +39,7 @@ class GovernanceService {
         DO UPDATE SET vote = EXCLUDED.vote, weight = EXCLUDED.weight, is_delegated = EXCLUDED.is_delegated, created_at = NOW()
         RETURNING *
       `;
-      const result = await client.query(query, [proposalId, userId, JSON.stringify(voteValue), weight, isDelegated]);
+      const result = await client.query(query, [proposalId, userId, voteValue, weight, isDelegated]);
 
       await client.query('COMMIT');
       return result.rows[0];

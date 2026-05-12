@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
-import { AlertTriangle, Users, Target, Activity, ShieldCheck, Zap } from 'lucide-react';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { AlertTriangle, Users, Target, Activity, ShieldCheck, Zap, ThumbsUp, ThumbsDown } from 'lucide-react';
 import * as S from './GovernanceStyles';
 
 const ProposalCard = ({ proposal, onVote }) => {
-  const { payload, proposal_type, title, description, status, id } = proposal;
+  const { payload, proposal_type, title, description, status, id, votes = [] } = proposal;
+  const { profile } = useUserProfile();
+
+  const { userVote, supportCount, opposeCount } = useMemo(() => {
+    const support = votes.filter(v => v.vote === true || v.vote?.value === true).length;
+    const oppose = votes.filter(v => v.vote === false || v.vote?.value === false).length;
+    const myVote = votes.find(v => Number(v.user_id) === Number(profile?.id));
+
+    return {
+      supportCount: support,
+      opposeCount: oppose,
+      userVote: myVote ? (myVote.vote === true || myVote.vote?.value === true) : null
+    };
+  }, [votes, profile?.id]);
 
   const getStatusColor = () => {
     switch (status) {
@@ -69,20 +83,26 @@ const ProposalCard = ({ proposal, onVote }) => {
 
       {/* Action Area */}
       {(status === 'deliberation' || status === 'voting') && (
-        <div className="flex gap-4 mt-4 pt-4 border-t border-white/5">
-          <S.NeonButton
-            onClick={() => onVote(id, true)}
-            className="flex-1"
-          >
-            Support
-          </S.NeonButton>
-          <S.NeonButton
-            onClick={() => onVote(id, false)}
-            color="red"
-            className="flex-1"
-          >
-            Oppose
-          </S.NeonButton>
+        <div className="mt-4 pt-4 border-t border-white/5">
+          <S.ButtonGroup>
+            <S.NeonButton
+              active={userVote === true}
+              size="compact"
+              onClick={(e) => { e.stopPropagation(); onVote(id, true); }}
+              className="flex-1"
+            >
+              <ThumbsUp size={14} /> {supportCount > 0 ? `Support (${supportCount})` : 'Support'}
+            </S.NeonButton>
+            <S.NeonButton
+              active={userVote === false}
+              size="compact"
+              onClick={(e) => { e.stopPropagation(); onVote(id, false); }}
+              color="red"
+              className="flex-1"
+            >
+              <ThumbsDown size={14} /> {opposeCount > 0 ? `Oppose (${opposeCount})` : 'Oppose'}
+            </S.NeonButton>
+          </S.ButtonGroup>
         </div>
       )}
 
