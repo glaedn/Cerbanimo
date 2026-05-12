@@ -282,7 +282,7 @@ const ProfilePage = () => {
         setIsGeocoding(true);
         try {
           const token = await getAccessTokenSilently();
-          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial_ops/search-location?q=${locationSearch}`, {
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setLocationOptions(response.data);
