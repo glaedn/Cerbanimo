@@ -4,12 +4,12 @@ import theme from '../../styles/theme';
 
 export const PageContainer = styled.div`
   background-color: #050510;
-  min-height: 100vh;
+  height: calc(100vh - 50px);
   color: #ffffff;
   font-family: 'Inter', sans-serif;
   padding: 2rem;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
 `;
 
 export const Header = styled.header`
@@ -114,9 +114,13 @@ export const SectionLabel = styled.div`
 `;
 
 export const NeonButton = styled.button`
-  background: ${props => props.variant === 'outline' ? 'transparent' : '#0891b2'};
-  color: ${props => props.variant === 'outline' ? theme.tokens.colors.brand.primary : 'white'};
-  border: ${props => props.variant === 'outline' ? `1px solid rgba(0, 243, 255, 0.3)` : 'none'};
+  background: ${props => {
+    if (props.variant === 'outline') return 'transparent';
+    if (props.color === 'red') return theme.tokens.colors.status.urgency.critical;
+    return '#0891b2';
+  }};
+  color: ${props => props.variant === 'outline' ? (props.color === 'red' ? theme.tokens.colors.status.urgency.critical : theme.tokens.colors.brand.primary) : 'white'};
+  border: ${props => props.variant === 'outline' ? `1px solid ${props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(0, 243, 255, 0.3)'}` : 'none'};
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
   font-family: 'Orbitron', sans-serif;
@@ -126,17 +130,28 @@ export const NeonButton = styled.button`
   letter-spacing: 0.1em;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: ${props => props.variant === 'outline' ? 'none' : '0 0 20px rgba(8, 145, 178, 0.3)'};
+  box-shadow: ${props => {
+    if (props.variant === 'outline') return 'none';
+    const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(8, 145, 178, 0.3)';
+    return `0 0 20px ${glowColor}`;
+  }};
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
 
   &:hover {
-    background: ${props => props.variant === 'outline' ? 'rgba(0, 243, 255, 0.1)' : '#06b6d4'};
-    box-shadow: ${props => props.variant === 'outline' ? '0 0 15px rgba(0, 243, 255, 0.2)' : '0 0 30px rgba(8, 145, 178, 0.5)'};
+    background: ${props => {
+      if (props.variant === 'outline') return props.color === 'red' ? 'rgba(255, 65, 54, 0.1)' : 'rgba(0, 243, 255, 0.1)';
+      return props.color === 'red' ? '#cc332a' : '#06b6d4';
+    }};
+    box-shadow: ${props => {
+      if (props.variant === 'outline') return `0 0 15px ${props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(0, 243, 255, 0.2)'}`;
+      const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(8, 145, 178, 0.5)';
+      return `0 0 30px ${glowColor}`;
+    }};
     transform: scale(1.02);
-    border-color: ${theme.tokens.colors.brand.primary};
+    border-color: ${props => props.color === 'red' ? theme.tokens.colors.status.urgency.critical : theme.tokens.colors.brand.primary};
   }
 
   &:disabled {

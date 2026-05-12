@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
 import { AlertTriangle, Users, Target, Activity, ShieldCheck, Zap } from 'lucide-react';
+import * as S from './GovernanceStyles';
 
 const ProposalCard = ({ proposal, onVote }) => {
   const { payload, proposal_type, title, description, status, id } = proposal;
@@ -68,19 +69,20 @@ const ProposalCard = ({ proposal, onVote }) => {
 
       {/* Action Area */}
       {(status === 'deliberation' || status === 'voting') && (
-        <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
-          <button
+        <div className="flex gap-4 mt-4 pt-4 border-t border-white/5">
+          <S.NeonButton
             onClick={() => onVote(id, true)}
-            className="flex-1 py-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 border border-cyan-500/50 rounded text-xs font-bold transition uppercase"
+            className="flex-1"
           >
             Support
-          </button>
-          <button
+          </S.NeonButton>
+          <S.NeonButton
             onClick={() => onVote(id, false)}
-            className="flex-1 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-500/50 rounded text-xs font-bold transition uppercase"
+            color="red"
+            className="flex-1"
           >
             Oppose
-          </button>
+          </S.NeonButton>
         </div>
       )}
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useGovernanceStore } from '../../store/useGovernanceStore';
 import { MessageSquare, Plus, ThumbsUp, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
+import * as S from './GovernanceStyles';
 
 const DeliberationSpace = ({ proposalId }) => {
   const d3Container = useRef(null);
@@ -93,9 +94,9 @@ const DeliberationSpace = ({ proposalId }) => {
         {tree.nodes.length === 0 ? (
           <div className="h-[300px] flex flex-col items-center justify-center text-center p-6">
             <p className="text-gray-500 text-sm italic mb-4">No structured reasoning has been mapped for this proposal yet.</p>
-            <button className="px-4 py-2 border border-cyan-500/50 text-cyan-400 rounded text-xs font-bold hover:bg-cyan-500/10 transition uppercase">
+            <S.NeonButton variant="outline" className="px-6">
               Begin Deliberation
-            </button>
+            </S.NeonButton>
           </div>
         ) : (
           <div ref={d3Container} className="h-[300px]"></div>
