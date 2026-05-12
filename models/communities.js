@@ -1,6 +1,24 @@
 import pool from '../backend/db.js';
 
+const checkPostGIS = async () => {
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'postgis'
+      );
+    `);
+    return result.rows[0].exists;
+  } catch (err) {
+    console.error('PostgreSQL: Failed checking PostGIS extension:', err);
+    return false;
+  }
+};
+
 const createCommunitiesTable = async () => {
+    const hasPostGIS = await checkPostGIS();
+
     const communityTableQuery = `
       CREATE TABLE IF NOT EXISTS communities (
         id SERIAL PRIMARY KEY,
@@ -13,7 +31,7 @@ const createCommunitiesTable = async () => {
         vote_delegations JSONB DEFAULT '{}'::jsonb,
         cross_community_enabled BOOLEAN DEFAULT FALSE,
         discord_guild_id VARCHAR(50),
-        location_point GEOGRAPHY(Point, 4326),
+        ${hasPostGIS ? 'location_point GEOGRAPHY(Point, 4326),' : ''}
         city VARCHAR(100),
         state VARCHAR(100),
         region VARCHAR(100),

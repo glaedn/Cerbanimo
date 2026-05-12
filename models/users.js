@@ -1,7 +1,25 @@
 import pool from '../backend/db.js';
 
+const checkPostGIS = async () => {
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'postgis'
+      );
+    `);
+    return result.rows[0].exists;
+  } catch (err) {
+    console.error('PostgreSQL: Failed checking PostGIS extension:', err);
+    return false;
+  }
+};
+
 // User schema with tasks relationship
 const createUserTable = async () => {
+  const hasPostGIS = await checkPostGIS();
+
   const userTableQuery = `
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -21,7 +39,7 @@ const createUserTable = async () => {
       alpha BOOLEAN DEFAULT FALSE,
       capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
       discord_user_id VARCHAR(50),
-      location_point GEOGRAPHY(Point, 4326),
+      ${hasPostGIS ? 'location_point GEOGRAPHY(Point, 4326),' : ''}
       city VARCHAR(100),
       state VARCHAR(100),
       region VARCHAR(100),
