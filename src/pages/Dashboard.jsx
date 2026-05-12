@@ -54,11 +54,18 @@ const Dashboard = () => {
 
           // If the response contains location data, center the map
           const dbUser = saveResponse.data.user;
-          if (dbUser?.location?.coordinates) {
+          if (dbUser?.location?.coordinates &&
+              dbUser.location.coordinates[1] !== 0 &&
+              dbUser.location.coordinates[0] !== 0) {
+
+            console.log('Centering map on user location:', dbUser.location.coordinates);
+
             setMapState({
-              latitude: dbUser.location.coordinates[1],
-              longitude: dbUser.location.coordinates[0],
-              zoom: 12
+              latitude: parseFloat(dbUser.location.coordinates[1]),
+              longitude: parseFloat(dbUser.location.coordinates[0]),
+              zoom: 12,
+              pitch: 45,
+              bearing: 0
             });
           }
         }

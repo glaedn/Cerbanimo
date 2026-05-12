@@ -45,6 +45,22 @@ const NeedDeclarationForm = ({
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [error, setError] = useState(null);
+  const [browserLocation, setBrowserLocation] = useState(null);
+
+  useEffect(() => {
+    if (!initialNeedData && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setBrowserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (err) => console.warn('Browser location access denied or failed:', err),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, [initialNeedData]);
 
   useEffect(() => {
     if (initialNeedData) {
@@ -112,6 +128,12 @@ const NeedDeclarationForm = ({
     }
 
     const payload = { ...formData };
+
+    // Inject browser location if no specific location coordinates provided and browser location is available
+    if (!payload.latitude && !payload.longitude && browserLocation) {
+      payload.latitude = browserLocation.latitude;
+      payload.longitude = browserLocation.longitude;
+    }
 
     if (communityId) {
       payload.requestor_community_id = communityId;

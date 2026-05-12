@@ -74,18 +74,40 @@ class NeedService {
       throw new Error('Either requestor_user_id or requestor_community_id must be provided.');
     }
 
+    // Spatial Fallback Logic
+    let finalLat = latitude;
+    let finalLon = longitude;
+
+    if (!finalLat || !finalLon) {
+      if (requestor_user_id) {
+        const userRes = await pool.query(
+          'SELECT ST_Y(location_point::geometry) as lat, ST_X(location_point::geometry) as lon FROM users WHERE id = $1',
+          [requestor_user_id]
+        );
+        if (userRes.rows.length > 0 && userRes.rows[0].lat && userRes.rows[0].lon) {
+          finalLat = userRes.rows[0].lat;
+          finalLon = userRes.rows[0].lon;
+        }
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO needs (name, description, category, quantity_needed, urgency,
                           urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
                           requestor_user_id, requestor_community_id, required_before_date,
-                          location_text, latitude, longitude, status, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                          location_text, latitude, longitude, status, source, location_point)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+               CASE
+                 WHEN $15::numeric IS NOT NULL AND $16::numeric IS NOT NULL
+                 THEN ST_SetSRID(ST_MakePoint($16::numeric, $15::numeric), 4326)::geography
+                 ELSE NULL
+               END)
        RETURNING *`,
       [
         name, description, category, quantity_needed, urgency,
         urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
         requestor_user_id, requestor_community_id, required_before_date,
-        location_text, latitude, longitude, status, source
+        location_text, finalLat, finalLon, status, source
       ]
     );
 
