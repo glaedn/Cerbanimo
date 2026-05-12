@@ -92,7 +92,7 @@ const createSpatialLayerTables = async () => {
   `;
 
   try {
-    //await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
+    await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
     await pool.query(locationsTableQuery);
     await pool.query(spatialEventsTableQuery);
     await pool.query(dispatchRoutesTableQuery);

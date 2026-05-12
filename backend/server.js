@@ -70,7 +70,7 @@ import { createDiscordConfigTable } from '../models/discord_config.js';
 import { createNeedCommentsTable } from '../models/need_comments.js';
 import { createNeedsTable } from '../models/needs.js';
 import { createCivicKernelTables } from '../models/civic_kernel.js';
-import { createSpatialLayerTables } from '../models/spatial_layer.js';
+import { createSpatialLayerTables } from '../models/spatial_layers.js';
 import { createSystemStateTable } from '../models/system_state.js';
 import { createGovernanceTables } from '../models/governance.js';
 import { createAgentTables } from '../models/agents.js';
