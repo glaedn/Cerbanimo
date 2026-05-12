@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGovernanceStore } from '../store/useGovernanceStore';
 import { useAppStore } from '../store/useAppStore';
 import { useAuth0 } from '@auth0/auth0-react';
+import toast from 'react-hot-toast';
 import ProposalCard from '../components/Governance/ProposalCard';
 import DeliberationSpace from '../components/Governance/DeliberationSpace';
 import { Autocomplete, TextField, CircularProgress } from '@mui/material';
@@ -102,10 +103,10 @@ const GovernanceChamber = () => {
   const refreshData = async () => {
     try {
       const token = await getAccessTokenSilently();
-      fetchCommunityGovernance(communityId, token);
+      await fetchCommunityGovernance(communityId, token);
     } catch (err) {
       console.error("Auth failed:", err);
-      fetchCommunityGovernance(communityId);
+      await fetchCommunityGovernance(communityId);
     }
   };
 
@@ -148,12 +149,14 @@ const GovernanceChamber = () => {
   const selectedProposal = proposals.find(p => p.id === selectedProposalId);
 
   const handleVote = async (proposalId, voteValue) => {
+    const loadingToast = toast.loading('Synchronizing vote with civic ledger...');
     try {
       const token = await getAccessTokenSilently();
       await castVote(proposalId, voteValue, token);
-      refreshData();
+      await refreshData();
+      toast.success(`Vote cast successfully: ${voteValue ? 'SUPPORT' : 'OPPOSE'}`, { id: loadingToast });
     } catch (err) {
-      alert('Error casting vote: ' + err.message);
+      toast.error('Civic link failed: ' + err.message, { id: loadingToast });
     }
   };
 

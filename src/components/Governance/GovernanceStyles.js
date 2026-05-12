@@ -120,17 +120,25 @@ export const NeonButton = styled.button`
     return '#0891b2';
   }};
   color: ${props => props.variant === 'outline' ? (props.color === 'red' ? theme.tokens.colors.status.urgency.critical : theme.tokens.colors.brand.primary) : 'white'};
-  border: ${props => props.variant === 'outline' ? `1px solid ${props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(0, 243, 255, 0.3)'}` : 'none'};
-  padding: 0.75rem 1.5rem;
+  border: ${props => {
+    if (props.active) return `2px solid ${props.color === 'red' ? '#fff' : theme.tokens.colors.brand.primary}`;
+    return props.variant === 'outline' ? `1px solid ${props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(0, 243, 255, 0.3)'}` : 'none';
+  }};
+  padding: ${props => props.size === 'compact' ? '0.5rem 1rem' : '0.75rem 1.5rem'};
   border-radius: 0.75rem;
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.7rem;
+  font-size: ${props => props.size === 'compact' ? '0.6rem' : '0.7rem'};
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s;
   box-shadow: ${props => {
+    if (props.active) {
+       const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : theme.tokens.colors.brand.primary;
+       return `0 0 25px ${glowColor}`;
+    }
     if (props.variant === 'outline') return 'none';
     const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(8, 145, 178, 0.3)';
     return `0 0 20px ${glowColor}`;
@@ -146,6 +154,10 @@ export const NeonButton = styled.button`
       return props.color === 'red' ? '#cc332a' : '#06b6d4';
     }};
     box-shadow: ${props => {
+      if (props.active) {
+        const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : theme.tokens.colors.brand.primary;
+        return `0 0 35px ${glowColor}`;
+      }
       if (props.variant === 'outline') return `0 0 15px ${props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(0, 243, 255, 0.2)'}`;
       const glowColor = props.color === 'red' ? theme.tokens.colors.status.urgency.critical : 'rgba(8, 145, 178, 0.5)';
       return `0 0 30px ${glowColor}`;
@@ -280,4 +292,11 @@ export const TextArea = styled.textarea`
   color: white;
   font-family: 'Inter', sans-serif;
   min-height: 120px;
+`;
+
+export const ButtonGroup = styled.div`
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  align-items: center;
 `;
