@@ -161,6 +161,19 @@ const alterExistingTables = async () => {
     await pool.query(alterProjectsQuery);
     await pool.query(alterCommunitiesQuery);
     await pool.query(alterUsersQuery);
+
+    // Update token precision and add blockchain fields
+    await pool.query(`
+      ALTER TABLE users
+      ALTER COLUMN cotokens TYPE NUMERIC(36,18);
+
+      ALTER TABLE token_transactions
+      ALTER COLUMN amount TYPE NUMERIC(36,18),
+      ADD COLUMN IF NOT EXISTS tx_hash TEXT,
+      ADD COLUMN IF NOT EXISTS chain TEXT,
+      ADD COLUMN IF NOT EXISTS on_chain_status VARCHAR(50);
+    `);
+
     await pool.query(alterStorySummariesQuery);
     await pool.query(alterImpactNodesQuery);
     await pool.query(alterNeedsQuery);

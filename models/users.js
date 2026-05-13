@@ -31,7 +31,7 @@ const createUserTable = async () => {
       skills JSONB,
       interests JSONB,
       badges JSONB,
-      cotokens NUMERIC DEFAULT 0,
+      cotokens NUMERIC(36,18) DEFAULT 0,
       experience JSONB DEFAULT '[]'::jsonb,
       token_ledger JSONB DEFAULT '[]'::jsonb,
       roles TEXT[] DEFAULT '{"user"}'::text[],

@@ -1,14 +1,15 @@
 // backend/services/tokenService.js
+import pool from '../db.js';
 
-const awardTokens = async (dbPool, receiverId, amount, reason, senderId = null) => {
+const awardTokensInternal = async (dbPool, receiverId, amount, reason, senderId = null) => {
   if (amount <= 0) {
     throw new Error('Token award amount must be positive.');
   }
   if (!receiverId) {
     throw new Error('Receiver ID is required.');
   }
-  if (typeof amount !== 'number' || isNaN(amount)) {
-    throw new Error('Token award amount must be a valid number.');
+  if (typeof amount !== 'number' && typeof amount !== 'string') {
+    throw new Error('Token award amount must be a valid number or string.');
   }
 
 
@@ -42,7 +43,7 @@ const awardTokens = async (dbPool, receiverId, amount, reason, senderId = null) 
         await client.query('ROLLBACK');
         throw new Error(`Sender user with ID ${senderId} not found. Transaction rolled back.`);
       }
-      if (senderBalanceCheck.rows[0].cotokens < amount) {
+      if (parseFloat(senderBalanceCheck.rows[0].cotokens) < parseFloat(amount)) {
         await client.query('ROLLBACK');
         throw new Error(`Sender user with ID ${senderId} has insufficient tokens (${senderBalanceCheck.rows[0].cotokens} available, ${amount} required). Transaction rolled back.`);
       }
@@ -54,7 +55,7 @@ const awardTokens = async (dbPool, receiverId, amount, reason, senderId = null) 
         await client.query('ROLLBACK'); 
         throw new Error(`Sender user with ID ${senderId} not found during balance update, despite initial check. Transaction rolled back.`);
       }
-      if (senderUpdateResult.rows[0].cotokens < 0) {
+      if (parseFloat(senderUpdateResult.rows[0].cotokens) < 0) {
          await client.query('ROLLBACK');
          throw new Error(`Sender's token balance went negative for user ID ${senderId}, which should not happen. Transaction rolled back.`);
       }
@@ -84,7 +85,7 @@ const awardTokens = async (dbPool, receiverId, amount, reason, senderId = null) 
   }
 };
 
-const deductTokens = async (dbPool, userId, amount, reason) => {
+const deductTokensInternal = async (dbPool, userId, amount, reason) => {
   if (amount <= 0) {
     throw new Error('Token deduction amount must be positive.');
   }
@@ -106,16 +107,15 @@ const deductTokens = async (dbPool, userId, amount, reason) => {
     }
 
     const currentBalance = balanceCheck.rows[0].cotokens;
-    if (currentBalance < amount) {
+    if (parseFloat(currentBalance) < parseFloat(amount)) {
       throw new Error(`Insufficient tokens (Available: ${currentBalance}, Required: ${amount})`);
     }
 
-    const transactionQuery = `
-      INSERT INTO token_transactions (sender_id, amount, reason, transaction_date)
-      VALUES ($1, $2, $3, NOW())
-      RETURNING id;
-    `;
-    const transactionResult = await client.query(transactionQuery, [userId, amount, reason]);
+    // Record the transaction. receiver_id is NULL for deductions (burns).
+    const transactionResult = await client.query(
+        'INSERT INTO token_transactions (sender_id, amount, receiver_id, reason, transaction_date) VALUES ($1, $2, NULL, $3, NOW()) RETURNING id',
+        [userId, amount, reason]
+    );
 
     const updateQuery = 'UPDATE users SET cotokens = cotokens - $1 WHERE id = $2 RETURNING cotokens;';
     const updateResult = await client.query(updateQuery, [amount, userId]);
@@ -136,4 +136,26 @@ const deductTokens = async (dbPool, userId, amount, reason) => {
   }
 };
 
-export { awardTokens, deductTokens };
+const awardTokens = async (dbPool, receiverId, amount, reason, senderId = null) => {
+    const { default: TokenBridgeService } = await import('./TokenBridgeService.js');
+    return TokenBridgeService.routeTransaction({
+        senderId,
+        receiverId,
+        amount,
+        type: senderId ? 'user_to_user' : 'system_to_user',
+        reason
+    });
+};
+
+const deductTokens = async (dbPool, userId, amount, reason) => {
+    const { default: TokenBridgeService } = await import('./TokenBridgeService.js');
+    return TokenBridgeService.routeTransaction({
+        senderId: userId,
+        receiverId: null, // burn/deduct
+        amount,
+        type: 'user_to_system',
+        reason
+    });
+};
+
+export { awardTokens, deductTokens, awardTokensInternal, deductTokensInternal };

@@ -88,6 +88,7 @@ import { createImpactReceiptTables } from '../models/impact_receipts.js';
 import { createNeedFulfillmentTable } from '../models/need_fulfillments.js';
 import { createAgentTables } from '../models/agents.js';
 import { createNarrativeTables } from '../models/narrative_v2.js';
+import { createWalletTable } from '../models/wallets.js';
 import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
@@ -482,6 +483,7 @@ async function initializeDatabase() {
     await createSolidarityTables();
     await createImpactReceiptTables();
     await createNeedFulfillmentTable();
+    await createWalletTable();
 
     try {
       await createDiscordConfigTable();

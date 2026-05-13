@@ -49,10 +49,13 @@ describe('TreasuryService', () => {
     };
     pool.connect.mockResolvedValue(mockClient);
 
-    pool.query.mockResolvedValueOnce({ rows: [{ id: 1, community_id: 1 }] }); // getTreasury
+    // Initial getTreasury call uses pool.query if externalClient is not provided
+    // but wait, TreasuryService.depositToTreasury calls this.getTreasury(communityId, client, true)
+    // where client is the newly connected mockClient.
 
     mockClient.query
       .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rows: [{ id: 1, community_id: 1 }] }) // getTreasury (check)
       .mockResolvedValueOnce({ rows: [] }) // UPDATE
       .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // recordTransaction
       .mockResolvedValueOnce({ rows: [] }); // COMMIT

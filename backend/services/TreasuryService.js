@@ -110,16 +110,15 @@ class TreasuryService {
         }, client);
 
       } else if (toType === 'user') {
-        await client.query(
-          'UPDATE users SET cotokens = cotokens + $1 WHERE id = $2',
-          [amount, toId]
-        );
-        // Record in token_transactions as well for user history
-        await client.query(
-          `INSERT INTO token_transactions (sender_id, receiver_id, amount, reason, transaction_date)
-           VALUES (NULL, $1, $2, $3, NOW())`,
-          [toId, amount, `Treasury payout: ${purpose}`]
-        );
+        const { default: TokenBridgeService } = await import('./TokenBridgeService.js');
+        await TokenBridgeService.routeTransaction({
+          senderId: fromCommunityId,
+          receiverId: toId,
+          amount: amount,
+          type: 'community_to_user_internal',
+          reason: `Treasury payout: ${purpose}`,
+          metadata: { ...metadata, createdBy: metadata.createdBy }
+        }, client);
       }
 
       if (isInternalTransaction) await client.query('COMMIT');
