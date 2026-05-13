@@ -33,14 +33,18 @@ class NeedAgent extends BaseAgent {
 
     return {
       needs: needsWithSpatialContext,
-      memory: this.instance?.memory || {}
+      memory: {
+        ...this.instance?.memory,
+        processedNeedIds: this.instance?.memory?.processedNeedIds || []
+      }
     };
   }
 
   async runReasoning(context) {
-    if (context.needs.length === 0) return null;
+    const freshNeeds = context.needs.filter(n => !context.memory.processedNeedIds.includes(n.id));
+    if (freshNeeds.length === 0) return null;
 
-    const signals = context.needs.map(n => ({
+    const signals = freshNeeds.map(n => ({
       id: n.id,
       name: n.name,
       urgency: n.urgency,
@@ -65,7 +69,9 @@ class NeedAgent extends BaseAgent {
     };
   }
 
-  async executeActions(actions) {
+  async executeActions(actions, context) {
+    const actedNeedIds = [];
+
     for (const action of actions) {
       if (action.type === 'recommendation') {
         const rec = action.payload;
@@ -81,8 +87,18 @@ class NeedAgent extends BaseAgent {
           needId: rec.targetId,
           recommendation: rec.recommendationType
         }, rec.confidence);
+
+        if (rec.targetId) {
+          actedNeedIds.push(rec.targetId);
+        }
       }
     }
+
+    // Update memory
+    context.memory.processedNeedIds = [
+      ...context.memory.processedNeedIds,
+      ...actedNeedIds
+    ].slice(-100); // Keep last 100
   }
 }
 

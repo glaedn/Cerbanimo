@@ -10,7 +10,7 @@ class UserGrowthAgent extends BaseAgent {
   async loadContext() {
     // Look for users who have completed multiple tasks recently but haven't expanded their skill set or taken on mentors
     const activeUsers = await pool.query(`
-      SELECT u.id, u.email,
+      SELECT u.id,
              COUNT(t.id) as tasks_completed,
              array_agg(DISTINCT t.impact_label) as skills_used
       FROM users u

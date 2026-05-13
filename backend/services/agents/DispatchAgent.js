@@ -1,7 +1,6 @@
 import BaseAgent from './BaseAgent.js';
 import pool from '../../db.js';
 import AIGatewayService from '../AIGatewayService.js';
-import LogisticsService from '../LogisticsService.js';
 
 class DispatchAgent extends BaseAgent {
   constructor(scope) {
