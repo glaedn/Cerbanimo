@@ -4,6 +4,7 @@ import path from 'path';
 import pool from '../db.js';
 import { generateProjectIdea, autoGenerateTasks, analyzeResume } from '../services/taskGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
+import GuildService from '../services/GuildService.js';
 import { processInterests } from '../services/interestService.js';
 
 const router = express.Router();
@@ -43,7 +44,7 @@ const upload = multer({ storage });
 // POST /initiate route for onboarding
 router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
   const auth0_id = req.auth.payload.sub;
-  const { username, resumeText } = req.body;
+  const { username, resumeText, primeDirective } = req.body;
   let { skills, interests } = req.body; // These might be JSON strings
 
   // Parse skills and interests if they are strings
@@ -186,23 +187,22 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
       const skillNames = processedSkills.map(s => s.name);
       const interestNames = processedInterests.map(i => i.name);
       
-      const projectIdea = await generateProjectIdea(skillNames, interestNames);
+      const projectIdea = await generateProjectIdea(skillNames, interestNames, primeDirective);
       generatedProjectName = projectIdea.Name;
       const generatedProjectDescription = projectIdea.Description;
 
-      // 7. Create Project
+      // 7. Generate Tasks for the New Project
+      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
+      const tasksToInsert = generatedTasksData.tasks;
+      const llmProject = (generatedTasksData.projects && generatedTasksData.projects[0]) || {};
+      const projectDueDate = llmProject.due_date || null;
+
+      // 8. Create Project
       const projectInsertResult = await client.query(
-        'INSERT INTO projects (name, description, creator_id, tags) VALUES ($1, $2, $3, $4) RETURNING id',
-        [generatedProjectName, generatedProjectDescription, internalUserId, []] // Empty tags array for now
+        'INSERT INTO projects (name, description, creator_id, tags, due_date) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+        [generatedProjectName, generatedProjectDescription, internalUserId, [], projectDueDate]
       );
       newProjectId = projectInsertResult.rows[0].id;
-
-      // 8. Generate and Save Tasks for the New Project
-      // The autoGenerateTasks function from taskGenerator.js expects project name, description, tags (can be empty), and creator_id.
-      // It returns an object like { projects: [...], tasks: [...] }
-      // We are interested in the tasks part.
-      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
-      const tasksToInsert = generatedTasksData.tasks; // Assuming this structure based on taskGenerator.js
 
       if (tasksToInsert && tasksToInsert.length > 0) {
         const llmToDbIdMap = {};
@@ -212,11 +212,11 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
           // Ensure default status and reward tokens if not provided by LLM
           const status = task.status || 'inactive-unassigned';
           const reward_tokens = task.reward_tokens || 50; // Default reward tokens
-          const dependencies = task.dependencies || []; // Default to empty array
+          const skillId = await GuildService.getOrCreateSkill(task.skill_name);
 
           const taskInsertResult = await client.query(
-            'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
-            [newProjectId, task.name, task.description, task.skill_id, task.skill_level || 0, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
+            'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, creator_id, start_date, due_date, is_local) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id',
+            [newProjectId, task.name, task.description, skillId, task.skill_level || 0, status, [], reward_tokens, internalUserId, task.start_date || null, task.due_date || null, task.is_local || false]
           );
           const dbId = taskInsertResult.rows[0].id;
           task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues

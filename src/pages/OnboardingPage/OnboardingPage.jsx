@@ -45,6 +45,7 @@ const OnboardingPage = () => {
   const [skillsOptions, setSkillsOptions] = useState([]);
   const [interestsOptions, setInterestsOptions] = useState([]);
   const [resumeText, setResumeText] = useState('');
+  const [primeDirective, setPrimeDirective] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -236,6 +237,7 @@ const OnboardingPage = () => {
     formData.append('longitude', locationData.longitude);
     formData.append('share_location_publicly', locationData.share_location_publicly);
     formData.append('resumeText', resumeText);
+    formData.append('primeDirective', primeDirective);
 
     if (profilePicture) {
       formData.append('profilePicture', profilePicture);
@@ -323,6 +325,20 @@ const OnboardingPage = () => {
           value={resumeText}
           onChange={(e) => setResumeText(e.target.value)}
           placeholder="Paste your text-based resume here to jumpstart your skills..."
+          InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
+          inputProps={{ style: { color: theme.colors.textPrimary } }}
+          sx={{ mb: 3 }}
+        />
+
+        <TextField
+          label="Prime Directive (Motivations & Goals)"
+          variant="outlined"
+          fullWidth
+          multiline
+          rows={3}
+          value={primeDirective}
+          onChange={(e) => setPrimeDirective(e.target.value)}
+          placeholder="What drives you? What are your goals in this ecosystem?"
           InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
           inputProps={{ style: { color: theme.colors.textPrimary } }}
           sx={{ mb: 3 }}

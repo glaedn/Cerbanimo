@@ -80,7 +80,7 @@ export const normalizeTaskImpactWeights = (tasks = []) => {
   }));
 };
 
-export const generateProjectIdea = async (skills, interests) => {
+export const generateProjectIdea = async (skills, interests, primeDirective = "") => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
 
@@ -88,6 +88,7 @@ export const generateProjectIdea = async (skills, interests) => {
     Context Parameters Provided:
     Skills: ${skillsString}
     Interests: ${interestsString}
+    Prime Directive (User motivations/goals): ${primeDirective}
 
     Instructions for AI Generation:
     Using the provided skills and interests, generate a unique project name that reflects this synergy.
@@ -290,7 +291,7 @@ Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
 - Maintain **relationships**: 
   - "project_id" in tasks must match the corresponding project's new ID.
-  - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit.
+  - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit. This is REQUIRED for every task.
   - "dependencies" in tasks must reference the correct **new task IDs**.
 - **Timeline Awareness**: Distribute tasks across time so the project completes by the due date.
   - Assign each task a logical start_date and due_date based on dependencies.
