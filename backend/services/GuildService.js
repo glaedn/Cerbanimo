@@ -31,17 +31,6 @@ class GuildService {
         'UPDATE guilds SET member_count = member_count + 1 WHERE id = $1',
         [guildId]
       );
-
-      // Emit community.joined event (guild version)
-      const CivicEventService = (await import('./CivicEventService.js')).default;
-      CivicEventService.recordEvent({
-        eventType: 'community.joined',
-        actorId: userId,
-        entityType: 'guild',
-        entityId: guildId,
-        payload: { role, xp },
-        correlationId: `guild:${guildId}`
-      }).catch(err => console.error('Failed to record guild.joined event:', err));
     }
 
     return result.rows[0];
