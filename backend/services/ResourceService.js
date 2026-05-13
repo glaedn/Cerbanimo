@@ -1,13 +1,17 @@
 import pool from '../db.js';
 
 class ResourceService {
-  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '', resourceType = null, availabilitySchedule = null, conditions = null) {
+  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '', resourceType = null, availabilitySchedule = null, conditions = null, latitude = null, longitude = null) {
+    const locationPoint = (latitude && longitude) ? `POINT(${longitude} ${latitude})` : null;
     const query = `
-      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text, resource_type, availability_schedule, conditions)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text, resource_type, availability_schedule, conditions, location_point)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($15), 4326)' : 'NULL'})
       RETURNING *;
     `;
-    const result = await pool.query(query, [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions]);
+    const params = [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions];
+    if (locationPoint) params.push(locationPoint);
+
+    const result = await pool.query(query, params);
     const resource = result.rows[0];
 
     // Emit resource.created event
@@ -220,7 +224,8 @@ class ResourceService {
   }
 
   async updateResource(id, data) {
-    const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions } = data;
+    const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude } = data;
+    const locationPoint = (latitude && longitude) ? `POINT(${longitude} ${latitude})` : null;
     const query = `
       UPDATE resources
       SET name = COALESCE($1, name),
@@ -235,11 +240,15 @@ class ResourceService {
           resource_type = COALESCE($10, resource_type),
           availability_schedule = COALESCE($11, availability_schedule),
           conditions = COALESCE($12, conditions),
+          location_point = COALESCE(${locationPoint ? 'ST_SetSRID(ST_GeomFromText($14), 4326)' : 'NULL'}, location_point),
           updated_at = NOW()
       WHERE id = $13
       RETURNING *;
     `;
-    const result = await pool.query(query, [name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, id]);
+    const params = [name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, id];
+    if (locationPoint) params.push(locationPoint);
+
+    const result = await pool.query(query, params);
     if (result.rows.length === 0) throw new Error('Resource not found');
     return result.rows[0];
   }

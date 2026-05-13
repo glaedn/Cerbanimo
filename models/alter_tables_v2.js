@@ -32,7 +32,8 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS resource_requirements TEXT[] DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS related_need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS related_need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS is_local BOOLEAN DEFAULT FALSE;
   `;
 
   const alterProjectsQuery = `
@@ -40,6 +41,7 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS health_score NUMERIC DEFAULT 0,
     ADD COLUMN IF NOT EXISTS closure_reason TEXT,
     ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS location JSONB,
     ${hasPostGIS ? 'ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),' : ''}
     ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE;
   `;
@@ -143,6 +145,8 @@ const alterExistingTables = async () => {
     ALTER TABLE resources
     ADD COLUMN IF NOT EXISTS resource_type TEXT,
     ${hasPostGIS ? 'ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),' : ''}
+    ADD COLUMN IF NOT EXISTS latitude NUMERIC,
+    ADD COLUMN IF NOT EXISTS longitude NUMERIC,
     ADD COLUMN IF NOT EXISTS availability_radius NUMERIC, -- in meters
     ADD COLUMN IF NOT EXISTS availability_schedule JSONB,
     ADD COLUMN IF NOT EXISTS conditions TEXT,

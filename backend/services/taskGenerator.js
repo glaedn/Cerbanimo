@@ -242,6 +242,7 @@ Rules:
 - For every task, include:
   - "impact_label": how this task helps fulfill the need.
   - "impact_weight": integer 0-100.
+  - "is_local": boolean (true if the task requires physical presence/local routing, false otherwise).
 - The sum of all task impact_weight values must equal 100.
 - Reward Scaling: Assign base reward tokens (50-150 range). Note: these will be scaled later.
 `;
@@ -274,7 +275,7 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["${tags}"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "${now}", "due_date": "${project_due_date || ''}", "impact_label": "...", "impact_weight": 50 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "${now}", "due_date": "${project_due_date || ''}", "impact_label": "...", "impact_weight": 50, "is_local": true }
   ]
 }
 `;
@@ -301,6 +302,7 @@ Here are the rules:
 - For every task, include:
   - "impact_label": one concise sentence explaining how that task contributes to the intended outcome.
   - "impact_weight": an integer from 0 to 100 representing that task's share of the total project impact.
+  - "is_local": boolean (true if the task requires physical presence or local routing, false if it can be done globally/remotely).
 - The sum of all task impact_weight values for this project must equal exactly 100.
 
 Example skills you can use or be inspired by:
@@ -336,9 +338,9 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30 },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30, "is_local": false },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45, "is_local": true },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25, "is_local": false }
   ]
 }
 
