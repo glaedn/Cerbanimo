@@ -4,7 +4,7 @@ import NeedExpansionService from './NeedExpansionService.js';
 import StoryEngineService from './StoryEngineService.js';
 import NeedService from './NeedService.js';
 import WorldGraphPopulator from './WorldGraphPopulator.js';
-import { getTemporalClient } from '../workers/temporalWorker.js';
+import AgentOrchestrationService from './AgentOrchestrationService.js';
 
 class EventRouter {
   async handleEvent(event) {
@@ -12,23 +12,8 @@ class EventRouter {
     console.log(`EventRouter: Routing ${eventType}`);
 
     try {
-      // Dispatch to agent workflow for relevant events
-      const agentEvents = [
-        'need.created', 'need.escalated', 'task.completed',
-        'project.created', 'treaty.proposed', 'crisis.triggered',
-        'governance.proposal_created', 'impact.verified', 'bounty.created'
-      ];
-
-      if (agentEvents.includes(eventType)) {
-        const client = await getTemporalClient();
-        if (client) {
-          client.workflow.start('agentEventWorkflow', {
-            taskQueue: 'agent-coordination',
-            workflowId: `agent-event-${event.id || Date.now()}`,
-            args: [event]
-          }).catch(err => console.error('EventRouter: Failed to start agent workflow', err));
-        }
-      }
+      // Dispatch to agent orchestration service
+      await AgentOrchestrationService.runAgentsForEvent(event);
 
       switch (eventType) {
         case 'need.created':
