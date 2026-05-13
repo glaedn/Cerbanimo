@@ -44,6 +44,7 @@ const OnboardingPage = () => {
   const [interests, setInterests] = useState([]);
   const [skillsOptions, setSkillsOptions] = useState([]);
   const [interestsOptions, setInterestsOptions] = useState([]);
+  const [resumeText, setResumeText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -234,6 +235,7 @@ const OnboardingPage = () => {
     formData.append('latitude', locationData.latitude);
     formData.append('longitude', locationData.longitude);
     formData.append('share_location_publicly', locationData.share_location_publicly);
+    formData.append('resumeText', resumeText);
 
     if (profilePicture) {
       formData.append('profilePicture', profilePicture);
@@ -310,6 +312,20 @@ const OnboardingPage = () => {
           InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
           inputProps={{ style: { color: theme.colors.textPrimary } }}
           sx={{ mb: 2 }}
+        />
+
+        <TextField
+          label="Paste resume text or LinkedIn export"
+          variant="outlined"
+          fullWidth
+          multiline
+          rows={4}
+          value={resumeText}
+          onChange={(e) => setResumeText(e.target.value)}
+          placeholder="Paste your text-based resume here to jumpstart your skills..."
+          InputLabelProps={{ style: { color: theme.colors.textSecondary } }}
+          inputProps={{ style: { color: theme.colors.textPrimary } }}
+          sx={{ mb: 3 }}
         />
 
         <Box sx={{ mb: 3 }}>

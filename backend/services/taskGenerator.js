@@ -372,3 +372,32 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
     throw new Error(`Failed to generate tasks: ${error.message}`);
   }
 };
+
+export const analyzeResume = async (resumeText) => {
+  const userPrompt = `
+    Analyze this user's resume for skills worked and durations worked. Presume part time unless listed. For instance, if the user was a web developer for a large firm, that user probably did 8-10 hours of web development per week, but also 3-6 hours of conference calls and 5-8 hours of general office work, whereas a cashier working part time consistently works 10-15 hours of customer service and money handling. Derive skill names and hours worked from this thought process, and award the user 10 times the amount of hours in skill xp (so 100 hours of labor becomes 1000 hours of skill xp).
+
+    Output the results in json, using this formula:
+    {"skills": [{"name": "Skill Name", "xp": 1000}]}
+
+    Resume: ${resumeText}
+  `;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+    });
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    const data = parseLLMJsonResponse(responseText);
+    if (!data.skills || !Array.isArray(data.skills)) {
+      throw new Error("LLM response missing skills array for resume analysis.");
+    }
+    return data;
+  } catch (error) {
+    console.error("Error analyzing resume:", error);
+    throw new Error(`Failed to analyze resume: ${error.message}`);
+  }
+};

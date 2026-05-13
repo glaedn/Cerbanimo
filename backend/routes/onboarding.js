@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import pool from '../db.js';
-import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
+import { generateProjectIdea, autoGenerateTasks, analyzeResume } from '../services/taskGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import { processInterests } from '../services/interestService.js';
 
@@ -21,7 +21,7 @@ const upload = multer({ storage });
 // POST /initiate route for onboarding
 router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
   const auth0_id = req.auth.payload.sub;
-  const { username } = req.body;
+  const { username, resumeText } = req.body;
   let { skills, interests } = req.body; // These might be JSON strings
 
   // Parse skills and interests if they are strings
@@ -67,46 +67,87 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 
 
     // 3. Process and Save Skills
-    const processedSkills = [];
+    const processedSkillsMap = new Map();
+
+    // --- Resume Analysis ---
+    if (resumeText && resumeText.trim()) {
+      try {
+        const resumeData = await analyzeResume(resumeText);
+        if (resumeData && resumeData.skills) {
+          for (const resumeSkill of resumeData.skills) {
+            const skillName = resumeSkill.name;
+            const skillExp = resumeSkill.xp || 0;
+            const skillLevel = Math.floor(Math.sqrt(skillExp / 40)) + 1;
+
+            let skillId;
+            const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
+
+            let currentUnlockedUsers = [];
+            if (existingSkillResult.rows.length > 0) {
+              skillId = existingSkillResult.rows[0].id;
+              currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || [];
+
+              let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers :
+                               currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
+
+              const userIndex = parsedUsers.findIndex(u => u.user_id === internalUserId);
+              if (userIndex !== -1) {
+                parsedUsers[userIndex].exp += skillExp;
+                parsedUsers[userIndex].level = Math.floor(Math.sqrt(parsedUsers[userIndex].exp / 40)) + 1;
+              } else {
+                parsedUsers.push({ user_id: internalUserId, level: skillLevel, exp: skillExp });
+              }
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
+            } else {
+              const newSkillResult = await client.query(
+                'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2::jsonb[]) RETURNING id',
+                [skillName, [JSON.stringify({ user_id: internalUserId, level: skillLevel, exp: skillExp })]]
+              );
+              skillId = newSkillResult.rows[0].id;
+            }
+            processedSkillsMap.set(skillId, { id: skillId, name: skillName });
+          }
+        }
+      } catch (resumeError) {
+        console.error('Error processing resume during onboarding:', resumeError);
+        // Continue onboarding even if resume analysis fails
+      }
+    }
+
+    // --- Manual Skills ---
     if (skills && Array.isArray(skills)) {
       for (const skillObj of skills) {
         const skillName = skillObj.name;
         let skillId;
 
-        // Check if skill exists
         const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
         
-        let currentUnlockedUsers = []; // Default to empty array
+        let currentUnlockedUsers = [];
 
         if (existingSkillResult.rows.length > 0) {
           skillId = existingSkillResult.rows[0].id;
-          currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || []; // Ensure it's an array
+          currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || [];
+
+          let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers :
+                           currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
+
+          const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
+          if (!userInSkill) {
+              parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
+          }
         } else {
-          // Insert new skill
-          // Assuming parent_skill_id can be NULL or you have a default
           const newSkillResult = await client.query(
-            'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2) RETURNING id, unlocked_users',
-            [skillName, JSON.stringify([{ user_id: internalUserId, level: 0, exp: 0 }])] // Initialize with current user
+            'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2::jsonb[]) RETURNING id',
+            [skillName, [JSON.stringify({ user_id: internalUserId, level: 0, exp: 0 })]]
           );
           skillId = newSkillResult.rows[0].id;
-          currentUnlockedUsers = newSkillResult.rows[0].unlocked_users || []; // Should be the one just inserted
         }
-        
-        // Update unlocked_users for existing skill if user not already present
-        if (existingSkillResult.rows.length > 0) { // Only update if skill was existing, new skill already has user
-            // Parse existing array properly
-            let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers : 
-                             currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
-            
-            const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
-            if (!userInSkill) {
-                parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
-                await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
-            }
-        }
-        processedSkills.push({ id: skillId, name: skillName });
+        processedSkillsMap.set(skillId, { id: skillId, name: skillName });
       }
     }
+
+    const processedSkills = Array.from(processedSkillsMap.values());
 
     // 4. Process and Save Interests
     const processedInterests = await processInterests(interests, internalUserId, client);
