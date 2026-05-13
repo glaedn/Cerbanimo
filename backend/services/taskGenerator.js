@@ -374,8 +374,11 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 };
 
 export const analyzeResume = async (resumeText) => {
+  const now = new Date().toISOString();
   const userPrompt = `
     Analyze this user's resume for skills worked and durations worked. Presume part time unless listed. For instance, if the user was a web developer for a large firm, that user probably did 8-10 hours of web development per week, but also 3-6 hours of conference calls and 5-8 hours of general office work, whereas a cashier working part time consistently works 10-15 hours of customer service and money handling. Derive skill names and hours worked from this thought process, and award the user 10 times the amount of hours in skill xp (so 100 hours of labor becomes 1000 hours of skill xp).
+
+    Today's Date: ${now}
 
     Output the results in json, using this formula:
     {"skills": [{"name": "Skill Name", "xp": 1000}]}
