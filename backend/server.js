@@ -43,6 +43,7 @@ import civicKernelRoutes from './routes/civic_kernel.js';
 import governanceRoutes from './routes/governance.js';
 import federationRoutes from './routes/federation.js';
 import narrativeRoutes from './routes/narrative.js';
+import walletRoutes from './routes/wallets.js';
 import treasuryRoutes from './routes/treasury.js';
 import bountyRoutes from './routes/bounties.js';
 import solidarityRoutes from './routes/solidarity.js';
@@ -271,6 +272,8 @@ app.use('/narrative', (req, res, next) => {
   if (req.method === 'GET') return next();
   return jwtCheck(req, res, next);
 }, resolveUser, narrativeRoutes);
+
+app.use('/wallets', jwtCheck, resolveUser, walletRoutes);
 
 app.use('/treasury', jwtCheck, resolveUser, treasuryRoutes);
 app.use('/bounties', jwtCheck, resolveUser, bountyRoutes);

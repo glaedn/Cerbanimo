@@ -26,14 +26,18 @@ class MissionAgent extends BaseAgent {
 
     return {
       missions: stalledMissions.rows,
-      memory: this.instance?.memory || {}
+      memory: {
+        ...this.instance?.memory,
+        processedMissionIds: this.instance?.memory?.processedMissionIds || []
+      }
     };
   }
 
   async runReasoning(context) {
-    if (context.missions.length === 0) return null;
+    const freshMissions = context.missions.filter(m => !context.memory.processedMissionIds.includes(m.id));
+    if (freshMissions.length === 0) return null;
 
-    const signals = context.missions.map(m => ({
+    const signals = freshMissions.map(m => ({
       id: m.id,
       name: m.name,
       completionRate: m.total_tasks > 0 ? (m.completed_tasks / m.total_tasks).toFixed(2) : 0,
@@ -57,7 +61,9 @@ class MissionAgent extends BaseAgent {
     };
   }
 
-  async executeActions(actions) {
+  async executeActions(actions, context) {
+    const actedMissionIds = [];
+
     for (const action of actions) {
       if (action.type === 'recommendation') {
         const rec = action.payload;
@@ -73,8 +79,18 @@ class MissionAgent extends BaseAgent {
           projectId: rec.targetId,
           recommendation: rec.recommendationType
         }, rec.confidence);
+
+        if (rec.targetId) {
+          actedMissionIds.push(rec.targetId);
+        }
       }
     }
+
+    // Update memory
+    context.memory.processedMissionIds = [
+      ...context.memory.processedMissionIds,
+      ...actedMissionIds
+    ].slice(-100);
   }
 }
 

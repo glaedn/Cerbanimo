@@ -24,14 +24,18 @@ class UserGrowthAgent extends BaseAgent {
 
     return {
       users: activeUsers.rows,
-      memory: this.instance?.memory || {}
+      memory: {
+        ...this.instance?.memory,
+        processedUserIds: this.instance?.memory?.processedUserIds || []
+      }
     };
   }
 
   async runReasoning(context) {
-    if (context.users.length === 0) return null;
+    const freshUsers = context.users.filter(u => !context.memory.processedUserIds.includes(u.id));
+    if (freshUsers.length === 0) return null;
 
-    const signals = context.users.map(u => ({
+    const signals = freshUsers.map(u => ({
       id: u.id,
       tasksCompleted: u.tasks_completed,
       skillsUsed: u.skills_used
@@ -53,7 +57,9 @@ class UserGrowthAgent extends BaseAgent {
     };
   }
 
-  async executeActions(actions) {
+  async executeActions(actions, context) {
+    const actedUserIds = [];
+
     for (const action of actions) {
       if (action.type === 'recommendation') {
         const rec = action.payload;
@@ -69,8 +75,18 @@ class UserGrowthAgent extends BaseAgent {
           userId: rec.targetId,
           recommendation: rec.recommendationType
         }, rec.confidence);
+
+        if (rec.targetId) {
+          actedUserIds.push(rec.targetId);
+        }
       }
     }
+
+    // Update memory
+    context.memory.processedUserIds = [
+      ...context.memory.processedUserIds,
+      ...actedUserIds
+    ].slice(-100);
   }
 }
 

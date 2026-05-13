@@ -22,12 +22,12 @@ router.get('/community/:communityId/balance', resolveUser, async (req, res) => {
   try {
     const { communityId } = req.params;
 
-    // Authorization: Member check
-    const memberCheck = await pool.query(
-      'SELECT 1 FROM communities WHERE id = $1 AND $2 = ANY(members)',
-      [communityId, req.user.id]
-    );
-    if (memberCheck.rows.length === 0) return res.status(403).json({ error: 'Community membership required' });
+    // Authorization: Admin check
+    try {
+      await checkCommunityAdmin(req.user.id, communityId);
+    } catch (err) {
+      return res.status(403).json({ error: err.message });
+    }
 
     const treasury = await TreasuryService.getTreasury(communityId);
     res.json(treasury);
