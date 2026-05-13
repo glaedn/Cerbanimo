@@ -185,7 +185,7 @@ const AdaptiveHUD = ({ children }) => {
 
       {/* Contextual Entity Inspector */}
       {selectedEntity && (
-        <div className="panel-wrapper entity-inspector-panel hud-slot-2">
+        <div className="panel-wrapper entity-inspector-panel">
           <EntityInspector />
         </div>
       )}

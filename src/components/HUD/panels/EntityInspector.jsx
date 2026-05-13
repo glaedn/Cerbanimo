@@ -27,7 +27,7 @@ const InspectorContainer = styled.div`
   padding: ${theme.tokens.spacing.md};
   color: ${theme.tokens.colors.text.primary};
   width: 320px;
-  max-height: 80vh;
+  max-height: 60vh;
   overflow-y: auto;
   box-shadow: ${theme.tokens.glow.primary};
   display: flex;
