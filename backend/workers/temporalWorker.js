@@ -37,6 +37,6 @@ export async function startTemporalWorker() {
 
     console.log('Temporal Worker: Registered and running in background');
   } catch (err) {
-    console.warn('Temporal Worker: Failed to start. Agents will not run automatically.', err.message);
+    console.info('Temporal Worker: Not started (Temporal server unreachable). Agents will run in local fallback mode.', err.message);
   }
 }
