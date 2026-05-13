@@ -1,9 +1,25 @@
 import { Worker } from '@temporalio/worker';
+import { Connection, Client } from '@temporalio/client';
 import * as activities from '../activities/agentActivities.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let client = null;
+
+export async function getTemporalClient() {
+  if (client) return client;
+
+  try {
+    const connection = await Connection.connect();
+    client = new Client({ connection });
+    return client;
+  } catch (err) {
+    console.error('Temporal Client: Failed to connect', err);
+    return null;
+  }
+}
 
 export async function startTemporalWorker() {
   try {

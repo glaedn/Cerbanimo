@@ -40,9 +40,14 @@ export async function agentEventWorkflow(event) {
     agentsToRun.push('MissionAgent');
   }
 
+  // Determine scope from event payload if communityId is present
+  const scope = event.payload?.communityId
+    ? { type: 'community', id: event.payload.communityId }
+    : { type: 'global', id: null };
+
   // Run agents sequentially for now
   for (const agentType of agentsToRun) {
-    await runAgentCycle(agentType, { type: 'global', id: null });
+    await runAgentCycle(agentType, scope);
   }
 
   return { processedAgents: agentsToRun };

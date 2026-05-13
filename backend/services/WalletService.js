@@ -67,6 +67,32 @@ class WalletService {
     const res = await pool.query('DELETE FROM wallets WHERE address = $1 RETURNING *', [address]);
     return res.rowCount > 0;
   }
+
+  async setPrimaryWallet(address) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const walletRes = await client.query('SELECT * FROM wallets WHERE address = $1', [address]);
+      if (walletRes.rows.length === 0) throw new Error('Wallet not found');
+      const wallet = walletRes.rows[0];
+
+      const unsetQuery = wallet.user_id
+        ? 'UPDATE wallets SET is_primary = FALSE WHERE user_id = $1 AND chain = $2'
+        : 'UPDATE wallets SET is_primary = FALSE WHERE community_id = $1 AND chain = $2';
+      await client.query(unsetQuery, [wallet.user_id || wallet.community_id, wallet.chain]);
+
+      await client.query('UPDATE wallets SET is_primary = TRUE WHERE address = $1', [address]);
+
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export default new WalletService();

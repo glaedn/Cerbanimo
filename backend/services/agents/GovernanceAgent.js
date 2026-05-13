@@ -58,22 +58,32 @@ class GovernanceAgent extends BaseAgent {
 
     return {
       risks,
-      memory: this.instance?.memory || {}
+      memory: {
+        ...this.instance?.memory,
+        reportedRiskKeys: this.instance?.memory?.reportedRiskKeys || []
+      }
     };
   }
 
   async runReasoning(context) {
-    if (context.risks.length === 0) return null;
+    const freshRisks = context.risks.filter(r => {
+      const key = `${r.type}:${r.communityId}:${r.proposalId || r.userId}`;
+      return !context.memory.reportedRiskKeys.includes(key);
+    });
+
+    if (freshRisks.length === 0) return null;
 
     return {
-      actions: context.risks.map(risk => ({
+      actions: freshRisks.map(risk => ({
         type: 'record_risk',
         payload: risk
       }))
     };
   }
 
-  async executeActions(actions) {
+  async executeActions(actions, context) {
+    const newKeys = [];
+
     for (const action of actions) {
       if (action.type === 'record_risk') {
         const risk = action.payload;
@@ -95,8 +105,17 @@ class GovernanceAgent extends BaseAgent {
           ...payload,
           message
         });
+
+        const key = `${risk.type}:${risk.communityId}:${risk.proposalId || risk.userId}`;
+        newKeys.push(key);
       }
     }
+
+    // Update memory
+    context.memory.reportedRiskKeys = [
+      ...context.memory.reportedRiskKeys,
+      ...newKeys
+    ].slice(-200);
   }
 }
 

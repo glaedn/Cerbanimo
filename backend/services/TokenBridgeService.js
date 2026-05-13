@@ -74,6 +74,21 @@ class TokenBridgeService {
           'UPDATE users SET cotokens = cotokens + $1 WHERE id = $2',
           [amount, receiverId]
         );
+
+        const ledgerEntry = {
+          mode: "earn",
+          type: "community_payout",
+          tokens: amount,
+          reason: reason,
+          creationDate: new Date(),
+          communityId: senderId
+        };
+
+        await db.query(
+          `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2`,
+          [JSON.stringify(ledgerEntry), receiverId]
+        );
+
         return await db.query(
           `INSERT INTO token_transactions (sender_id, receiver_id, amount, reason, transaction_date)
            VALUES (NULL, $1, $2, $3, NOW())`,
