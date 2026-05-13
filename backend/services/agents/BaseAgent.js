@@ -30,7 +30,7 @@ class BaseAgent {
     throw new Error('runReasoning() must be implemented by subclass');
   }
 
-  async executeActions(actions) {
+  async executeActions(actions, context) {
     throw new Error('executeActions() must be implemented by subclass');
   }
 
@@ -83,7 +83,7 @@ class BaseAgent {
     const reasoning = await this.runReasoning(context);
 
     if (reasoning && reasoning.actions) {
-      await this.executeActions(reasoning.actions);
+      await this.executeActions(reasoning.actions, context);
     }
 
     await pool.query(

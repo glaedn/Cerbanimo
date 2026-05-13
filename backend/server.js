@@ -62,6 +62,7 @@ import TreatyEnforcementService from './services/TreatyEnforcementService.js';
 import CrisisService from './services/CrisisService.js';
 import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
+import { startTemporalWorker } from './workers/temporalWorker.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -523,6 +524,7 @@ initializeDatabase().then(async () => {
   // Initialize Event System
   await EventBusService.initialize();
   startEventWorker();
+  startTemporalWorker();
 
   // Post-initialization synchronization
   try {
