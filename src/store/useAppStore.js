@@ -28,7 +28,7 @@ export const useAppStore = create((set) => ({
 
   // HUD Customization
   hudMode: 'normal', // 'normal' or 'operational'
-  activePanels: ['signals', 'pulse', 'river', 'mission'], // Max 6
+  activePanels: ['signals', 'pulse', 'regional', 'mission', 'dispatch', 'river'], // Max 6, ordered by slot positions
   collapsedPanels: [], // ['signals', etc]
 
   // Actions

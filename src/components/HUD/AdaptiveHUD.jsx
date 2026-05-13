@@ -60,13 +60,14 @@ const AdaptiveHUD = ({ children }) => {
     }
   }, [realtimeEvents, selectedEntity, isCrisisMode, activeContext, setCrisisMode, setActiveContext]);
 
-  const renderPanel = (panelId) => {
+  const renderPanel = (panelId, index) => {
     const isCollapsed = collapsedPanels.includes(panelId);
+    const slotClass = `hud-slot-${index}`;
 
     switch (panelId) {
       case 'signals':
         return (
-          <div className="panel-wrapper signal-feed-panel" key="signals">
+          <div className={`panel-wrapper signal-feed-panel ${slotClass}`} key="signals">
              <div className="hud-panel" style={{ maxWidth: '300px' }}>
                 <div className="hud-panel-header" onClick={() => togglePanelCollapse('signals')} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h4>Ecosystem Signals</h4>
@@ -77,17 +78,17 @@ const AdaptiveHUD = ({ children }) => {
           </div>
         );
       case 'river':
-        return <div className="panel-wrapper event-river-panel" key="river"><EventRiver /></div>;
+        return <div className={`panel-wrapper event-river-panel ${slotClass}`} key="river"><EventRiver /></div>;
       case 'mission':
-        return <div className="panel-wrapper mission-control-panel" key="mission"><MissionControlInterface /></div>;
+        return <div className={`panel-wrapper mission-control-panel ${slotClass}`} key="mission"><MissionControlInterface /></div>;
       case 'crisis':
-        return <div className="panel-wrapper crisis-ops-panel" key="crisis"><CrisisOpsConsole /></div>;
+        return <div className={`panel-wrapper crisis-ops-panel ${slotClass}`} key="crisis"><CrisisOpsConsole /></div>;
       case 'pulse':
-        return <div className="panel-wrapper pulse-hud-panel" key="pulse"><CoordinationPulseHUD /></div>;
+        return <div className={`panel-wrapper pulse-hud-panel ${slotClass}`} key="pulse"><CoordinationPulseHUD /></div>;
       case 'dispatch':
-        return <div className="panel-wrapper dispatch-panel" key="dispatch"><DispatchCenter /></div>;
+        return <div className={`panel-wrapper dispatch-panel ${slotClass}`} key="dispatch"><DispatchCenter /></div>;
       case 'regional':
-        return <div className="panel-wrapper regional-pulse-panel" key="regional"><RegionalPulse /></div>;
+        return <div className={`panel-wrapper regional-pulse-panel ${slotClass}`} key="regional"><RegionalPulse /></div>;
       default:
         return null;
     }
@@ -103,14 +104,14 @@ const AdaptiveHUD = ({ children }) => {
         case 'governance':
           return <div className="governance-overlay" style={{ pointerEvents: 'auto' }}><EventRiver /></div>;
         default:
-          return activePanels.slice(0, 6).map(renderPanel);
+          return activePanels.slice(0, 6).map((panelId, index) => renderPanel(panelId, index));
       }
     }
 
     // Normal Dashboard HUD: customizable items
     return (
       <div className="dashboard-hud-layers">
-        {activePanels.slice(0, 6).map(renderPanel)}
+        {activePanels.slice(0, 6).map((panelId, index) => renderPanel(panelId, index))}
       </div>
     );
   };
@@ -184,7 +185,7 @@ const AdaptiveHUD = ({ children }) => {
 
       {/* Contextual Entity Inspector */}
       {selectedEntity && (
-        <div className="panel-wrapper entity-inspector-panel">
+        <div className="panel-wrapper entity-inspector-panel hud-slot-2">
           <EntityInspector />
         </div>
       )}

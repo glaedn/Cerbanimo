@@ -64,6 +64,19 @@ describe('AdaptiveHUD', () => {
     expect(screen.getByTestId('event-river')).toBeInTheDocument();
     expect(screen.getByTestId('signal-feed')).toBeInTheDocument();
     expect(screen.getAllByTestId('pulse-hud').length).toBeGreaterThan(0);
+
+    // Verify slot assignment by order
+    const signalWrapper = screen.getByTestId('signal-feed').closest('.panel-wrapper');
+    const pulseWrapper = screen.getAllByTestId('pulse-hud')[0].closest('.panel-wrapper');
+    const riverWrapper = screen.getByTestId('event-river').closest('.panel-wrapper');
+
+    // Orders in mock: activePanels: ['signals', 'river', 'pulse']
+    // signals -> index 0 -> hud-slot-0
+    // river -> index 1 -> hud-slot-1
+    // pulse -> index 2 -> hud-slot-2
+    expect(signalWrapper).toHaveClass('hud-slot-0');
+    expect(riverWrapper).toHaveClass('hud-slot-1');
+    expect(pulseWrapper).toHaveClass('hud-slot-2');
   });
 
   test('renders mission control in mission mode', () => {
