@@ -7,6 +7,28 @@ import { checkAndAwardBadges } from '../services/badgeService.js';
 import { processInterests } from '../services/interestService.js';
 
 const router = express.Router();
+
+const parseUnlockedUsers = (unlockedUsers) => {
+  if (!unlockedUsers || unlockedUsers.length === 0) return [];
+
+  return unlockedUsers
+    .map((entry) => {
+      try {
+        let parsed = typeof entry === "string" ? JSON.parse(entry) : entry;
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(
+            parsed.replace(/\\"/g, '"').replace(/^"{|}"}$/g, "")
+          );
+        }
+        return parsed;
+      } catch (e) {
+        console.error("Error parsing unlocked user entry:", e);
+        return null;
+      }
+    })
+    .filter(Boolean);
+};
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -82,13 +104,9 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
             let skillId;
             const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
 
-            let currentUnlockedUsers = [];
             if (existingSkillResult.rows.length > 0) {
               skillId = existingSkillResult.rows[0].id;
-              currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || [];
-
-              let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers :
-                               currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
+              let parsedUsers = parseUnlockedUsers(existingSkillResult.rows[0].unlocked_users);
 
               const userIndex = parsedUsers.findIndex(u => u.user_id === internalUserId);
               if (userIndex !== -1) {
@@ -97,7 +115,7 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
               } else {
                 parsedUsers.push({ user_id: internalUserId, level: skillLevel, exp: skillExp });
               }
-              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers.map(u => JSON.stringify(u)), skillId]);
             } else {
               const newSkillResult = await client.query(
                 'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2::jsonb[]) RETURNING id',
@@ -122,19 +140,14 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 
         const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
         
-        let currentUnlockedUsers = [];
-
         if (existingSkillResult.rows.length > 0) {
           skillId = existingSkillResult.rows[0].id;
-          currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || [];
-
-          let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers :
-                           currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
+          let parsedUsers = parseUnlockedUsers(existingSkillResult.rows[0].unlocked_users);
 
           const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
           if (!userInSkill) {
               parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
-              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers.map(u => JSON.stringify(u)), skillId]);
           }
         } else {
           const newSkillResult = await client.query(
