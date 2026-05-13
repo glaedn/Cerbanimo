@@ -27,6 +27,10 @@ class CrisisService {
 
   async evaluateAutoCrisis() {
     console.log('Evaluating automatic crisis triggers...');
+    const currentCrisis = await this.getCrisisMode();
+    let shouldBeInCrisis = false;
+    let crisisReason = null;
+    let targetCommunity = null;
 
     // 1. Detect Resource Deserts in major community hubs
     const communities = await pool.query("SELECT id, name, ST_Y(location_point::geometry) as lat, ST_X(location_point::geometry) as lon FROM communities WHERE location_point IS NOT NULL");
@@ -36,31 +40,15 @@ class CrisisService {
 
       if (desertInfo.isDesert && desertInfo.needCount > 10) {
         console.log(`Resource desert detected around ${community.name}. Potential crisis trigger.`);
-
-        const currentCrisis = await this.getCrisisMode();
-        if (!currentCrisis.enabled) {
-          await this.setCrisisMode(true, {
-            type: 'resource_desert',
-            region: community.name,
-            severity: 'high',
-            reason: `High volume of unmet needs (${desertInfo.needCount}) with low resource availability.`
-          });
-
-          // Notify allied communities
-          const activeTreaties = await pool.query(
-            "SELECT * FROM federation_treaties WHERE (community_a = $1 OR community_b = $1) AND status = 'active'",
-            [community.id]
-          );
-
-          for (const treaty of activeTreaties.rows) {
-            const alliedId = treaty.community_a === community.id ? treaty.community_b : treaty.community_a;
-            await FederationService.recordFederationEvent(alliedId, 'crisis.ally_alert', {
-              sourceCommunityId: community.id,
-              region: community.name,
-              reason: 'Resource desert crisis triggered'
-            });
-          }
-        }
+        shouldBeInCrisis = true;
+        crisisReason = {
+          type: 'resource_desert',
+          region: community.name,
+          severity: 'high',
+          reason: `High volume of unmet needs (${desertInfo.needCount}) with low resource availability.`
+        };
+        targetCommunity = community;
+        break; // Trigger crisis for the first desert found
       }
     }
 
@@ -71,9 +59,38 @@ class CrisisService {
       AND updated_at < NOW() - INTERVAL '72 hours'
     `);
 
-    if (parseInt(staleEscalated.rows[0].count) > 5) {
+    if (!shouldBeInCrisis && parseInt(staleEscalated.rows[0].count) > 5) {
        console.log('Multiple escalated needs remain unmet for >72h. Triggering regional alert.');
-       // This could also trigger crisis mode or specific regional alerts
+       shouldBeInCrisis = true;
+       crisisReason = {
+         type: 'stale_escalated_needs',
+         severity: 'medium',
+         reason: 'Multiple escalated needs remain unmet for >72h.'
+       };
+    }
+
+    if (shouldBeInCrisis && !currentCrisis.enabled) {
+      await this.setCrisisMode(true, crisisReason);
+
+      if (targetCommunity) {
+        // Notify allied communities
+        const activeTreaties = await pool.query(
+          "SELECT * FROM federation_treaties WHERE (community_a = $1 OR community_b = $1) AND status = 'active'",
+          [targetCommunity.id]
+        );
+
+        for (const treaty of activeTreaties.rows) {
+          const alliedId = treaty.community_a === targetCommunity.id ? treaty.community_b : treaty.community_a;
+          await FederationService.recordFederationEvent(alliedId, 'crisis.ally_alert', {
+            sourceCommunityId: targetCommunity.id,
+            region: targetCommunity.name,
+            reason: crisisReason.reason
+          });
+        }
+      }
+    } else if (!shouldBeInCrisis && currentCrisis.enabled) {
+      console.log('Crisis conditions resolved. Disabling auto-crisis mode.');
+      await this.setCrisisMode(false, { resolved_at: new Date() });
     }
   }
 

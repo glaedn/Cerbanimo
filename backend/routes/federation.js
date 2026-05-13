@@ -1,6 +1,7 @@
 import express from 'express';
 import FederationService from '../services/FederationService.js';
 import resolveUser from '../middlewares/resolveUser.js';
+import pool from '../db.js';
 
 const router = express.Router();
 

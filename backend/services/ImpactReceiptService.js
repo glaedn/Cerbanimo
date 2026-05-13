@@ -2,7 +2,8 @@ import pool from '../db.js';
 import crypto from 'crypto';
 
 class ImpactReceiptService {
-  async generateReceipt(data) {
+  async generateReceipt(data, client = null) {
+    const db = client || pool;
     const {
       aidEventId,
       providerCommunityId,
@@ -27,7 +28,7 @@ class ImpactReceiptService {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
-    const result = await pool.query(query, [
+    const result = await db.query(query, [
       receiptHash, aidEventId, providerCommunityId, recipientCommunityId,
       aidType, quantity, unit, verifiedBy, verificationMethod, narrative
     ]);

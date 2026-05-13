@@ -12,7 +12,7 @@ class TreasuryService {
 
     if (result.rows.length === 0) {
       // Auto-initialize treasury if it doesn't exist
-      const initResult = await pool.query(
+      const initResult = await db.query(
         'INSERT INTO community_treasury (community_id) VALUES ($1) ON CONFLICT (community_id) DO NOTHING RETURNING *',
         [communityId]
       );
@@ -107,7 +107,7 @@ class TreasuryService {
           verifiedBy: metadata.createdBy ? [metadata.createdBy] : [],
           verificationMethod: 'system',
           narrative: `Automated receipt for community fund transfer: ${purpose}`
-        });
+        }, client);
 
       } else if (toType === 'user') {
         await client.query(

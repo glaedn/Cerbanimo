@@ -28,7 +28,40 @@ class TreatyEnforcementService {
 
     // 2. Mutual Aid Commitments (Triggered by conditions, but we can check limits here)
     if (terms.mutual_aid_commitment) {
-       // Future: Check if monthly limits exceeded, etc.
+       await this.enforceMutualAidCommitment(treaty, terms.mutual_aid_commitment);
+    }
+  }
+
+  async enforceMutualAidCommitment(treaty, config) {
+    // 1. Skill-Sharing Commitments
+    if (config.skill_sharing) {
+      const { required_skills, hours_per_month } = config.skill_sharing;
+      console.log(`Enforcing skill-sharing commitment for treaty ${treaty.id}.`);
+
+      // Auto-tag partners for mutual aid tasks in these skills
+      await pool.query(
+        `UPDATE tasks SET tags = array_append(tags, 'treaty_priority')
+         WHERE skill_id = ANY($1) AND project_id IN (SELECT id FROM projects WHERE community_id = $2)`,
+        [required_skills, treaty.community_a]
+      );
+      await pool.query(
+        `UPDATE tasks SET tags = array_append(tags, 'treaty_priority')
+         WHERE skill_id = ANY($1) AND project_id IN (SELECT id FROM projects WHERE community_id = $2)`,
+        [required_skills, treaty.community_b]
+      );
+    }
+
+    // 2. Resource-Category Commitments
+    if (config.resource_sharing) {
+      const { categories, priority_access } = config.resource_sharing;
+      console.log(`Enforcing resource-category commitment for treaty ${treaty.id} on categories: ${categories.join(', ')}.`);
+
+      // Update resources in these categories to have priority for the partner community
+      await pool.query(
+        `UPDATE resources SET status = 'treaty_priority'
+         WHERE category = ANY($1) AND community_id IN ($2, $3) AND status = 'available'`,
+        [categories, treaty.community_a, treaty.community_b]
+      );
     }
   }
 

@@ -169,14 +169,14 @@ class GovernanceService {
           break;
         }
         case 'bounty_creation': {
-          await BountyService.createBounty(proposal.community_id, proposal.payload);
+          await BountyService.createBounty(proposal.community_id, proposal.payload, client);
           break;
         }
         case 'solidarity_draw': {
           const { poolId, amount, purpose, crisisLevel } = proposal.payload;
           const draw = await SolidarityService.requestDraw(poolId, proposal.community_id, amount, purpose, crisisLevel);
           await client.query("UPDATE solidarity_draws SET status = 'approved' WHERE id = $1", [draw.id]);
-          await SolidarityService.executeDraw(draw.id);
+          await SolidarityService.executeDraw(draw.id, client);
           break;
         }
       }

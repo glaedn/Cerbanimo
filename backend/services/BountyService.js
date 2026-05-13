@@ -3,11 +3,12 @@ import TreasuryService from './TreasuryService.js';
 import { sendNotification } from './NotificationService.js';
 
 class BountyService {
-  async createBounty(communityId, data) {
+  async createBounty(communityId, data, externalClient = null) {
     const { title, description, skillId, rewardAmount, treasurySource, deliverableDescription } = data;
+    const db = externalClient || pool;
 
     // Check treasury balance before creating (as a preliminary check)
-    const treasury = await TreasuryService.getTreasury(communityId);
+    const treasury = await TreasuryService.getTreasury(communityId, externalClient);
     const balance = treasurySource === 'solidarity_fund' ? treasury.solidarity_fund : treasury.cotoken_balance;
 
     if (parseFloat(balance) < rewardAmount) {
@@ -19,7 +20,7 @@ class BountyService {
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
-    const result = await pool.query(query, [title, description, communityId, skillId, rewardAmount, treasurySource, deliverableDescription]);
+    const result = await db.query(query, [title, description, communityId, skillId, rewardAmount, treasurySource, deliverableDescription]);
     return result.rows[0];
   }
 

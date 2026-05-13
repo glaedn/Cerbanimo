@@ -48,6 +48,7 @@ import bountyRoutes from './routes/bounties.js';
 import solidarityRoutes from './routes/solidarity.js';
 import crisisRoutes from './routes/crisis.js';
 import impactReceiptRoutes from './routes/impact_receipts.js';
+import needFulfillmentRoutes from './routes/need_fulfillments.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -274,6 +275,7 @@ app.use('/bounties', jwtCheck, resolveUser, bountyRoutes);
 app.use('/solidarity', jwtCheck, resolveUser, solidarityRoutes);
 app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
 app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
+app.use('/need-fulfillments', jwtCheck, resolveUser, needFulfillmentRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

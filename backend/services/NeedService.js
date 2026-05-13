@@ -172,6 +172,20 @@ class NeedService {
     return result.rows[0];
   }
 
+  async getNeedWithFulfillment(needId) {
+    const needRes = await pool.query('SELECT * FROM needs WHERE id = $1', [needId]);
+    if (needRes.rows.length === 0) return null;
+    const need = needRes.rows[0];
+
+    const fulfillmentRes = await pool.query(
+      "SELECT SUM(fulfillment_percentage) as total FROM need_fulfillments WHERE need_id = $1 AND status IN ('verified', 'completed')",
+      [needId]
+    );
+
+    need.fulfillment_percentage = parseFloat(fulfillmentRes.rows[0].total || 0);
+    return need;
+  }
+
   async processMatches(need, causationId = null) {
     const matches = await findMatchesForNeed(need.id, pool);
     const notifications = [];

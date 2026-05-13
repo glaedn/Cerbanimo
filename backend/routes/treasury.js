@@ -18,9 +18,17 @@ async function checkCommunityAdmin(userId, communityId) {
   }
 }
 
-router.get('/community/:communityId/balance', async (req, res) => {
+router.get('/community/:communityId/balance', resolveUser, async (req, res) => {
   try {
     const { communityId } = req.params;
+
+    // Authorization: Member check
+    const memberCheck = await pool.query(
+      'SELECT 1 FROM communities WHERE id = $1 AND $2 = ANY(members)',
+      [communityId, req.user.id]
+    );
+    if (memberCheck.rows.length === 0) return res.status(403).json({ error: 'Community membership required' });
+
     const treasury = await TreasuryService.getTreasury(communityId);
     res.json(treasury);
   } catch (err) {
@@ -28,9 +36,17 @@ router.get('/community/:communityId/balance', async (req, res) => {
   }
 });
 
-router.get('/community/:communityId/transactions', async (req, res) => {
+router.get('/community/:communityId/transactions', resolveUser, async (req, res) => {
   try {
     const { communityId } = req.params;
+
+    // Authorization: Member check
+    const memberCheck = await pool.query(
+      'SELECT 1 FROM communities WHERE id = $1 AND $2 = ANY(members)',
+      [communityId, req.user.id]
+    );
+    if (memberCheck.rows.length === 0) return res.status(403).json({ error: 'Community membership required' });
+
     const treasury = await TreasuryService.getTreasury(communityId);
     const result = await pool.query(
       'SELECT * FROM treasury_transactions WHERE treasury_id = $1 ORDER BY created_at DESC LIMIT 50',

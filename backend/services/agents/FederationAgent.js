@@ -25,15 +25,24 @@ class FederationAgent extends BaseAgent {
      for (const pair of result.rows) {
         const actionKey = `federation_recommendation:${pair.c1_id}:${pair.c2_id}`;
         if (await this.checkCooldown(actionKey, 168)) { // 1 week cooldown for the same pair
+           const sharedTagIds = pair.c1_tags.filter(t => pair.c2_tags.includes(t));
+
+           // Resolve tag names
+           let sharedTagNames = [];
+           if (sharedTagIds.length > 0) {
+             const tagRes = await pool.query('SELECT name FROM interests WHERE id = ANY($1)', [sharedTagIds]);
+             sharedTagNames = tagRes.rows.map(r => r.name);
+           }
+
            // Simple heuristic: shared interest tags suggest potential for treaty
            await this.createRecommendation({
               type: 'federation_treaty',
               targetType: 'community',
               targetId: pair.c1_id,
               reasoning: {
-                 description: `Potential mutual aid opportunity detected between "${pair.c1_name}" and "${pair.c2_name}" based on shared interest tags.`,
+                 description: `Potential mutual aid opportunity detected between "${pair.c1_name}" and "${pair.c2_name}" based on shared interests: ${sharedTagNames.join(', ') || 'shared goals'}.`,
                  otherCommunityId: pair.c2_id,
-                 sharedTags: pair.c1_tags.filter(t => pair.c2_tags.includes(t))
+                 sharedTags: sharedTagNames
               },
               confidence: 0.7
            });

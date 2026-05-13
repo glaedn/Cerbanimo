@@ -50,10 +50,11 @@ class SolidarityService {
     return result.rows[0];
   }
 
-  async executeDraw(drawId) {
-    const client = await pool.connect();
+  async executeDraw(drawId, externalClient = null) {
+    const client = externalClient || await pool.connect();
+    const isInternal = !externalClient;
     try {
-      await client.query('BEGIN');
+      if (isInternal) await client.query('BEGIN');
 
       const drawRes = await client.query('SELECT * FROM solidarity_draws WHERE id = $1 FOR UPDATE', [drawId]);
       if (drawRes.rows.length === 0) throw new Error('Draw request not found');
@@ -90,13 +91,13 @@ class SolidarityService {
         [drawId]
       );
 
-      await client.query('COMMIT');
+      if (isInternal) await client.query('COMMIT');
       return { success: true };
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (isInternal) await client.query('ROLLBACK');
       throw err;
     } finally {
-      client.release();
+      if (isInternal) client.release();
     }
   }
 }
