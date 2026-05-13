@@ -71,6 +71,23 @@ router.post('/verify_exchange/:taskId', authenticate, async (req, res) => {
     if (task.need_id) await client.query('UPDATE needs SET status = $1 WHERE id = $2', ['fulfilled', task.need_id]);
     if (task.resource_id) await client.query('UPDATE resources SET status = $1 WHERE id = $2', ['exchanged', task.resource_id]);
 
+    // Record reciprocity if inter-community
+    const needRes = await client.query('SELECT requestor_community_id FROM needs WHERE id = $1', [task.related_need_id || task.need_id]);
+    const resRes = await client.query('SELECT owner_community_id FROM resources WHERE id = $1', [task.related_resource_id || task.resource_id]);
+
+    if (needRes.rows.length > 0 && resRes.rows.length > 0) {
+      const recipientCommunityId = needRes.rows[0].requestor_community_id;
+      const providerCommunityId = resRes.rows[0].owner_community_id;
+
+      if (recipientCommunityId && providerCommunityId && recipientCommunityId !== providerCommunityId) {
+        await client.query(
+          `INSERT INTO community_reciprocity_ledger (from_community_id, to_community_id, aid_type, reference_need_id)
+           VALUES ($1, $2, $3, $4)`,
+          [providerCommunityId, recipientCommunityId, 'resource', task.related_need_id || task.need_id]
+        );
+      }
+    }
+
     // Trigger reward if applicable
     if (task.reward_amount && task.contributor_id) {
        await awardTokens(db, task.contributor_id, task.reward_amount, `Exchange completed: Task ${taskId}`);

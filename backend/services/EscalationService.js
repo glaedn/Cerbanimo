@@ -3,6 +3,7 @@ import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import ProjectConversionService from './ProjectConversionService.js';
 import CivicEventService from './CivicEventService.js';
+import FederationService from './FederationService.js';
 
 class EscalationService {
   async checkAndEscalateNeeds() {
@@ -65,6 +66,37 @@ class EscalationService {
       }
 
       await Promise.all(notifications);
+
+      // 3. Federation Broadcast
+      if (need.requestor_community_id) {
+        const activeTreaties = await pool.query(
+          "SELECT * FROM federation_treaties WHERE (community_a = $1 OR community_b = $1) AND status = 'active'",
+          [need.requestor_community_id]
+        );
+
+        for (const treaty of activeTreaties.rows) {
+          const alliedCommunityId = treaty.community_a === need.requestor_community_id ? treaty.community_b : treaty.community_a;
+
+          // Notify allied community admins
+          const alliedAdmins = await pool.query(
+            "SELECT id FROM users WHERE roles @> '{admin}'" // In a real app, this should be community-specific admins
+          );
+
+          for (const admin of alliedAdmins.rows) {
+            await sendNotification(admin.id, {
+              message: `ALLIED AID REQUEST: A need from allied community "${need.requestor_community_id}" is escalating: ${need.name}`,
+              type: 'federation_broadcast',
+              needId: need.id
+            });
+          }
+
+          await FederationService.recordFederationEvent(alliedCommunityId, 'federation.need_broadcast', {
+            sourceCommunityId: need.requestor_community_id,
+            needId: need.id,
+            treatyId: treaty.id
+          });
+        }
+      }
 
       // Record Event
       await CivicEventService.recordEvent({

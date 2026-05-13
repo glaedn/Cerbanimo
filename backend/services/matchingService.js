@@ -72,7 +72,22 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
     }
 
     const resourcesResult = await dbPool.query(resourceQueryText, resourceParams);
-    const resources = resourcesResult.rows;
+    let resources = resourcesResult.rows;
+
+    // --- 1.1 Federation Resources (if escalating) ---
+    if (need.status === 'escalating' && need.requestor_community_id) {
+      const federationResourcesResult = await dbPool.query(`
+        SELECT r.* FROM resources r
+        JOIN federation_treaties ft ON (ft.community_a = $1 OR ft.community_b = $1)
+        JOIN communities c ON (c.id = ft.community_a OR c.id = ft.community_b)
+        WHERE (r.owner_community_id = c.id AND c.id != $1)
+        AND ft.status = 'active'
+        AND r.category = $2
+        AND r.status = 'available'
+      `, [need.requestor_community_id, need.category]);
+
+      resources = [...resources, ...federationResourcesResult.rows];
+    }
 
     const scoredResources = resources.map(resource => {
       let score = 0;

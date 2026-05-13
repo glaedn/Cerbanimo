@@ -52,6 +52,7 @@ import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
 import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
 import EscalationService from './services/EscalationService.js';
+import TreatyEnforcementService from './services/TreatyEnforcementService.js';
 import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
 
@@ -73,6 +74,10 @@ import { createCivicKernelTables } from '../models/civic_kernel.js';
 import { createSpatialLayerTables } from '../models/spatial_layers.js';
 import { createSystemStateTable } from '../models/system_state.js';
 import { createGovernanceTables } from '../models/governance.js';
+import { createMutualAidTables } from '../models/mutual_aid.js';
+import { createBountyTables } from '../models/bounties.js';
+import { createSolidarityTables } from '../models/solidarity.js';
+import { createImpactReceiptTables } from '../models/impact_receipts.js';
 import { createAgentTables } from '../models/agents.js';
 import { createNarrativeTables } from '../models/narrative_v2.js';
 import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
@@ -336,6 +341,16 @@ cron.schedule('0 3 * * *', async () => {
   }
 });
 
+// Federation Treaty Enforcement (Daily at 4:00 AM)
+cron.schedule('0 4 * * *', async () => {
+  console.log('Running daily federation treaty enforcement...');
+  try {
+    await TreatyEnforcementService.runEnforcementCycle();
+  } catch (err) {
+    console.error('Treaty enforcement worker failed:', err);
+  }
+});
+
 // Dynamic Reward & Decay Adjustment (Every 6 hours)
 cron.schedule('0 */6 * * *', async () => {
   console.log('Running dynamic reward and decay adjustment');
@@ -437,6 +452,10 @@ async function initializeDatabase() {
 
     await createSystemStateTable();
     await createGovernanceTables();
+    await createMutualAidTables();
+    await createBountyTables();
+    await createSolidarityTables();
+    await createImpactReceiptTables();
 
     try {
       await createDiscordConfigTable();
