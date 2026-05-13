@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateProjectIdea, normalizeTaskImpactWeights, parseLLMJsonResponse } from './taskGenerator';
+import { generateProjectIdea, normalizeTaskImpactWeights, parseLLMJsonResponse, analyzeResume } from './taskGenerator';
 
 // Mock the @google/generative-ai library
 const mockGenerateContent = vi.fn();
@@ -141,6 +141,34 @@ describe('taskGenerator.js', () => {
       await expect(generateProjectIdea(skills, interests))
         .rejects
         .toThrow('LLM response missing Name or Description for project idea.');
+    });
+  });
+
+  describe('analyzeResume', () => {
+    it('should correctly parse skills from LLM response', async () => {
+      const mockResumeData = {
+        skills: [
+          { name: 'JavaScript', xp: 0 },
+          { name: 'React', xp: 0 }
+        ]
+      };
+      mockGenerateContent.mockResolvedValue({
+        response: { text: () => JSON.stringify(mockResumeData) }
+      });
+
+      const result = await analyzeResume('Some resume text');
+      expect(result).toEqual(mockResumeData);
+      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw error if skills array is missing', async () => {
+      mockGenerateContent.mockResolvedValue({
+        response: { text: () => '{"something": "else"}' }
+      });
+
+      await expect(analyzeResume('Some resume text'))
+        .rejects
+        .toThrow('LLM response missing skills array for resume analysis.');
     });
   });
 });

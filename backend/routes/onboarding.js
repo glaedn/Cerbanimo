@@ -99,8 +99,11 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
         if (resumeData && resumeData.skills) {
           for (const resumeSkill of resumeData.skills) {
             const skillName = resumeSkill.name;
-            const skillExp = resumeSkill.xp || 0;
-            const skillLevel = Math.floor(Math.sqrt(skillExp / 40)) + 1;
+            // XP from resumes is temporarily disabled until guild leveling is implemented.
+            // const skillExp = resumeSkill.xp || 0;
+            // const skillLevel = Math.floor(Math.sqrt(skillExp / 40)) + 1;
+            const skillExp = 0;
+            const skillLevel = 1;
 
             let skillId;
             const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
@@ -111,8 +114,9 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 
               const userIndex = parsedUsers.findIndex(u => u.user_id === internalUserId);
               if (userIndex !== -1) {
-                parsedUsers[userIndex].exp += skillExp;
-                parsedUsers[userIndex].level = Math.floor(Math.sqrt(parsedUsers[userIndex].exp / 40)) + 1;
+                // If user already has the skill, don't update XP/Level from resume for now.
+                // parsedUsers[userIndex].exp += skillExp;
+                // parsedUsers[userIndex].level = Math.floor(Math.sqrt(parsedUsers[userIndex].exp / 40)) + 1;
               } else {
                 parsedUsers.push({ user_id: internalUserId, level: skillLevel, exp: skillExp });
               }
