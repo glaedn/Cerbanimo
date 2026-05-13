@@ -74,19 +74,31 @@ class NeedService {
       throw new Error('Either requestor_user_id or requestor_community_id must be provided.');
     }
 
-    // Spatial Fallback Logic
+    // Spatial and Textual Location Fallback Logic
     let finalLat = latitude;
     let finalLon = longitude;
+    let finalLocationText = location_text;
 
-    if (!finalLat || !finalLon) {
-      if (requestor_user_id) {
-        const userRes = await pool.query(
-          'SELECT ST_Y(location_point::geometry) as lat, ST_X(location_point::geometry) as lon FROM users WHERE id = $1',
-          [requestor_user_id]
-        );
-        if (userRes.rows.length > 0 && userRes.rows[0].lat && userRes.rows[0].lon) {
-          finalLat = userRes.rows[0].lat;
-          finalLon = userRes.rows[0].lon;
+    if (requestor_user_id) {
+      const userRes = await pool.query(
+        `SELECT ST_Y(u.location_point::geometry) as lat, ST_X(u.location_point::geometry) as lon,
+                u.formatted_address, u.city, u.state, p.location as profile_location
+         FROM users u
+         LEFT JOIN profiles p ON u.id = p.user_id
+         WHERE u.id = $1`,
+        [requestor_user_id]
+      );
+
+      if (userRes.rows.length > 0) {
+        const userData = userRes.rows[0];
+        if (!finalLat || !finalLon) {
+          finalLat = userData.lat;
+          finalLon = userData.lon;
+        }
+        if (!finalLocationText) {
+          finalLocationText = userData.formatted_address ||
+                              (userData.city && userData.state ? `${userData.city}, ${userData.state}` : null) ||
+                              userData.profile_location;
         }
       }
     }
@@ -107,7 +119,7 @@ class NeedService {
         name, description, category, quantity_needed, urgency,
         urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
         requestor_user_id, requestor_community_id, required_before_date,
-        location_text, finalLat, finalLon, status, source
+        finalLocationText, finalLat, finalLon, status, source
       ]
     );
 
