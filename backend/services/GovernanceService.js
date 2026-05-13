@@ -118,6 +118,9 @@ class GovernanceService {
         return { executed: false, reason: 'Proposal did not pass quorum or majority' };
       }
 
+      // Mark as executing to prevent races
+      await client.query("UPDATE proposals SET status = 'executing' WHERE id = $1", [proposalId]);
+
       switch (proposal.proposal_type) {
         case 'constitution': {
           const { content } = proposal.payload;
@@ -173,6 +176,7 @@ class GovernanceService {
           const { poolId, amount, purpose, crisisLevel } = proposal.payload;
           const draw = await SolidarityService.requestDraw(poolId, proposal.community_id, amount, purpose, crisisLevel);
           await client.query("UPDATE solidarity_draws SET status = 'approved' WHERE id = $1", [draw.id]);
+          await SolidarityService.executeDraw(draw.id);
           break;
         }
       }

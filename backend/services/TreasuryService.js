@@ -1,4 +1,5 @@
 import pool from '../db.js';
+import ImpactReceiptService from './ImpactReceiptService.js';
 
 class TreasuryService {
   async getTreasury(communityId, client = null, lock = false) {
@@ -89,11 +90,25 @@ class TreasuryService {
         });
 
         // Record in reciprocity ledger
-        await client.query(
+        const ledgerRes = await client.query(
           `INSERT INTO community_reciprocity_ledger (from_community_id, to_community_id, aid_type, value_in_cotokens)
-           VALUES ($1, $2, $3, $4)`,
+           VALUES ($1, $2, $3, $4) RETURNING id`,
           [fromCommunityId, toId, 'token', amount]
         );
+
+        // Auto-generate impact receipt
+        await ImpactReceiptService.generateReceipt({
+          aidEventId: ledgerRes.rows[0].id,
+          providerCommunityId: fromCommunityId,
+          recipientCommunityId: toId,
+          aidType: 'token',
+          quantity: amount,
+          unit: 'cotoken',
+          verifiedBy: metadata.createdBy ? [metadata.createdBy] : [],
+          verificationMethod: 'system',
+          narrative: `Automated receipt for community fund transfer: ${purpose}`
+        });
+
       } else if (toType === 'user') {
         await client.query(
           'UPDATE users SET cotokens = cotokens + $1 WHERE id = $2',

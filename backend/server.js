@@ -43,6 +43,11 @@ import civicKernelRoutes from './routes/civic_kernel.js';
 import governanceRoutes from './routes/governance.js';
 import federationRoutes from './routes/federation.js';
 import narrativeRoutes from './routes/narrative.js';
+import treasuryRoutes from './routes/treasury.js';
+import bountyRoutes from './routes/bounties.js';
+import solidarityRoutes from './routes/solidarity.js';
+import crisisRoutes from './routes/crisis.js';
+import impactReceiptRoutes from './routes/impact_receipts.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -53,6 +58,7 @@ import ConstellationHealthService from './services/ConstellationHealthService.js
 import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
 import EscalationService from './services/EscalationService.js';
 import TreatyEnforcementService from './services/TreatyEnforcementService.js';
+import CrisisService from './services/CrisisService.js';
 import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
 
@@ -78,6 +84,7 @@ import { createMutualAidTables } from '../models/mutual_aid.js';
 import { createBountyTables } from '../models/bounties.js';
 import { createSolidarityTables } from '../models/solidarity.js';
 import { createImpactReceiptTables } from '../models/impact_receipts.js';
+import { createNeedFulfillmentTable } from '../models/need_fulfillments.js';
 import { createAgentTables } from '../models/agents.js';
 import { createNarrativeTables } from '../models/narrative_v2.js';
 import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
@@ -262,6 +269,12 @@ app.use('/narrative', (req, res, next) => {
   return jwtCheck(req, res, next);
 }, resolveUser, narrativeRoutes);
 
+app.use('/treasury', jwtCheck, resolveUser, treasuryRoutes);
+app.use('/bounties', jwtCheck, resolveUser, bountyRoutes);
+app.use('/solidarity', jwtCheck, resolveUser, solidarityRoutes);
+app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
+app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
@@ -348,6 +361,16 @@ cron.schedule('0 4 * * *', async () => {
     await TreatyEnforcementService.runEnforcementCycle();
   } catch (err) {
     console.error('Treaty enforcement worker failed:', err);
+  }
+});
+
+// Crisis Auto-Trigger Evaluation (Daily at 5:00 AM)
+cron.schedule('0 5 * * *', async () => {
+  console.log('Running daily crisis auto-trigger evaluation...');
+  try {
+    await CrisisService.evaluateAutoCrisis();
+  } catch (err) {
+    console.error('Crisis evaluation worker failed:', err);
   }
 });
 
@@ -456,6 +479,7 @@ async function initializeDatabase() {
     await createBountyTables();
     await createSolidarityTables();
     await createImpactReceiptTables();
+    await createNeedFulfillmentTable();
 
     try {
       await createDiscordConfigTable();

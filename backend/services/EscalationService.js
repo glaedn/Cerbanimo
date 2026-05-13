@@ -53,7 +53,12 @@ class EscalationService {
       // If it's a community need, notify community admins
       if (need.requestor_community_id) {
         const adminsResult = await pool.query(
-          "SELECT id FROM users WHERE roles @> '{admin}'"
+          `SELECT u.id FROM users u
+           WHERE u.id = ANY(
+             SELECT unnest(members) FROM communities WHERE id = $1
+           )
+           AND u.roles @> '{admin}'`,
+           [need.requestor_community_id]
         );
         for (const admin of adminsResult.rows) {
            notifications.push(
@@ -79,7 +84,12 @@ class EscalationService {
 
           // Notify allied community admins
           const alliedAdmins = await pool.query(
-            "SELECT id FROM users WHERE roles @> '{admin}'" // In a real app, this should be community-specific admins
+            `SELECT u.id FROM users u
+             WHERE u.id = ANY(
+               SELECT unnest(members) FROM communities WHERE id = $1
+             )
+             AND u.roles @> '{admin}'`,
+             [alliedCommunityId]
           );
 
           for (const admin of alliedAdmins.rows) {
