@@ -13,9 +13,13 @@ if (PgBossNamespace.PgBoss) {
   Boss = PgBossNamespace;
 }
 
-const boss = new Boss({
-  connectionString: process.env.POSTGRES_URL,
-});
+const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://localhost:5432/postgres';
+
+if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+  console.warn('Neither POSTGRES_URL nor DATABASE_URL found, using default for PgBoss');
+}
+
+const boss = new Boss(connectionString);
 
 boss.on('error', error => console.error('PgBoss Error:', error));
 
