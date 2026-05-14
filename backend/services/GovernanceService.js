@@ -99,6 +99,17 @@ class GovernanceService {
   }
 
   async executeProposal(proposalId) {
+    const { default: boss } = await import('../jobs/boss.js');
+    console.log(`GovernanceService: Offloading execution of proposal ${proposalId} to pg-boss`);
+
+    // Mark as executing immediately to prevent concurrent UI triggers
+    await pool.query("UPDATE proposals SET status = 'executing' WHERE id = $1 AND status IN ('deliberation', 'voting')", [proposalId]);
+
+    await boss.send('governance-execution', { proposalId });
+    return { status: 'queued', proposalId };
+  }
+
+  async executeProposalInternal(proposalId) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -107,9 +118,7 @@ class GovernanceService {
       if (propRes.rows.length === 0) throw new Error('Proposal not found');
       const proposal = propRes.rows[0];
 
-      if (proposal.status !== 'deliberation' && proposal.status !== 'voting') {
-         throw new Error('Proposal is not in a state that can be executed');
-      }
+      // Note: We don't check status here as it's already marked 'executing' by the caller
 
       const tally = await this.tallyVotes(proposalId);
       if (!tally.passed) {
@@ -117,9 +126,6 @@ class GovernanceService {
         await client.query('COMMIT');
         return { executed: false, reason: 'Proposal did not pass quorum or majority' };
       }
-
-      // Mark as executing to prevent races
-      await client.query("UPDATE proposals SET status = 'executing' WHERE id = $1", [proposalId]);
 
       switch (proposal.proposal_type) {
         case 'constitution': {

@@ -62,7 +62,6 @@ import TreatyEnforcementService from './services/TreatyEnforcementService.js';
 import CrisisService from './services/CrisisService.js';
 import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
-import { startTemporalWorker } from './workers/temporalWorker.js';
 import boss from './jobs/boss.js';
 import { startWorkers } from './jobs/startWorkers.js';
 
@@ -421,7 +420,6 @@ initializeDatabase().then(async () => {
   }
 
   startEventWorker();
-  startTemporalWorker();
 
   // Post-initialization synchronization
   try {
