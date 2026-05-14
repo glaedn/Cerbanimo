@@ -7,18 +7,6 @@ const URGENCY_SCORES = {
   critical: 4,
 };
 
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
-  const R = 6371; // Radius of the earth in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    0.5 - Math.cos(dLat) / 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    (1 - Math.cos(dLon)) / 2;
-  return R * 2 * Math.asin(Math.sqrt(a)); // Distance in km
-};
-
 const isResourceAvailableAt = (resource, dateTime) => {
   if (!resource.availability_schedule) return true;
   if (!dateTime) return true;
@@ -38,7 +26,7 @@ const isResourceAvailableAt = (resource, dateTime) => {
 
 const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
   try {
-    const needResult = await dbPool.query('SELECT * FROM needs WHERE id = $1', [needId]);
+    const needResult = await dbPool.query('SELECT *, ST_X(location_point::geometry) as lon, ST_Y(location_point::geometry) as lat FROM needs WHERE id = $1', [needId]);
     if (needResult.rows.length === 0) {
       console.warn(`Need with ID ${needId} not found.`);
       return { resources: [], users: [] };
@@ -51,24 +39,23 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
       return { resources: [], users: [] };
     }
 
-    const needLat = parseFloat(need.location?.latitude || need.latitude);
-    const needLon = parseFloat(need.location?.longitude || need.longitude);
-
-    // Bounding box approximation (1 degree is approx 111km)
-    const latDelta = radiusKm / 111;
-    const lonDelta = needLat ? radiusKm / (111 * Math.cos(needLat * Math.PI / 180)) : latDelta;
+    const needLat = parseFloat(need.lat || need.location?.latitude || need.latitude);
+    const needLon = parseFloat(need.lon || need.location?.longitude || need.longitude);
+    const hasLocation = !isNaN(needLat) && !isNaN(needLon);
 
     // --- 1. Match Resources ---
-    let resourceQueryText = 'SELECT * FROM resources WHERE category = $1 AND status = $2';
+    let resourceQueryText = `
+      SELECT *,
+      ${hasLocation ? 'ST_Distance(location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) / 1000 as distance_km' : 'NULL as distance_km'}
+      FROM resources
+      WHERE category = $1 AND status = $2
+      AND (availability_window_end IS NULL OR availability_window_end >= NOW())
+    `;
     const resourceParams = [need.category, 'available'];
-    let paramIndex = 3;
 
-    resourceQueryText += ' AND (availability_window_end IS NULL OR availability_window_end >= NOW())';
-
-    if (needLat && needLon) {
-      resourceQueryText += ` AND (latitude BETWEEN $${paramIndex++} AND $${paramIndex++})
-                            AND (longitude BETWEEN $${paramIndex++} AND $${paramIndex++})`;
-      resourceParams.push(needLat - latDelta, needLat + latDelta, needLon - lonDelta, needLon + lonDelta);
+    if (hasLocation) {
+      resourceQueryText += ' AND ST_DWithin(location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)';
+      resourceParams.push(needLon, needLat, radiusKm * 1000);
     }
 
     const resourcesResult = await dbPool.query(resourceQueryText, resourceParams);
@@ -77,25 +64,26 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
     // --- 1.1 Federation Resources (if escalating) ---
     if (need.status === 'escalating' && need.requestor_community_id) {
       const federationResourcesResult = await dbPool.query(`
-        SELECT r.* FROM resources r
+        SELECT r.*,
+        ${hasLocation ? 'ST_Distance(r.location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) / 1000 as distance_km' : 'NULL as distance_km'}
+        FROM resources r
         JOIN federation_treaties ft ON (ft.community_a = $1 OR ft.community_b = $1)
         JOIN communities c ON (c.id = ft.community_a OR c.id = ft.community_b)
         WHERE (r.owner_community_id = c.id AND c.id != $1)
         AND ft.status = 'active'
         AND r.category = $2
         AND r.status = 'available'
-      `, [need.requestor_community_id, need.category]);
+        ${hasLocation ? 'AND ST_DWithin(r.location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)' : ''}
+      `, hasLocation ? [need.requestor_community_id, need.category, needLon, needLat, radiusKm * 1000] : [need.requestor_community_id, need.category]);
 
       resources = [...resources, ...federationResourcesResult.rows];
     }
 
     const scoredResources = resources.map(resource => {
       let score = 0;
-      const resLat = parseFloat(resource.latitude);
-      const resLon = parseFloat(resource.longitude);
+      const distance = resource.distance_km;
 
-      if (needLat && needLon && resLat && resLon) {
-        const distance = calculateDistance(needLat, needLon, resLat, resLon);
+      if (distance !== null) {
         if (distance < 5) score += 50;
         else if (distance < 20) score += 20;
         else if (distance <= radiusKm) score += 5;
@@ -118,32 +106,27 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
     let matchedUsers = [];
     if (need.skill_ids && need.skill_ids.length > 0) {
       let usersBySkillsQuery = `
-        SELECT DISTINCT u.id, u.username, u.profile_picture, u.capacity_status, p.location, p.latitude, p.longitude
+        SELECT DISTINCT u.id, u.username, u.profile_picture, u.capacity_status,
+        ${hasLocation ? 'ST_Distance(u.location_point, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) / 1000 as distance_km' : 'NULL as distance_km'}
         FROM skills s
         JOIN LATERAL jsonb_array_elements(s.unlocked_users) AS su ON true
         JOIN users u ON (su->>'user_id')::int = u.id
-        LEFT JOIN profiles p ON u.id = p.user_id
         WHERE s.id = ANY($1)
         AND (u.capacity_status IS NULL OR u.capacity_status != 'unavailable')
       `;
       const userParams = [need.skill_ids];
-      let userParamIndex = 2;
-
-      if (needLat && needLon) {
-        usersBySkillsQuery += ` AND (p.latitude BETWEEN $${userParamIndex++} AND $${userParamIndex++})
-                               AND (p.longitude BETWEEN $${userParamIndex++} AND $${userParamIndex++})`;
-        userParams.push(needLat - latDelta, needLat + latDelta, needLon - lonDelta, needLon + lonDelta);
+      if (hasLocation) {
+        usersBySkillsQuery += ' AND ST_DWithin(u.location_point, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)';
+        userParams.push(needLon, needLat, radiusKm * 1000);
       }
 
       const usersResult = await dbPool.query(usersBySkillsQuery, userParams);
 
       matchedUsers = usersResult.rows.map(user => {
          let score = 50; // Base score for having at least one skill match
-         const userLat = parseFloat(user.latitude);
-         const userLon = parseFloat(user.longitude);
+         const distance = user.distance_km;
 
-         if (needLat && needLon && userLat && userLon) {
-           const distance = calculateDistance(needLat, needLon, userLat, userLon);
+         if (distance !== null) {
            if (distance < 10) score += 30;
            else if (distance < 50) score += 10;
          }
@@ -165,11 +148,10 @@ const findMatchesForNeed = async (needId, dbPool, radiusKm = 50) => {
   }
 };
 
-const findMatchesForResource = async (resourceId, dbPool) => {
+const findMatchesForResource = async (resourceId, dbPool, radiusKm = 50) => {
   try {
-    const resourceResult = await dbPool.query('SELECT * FROM resources WHERE id = $1', [resourceId]);
+    const resourceResult = await dbPool.query('SELECT *, ST_X(location_point::geometry) as lon, ST_Y(location_point::geometry) as lat FROM resources WHERE id = $1', [resourceId]);
     if (resourceResult.rows.length === 0) {
-      // throw new Error(`Resource with ID ${resourceId} not found.`);
       console.warn(`Resource with ID ${resourceId} not found.`);
       return [];
     }
@@ -181,17 +163,22 @@ const findMatchesForResource = async (resourceId, dbPool) => {
       return [];
     }
 
-    let needQueryText = 'SELECT * FROM needs WHERE category = $1 AND status = $2';
+    const resLat = parseFloat(resource.lat || resource.latitude);
+    const resLon = parseFloat(resource.lon || resource.longitude);
+    const hasLocation = !isNaN(resLat) && !isNaN(resLon);
+
+    let needQueryText = `
+      SELECT *,
+      ${hasLocation ? 'ST_Distance(location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography) / 1000 as distance_km' : 'NULL as distance_km'}
+      FROM needs
+      WHERE category = $1 AND status = $2
+    `;
     const queryParams = [resource.category, 'open'];
     
-    // Add check for required_before_date
-
-    // Placeholder for geo-spatial filtering (similar to above)
-    // const searchRadiusKm = 50;
-    // if (resource.latitude != null && resource.longitude != null) {
-    //   // ... similar bounding box logic as in findMatchesForNeed ...
-    //   // needQueryText += ` AND (latitude BETWEEN ...`;
-    // }
+    if (hasLocation) {
+      needQueryText += ' AND ST_DWithin(location_point, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)';
+      queryParams.push(resLon, resLat, radiusKm * 1000);
+    }
     
     const needsResult = await dbPool.query(needQueryText, queryParams);
     const needs = needsResult.rows;
@@ -205,10 +192,8 @@ const findMatchesForResource = async (resourceId, dbPool) => {
       score += urgencyScore * 10;
 
       // Proximity
-      const needLat = need.location?.latitude || need.latitude;
-      const needLon = need.location?.longitude || need.longitude;
-      if (needLat && needLon && resource.latitude && resource.longitude) {
-        const distance = calculateDistance(needLat, needLon, resource.latitude, resource.longitude);
+      const distance = need.distance_km;
+      if (distance !== null) {
         if (distance < 5) score += 50;
         else if (distance < 20) score += 20;
       }
