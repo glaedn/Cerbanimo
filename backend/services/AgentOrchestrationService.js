@@ -1,11 +1,10 @@
-import { getTemporalClient } from '../workers/temporalWorker.js';
+import boss from '../jobs/boss.js';
 import { getAgentsForEvent, getScopeForEvent } from '../utils/agentRouting.js';
 import * as activities from '../activities/agentActivities.js';
 
 class AgentOrchestrationService {
   /**
-   * Dispatches an event to relevant agents, using Temporal if available,
-   * or running them locally as a fallback.
+   * Dispatches an event to relevant agents using pg-boss.
    */
   async runAgentsForEvent(event) {
     const { eventType } = event;
@@ -15,21 +14,20 @@ class AgentOrchestrationService {
 
     const scope = getScopeForEvent(event);
 
-    try {
-      const client = await getTemporalClient();
-      if (client) {
-        console.log(`AgentOrchestration: Dispatching ${agentsToRun.join(', ')} via Temporal for ${eventType}`);
-        await client.workflow.start('agentEventWorkflow', {
-          taskQueue: 'agent-coordination',
-          workflowId: `agent-event-${event.id || Date.now()}`,
-          args: [event]
+    console.log(`AgentOrchestration: Dispatching ${agentsToRun.join(', ')} via pg-boss for ${eventType}`);
+
+    for (const agentType of agentsToRun) {
+      try {
+        await boss.send('agent-execution', {
+          agentType,
+          scope,
+          eventId: event.id,
+          eventType
         });
-      } else {
-        await this.runAgentsLocally(agentsToRun, scope);
+      } catch (err) {
+        console.warn(`AgentOrchestration: pg-boss dispatch failed for ${agentType}, falling back to local execution`, err.message);
+        await activities.runAgentCycle(agentType, scope);
       }
-    } catch (err) {
-      console.warn('AgentOrchestration: Temporal dispatch failed, falling back to local execution', err.message);
-      await this.runAgentsLocally(agentsToRun, scope);
     }
   }
 

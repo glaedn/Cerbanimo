@@ -1,38 +1,17 @@
-import { Queue, Worker, QueueEvents } from 'bullmq';
-import IORedis from 'ioredis';
 import { EventEmitter } from 'events';
+import boss from '../jobs/boss.js';
 import 'dotenv/config';
 
 class EventBusService extends EventEmitter {
   constructor() {
     super();
     this.queueName = 'civic-events';
-    this.redisUrl = process.env.REDIS_URL;
-    this.useRedis = false;
-    this.queue = null;
-    this.worker = null;
+    this.boss = boss;
   }
 
   async initialize() {
-    if (this.redisUrl) {
-      try {
-        this.connection = new IORedis(this.redisUrl, {
-          maxRetriesPerRequest: null,
-        });
-
-        // Test connection
-        await this.connection.ping();
-
-        this.useRedis = true;
-        this.queue = new Queue(this.queueName, { connection: this.connection });
-        console.log('EventBus: Using BullMQ with Redis');
-      } catch (err) {
-        console.warn('EventBus: Redis connection failed, falling back to EventEmitter', err.message);
-        this.useRedis = false;
-      }
-    } else {
-      console.log('EventBus: No REDIS_URL found, using EventEmitter fallback');
-    }
+    // pg-boss is initialized in server.js
+    console.log('EventBus: Using pg-boss for event persistence');
   }
 
   async publish(eventType, payload, metadata = {}) {
@@ -48,12 +27,13 @@ class EventBusService extends EventEmitter {
       timestamp: new Date().toISOString()
     };
 
-    if (this.useRedis && this.queue) {
-      await this.queue.add(eventType, event, {
-        removeOnComplete: true,
-        removeOnFail: 1000,
+    try {
+      await this.boss.send(this.queueName, event, {
+        retryLimit: 5,
+        retryBackoff: true
       });
-    } else {
+    } catch (err) {
+      console.warn('EventBus: pg-boss publish failed, falling back to local emission', err.message);
       // Async emission to mimic queue behavior
       setImmediate(() => {
         this.emit('event', event);
@@ -64,24 +44,21 @@ class EventBusService extends EventEmitter {
     return event;
   }
 
-  startInProcessWorker(handler) {
-    if (this.useRedis) {
-      this.worker = new Worker(this.queueName, async (job) => {
-        await handler(job.data);
-      }, { connection: this.connection });
+  async startInProcessWorker(handler) {
+    console.log('EventBus: Starting pg-boss worker for civic-events');
 
-      this.worker.on('failed', (job, err) => {
-        console.error(`EventBus: Job ${job.id} failed`, err);
-      });
-    } else {
-      this.on('event', async (event) => {
-        try {
-          await handler(event);
-        } catch (err) {
-          console.error('EventBus: Local handler failed', err);
-        }
-      });
-    }
+    await this.boss.work(this.queueName, async (job) => {
+      await handler(job.data);
+    });
+
+    // Also listen for local emissions for fallback/immediate needs
+    this.on('event', async (event) => {
+      try {
+        await handler(event);
+      } catch (err) {
+        console.error('EventBus: Local handler failed', err);
+      }
+    });
   }
 }
 
