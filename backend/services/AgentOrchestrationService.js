@@ -26,7 +26,11 @@ class AgentOrchestrationService {
         });
       } catch (err) {
         console.warn(`AgentOrchestration: pg-boss dispatch failed for ${agentType}, falling back to local execution`, err.message);
-        await activities.runAgentCycle(agentType, scope);
+        try {
+          await activities.runAgentCycle(agentType, scope);
+        } catch (localErr) {
+          console.error(`AgentOrchestration: Local fallback also failed for ${agentType}`, localErr);
+        }
       }
     }
   }

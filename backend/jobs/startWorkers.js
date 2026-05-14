@@ -17,6 +17,32 @@ export async function startWorkers() {
   console.log('Initializing pg-boss workers...');
 
   try {
+    // Explicitly create queues to avoid "Queue does not exist" errors
+    const queues = [
+      'agent-execution',
+      'scheduled-tasks',
+      'civic-events',
+      'nightly-reset-job',
+      'interest-validation-job',
+      'guild-membership-sync-job',
+      'skill-enrichment-job',
+      'weekly-wrapup-job',
+      'need-escalation-job',
+      'treaty-enforcement-job',
+      'crisis-evaluation-job',
+      'reward-adjustment-job',
+      'intelligence-scoring-job'
+    ];
+
+    for (const queue of queues) {
+      try {
+        await boss.createQueue(queue);
+      } catch (err) {
+        // createQueue might fail if it already exists or other reasons, log and continue
+        console.warn(`Queue creation notice for ${queue}:`, err.message);
+      }
+    }
+
     await startAgentWorker();
 
     // Define worker for scheduled tasks
@@ -70,27 +96,31 @@ export async function startWorkers() {
 
 async function runIntelligenceScoring() {
   console.log('Running intelligence scoring (Priority & Project Health)');
-  // Score all unassigned tasks
-  const tasks = await pool.query("SELECT id FROM tasks WHERE status::text LIKE $1", ['%unassigned']);
-  for (const task of tasks.rows) {
-    await TaskRoutingService.calculatePriorityScore(task.id);
-  }
+  try {
+    // Score all unassigned tasks
+    const tasks = await pool.query("SELECT id FROM tasks WHERE status::text LIKE $1", ['%unassigned']);
+    for (const task of tasks.rows) {
+      await TaskRoutingService.calculatePriorityScore(task.id);
+    }
 
-  // Score all active projects
-  const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
-  for (const project of projects.rows) {
-    await ProjectHealthService.calculateHealthScore(project.id);
-  }
+    // Score all active projects
+    const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
+    for (const project of projects.rows) {
+      await ProjectHealthService.calculateHealthScore(project.id);
+    }
 
-  // Score all guilds
-  const guilds = await pool.query("SELECT id FROM guilds WHERE status != 'dissolved'");
-  for (const guild of guilds.rows) {
-    await GuildHealthService.calculateGuildMetrics(guild.id);
-  }
+    // Score all guilds
+    const guilds = await pool.query("SELECT id FROM guilds WHERE status != 'dissolved'");
+    for (const guild of guilds.rows) {
+      await GuildHealthService.calculateGuildMetrics(guild.id);
+    }
 
-  // Score all active constellations
-  const constellations = await pool.query("SELECT id FROM constellations WHERE status NOT IN ('completed', 'dissolved')");
-  for (const constellation of constellations.rows) {
-    await ConstellationHealthService.calculateConstellationMetrics(constellation.id);
+    // Score all active constellations
+    const constellations = await pool.query("SELECT id FROM constellations WHERE status NOT IN ('completed', 'dissolved')");
+    for (const constellation of constellations.rows) {
+      await ConstellationHealthService.calculateConstellationMetrics(constellation.id);
+    }
+  } catch (err) {
+    console.error('Intelligence scoring failed:', err);
   }
 }

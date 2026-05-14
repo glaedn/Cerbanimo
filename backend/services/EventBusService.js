@@ -28,6 +28,7 @@ class EventBusService extends EventEmitter {
     };
 
     try {
+      // Ensure queue exists if boss is started
       await this.boss.send(this.queueName, event, {
         retryLimit: 5,
         retryBackoff: true
