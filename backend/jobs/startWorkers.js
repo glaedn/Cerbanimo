@@ -1,4 +1,5 @@
 import { startAgentWorker } from './workers/agentWorker.js';
+import { startDomainWorkers } from './workers/domain/domainWorkers.js';
 import boss from './boss.js';
 import TaskRoutingService from '../services/TaskRoutingService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
@@ -43,7 +44,12 @@ export async function startWorkers() {
       }
     }
 
+    // New domain queues
+    await boss.createQueue('governance-execution');
+    await boss.createQueue('chronicle-generation');
+
     await startAgentWorker();
+    await startDomainWorkers();
 
     // Define worker for scheduled tasks
     await boss.work('scheduled-tasks', async (job) => {

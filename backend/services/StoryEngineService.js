@@ -92,6 +92,12 @@ class StoryEngineService {
   }
 
   async detectUserPatterns(userId) {
+    const { default: boss } = await import('../jobs/boss.js');
+    console.log(`StoryEngine: Offloading pattern detection for user ${userId} to pg-boss`);
+    await boss.send('chronicle-generation', { type: 'userPatterns', payload: { userId } });
+  }
+
+  async detectUserPatternsInternal(userId) {
     const unitsQuery = 'SELECT * FROM story_units WHERE user_id = $1';
     const unitsResult = await pool.query(unitsQuery, [userId]);
     const units = unitsResult.rows;
@@ -110,11 +116,14 @@ class StoryEngineService {
       // Specialist: Many units in same skill tags
       const skillCounts = {};
       units.forEach(u => {
-        u.skill_tags.forEach(tag => {
-           skillCounts[tag] = (skillCounts[tag] || 0) + 1;
-        });
+        if (u.skill_tags) {
+          u.skill_tags.forEach(tag => {
+             skillCounts[tag] = (skillCounts[tag] || 0) + 1;
+          });
+        }
       });
-      const maxSkills = Math.max(...Object.values(skillCounts));
+      const skillValues = Object.values(skillCounts);
+      const maxSkills = skillValues.length > 0 ? Math.max(...skillValues) : 0;
       patterns['Specialist'] = Math.min(maxSkills / units.length, 1.0);
 
       // Finisher: High completion rate for units that have high complexity
@@ -157,6 +166,7 @@ class StoryEngineService {
       );
     });
     await Promise.all(upsertPromises);
+    return { status: 'success', patterns };
   }
 
   async generateMicroNarrative(unitId) {
@@ -192,7 +202,13 @@ class StoryEngineService {
     return content;
   }
 
-  async createFromNeed({ needId, projectId, complexity }) {
+  async createFromNeed(payload) {
+    const { default: boss } = await import('../jobs/boss.js');
+    console.log(`StoryEngine: Offloading creation from need to pg-boss`);
+    await boss.send('chronicle-generation', { type: 'fromNeed', payload });
+  }
+
+  async createFromNeedInternal({ needId, projectId, complexity }) {
     const needResult = await pool.query('SELECT * FROM needs WHERE id = $1', [needId]);
     const need = needResult.rows[0];
 
@@ -201,7 +217,8 @@ class StoryEngineService {
       VALUES ($1, $2, 'originator', $3, 'need_expansion')
       RETURNING *;
     `;
-    return pool.query(insertQuery, [need.requestor_user_id, projectId, complexity]);
+    const res = await pool.query(insertQuery, [need.requestor_user_id, projectId, complexity]);
+    return res.rows[0];
   }
 }
 
