@@ -9,8 +9,12 @@ import EventRouter from './EventRouter.js';
 vi.mock('../db.js');
 vi.mock('./matchingService.js');
 vi.mock('./NotificationService.js');
-vi.mock('../workers/temporalWorker.js', () => ({
-  getTemporalClient: vi.fn().mockResolvedValue(null)
+vi.mock('../jobs/boss.js', () => ({
+  default: {
+    send: vi.fn().mockResolvedValue('job-id'),
+    start: vi.fn().mockResolvedValue(),
+    work: vi.fn().mockResolvedValue()
+  }
 }));
 
 describe('NeedService', () => {

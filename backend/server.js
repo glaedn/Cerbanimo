@@ -6,7 +6,6 @@ import { auth } from 'express-oauth2-jwt-bearer';
 import rateLimit from 'express-rate-limit';
 import http from 'http';
 import { Server } from 'socket.io';
-import cron from 'node-cron';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -64,6 +63,8 @@ import CrisisService from './services/CrisisService.js';
 import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
 import { startTemporalWorker } from './workers/temporalWorker.js';
+import boss from './jobs/boss.js';
+import { startWorkers } from './jobs/startWorkers.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -89,6 +90,7 @@ import { createSolidarityTables } from '../models/solidarity.js';
 import { createImpactReceiptTables } from '../models/impact_receipts.js';
 import { createNeedFulfillmentTable } from '../models/need_fulfillments.js';
 import { createAgentTables } from '../models/agents.js';
+import { createWorkflowTables } from '../models/workflows.js';
 import { createNarrativeTables } from '../models/narrative_v2.js';
 import { createWalletTable } from '../models/wallets.js';
 import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
@@ -298,133 +300,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Nightly task reset
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running nightly reset of spent points');
-  try {
-    const result = await taskController.resetAllSpentPoints();
-    console.log('Reset completed:', result);
-  } catch (error) {
-    console.error('Failed to reset spent points:', error);
-  }
-});
-
-// Nightly interest validation
-cron.schedule('0 1 * * *', async () => {
-  console.log('Running nightly interest validation...');
-  try {
-    await validatePendingInterests();
-    console.log('Interest validation completed.');
-  } catch (error) {
-    console.error('Interest validation worker failed:', error);
-  }
-});
-
-// Roadmap Background Workers
-// Sync Guild Memberships (Every 15 minutes)
-cron.schedule('*/15 * * * *', async () => {
-  console.log('Running guild membership synchronization...');
-  try {
-    await GuildService.syncMembershipsWithSkills();
-  } catch (err) {
-    console.error('Membership sync worker failed:', err);
-  }
-});
-
-// Automated Skill Enrichment (Daily at midnight)
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running daily skill enrichment...');
-  try {
-    await GuildService.enrichSkillsAndHierarchy();
-  } catch (err) {
-    console.error('Skill enrichment worker failed:', err);
-  }
-});
-
-// Weekly Wrap-up Generation (Daily at 2:00 AM)
-cron.schedule('0 2 * * *', async () => {
-  console.log('Running daily weekly wrap-up generation...');
-  try {
-    await WeeklyWrapUpService.generateWeeklyWrapUps();
-  } catch (err) {
-    console.error('Weekly wrap-up worker failed:', err);
-  }
-});
-
-// Need Escalation Engine (Daily at 3:00 AM)
-cron.schedule('0 3 * * *', async () => {
-  console.log('Running daily need escalation check...');
-  try {
-    await EscalationService.checkAndEscalateNeeds();
-  } catch (err) {
-    console.error('Need escalation worker failed:', err);
-  }
-});
-
-// Federation Treaty Enforcement (Daily at 4:00 AM)
-cron.schedule('0 4 * * *', async () => {
-  console.log('Running daily federation treaty enforcement...');
-  try {
-    await TreatyEnforcementService.runEnforcementCycle();
-  } catch (err) {
-    console.error('Treaty enforcement worker failed:', err);
-  }
-});
-
-// Crisis Auto-Trigger Evaluation (Daily at 5:00 AM)
-cron.schedule('0 5 * * *', async () => {
-  console.log('Running daily crisis auto-trigger evaluation...');
-  try {
-    await CrisisService.evaluateAutoCrisis();
-  } catch (err) {
-    console.error('Crisis evaluation worker failed:', err);
-  }
-});
-
-// Dynamic Reward & Decay Adjustment (Every 6 hours)
-cron.schedule('0 */6 * * *', async () => {
-  console.log('Running dynamic reward and decay adjustment');
-  try {
-    const adjusted = await TaskRoutingService.applyDynamicRewardAdjustment();
-    console.log(`Adjusted ${adjusted.length} tasks.`);
-  } catch (err) {
-    console.error('Reward adjustment worker failed:', err);
-  }
-});
-
-// Intelligence Scoring (Hourly)
-cron.schedule('0 * * * *', async () => {
-  console.log('Running intelligence scoring (Priority & Project Health)');
-  try {
-    // Score all unassigned tasks
-    const tasks = await pool.query("SELECT id FROM tasks WHERE status::text LIKE $1", ['%unassigned']);
-    for (const task of tasks.rows) {
-      await TaskRoutingService.calculatePriorityScore(task.id);
-    }
-
-    // Score all active projects
-    const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
-    for (const project of projects.rows) {
-      await ProjectHealthService.calculateHealthScore(project.id);
-    }
-
-    // Score all guilds
-    const guilds = await pool.query("SELECT id FROM guilds WHERE status != 'dissolved'");
-    for (const guild of guilds.rows) {
-      await GuildHealthService.calculateGuildMetrics(guild.id);
-    }
-
-    // Score all active constellations
-    const constellations = await pool.query("SELECT id FROM constellations WHERE status NOT IN ('completed', 'dissolved')");
-    for (const constellation of constellations.rows) {
-      await ConstellationHealthService.calculateConstellationMetrics(constellation.id);
-    }
-
-    console.log('Intelligence scoring completed.');
-  } catch (err) {
-    console.error('Intelligence scoring worker failed:', err);
-  }
-});
+// Scheduled tasks moved to pg-boss in startWorkers.js
 
 // Start server
 const PORT = process.env.PORT || 4000;
@@ -504,6 +380,12 @@ async function initializeDatabase() {
     }
 
     try {
+      await createWorkflowTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Workflow Tables initialization failed:', err.message);
+    }
+
+    try {
       await createNarrativeTables();
     } catch (err) {
       console.warn('Optional Subsystem Skip: Narrative Tables initialization failed:', err.message);
@@ -528,6 +410,16 @@ async function initializeDatabase() {
 initializeDatabase().then(async () => {
   // Initialize Event System
   await EventBusService.initialize();
+
+  // Start pg-boss
+  try {
+    await boss.start();
+    console.log('PgBoss started successfully');
+    await startWorkers();
+  } catch (err) {
+    console.error('Failed to start PgBoss:', err);
+  }
+
   startEventWorker();
   startTemporalWorker();
 
