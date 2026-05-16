@@ -3,6 +3,8 @@ import { AudioDirector } from "./AudioDirector";
 import { themeLayer } from "./layers/themeLayer";
 import { uiLayer } from "./layers/uiLayer";
 import { eventLayer } from "./layers/eventLayer";
+import { tokenLayer } from "./layers/tokenLayer";
+import { socialLayer } from "./layers/socialLayer";
 import { ambientLayer } from "./layers/ambientLayer";
 import { audioSceneManager } from "./AudioSceneManager";
 
@@ -13,6 +15,10 @@ import { workspaceScene } from "./scenes/workspace";
 import { governanceScene } from "./scenes/governance";
 import { crisisScene } from "./scenes/crisis";
 import { portfolioScene } from "./scenes/portfolio";
+import { skillGalaxyScene } from "./scenes/skillGalaxy";
+import { guildHubScene } from "./scenes/guildHub";
+import { communityScene } from "./scenes/community";
+import { onboardingScene } from "./scenes/onboarding";
 
 class AudioEngine {
   constructor() {
@@ -28,6 +34,8 @@ class AudioEngine {
     themeLayer.connect(this.themeGain);
     uiLayer.connect(this.uiGain);
     eventLayer.connect(this.uiGain);
+    tokenLayer.connect(this.uiGain);
+    socialLayer.connect(this.uiGain);
     ambientLayer.connect(this.themeGain);
 
     // Register scenes with the manager
@@ -37,6 +45,12 @@ class AudioEngine {
     audioSceneManager.registerScene("governance", governanceScene);
     audioSceneManager.registerScene("crisis", crisisScene);
     audioSceneManager.registerScene("portfolio", portfolioScene);
+    audioSceneManager.registerScene("skill-galaxy", skillGalaxyScene);
+    audioSceneManager.registerScene("guild-hub", guildHubScene);
+    audioSceneManager.registerScene("community", communityScene);
+    audioSceneManager.registerScene("onboarding", onboardingScene);
+    audioSceneManager.registerScene("marketplace", workspaceScene);
+    audioSceneManager.registerScene("atlas", homepageScene);
   }
 
   async start() {

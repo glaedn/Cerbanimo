@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal, Paper, Typography, TextField, Button, Box, IconButton, List, ListItem, ListItemText, Divider, Snackbar, Alert, CircularProgress
 } from '@mui/material';
@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { motion, AnimatePresence } from 'framer-motion';
+import { audioEngine } from '../audio/AudioEngine';
 
 const SubmissionModal = ({ open, onClose, onSubmit, taskName }) => {
   const [proofUrls, setProofUrls] = useState(['']);
@@ -28,7 +29,19 @@ const SubmissionModal = ({ open, onClose, onSubmit, taskName }) => {
     setProofUrls(newUrls);
   };
 
+  useEffect(() => {
+    if (open) {
+      audioEngine.trigger('ui.modal_open');
+    }
+  }, [open]);
+
+  const handleClose = () => {
+    audioEngine.trigger('ui.modal_close');
+    onClose();
+  };
+
   const handleSubmit = async () => {
+    audioEngine.trigger('ui.confirm');
     setIsSubmitting(true);
     // filter out empty URLs
     const filteredUrls = proofUrls.filter(url => url.trim() !== '');
@@ -41,7 +54,7 @@ const SubmissionModal = ({ open, onClose, onSubmit, taskName }) => {
   };
 
   return (
-    <Modal open={open} onClose={onClose} aria-labelledby="submission-modal-title" closeAfterTransition>
+    <Modal open={open} onClose={handleClose} aria-labelledby="submission-modal-title" closeAfterTransition>
       <AnimatePresence>
         {open && (
           <motion.div
@@ -79,7 +92,7 @@ const SubmissionModal = ({ open, onClose, onSubmit, taskName }) => {
           <Typography variant="h6" id="submission-modal-title" sx={{ color: '#00F3FF' }}>
             Submit Task: {taskName}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: '#fff' }}>
+          <IconButton onClick={handleClose} sx={{ color: '#fff' }}>
             <CloseIcon />
           </IconButton>
         </Box>

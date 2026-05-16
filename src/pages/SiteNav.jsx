@@ -102,11 +102,21 @@ const SiteNav = () => {
   const avatarUrl = useMemo(() => getProfileImageUrl(profile, user), [profile, user]);
   const recentNotifications = notifications.slice(0, 5);
 
-  const toggleSidebar = () => setIsSidebarOpen((open) => !open);
-  const closeSidebar = () => setIsSidebarOpen(false);
+  const toggleSidebar = () => {
+    const nextState = !isSidebarOpen;
+    setIsSidebarOpen(nextState);
+    audioEngine.trigger(nextState ? "ui.sidebar_open" : "ui.sidebar_close");
+  };
+  const closeSidebar = () => {
+    if (isSidebarOpen) {
+      setIsSidebarOpen(false);
+      audioEngine.trigger("ui.sidebar_close");
+    }
+  };
 
   const handleOpenNotifications = (event) => {
     setAnchorEl(event.currentTarget);
+    audioEngine.trigger("ui.dropdown_open");
   };
 
   const handleCloseNotifications = () => {
@@ -115,6 +125,7 @@ const SiteNav = () => {
       markAsRead(unreadNotificationIds);
     }
     setAnchorEl(null);
+    audioEngine.trigger("ui.dropdown_close");
   };
 
   const fetchUserProfileId = useCallback(async () => {
@@ -146,6 +157,7 @@ const SiteNav = () => {
   const handleOpenNeedModal = () => {
     if (isAuthenticated && userProfileId) {
       setIsNeedModalOpen(true);
+      audioEngine.trigger("ui.modal_open");
     } else {
       setNotificationState({
         open: true,
@@ -155,7 +167,10 @@ const SiteNav = () => {
     }
   };
 
-  const handleCloseNeedModal = () => setIsNeedModalOpen(false);
+  const handleCloseNeedModal = () => {
+    setIsNeedModalOpen(false);
+    audioEngine.trigger("ui.modal_close");
+  };
 
   const handleNeedSubmit = async (needData) => {
     try {

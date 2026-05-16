@@ -1,5 +1,7 @@
 import { uiLayer } from "./layers/uiLayer";
 import { eventLayer } from "./layers/eventLayer";
+import { tokenLayer } from "./layers/tokenLayer";
+import { socialLayer } from "./layers/socialLayer";
 import { ambientLayer } from "./layers/ambientLayer";
 import { themeLayer } from "./layers/themeLayer";
 import { audioSceneManager } from "./AudioSceneManager";
@@ -35,6 +37,27 @@ export function handleEvent(eventType, payload = {}) {
       break;
     case "ui.modal_open":
       uiLayer.openModal();
+      break;
+    case "ui.modal_close":
+      uiLayer.closeModal();
+      break;
+    case "ui.tab_switch":
+      uiLayer.tabSwitch();
+      break;
+    case "ui.toggle_on":
+      uiLayer.toggleOn();
+      break;
+    case "ui.toggle_off":
+      uiLayer.toggleOff();
+      break;
+    case "ui.notification_arrive":
+      uiLayer.notificationArrive();
+      break;
+    case "ui.sidebar_open":
+      uiLayer.sidebarOpen();
+      break;
+    case "ui.sidebar_close":
+      uiLayer.sidebarClose();
       break;
 
     case "task.accepted":
@@ -84,6 +107,23 @@ export function handleEvent(eventType, payload = {}) {
       break;
     case "guild.demand.spike":
       eventLayer.guildSpike(payload);
+      break;
+
+    case "token.earned":
+      tokenLayer.tokenEarned();
+      break;
+    case "token.spent":
+      tokenLayer.tokenSpent();
+      break;
+    case "community.joined":
+      socialLayer.communityJoined();
+      break;
+    case "constellation.formed":
+      socialLayer.constellationFormed();
+      break;
+
+    case "crisis.declared":
+      audioSceneManager.transitionTo("crisis");
       break;
 
     case "context.change":

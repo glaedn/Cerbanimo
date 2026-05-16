@@ -3,6 +3,7 @@
 // No slide or harmonica — there's no time for poetry
 export const crisisScene = {
   bpm: 104,
+  transitionTime: 0.3,
   mood: {
     stringsVol: -10,     // steel string: maximum — driving urgency
     brassVol: -40,       // harmonica: silent

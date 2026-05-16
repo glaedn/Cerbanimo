@@ -18,6 +18,7 @@ import ChronicleTimeline from '../../components/ChronicleTimeline';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ShareIcon from '@mui/icons-material/Share';
+import { audioEngine } from '../../audio/AudioEngine';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { toast } from 'react-hot-toast';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
@@ -339,6 +340,7 @@ const ProfilePage = () => {
   const handleShareProfile = () => {
     const publicProfileUrl = `${window.location.origin}/profile/public/${profileData.id}`;
     navigator.clipboard.writeText(publicProfileUrl).then(() => {
+      audioEngine.trigger('ui.copy_success');
       toast.success('Public profile link copied to clipboard!');
     }).catch(err => {
       console.error('Failed to copy profile link:', err);

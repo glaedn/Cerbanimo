@@ -3,6 +3,7 @@
 // The arp adds that starfield shimmer overhead
 export const dashboardScene = {
   bpm: 76,
+  transitionTime: 2,
   mood: {
     stringsVol: -12,     // steel string: full presence — this is the heartbeat
     brassVol: -28,       // harmonica: quiet undertone

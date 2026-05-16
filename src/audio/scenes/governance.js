@@ -4,6 +4,7 @@
 // This is where the future of the frontier gets decided
 export const governanceScene = {
   bpm: 62,
+  transitionTime: 6,
   mood: {
     stringsVol: -20,     // steel string: receded, barely heard
     brassVol: -16,       // harmonica: forward — speaks for the collective

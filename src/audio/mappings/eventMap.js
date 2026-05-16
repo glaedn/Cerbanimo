@@ -6,5 +6,13 @@ export const eventMap = {
     "task.dropped": "task.dropped",
     "task.rejected": "task.rejected",
     "task.unblocked": "task.unblocked",
-    "project.health.update": "project.health.update"
+    "task.completed": "task.approved",
+    "project.health.update": "project.health.update",
+    "reputation.levelup": "reputation.levelup",
+    "vote.passed": "vote.passed",
+    "vote.failed": "vote.failed",
+    "collaboration.invite": "collaboration.invite",
+    "community.joined": "community.joined",
+    "community.alert": "crisis.declared",
+    "trust.updated": "reputation.levelup"
 };

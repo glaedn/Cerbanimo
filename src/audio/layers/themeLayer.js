@@ -124,7 +124,7 @@ const hat = new Tone.MetalSynth({
 // G major / G mixolydian — bright, open, heroic frontier
 // The mixolydian b7 (F natural in G) gives that cosmic, slightly unresolved edge
 
-const progressions = [
+let progressions = [
   // I - IV - V - I (classic western cadence — this is home base)
   [
     { notes: ["G3", "B3", "D4"] },
@@ -150,14 +150,14 @@ const progressions = [
 
 // G major pentatonic in high register for the stellar arp
 // Sparse and random — not a melody, just light catching on things
-const pentatonicHigh = [
+let pentatonicHigh = [
   "G5", "A5", "B5", "D6", "E6", "G6",
   "B5", null, "D6", null, "E6", null,
   "G6", null, "A5", null,
 ];
 
 // Walking bass — cowboy upright bass feel, thumbed not plucked
-const bassNotes = [
+let bassNotes = [
   "G1", "G1", "D1", "G1",
   "C1", "C1", "G1", "C1",
   "D1", "D1", "A1", "D1",
@@ -166,7 +166,7 @@ const bassNotes = [
 
 // Slide guitar notes — 3rds and 5ths, meandering through the changes
 // Portamento makes these feel like a physical slide on strings
-const slideNotes = [
+let slideNotes = [
   "B3", "G3", "A3", "B3",
   "E4", "G3", "F#4", "D4",
   "G4", "E4", "B3", "D4",
@@ -174,7 +174,7 @@ const slideNotes = [
 ];
 
 // Harmonica notes — G pentatonic, mid-register, slightly plaintive
-const harmonicaNotes = [
+let harmonicaNotes = [
   "D4", "G4", "B4", "D5",
   "G4", "B4", "D5", "G5",
   "E4", "G4", "A4", "B4",
@@ -186,6 +186,8 @@ let currentProgressionIndex = 0;
 let sequences = [];
 let rotatorId = null;
 let started = false;
+
+let steelSeq, padSeq, slideSeq, harmonicaSeq, starArpSeq, bassSeq, kickSeq, snareSeq, hatSeq;
 
 const state = {
   urgency: 0,
@@ -211,14 +213,16 @@ export const themeLayer = {
 
     // ── Steel string — boom-chick country picking pattern
     // Plays on every half note; the backbone of the cowboy groove
-    const steelSeq = new Tone.Sequence(
+    steelSeq = new Tone.Sequence(
       (time, event) => {
         if (event?.notes) {
+          // Live feel: random velocity variance
+          const velocity = (0.55 + state.collaboration * 0.35) * (0.85 + Math.random() * 0.3);
           steelString.triggerAttackRelease(
             event.notes,
             "16n",
             time,
-            0.55 + state.collaboration * 0.35
+            velocity
           );
         }
       },
@@ -228,7 +232,7 @@ export const themeLayer = {
 
     // ── Cosmic pad — nebula wash, barely audible, always felt
     // Plays every 2 bars, octave below the chord
-    const padSeq = new Tone.Sequence(
+    padSeq = new Tone.Sequence(
       (time, event) => {
         if (event?.notes) {
           const padNotes = event.notes.map((n) =>
@@ -242,7 +246,7 @@ export const themeLayer = {
     );
 
     // ── Slide guitar — portamento melody, wandering and expressive
-    const slideSeq = new Tone.Sequence(
+    slideSeq = new Tone.Sequence(
       (time, note) => {
         if (state.melodyActive && note) {
           slide.triggerAttackRelease(note, "4n.", time, 0.65);
@@ -253,7 +257,7 @@ export const themeLayer = {
     );
 
     // ── Space harmonica — plaintive, reedy, calls to the horizon
-    const harmonicaSeq = new Tone.Sequence(
+    harmonicaSeq = new Tone.Sequence(
       (time, note) => {
         if (state.choirActive && note) {
           harmonica.triggerAttackRelease([note], "4n.", time, 0.6);
@@ -265,7 +269,7 @@ export const themeLayer = {
 
     // ── Stellar arp — sparse, random starfield shimmer
     // Never plays every note — randomized by arpDensity for a natural twinkle
-    const starArpSeq = new Tone.Sequence(
+    starArpSeq = new Tone.Sequence(
       (time, note) => {
         if (state.arpActive && note && Math.random() < state.arpDensity) {
           starArp.triggerAttackRelease(note, "32n", time, 0.3);
@@ -276,7 +280,7 @@ export const themeLayer = {
     );
 
     // ── Bass — upright walking feel, thumbed pluck
-    const bassSeq = new Tone.Sequence(
+    bassSeq = new Tone.Sequence(
       (time, note) => {
         if (state.bassIntensity > 0.2 && note) {
           bass.triggerAttackRelease(
@@ -300,7 +304,7 @@ export const themeLayer = {
 
     // ── Kick — sparse and boomy, beats 1 and 3 only
     // Cowboys stomp once, they don't shuffle
-    const kickSeq = new Tone.Sequence(
+    kickSeq = new Tone.Sequence(
       (time, active) => {
         if (state.percussionActive && active) {
           kick.triggerAttackRelease("G1", "8n", time, 0.8);
@@ -311,7 +315,7 @@ export const themeLayer = {
     );
 
     // ── Snare — rimshot on 2 and 4, dry and cracking
-    const snareSeq = new Tone.Sequence(
+    snareSeq = new Tone.Sequence(
       (time, active) => {
         if (state.percussionActive && active) {
           snare.triggerAttackRelease("8n", time, 0.5);
@@ -322,7 +326,7 @@ export const themeLayer = {
     );
 
     // ── Hat — sparse, dusty, like spurs on the deck of a starship
-    const hatSeq = new Tone.Sequence(
+    hatSeq = new Tone.Sequence(
       (time, active) => {
         if (state.percussionActive && active && Math.random() > 0.4) {
           hat.triggerAttackRelease("32n", time, 0.25);
@@ -411,18 +415,20 @@ export const themeLayer = {
       melodyActive = false,  // slide on/off
       arpDensity = 0.4,
       bassIntensity = 0.5,
+      melodicMaterial = null,
+      transitionTime = 4,
     } = moodConfig;
 
-    steelString.volume.rampTo(stringsVol, 4);
-    slide.volume.rampTo(stringsVol + 2, 4);
-    harmonica.volume.rampTo(brassVol, 4);
-    cosmicPad.volume.rampTo(stringsVol - 8, 4);
-    starArp.volume.rampTo(stringsVol - 2, 4);
-    bass.volume.rampTo(bassVol, 4);
-    kick.volume.rampTo(percVol, 4);
-    snare.volume.rampTo(percVol, 4);
-    hat.volume.rampTo(percVol - 8, 4);
-    spaceReverb.wet.rampTo(reverbWet, 4);
+    steelString.volume.rampTo(stringsVol, transitionTime);
+    slide.volume.rampTo(stringsVol + 2, transitionTime);
+    harmonica.volume.rampTo(brassVol, transitionTime);
+    cosmicPad.volume.rampTo(stringsVol - 8, transitionTime);
+    starArp.volume.rampTo(stringsVol - 2, transitionTime);
+    bass.volume.rampTo(bassVol, transitionTime);
+    kick.volume.rampTo(percVol, transitionTime);
+    snare.volume.rampTo(percVol, transitionTime);
+    hat.volume.rampTo(percVol - 8, transitionTime);
+    spaceReverb.wet.rampTo(reverbWet, transitionTime);
 
     state.percussionActive = percussionActive;
     state.choirActive = choirActive;
@@ -430,5 +436,36 @@ export const themeLayer = {
     state.melodyActive = melodyActive;
     state.arpDensity = arpDensity;
     state.bassIntensity = bassIntensity;
+
+    if (melodicMaterial) {
+      this.swapMelody(melodicMaterial);
+    }
   },
+
+  swapMelody(material) {
+    const {
+      progressions: newProgs,
+      pentatonicHigh: newArp,
+      bassNotes: newBass,
+      slideNotes: newSlide,
+      harmonicaNotes: newHarm,
+    } = material;
+
+    if (newProgs) progressions = newProgs;
+    if (newArp) pentatonicHigh = newArp;
+    if (newBass) bassNotes = newBass;
+    if (newSlide) slideNotes = newSlide;
+    if (newHarm) harmonicaNotes = newHarm;
+
+    // Update sequences if they exist
+    if (steelSeq) {
+      currentProgressionIndex = 0;
+      steelSeq.events = progressions[currentProgressionIndex];
+      padSeq.events = progressions[currentProgressionIndex];
+      starArpSeq.events = pentatonicHigh;
+      bassSeq.events = bassNotes;
+      slideSeq.events = slideNotes;
+      harmonicaSeq.events = harmonicaNotes;
+    }
+  }
 };

@@ -7,6 +7,7 @@ import PrivateRoute from "./components/PrivateRoute.jsx";
 //import IntentionPages from "./pages/IntentionPages.jsx";
 import SiteNav from "./pages/SiteNav.jsx";
 import MusicController from "./components/MusicController.jsx";
+import SceneRouter from "./audio/SceneRouter";
 //import IntentionCreation from "./pages/IntentionCreation.jsx";
 //import Intention from "./pages/Intention.jsx";
 //import CapabilityTree from "./pages/CapabilityTree.jsx";
@@ -128,6 +129,7 @@ const AppContent = () => {
     <SpaceShell>
       <div className="App">
         {isAuthenticated && <MusicController />}
+        {isAuthenticated && <SceneRouter />}
       <Toaster
           position="top-right"
           toastOptions={{

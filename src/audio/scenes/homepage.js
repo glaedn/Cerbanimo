@@ -14,5 +14,17 @@ export const homepageScene = {
     melodyActive: true,  // slide: yes — gives the landing page a voice
     arpDensity: 0.2,
     bassIntensity: 0.3,
+    melodicMaterial: {
+      harmonicaNotes: [
+        "D4", "G4", "B4", "G4",
+        "D4", "G4", "B4", "D5",
+        "E4", "G4", "A4", "G4",
+        "D4", "B4", "A4", "G4",
+      ],
+      pentatonicHigh: [
+        "G5", null, "A5", null, "B5", null, "D6", null,
+        "E6", null, "G6", null, "B6", null, "D7", null,
+      ]
+    }
   },
 };

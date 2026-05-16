@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useCrisis } from '../../../context/CrisisContext';
 import { useLoFi } from '../../../context/LoFiContext';
 import { Switch, FormControlLabel } from '@mui/material';
+import { audioEngine } from '../../../audio/AudioEngine';
 import '../HUDPanel.css';
 import './StatusBar.css';
 
@@ -13,8 +14,20 @@ const StatusBar = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { allSkills, loading: skillsLoading, error: skillsError } = useSkillData();
   const { user, isAuthenticated } = useAuth0();
-  const { isCrisisMode, toggleCrisisMode } = useCrisis();
-  const { isLoFiMode, toggleLoFiMode } = useLoFi();
+  const { isCrisisMode, toggleCrisisMode: originalToggleCrisisMode } = useCrisis();
+  const { isLoFiMode, toggleLoFiMode: originalToggleLoFiMode } = useLoFi();
+
+  const toggleLoFiMode = () => {
+    const nextState = !isLoFiMode;
+    originalToggleLoFiMode();
+    audioEngine.trigger(nextState ? 'ui.toggle_on' : 'ui.toggle_off');
+  };
+
+  const toggleCrisisMode = () => {
+    const nextState = !isCrisisMode;
+    originalToggleCrisisMode();
+    audioEngine.trigger(nextState ? 'ui.toggle_on' : 'ui.toggle_off');
+  };
 
   const primaryColor = '#00F3FF';
   const accentFont = "'Orbitron', sans-serif";

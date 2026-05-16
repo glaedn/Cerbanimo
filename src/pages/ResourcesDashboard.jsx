@@ -9,6 +9,7 @@ import {
 import { Box as BoxIcon, Calendar, Wrench, MapPin, Plus, Search, Book } from 'lucide-react';
 import ResourceListingForm from '../components/ResourceListingForm/ResourceListingForm';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { audioEngine } from '../audio/AudioEngine';
 
 const ResourcesDashboard = () => {
   const isMobile = useIsMobile();
@@ -28,6 +29,11 @@ const ResourcesDashboard = () => {
   const [isConflictOpen, setIsConflictOpen] = useState(false);
   const [selectedConflict, setSelectedConflict] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (e, v) => {
+    setTabValue(v);
+    audioEngine.trigger('ui.tab_switch');
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -186,7 +192,7 @@ const ResourcesDashboard = () => {
       {isMobile && (
         <Tabs
           value={tabValue}
-          onChange={(e, v) => setTabValue(v)}
+          onChange={handleTabChange}
           variant="fullWidth"
           sx={{
             mb: 3,
@@ -228,7 +234,11 @@ const ResourcesDashboard = () => {
                             variant="contained"
                             startIcon={<Book size={16} />}
                             disabled={r.owner_user_id === platformUserId}
-                            onClick={() => { setSelectedResource(r); setIsBookingOpen(true); }}
+                            onClick={() => {
+                              setSelectedResource(r);
+                              setIsBookingOpen(true);
+                              audioEngine.trigger('ui.modal_open');
+                            }}
                             sx={{ bgcolor: '#00d787', color: '#000', height: isMobile ? '48px' : 'auto', '&:hover': { bgcolor: '#00b572' } }}
                         >
                             {r.owner_user_id === platformUserId ? 'OWNED' : 'RESERVE'}
@@ -290,7 +300,7 @@ const ResourcesDashboard = () => {
         )}
       </Grid>
 
-      <Modal open={isConflictOpen} onClose={() => setIsConflictOpen(false)}>
+      <Modal open={isConflictOpen} onClose={() => { setIsConflictOpen(false); audioEngine.trigger('ui.modal_close'); }}>
           <Box sx={{
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
               width: isMobile ? '100%' : 600, height: isMobile ? '100%' : 'auto', bgcolor: '#0a0a0a', border: isMobile ? 'none' : '2px solid #ff3232', p: isMobile ? 2 : 4, borderRadius: isMobile ? 0 : 2,

@@ -23,12 +23,19 @@ class AudioSceneManager {
 
     // Ramp BPM
     if (config.bpm) {
-      Tone.Transport.bpm.rampTo(config.bpm, 4);
+      if (sceneName === 'crisis') {
+        Tone.Transport.bpm.value = config.bpm;
+      } else {
+        Tone.Transport.bpm.rampTo(config.bpm, config.transitionTime || 4);
+      }
     }
 
     // Apply layer volumes and effects via themeLayer
     if (themeLayer && themeLayer.setMood) {
-      themeLayer.setMood(config.mood || {});
+      themeLayer.setMood({
+        ...(config.mood || {}),
+        transitionTime: config.transitionTime || 4
+      });
     }
   }
 }

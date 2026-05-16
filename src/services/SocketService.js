@@ -20,6 +20,7 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('[SocketService] Connected:', this.socket.id);
+      audioEngine.trigger('ui.connection_on');
       this.socket.emit('join', userId);
       this.startPresenceHeartbeat(userId);
     });
@@ -65,6 +66,13 @@ class SocketService {
     this.socket.on('audio:event', ({ type, payload }) => {
       console.log('[SocketService] Audio Event:', type, payload);
       audioEngine.trigger(type, payload);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.warn('[SocketService] Disconnected:', reason);
+      if (reason !== 'io client disconnect') {
+        audioEngine.trigger('ui.connection_lost');
+      }
     });
 
     this.socket.on('levelUpdate', (data) => {
