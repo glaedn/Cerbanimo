@@ -65,6 +65,15 @@ const slide = new Tone.MonoSynth({
   portamento:       0.4, // increased for more fluid, less gridlocked transitions
 }).connect(canyonDelay);
 
+const harmonica = new Tone.PolySynth(Tone.FMSynth, {
+  harmonicity:        1.5,
+  modulationIndex:    3,
+  oscillator:         { type: 'sine' },
+  envelope:           { attack: 0.3, decay: 0.4, sustain: 0.6, release: 2.5 },
+  modulation:         { type: 'triangle' },
+  modulationEnvelope: { attack: 0.2, decay: 0.3, sustain: 0.4, release: 1.5 },
+}).connect(canyonDelay);
+
 const cosmicPad = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: 'sine' },
   envelope:   { attack: 12, decay: 1, sustain: 0.8, release: 12 },
@@ -75,14 +84,6 @@ const starArp = new Tone.Synth({
   oscillator: { type: 'sine' },
   envelope:   { attack: 0.02, decay: 0.25, sustain: 0, release: 1.2 },
 }).connect(spaceReverb);
-
-const cyberArp = new Tone.MonoSynth({
-  oscillator:    { type: 'pulse', width: 0.25 },
-  filter:        { Q: 3, type: 'lowpass', frequency: 2800, rolloff: -24 },
-  filterEnvelope:{ attack: 0.002, decay: 0.12, sustain: 0.3, release: 0.2, baseFrequency: 900, octaves: 2.2 },
-  envelope:      { attack: 0.002, decay: 0.1, sustain: 0.25, release: 0.3 },
-  portamento:     0.012,
-}).connect(canyonDelay);
 
 const bass = new Tone.MonoSynth({
   oscillator:    { type: 'triangle' },
@@ -113,11 +114,6 @@ const hat = new Tone.MetalSynth({
   envelope:        { attack: 0.001, decay: 0.04, release: 0.01 },
   harmonicity:     3.1,
   modulationIndex: 14,
-}).connect(dryReverb);
-
-const machineSynth = new Tone.Synth({
-  oscillator: { type: 'triangle' },
-  envelope:   { attack: 0.05, decay: 0.2, sustain: 0.2, release: 0.8 },
 }).connect(dryReverb);
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
@@ -156,12 +152,13 @@ let progressions = [
 
 let melodicMaterial = {
   slideCells:     [['G4', null, 'A4', 'B4', 'D5', null, 'B4', 'A4']],
+  harmonicaCells: [['D5', 'B4', 'A4', null]],
   starCells:      [['G5', 'B5', 'D6'], ['A5', 'D6', 'E6']],
-  cyberCells:     [['G4', 'B4', 'D5', 'B4']],
   bassNotes:      ['G1', 'D1', 'C1', 'E1'],
 };
 
 let activeSlide = null;
+let activeHarmonica = null;
 
 let currentProgressionIndex = 0;
 let phraseStep = 0; // 0, 1, 2, 3 for A-A'-B-A
@@ -174,10 +171,8 @@ let conductorId  = null;
 let started      = false;
 let pendingSwap  = null;
 
-let steelSeq, padSeq, slideSeq, starArpSeq, cyberArpSeq, bassSeq,
-    kickSeq, snareSeq, hatSeq, machineSeq;
-
-let machineRoot = 'G3';
+let steelSeq, padSeq, slideSeq, harmonicaSeq, starArpSeq, bassSeq,
+    kickSeq, snareSeq, hatSeq;
 
 const state = {
   urgency:          0,
@@ -255,31 +250,44 @@ export const themeLayer = {
       '8n'
     );
 
+    // 4. Harmonica - Bluesy response engine
+    harmonicaSeq = new Tone.Sequence(
+      (time, event) => {
+        if (state.choirActive && event?.note) {
+          const drift = getDrift();
+          const progressionIdx = measureCounter % 16;
+          const chord = progressions[currentProgressionIndex][progressionIdx];
+          const anchoredNote = anchorToChord(event.note, chord?.notes);
+          const dur = event.dur || '4n';
+          const vel = (event.vel || 0.1) * (0.7 + Math.random() * 0.4);
+          harmonica.triggerAttackRelease([anchoredNote], dur, time + drift, vel);
+        }
+      },
+      new Array(32).fill(null),
+      '8n'
+    );
 
-    // 5. Stellar Arp - Embellishments
+
+    // 5. Stellar Arp - High generative stardust
     starArpSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.arpActive && note && Math.random() < state.arpDensity) {
-          const drift = getDrift();
-          starArp.triggerAttackRelease(note, '16n', time + drift, 0.08);
-        }
+      (time) => {
+        if (!state.arpActive || Math.random() > state.arpDensity) return;
+
+        const chord = progressions[currentProgressionIndex][measureCounter % 16];
+        const notes = chord?.notes || ['G4'];
+
+        // Non-repeating random selection from chord tones + octaves
+        const note = notes[Math.floor(Math.random() * notes.length)];
+        const oct  = Math.random() > 0.6 ? 24 : 12;
+        const target = Tone.Frequency(note).transpose(oct).toNote();
+
+        const drift = getDrift();
+        starArp.triggerAttackRelease(target, '16n', time + drift, 0.05 + Math.random() * 0.03);
       },
-      new Array(16).fill(null),
+      new Array(16).fill(0),
       '16n'
     );
 
-    // 6. Cyber Arp - Repetitive hypnotic pulse
-    cyberArpSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.cyberActive && note) {
-          const drift = getDrift();
-          const vel = 0.1 + state.cyberDensity * 0.08;
-          cyberArp.triggerAttackRelease(note, '16n', time + drift, vel);
-        }
-      },
-      new Array(16).fill(null),
-      '16n'
-    );
 
     // 7. Bass - Conservative grounding
     bassSeq = new Tone.Sequence(
@@ -343,39 +351,37 @@ export const themeLayer = {
       }
     }, '1m');
 
-    // 10. The Conductor - Manages Narrative Phrasing and Silence
+    // 10. The Conductor - Manages Narrative Breathing (16 bar cycles)
+    // Measures Lead-Silence-Response-Silence (4 bars each)
     conductorId = Tone.Transport.scheduleRepeat(() => {
-      // Update Arp Motifs every 4 bars
-      if (measureCounter % 4 === 0) {
-        const starCell = melodicMaterial.starCells[Math.floor(Math.random() * melodicMaterial.starCells.length)];
-        starArpSeq.events = mutatePhrase(starCell, 0.1);
+      const pos = measureCounter % 16;
 
-        const cyberCell = melodicMaterial.cyberCells[Math.floor(Math.random() * melodicMaterial.cyberCells.length)];
-        cyberArpSeq.events = mutatePhrase(cyberCell, 0.05);
-      }
-
-      // Sparse Narrative Phrasing (8 bar cycles)
-      // We use the full 32-step arrays (4 measures of 8th notes).
-
-      const cyclePos = measureCounter % 8;
-
-      if (cyclePos === 0) {
-        // Measures 1-4: Slide Solo
+      if (pos === 0) {
+        // Measures 1-4: Slide Narrative
         activeSlide = melodicMaterial.slideCells[Math.floor(Math.random() * melodicMaterial.slideCells.length)];
         slideSeq.events = activeSlide;
+        harmonicaSeq.events = new Array(32).fill(null);
         console.log("Conductor: Slide Narrative (Measures 1-4)");
-      } else if (cyclePos === 4) {
-        // Measures 5-8: Silence / Transition
-        // We clear the slide to let the atmosphere breathe
+      }
+      else if (pos === 4) {
+        // Measures 5-8: ATMOSPHERIC SILENCE
+        // User specifically wants the sound at measure 5 deleted.
         slideSeq.events = new Array(32).fill(null);
-        console.log("Conductor: Atmospheric Silence (Measures 5-8)");
-
-        // Randomly introduce a mutated slide lick in silence if growth is high
-        if (state.growth > 0.6 && Math.random() > 0.5) {
-             const ghostLick = mutatePhrase(activeSlide, 0.3);
-             slideSeq.events = ghostLick;
-             console.log("Conductor: Ghost Lick Variation");
-        }
+        harmonicaSeq.events = new Array(32).fill(null);
+        console.log("Conductor: Breathing Silence (Measures 5-8)");
+      }
+      else if (pos === 8) {
+        // Measures 9-12: Harmonica Response
+        slideSeq.events = new Array(32).fill(null);
+        activeHarmonica = melodicMaterial.harmonicaCells[Math.floor(Math.random() * melodicMaterial.harmonicaCells.length)];
+        harmonicaSeq.events = activeHarmonica;
+        console.log("Conductor: Harmonica Response (Measures 9-12)");
+      }
+      else if (pos === 12) {
+        // Measures 13-16: ATMOSPHERIC SILENCE
+        slideSeq.events = new Array(32).fill(null);
+        harmonicaSeq.events = new Array(32).fill(null);
+        console.log("Conductor: Breathing Silence (Measures 13-16)");
       }
 
     }, '1m');
@@ -390,41 +396,10 @@ export const themeLayer = {
       }
     }, '16m');
 
-    // 12. Star Whistle - Generative high melody
-    // Replaces the repetitive machine scale with a non-repeating random walk.
-    let starNote = Tone.Frequency('G5');
-    machineSeq = new Tone.Sequence(
-      (time) => {
-        if (!state.machineActive) return;
-
-        // Sparse triggering
-        if (Math.random() > 0.35) return;
-
-        const chord = progressions[currentProgressionIndex][measureCounter % 16];
-        const root = chord?.notes?.[0] || 'G3';
-
-        // Random walk through a pentatonic/blues scale relative to root
-        const intervals = [-2, 0, 2, 3, 5, 7, 10, 12];
-        const jump = intervals[Math.floor(Math.random() * intervals.length)];
-
-        // Keep it in a high, ethereal range (Octave 5-6)
-        let nextFreq = Tone.Frequency(root).transpose(24 + jump);
-        if (nextFreq.toFrequency() > 1500) nextFreq = nextFreq.transpose(-12);
-        if (nextFreq.toFrequency() < 500)  nextFreq = nextFreq.transpose(12);
-
-        const drift = getDrift();
-        const vel = 0.02 + (state.urgency * 0.04) + (Math.random() * 0.02);
-
-        machineSynth.triggerAttackRelease(nextFreq.toNote(), '2n', time + drift, vel);
-      },
-      new Array(16).fill(0),
-      '4n'
-    );
-
     sequences = [
-      steelSeq, padSeq, slideSeq,
-      starArpSeq, cyberArpSeq, bassSeq,
-      kickSeq, snareSeq, hatSeq, machineSeq,
+      steelSeq, padSeq, slideSeq, harmonicaSeq,
+      starArpSeq, bassSeq,
+      kickSeq, snareSeq, hatSeq,
     ];
 
     Tone.Transport.loop      = true;
@@ -475,9 +450,9 @@ export const themeLayer = {
   setMood(moodConfig) {
     const {
       stringsVol       = -18, // Restored blend
-      brassVol         = -48, // Ethereal Slide
+      brassVol         = -42, // Subdued Melody (Slide/Harmonica)
       bassVol          = -18, // Stronger foundation
-      percVol          = -20, // Better presence
+      percVol          = -22, // Better presence
       reverbWet        = 0.4,
       percussionActive = false,
       choirActive      = false,
@@ -494,10 +469,9 @@ export const themeLayer = {
 
     steelString.volume.rampTo(stringsVol,     transitionTime);
     slide.volume.rampTo(brassVol,             transitionTime);
+    harmonica.volume.rampTo(brassVol - 4,     transitionTime);
     cosmicPad.volume.rampTo(stringsVol - 2,   transitionTime);
-    starArp.volume.rampTo(stringsVol - 6,     transitionTime);
-    cyberArp.volume.rampTo(stringsVol + 0,    transitionTime);
-    machineSynth.volume.rampTo(stringsVol - 10, transitionTime); // Ethereal Whistle
+    starArp.volume.rampTo(stringsVol - 16,    transitionTime); // Very subtle stardust
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
     snare.volume.rampTo(percVol,              transitionTime);
