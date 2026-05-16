@@ -124,6 +124,11 @@ const hat = new Tone.MetalSynth({
   modulationIndex: 14,
 }).connect(dryReverb);
 
+const machineSynth = new Tone.Synth({
+  oscillator: { type: 'triangle' },
+  envelope:   { attack: 0.05, decay: 0.2, sustain: 0.2, release: 0.8 },
+}).connect(dryReverb);
+
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const getDrift = () => (Math.random() - 0.5) * 0.03;
 
@@ -175,7 +180,9 @@ let started      = false;
 let pendingSwap  = null;
 
 let steelSeq, padSeq, slideSeq, harmonicaSeq, starArpSeq, cyberArpSeq, bassSeq,
-    kickSeq, snareSeq, hatSeq;
+    kickSeq, snareSeq, hatSeq, machineSeq;
+
+let machineRoot = 'G3';
 
 const state = {
   urgency:          0,
@@ -186,6 +193,7 @@ const state = {
   arpActive:        false,
   cyberActive:      false,
   melodyActive:     false,
+  machineActive:    true,
   arpDensity:       0.3,
   cyberDensity:     0.4,
   bassIntensity:    0.4,
@@ -387,10 +395,37 @@ export const themeLayer = {
       }
     }, '16m');
 
+    // 12. Machine Scale - Generative background pulse
+    machineSeq = new Tone.Sequence(
+      (time, noteIdx) => {
+        if (!state.machineActive) return;
+
+        const groupIdx = Math.floor(noteIdx / 4); // 0, 1, 2, 3
+        const scaleIdx = noteIdx % 4; // 0, 1, 2, 3
+
+        const scale = [0, 2, 4, 7]; // Ascending fragment
+        const groupOffset = groupIdx * -2; // Down a step every 4 notes
+
+        const totalOffset = groupOffset + scale[scaleIdx];
+        const note = Tone.Frequency(machineRoot).transpose(totalOffset).toNote();
+
+        const drift = getDrift();
+        const vel = 0.04 + (state.urgency * 0.06);
+        machineSynth.triggerAttackRelease(note, '16n', time + drift, vel);
+
+        if (noteIdx === 15) {
+          const roots = ['G3', 'C4', 'D4', 'A3', 'F3', 'Bb3'];
+          machineRoot = roots[Math.floor(Math.random() * roots.length)];
+        }
+      },
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      '8n'
+    );
+
     sequences = [
       steelSeq, padSeq, slideSeq, harmonicaSeq,
       starArpSeq, cyberArpSeq, bassSeq,
-      kickSeq, snareSeq, hatSeq,
+      kickSeq, snareSeq, hatSeq, machineSeq,
     ];
 
     Tone.Transport.loop      = true;
@@ -450,6 +485,7 @@ export const themeLayer = {
       arpActive        = false,
       cyberActive      = false,
       melodyActive     = false,
+      machineActive    = true,
       arpDensity       = 0.3,
       cyberDensity     = 0.4,
       bassIntensity    = 0.4,
@@ -463,6 +499,7 @@ export const themeLayer = {
     cosmicPad.volume.rampTo(stringsVol - 6,   transitionTime);
     starArp.volume.rampTo(stringsVol - 4,     transitionTime);
     cyberArp.volume.rampTo(stringsVol + 2,    transitionTime);
+    machineSynth.volume.rampTo(stringsVol - 2, transitionTime);
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
     snare.volume.rampTo(percVol,              transitionTime);
@@ -474,6 +511,7 @@ export const themeLayer = {
     state.arpActive        = arpActive;
     state.cyberActive      = cyberActive;
     state.melodyActive     = melodyActive;
+    state.machineActive    = machineActive;
     state.arpDensity       = arpDensity;
     state.cyberDensity     = cyberDensity;
     state.bassIntensity    = bassIntensity;
