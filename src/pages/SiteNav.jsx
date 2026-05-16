@@ -209,7 +209,7 @@ const SiteNav = () => {
       </Link>
 
       <div className="site-nav-actions">
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 2, display: { xs: 'none', md: 'flex' } }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 2, display: { xs: 'none', sm: 'flex' } }}>
           <Tooltip title={`Music ${musicEnabled ? 'On' : 'Off'}`}>
             <IconButton size="small" onClick={toggleMusic} sx={{ color: musicEnabled ? '#5ff0ff' : '#666' }}>
               {musicEnabled ? <MusicNoteIcon fontSize="small" /> : <MusicOffIcon fontSize="small" />}
@@ -330,6 +330,23 @@ const SiteNav = () => {
         </div>
 
         <div className="nav-links">
+          <div className="sidebar-audio-section" style={{ padding: '0 20px 20px', borderBottom: '1px solid rgba(95, 240, 255, 0.1)', marginBottom: '10px' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(95, 240, 255, 0.5)', mb: 1, display: 'block' }}>AUDIO_ARRAY</Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+               <IconButton size="small" onClick={toggleMusic} sx={{ color: musicEnabled ? '#5ff0ff' : '#666' }}>
+                {musicEnabled ? <MusicNoteIcon /> : <MusicOffIcon />}
+              </IconButton>
+              <IconButton size="small" onClick={toggleSFX} sx={{ color: sfxEnabled ? '#5ff0ff' : '#666' }}>
+                {sfxEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
+              </IconButton>
+              <Slider
+                size="small"
+                value={masterVolume}
+                onChange={handleVolumeChange}
+                sx={{ color: '#5ff0ff', flex: 1 }}
+              />
+            </Stack>
+          </div>
           {isAuthenticated && (
             <Button
               variant="text"

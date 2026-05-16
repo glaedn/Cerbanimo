@@ -24,6 +24,7 @@ class AudioEngine {
   constructor() {
     this.started      = false;
     this.themeStarted = false;
+    this.eventQueue   = [];
 
     // Increase the default 100ms look-ahead to 180ms.
     // This schedules audio events further ahead of the playhead, giving the
@@ -56,6 +57,19 @@ class AudioEngine {
     audioSceneManager.registerScene('onboarding',  onboardingScene);
     audioSceneManager.registerScene('marketplace', workspaceScene);
     audioSceneManager.registerScene('atlas',       portfolioScene);
+
+    // Bootstrap first-interaction start for browser compliance
+    if (typeof window !== 'undefined') {
+      const handleStart = () => {
+        this.start();
+        window.removeEventListener('mousedown', handleStart);
+        window.removeEventListener('keydown', handleStart);
+        window.removeEventListener('touchstart', handleStart);
+      };
+      window.addEventListener('mousedown', handleStart);
+      window.addEventListener('keydown', handleStart);
+      window.addEventListener('touchstart', handleStart);
+    }
   }
 
   async start() {
@@ -63,6 +77,11 @@ class AudioEngine {
       await Tone.start();
       this.started = true;
       console.log('Audio Engine started (lookAhead:', Tone.getContext().lookAhead, 's)');
+
+      // Drain queue
+      const queue = [...this.eventQueue];
+      this.eventQueue = [];
+      queue.forEach(({ type, payload }) => this.trigger(type, payload));
     }
   }
 
@@ -72,7 +91,6 @@ class AudioEngine {
       await themeLayer.start();
       this.themeStarted = true;
       console.log('Theme music started');
-      audioSceneManager.transitionTo('normal');
     }
   }
 
@@ -96,7 +114,7 @@ class AudioEngine {
 
   trigger(eventType, payload) {
     if (!this.started) {
-      console.warn(`AudioEngine not started — ignoring: ${eventType}`);
+      this.eventQueue.push({ type: eventType, payload });
       return;
     }
     AudioDirector.dispatch(eventType, payload);

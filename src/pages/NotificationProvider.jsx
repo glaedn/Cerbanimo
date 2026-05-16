@@ -179,15 +179,6 @@ useEffect(() => {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    // Start audio engine on user interaction
-    const handleFirstInteraction = () => {
-      audioEngine.start();
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-    };
-    window.addEventListener('click', handleFirstInteraction);
-    window.addEventListener('keydown', handleFirstInteraction);
-
     const setupSocket = async () => {
       try {
         const token = await getAccessTokenSilently();

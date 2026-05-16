@@ -128,8 +128,8 @@ const AppContent = () => {
   return (
     <SpaceShell>
       <div className="App">
-        {isAuthenticated && <MusicController />}
-        {isAuthenticated && <SceneRouter />}
+        <MusicController />
+        <SceneRouter />
       <Toaster
           position="top-right"
           toastOptions={{

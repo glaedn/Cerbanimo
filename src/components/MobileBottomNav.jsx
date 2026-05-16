@@ -38,9 +38,15 @@ import GavelIcon from "@mui/icons-material/Gavel";
 import HubIcon from "@mui/icons-material/Hub";
 import SchoolIcon from "@mui/icons-material/School";
 import PsychologyIcon from "@mui/icons-material/Psychology";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import MusicNoteIcon from "@mui/icons-material/MusicNote";
+import MusicOffIcon from "@mui/icons-material/MusicOff";
+import { Slider, Stack } from "@mui/material";
 import { useNotifications } from "../pages/NotificationProvider";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { getProfileImageUrl } from "../utils/avatar";
+import { audioEngine } from "../audio/AudioEngine";
 import {
   groupedNavItems,
   isRouteActive,
@@ -89,6 +95,28 @@ const MobileBottomNav = () => {
   const { unreadCount } = useNotifications();
   const [trayOpen, setTrayOpen] = React.useState(false);
   const [routeQuery, setRouteQuery] = React.useState("");
+  const [musicEnabled, setMusicEnabled] = React.useState(true);
+  const [sfxEnabled, setSfxEnabled] = React.useState(true);
+  const [masterVolume, setMasterVolume] = React.useState(80);
+
+  const toggleMusic = () => {
+    const newState = !musicEnabled;
+    setMusicEnabled(newState);
+    audioEngine.toggleTheme(newState);
+    audioEngine.trigger("ui.click");
+  };
+
+  const toggleSFX = () => {
+    const newState = !sfxEnabled;
+    setSfxEnabled(newState);
+    audioEngine.toggleUI(newState);
+    audioEngine.trigger("ui.click");
+  };
+
+  const handleVolumeChange = (event, newValue) => {
+    setMasterVolume(newValue);
+    audioEngine.setMasterVolume(newValue);
+  };
 
   const avatarUrl = React.useMemo(() => getProfileImageUrl(profile, user), [profile, user]);
   const value = resolveBottomValue(location.pathname);
@@ -187,6 +215,23 @@ const MobileBottomNav = () => {
               <Typography variant="h6">Route Tray</Typography>
               <Typography variant="caption">All platform surfaces</Typography>
             </Box>
+          </Box>
+
+          <Box className="mobile-tray-audio" sx={{ px: 2, py: 1, borderBottom: '1px solid rgba(95, 240, 255, 0.1)' }}>
+             <Stack direction="row" spacing={2} alignItems="center">
+               <IconButton size="small" onClick={toggleMusic} sx={{ color: musicEnabled ? '#5ff0ff' : '#666' }}>
+                {musicEnabled ? <MusicNoteIcon /> : <MusicOffIcon />}
+              </IconButton>
+              <IconButton size="small" onClick={toggleSFX} sx={{ color: sfxEnabled ? '#5ff0ff' : '#666' }}>
+                {sfxEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
+              </IconButton>
+              <Slider
+                size="small"
+                value={masterVolume}
+                onChange={handleVolumeChange}
+                sx={{ color: '#5ff0ff', flex: 1 }}
+              />
+            </Stack>
           </Box>
 
           <Box className="mobile-tray-search">
