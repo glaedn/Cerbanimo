@@ -1,39 +1,10 @@
 // src/audio/layers/themeLayer.js
-//
-// CHANGES from previous version:
-//   FX CHAIN FIXES (source of loud low-tone):
-//     - Added Tone.Compressor before the Limiter. The old chain had hard-limiting
-//       only — stacked pads and bass would clip instead of compress.
-//     - Added a 60 Hz highpass filter before the compressor. Catches subsonic
-//       content from subBass playing G0/C0 and from the cosmicPad reverb tail.
-//     - Reduced spaceReverb decay from 14s → 7s. 14 seconds of reverb on bass
-//       and pad chords was the main low-end accumulation source.
-//     - Reduced canyonDelay feedback from 0.22 → 0.12. At 0.22 into a 14s reverb,
-//       delayed notes fed the reverb repeatedly — a self-reinforcing buildup loop.
-//     - Reduced cosmicPad release from 10s → 4s, velocity capped at 0.18.
-//       Previously 2+ pad chords were always sustaining simultaneously.
-//     - Reduced kick release from 2s → 0.4s. Long kick tails were stacking at
-//       fast tempos and feeding the limiter hard.
-//     - Fixed subBass: floors the transposed note at C1 (32.7 Hz). G0 (24.5 Hz)
-//       is subsonic and causes distortion through the limiter.
-//
-//   NEW INSTRUMENT:
-//     - cyberArp: MonoSynth with pulse wave oscillator. Plays 16th-note patterns
-//       defined per-scene. Gives the cybernetic pulse feel — a precise, rhythmic
-//       digital signal running underneath the organic cowboy instruments.
-//
-//   MELODY SWAP:
-//     - swapMelody() now aligns to the next bar boundary to avoid mid-phrase cuts.
-
 import * as Tone from 'tone';
 
 // ─── FX CHAIN ─────────────────────────────────────────────────────────────────
 
-// Final output (connects to AudioEngine's themeGain)
 const masterLimiter = new Tone.Limiter(-2);
 
-// Compressor before hard limiting — handles dynamic peaks from stacked instruments
-// without clipping. Gentle ratio keeps the frontier sound alive.
 const masterCompressor = new Tone.Compressor({
   threshold: -14,
   knee:       6,
@@ -42,38 +13,42 @@ const masterCompressor = new Tone.Compressor({
   release:    0.15,
 }).connect(masterLimiter);
 
-// Highpass filter cuts subsonic content (< 60 Hz) before it hits the compressor.
-// Prevents subBass / cosmicPad reverb tail from building up into a low drone.
 const hpFilter = new Tone.Filter({
   frequency: 60,
   type:      'highpass',
   rolloff:   -12,
 }).connect(masterCompressor);
 
-// Long cosmic reverb — the void between star systems.
-// Decay reduced 14 → 7 to stop low-end accumulation.
 const spaceReverb = new Tone.Reverb({
   decay: 7,
   wet:   0.5,
 }).connect(hpFilter);
 
-// Slapback delay — echoes of calls across the frontier.
-// Feedback reduced 0.22 → 0.12 to break the delay→reverb feedback loop.
 const canyonDelay = new Tone.FeedbackDelay({
   delayTime: '8n.',
   feedback:   0.12,
   wet:        0.18,
 }).connect(spaceReverb);
 
-// Dry reverb for percussion — short, present.
 const dryReverb = new Tone.Reverb({
   decay: 1.5,
   wet:   0.22,
 }).connect(hpFilter);
 
+// Noise Swell for textural percussion
+const noiseFilter = new Tone.Filter({
+  frequency: 1200,
+  type: 'lowpass',
+  Q: 1
+}).connect(dryReverb);
+
+const noiseSwell = new Tone.NoiseSynth({
+  noise: { type: 'pink' },
+  envelope: { attack: 4, decay: 4, sustain: 0.1, release: 4 }
+}).connect(noiseFilter);
+
 // ─── INSTRUMENTS ──────────────────────────────────────────────────────────────
 
-// Steel string — twangy AM pluck, the heartbeat of the cowboy groove
 const steelString = new Tone.PolySynth(Tone.AMSynth, {
   harmonicity:        3.5,
   oscillator:         { type: 'triangle' },
@@ -82,7 +57,6 @@ const steelString = new Tone.PolySynth(Tone.AMSynth, {
   modulationEnvelope: { attack: 0.002, decay: 0.18, sustain: 0, release: 0.4 },
 }).connect(canyonDelay);
 
-// Slide guitar — portamento glide, warm sawtooth, the frontier's voice
 const slide = new Tone.MonoSynth({
   oscillator:      { type: 'sawtooth' },
   filter:          { Q: 3, type: 'lowpass', rolloff: -24 },
@@ -91,7 +65,6 @@ const slide = new Tone.MonoSynth({
   portamento:       0.18,
 }).connect(canyonDelay);
 
-// Space harmonica — FM reed approximation, plaintive and expressive
 const harmonica = new Tone.PolySynth(Tone.FMSynth, {
   harmonicity:        2,
   modulationIndex:    4.5,
@@ -101,24 +74,17 @@ const harmonica = new Tone.PolySynth(Tone.FMSynth, {
   modulationEnvelope: { attack: 0.12, decay: 0.2, sustain: 0.5, release: 1.2 },
 }).connect(canyonDelay);
 
-// Cosmic pad — nebula wash under everything.
-// Release reduced 10 → 4s, velocity capped at 0.18 to stop stacking buildup.
 const cosmicPad = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: 'sine' },
-  envelope:   { attack: 5, decay: 1, sustain: 0.8, release: 4 },
-  volume:     -6,
+  envelope:   { attack: 8, decay: 1, sustain: 0.8, release: 10 },
+  volume:     -16,
 }).connect(spaceReverb);
 
-// Stellar arp — sparse sine shimmer, like starlight on a visor
 const starArp = new Tone.Synth({
   oscillator: { type: 'sine' },
   envelope:   { attack: 0.02, decay: 0.25, sustain: 0, release: 1.2 },
 }).connect(spaceReverb);
 
-// CYBER ARP — pulse wave, rhythmic, digital precision
-// The "cybernetic" counterpart to the organic starArp.
-// Plays 16th-note sequences defined per scene. Fast filter envelope for that
-// classic pulse-bass "pew" character — circuits firing across the frontier.
 const cyberArp = new Tone.MonoSynth({
   oscillator:    { type: 'pulse', width: 0.25 },
   filter:        { Q: 3, type: 'lowpass', frequency: 2800, rolloff: -24 },
@@ -127,7 +93,6 @@ const cyberArp = new Tone.MonoSynth({
   portamento:     0.012,
 }).connect(canyonDelay);
 
-// Upright-ish bass — woody, resonant
 const bass = new Tone.MonoSynth({
   oscillator:    { type: 'triangle' },
   filter:        { Q: 3, type: 'lowpass', rolloff: -24 },
@@ -135,27 +100,23 @@ const bass = new Tone.MonoSynth({
   envelope:      { attack: 0.09, decay: 0.7, sustain: 0.25, release: 1.5 },
 }).connect(dryReverb);
 
-// Sub bass — fundamental reinforcement only. No reverb to avoid mudding.
 const subBass = new Tone.MonoSynth({
   oscillator: { type: 'sine' },
   envelope:   { attack: 0.08, decay: 0.5, sustain: 0.1, release: 1.5 },
-}).connect(hpFilter); // through HP filter — any note below 60 Hz is cut
+}).connect(hpFilter);
 
-// Kick — boomy membrane, reduced release to prevent tail stacking
 const kick = new Tone.MembraneSynth({
   pitchDecay: 0.07,
   octaves:    6,
   oscillator: { type: 'sine' },
-  envelope:   { attack: 0.001, decay: 0.45, sustain: 0.01, release: 0.4 }, // was release: 2
+  envelope:   { attack: 0.001, decay: 0.45, sustain: 0.01, release: 0.4 },
 }).connect(dryReverb);
 
-// Snare — sparse rimshot
 const snare = new Tone.NoiseSynth({
   noise:    { type: 'white' },
   envelope: { attack: 0.001, decay: 0.15, sustain: 0 },
 }).connect(dryReverb);
 
-// Hi-hat — dusty tick, like boot spurs
 const hat = new Tone.MetalSynth({
   frequency:       280,
   envelope:        { attack: 0.001, decay: 0.04, release: 0.01 },
@@ -163,66 +124,29 @@ const hat = new Tone.MetalSynth({
   modulationIndex: 14,
 }).connect(dryReverb);
 
-// ─── DEFAULT MELODIC MATERIAL (G major / G Mixolydian) ───────────────────────
-// Overridden per scene via swapMelody()
-
-let progressions = [
-  [
-    { notes: ['G3', 'B3', 'D4'] },
-    { notes: ['C3', 'E3', 'G3'] },
-    { notes: ['D3', 'F#3', 'A3'] },
-    { notes: ['G3', 'B3', 'D4'] },
-  ],
-  [
-    { notes: ['G3', 'B3', 'D4'] },
-    { notes: ['E3', 'G3', 'B3'] },
-    { notes: ['C3', 'E3', 'G3'] },
-    { notes: ['D3', 'F#3', 'A3'] },
-  ],
-];
-
-let pentatonicHigh = [
-  'G5', 'A5', 'B5', 'D6', 'E6', 'G6',
-  'B5', null, 'D6', null, 'E6', null,
-  'G6', null, 'A5', null,
-];
-
-// Default cyber arp pattern (G major pentatonic 16ths)
-let cyberNotes = [
-  'G5', 'B5', 'D6', null, 'G5', null, 'D6', 'B5',
-  'A5', null, 'E6', null, 'D6', 'B5', 'G5', null,
-];
-
-let bassNotes = [
-  'G1', 'G1', 'D1', 'G1',
-  'C1', 'C1', 'G1', 'C1',
-  'D1', 'D1', 'A1', 'D1',
-  'E1', 'E1', 'B1', 'E1',
-];
-
-let slideNotes = [
-  'B3', 'G3', 'A3', 'B3',
-  'E4', 'G3', 'F#4', 'D4',
-  'G4', 'E4', 'B3', 'D4',
-  'A3', 'G3', 'F#3', 'B3',
-];
-
-let harmonicaNotes = [
-  'D4', 'G4', 'B4', 'D5',
-  'G4', 'B4', 'D5', 'G5',
-  'E4', 'G4', 'A4', 'B4',
-  'D5', 'B4', 'A4', 'G4',
-];
-
 // ─── STATE ────────────────────────────────────────────────────────────────────
+let progressions = [
+  new Array(16).fill({ notes: ['G3', 'B3', 'D4'] })
+];
+
+let pentatonicHigh = [['G5', 'B5', 'D6'], ['A5', 'D6', 'E6'], ['G5', 'A5', 'D6', 'B5']];
+let cyberNotes     = [['G4', 'B4', 'D5'], ['A4', 'E5', 'G5'], ['D5', 'G5', 'B5']];
+let bassNotes      = ['G1', 'D1', 'C1', 'E1'];
+let slideNotes     = ['B3', 'G3', 'A3', 'D4'];
+let harmonicaNotes = ['D4', 'G4', 'B4', 'D5'];
+
 let currentProgressionIndex = 0;
 let sequences    = [];
 let rotatorId    = null;
+let mutationId   = null;
 let started      = false;
-let pendingSwap  = null; // queued melody swap, fires on next bar
+let pendingSwap  = null;
 
-let steelSeq, padSeq, slideSeq, harmonicaSeq, starArpSeq, cyberArpSeq, bassSeq,
-    kickSeq, snareSeq, hatSeq;
+// Generative State Tracking
+let starMotifIndex = 0;
+let starMotifStep  = 0;
+let cyberMotifIndex = 0;
+let cyberMotifStep  = 0;
 
 const state = {
   urgency:          0,
@@ -233,10 +157,12 @@ const state = {
   arpActive:        false,
   cyberActive:      false,
   melodyActive:     false,
-  arpDensity:       0.4,
-  cyberDensity:     0.5,
-  bassIntensity:    0.5,
+  arpDensity:       0.3,
+  cyberDensity:     0.4,
+  bassIntensity:    0.4,
 };
+
+const getDrift = () => (Math.random() - 0.5) * 0.03;
 
 // ─── THEME LAYER ─────────────────────────────────────────────────────────────
 export const themeLayer = {
@@ -245,127 +171,165 @@ export const themeLayer = {
 
     Tone.Transport.bpm.value = 76;
 
-    // Steel string — boom-chick backbone
+    // 1. Steel String - Sparse 16-bar Narrative
     steelSeq = new Tone.Sequence(
       (time, event) => {
-        if (!event?.notes) return;
-        const vel = (0.5 + state.collaboration * 0.35) * (0.85 + Math.random() * 0.3);
-        steelString.triggerAttackRelease(event.notes, '16n', time, Math.min(vel, 1));
+        if (!event?.notes || Math.random() > 0.6) return;
+        const drift = getDrift();
+        const vel = (0.2 + state.collaboration * 0.2) * (0.8 + Math.random() * 0.2);
+        steelString.triggerAttackRelease(event.notes, '8n', time + drift, Math.min(vel, 0.4));
       },
       progressions[currentProgressionIndex],
-      '2n'
+      '1m'
     );
 
-    // Cosmic pad — nebula wash, fires every 2 bars
+    // 2. Cosmic Pad - Continuous Atmospheric Ocean
     padSeq = new Tone.Sequence(
       (time, event) => {
         if (!event?.notes) return;
+        const drift = getDrift();
         const padNotes = event.notes.map(n => Tone.Frequency(n).transpose(-12).toNote());
-        cosmicPad.triggerAttackRelease(padNotes, '2m', time, 0.18);
+
+        const duration = Math.random() > 0.7 ? '8m' : '4m';
+        const inversion = Math.random() > 0.5
+          ? padNotes
+          : [...padNotes.slice(1), padNotes[0]];
+
+        cosmicPad.triggerAttackRelease(
+          inversion,
+          duration,
+          time + drift,
+          0.05 + Math.random() * 0.04
+        );
       },
       progressions[currentProgressionIndex],
-      '2m'
+      '1m'
     );
 
-    // Slide guitar
+    // 3. Slide Guitar - Sparse Response (Polymeter: 20)
     slideSeq = new Tone.Sequence(
       (time, note) => {
-        if (state.melodyActive && note) {
-          slide.triggerAttackRelease(note, '4n.', time, 0.6);
+        if (state.melodyActive && note && Math.random() > 0.7) {
+          const drift = getDrift();
+          slide.triggerAttackRelease(note, '2m', time + drift, 0.25);
         }
       },
-      slideNotes,
-      '4n'
+      new Array(20).fill(0).map((_, i) => slideNotes[i % slideNotes.length]),
+      '2n'
     );
 
-    // Harmonica
+    // 4. Harmonica - Rare Accents (Polymeter: 12)
     harmonicaSeq = new Tone.Sequence(
       (time, note) => {
-        if (state.choirActive && note) {
-          harmonica.triggerAttackRelease([note], '4n.', time, 0.55);
+        if (state.choirActive && note && Math.random() > 0.8) {
+          const drift = getDrift();
+          harmonica.triggerAttackRelease([note], '2m', time + drift, 0.2);
         }
       },
-      harmonicaNotes,
-      '4n'
+      new Array(12).fill(0).map((_, i) => harmonicaNotes[i % harmonicaNotes.length]),
+      '1n'
     );
 
-    // Stellar arp — organic randomised shimmer
+    // 5. Stellar Arp - Generative Motif Mutation (Polymeter: 15)
     starArpSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.arpActive && note && Math.random() < state.arpDensity) {
-          starArp.triggerAttackRelease(note, '32n', time, 0.28);
-        }
-      },
-      pentatonicHigh,
-      '8n'
-    );
+      (time) => {
+        if (!state.arpActive) return;
 
-    // Cyber arp — precise 16th-note pulse, never random
-    cyberArpSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.cyberActive && note) {
-          const vel = 0.35 + state.cyberDensity * 0.25;
-          cyberArp.triggerAttackRelease(note, '16n', time, vel);
-        }
-      },
-      cyberNotes,
-      '16n'
-    );
+        const motif = pentatonicHigh[starMotifIndex];
+        const note = motif[starMotifStep];
 
-    // Walking bass
-    bassSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.bassIntensity > 0.2 && note) {
-          bass.triggerAttackRelease(note, '8n.', time, 0.6 + state.bassIntensity * 0.25);
-          if (state.bassIntensity > 0.7) {
-            // Floor the transposed note at C1 (32.7 Hz) — prevents subsonic output
-            const rawHz      = Tone.Frequency(note).toFrequency();
-            const targetHz   = rawHz / 2;                            // one octave down
-            const clampedHz  = Math.max(32.7, targetHz);
-            subBass.triggerAttackRelease(clampedHz, '4n', time, 0.45);
+        if (note && Math.random() > 0.4) {
+          const drift = getDrift();
+          starArp.triggerAttackRelease(note, '16n', time + drift, 0.1);
+        }
+
+        starMotifStep++;
+        if (starMotifStep >= motif.length) {
+          starMotifStep = 0;
+          if (Math.random() > 0.55) {
+            starMotifIndex = Math.floor(Math.random() * pentatonicHigh.length);
           }
         }
       },
-      bassNotes,
-      '4n'
+      new Array(15).fill(0),
+      '16n'
     );
 
-    // Kick — beats 1 and 3
+    // 6. Cyber Arp - Generative Digital Pulse (Polymeter: 14)
+    cyberArpSeq = new Tone.Sequence(
+      (time) => {
+        if (!state.cyberActive) return;
+
+        const motif = cyberNotes[cyberMotifIndex];
+        const note = motif[cyberMotifStep];
+
+        if (note && Math.random() > 0.3) {
+          const drift = getDrift();
+          const vel = 0.1 + state.cyberDensity * 0.1;
+          cyberArp.triggerAttackRelease(note, '16n', time + drift, vel);
+        }
+
+        cyberMotifStep++;
+        if (cyberMotifStep >= motif.length) {
+          cyberMotifStep = 0;
+          if (Math.random() > 0.6) {
+            cyberMotifIndex = Math.floor(Math.random() * cyberNotes.length);
+          }
+        }
+      },
+      new Array(14).fill(0),
+      '16n'
+    );
+
+    // 7. Bass - Half-time, Humanized (Polymeter: 16)
+    bassSeq = new Tone.Sequence(
+      (time, note) => {
+        if (state.bassIntensity > 0.2 && note && Math.random() > 0.3) {
+          const drift = getDrift();
+          bass.triggerAttackRelease(note, '2n', time + drift, 0.25 + state.bassIntensity * 0.1);
+          if (state.bassIntensity > 0.7 && Math.random() > 0.5) {
+            const clampedHz = Math.max(32.7, Tone.Frequency(note).toFrequency() / 2);
+            subBass.triggerAttackRelease(clampedHz, '1m', time + drift, 0.3);
+          }
+        }
+      },
+      new Array(16).fill(0).map((_, i) => bassNotes[i % bassNotes.length]),
+      '2n'
+    );
+
+    // 8. Percussion - Textural Dust (Polymeter: 11 for Hat)
     kickSeq = new Tone.Sequence(
       (time, active) => {
-        if (state.percussionActive && active) {
-          kick.triggerAttackRelease('G1', '8n', time, 0.75);
+        if (state.percussionActive && active && Math.random() > 0.5) {
+          kick.triggerAttackRelease('G1', '8n', time + getDrift(), 0.22);
         }
       },
-      [1, 0, 0, 0, 1, 0, 0, 0],
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
       '8n'
     );
 
-    // Snare — 2 and 4
     snareSeq = new Tone.Sequence(
       (time, active) => {
-        if (state.percussionActive && active) {
-          snare.triggerAttackRelease('8n', time, 0.45);
+        if (state.percussionActive && active && Math.random() > 0.7) {
+          snare.triggerAttackRelease('8n', time + getDrift(), 0.15);
         }
       },
-      [0, 0, 1, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
       '8n'
     );
 
-    // Hat — sparse
     hatSeq = new Tone.Sequence(
       (time, active) => {
-        if (state.percussionActive && active && Math.random() > 0.4) {
-          hat.triggerAttackRelease('32n', time, 0.22);
+        if (state.percussionActive && active && Math.random() > 0.8) {
+          hat.triggerAttackRelease('32n', time + getDrift(), 0.1);
         }
       },
-      [1, 0, 1, 0, 1, 0, 1, 0],
-      '8n'
+      new Array(11).fill(1),
+      '16n'
     );
 
-    // Progression rotator — every 16 bars
+    // 9. Progression Rotator - 16m
     rotatorId = Tone.Transport.scheduleRepeat(() => {
-      // Apply any pending melody swap at the bar boundary
       if (pendingSwap) {
         this._applySwap(pendingSwap);
         pendingSwap = null;
@@ -375,6 +339,19 @@ export const themeLayer = {
       padSeq.events   = progressions[currentProgressionIndex];
     }, '16m');
 
+    // 10. Dynamic Mutation Scheduler - 8m
+    mutationId = Tone.Transport.scheduleRepeat(() => {
+      state.cyberDensity = 0.2 + Math.random() * 0.4;
+      state.arpDensity = 0.1 + Math.random() * 0.3;
+
+      canyonDelay.feedback.rampTo(0.05 + Math.random() * 0.15, 4);
+      spaceReverb.wet.rampTo(0.3 + Math.random() * 0.3, 4);
+
+      if (state.percussionActive && Math.random() > 0.6) {
+        noiseSwell.triggerAttackRelease('4m', Tone.now(), 0.05);
+      }
+    }, '8m');
+
     sequences = [
       steelSeq, padSeq, slideSeq, harmonicaSeq,
       starArpSeq, cyberArpSeq, bassSeq,
@@ -383,7 +360,7 @@ export const themeLayer = {
 
     Tone.Transport.loop      = true;
     Tone.Transport.loopStart = '0:0:0';
-    Tone.Transport.loopEnd   = '32m';
+    Tone.Transport.loopEnd   = '128m';
   },
 
   async start() {
@@ -401,6 +378,10 @@ export const themeLayer = {
       Tone.Transport.clear(rotatorId);
       rotatorId = null;
     }
+    if (mutationId !== null) {
+      Tone.Transport.clear(mutationId);
+      mutationId = null;
+    }
     started = false;
   },
 
@@ -414,31 +395,31 @@ export const themeLayer = {
   },
 
   applyState() {
-    const filterFreq = state.urgency > 0.5 ? 220 : 1600;
+    const filterFreq = state.urgency > 0.5 ? 400 : 2200;
     bass.filter.frequency.rampTo(filterFreq, 2);
 
-    const strVol = Tone.gainToDb(Math.max(0.1, state.growth));
+    const strVol = Tone.gainToDb(Math.max(0.05, state.growth * 0.5));
     steelString.volume.rampTo(strVol, 2);
 
-    spaceReverb.wet.rampTo(0.38 + state.collaboration * 0.28, 2);
-    canyonDelay.wet.rampTo(0.1  + state.collaboration * 0.14, 2);
+    spaceReverb.wet.rampTo(0.2 + state.collaboration * 0.4, 2);
+    canyonDelay.wet.rampTo(0.05 + state.collaboration * 0.2, 2);
   },
 
   setMood(moodConfig) {
     const {
-      stringsVol       = -12,
-      brassVol         = -24,
-      bassVol          = -16,
-      percVol          = -18,
-      reverbWet        = 0.5,
+      stringsVol       = -20,
+      brassVol         = -26,
+      bassVol          = -22,
+      percVol          = -28,
+      reverbWet        = 0.4,
       percussionActive = false,
       choirActive      = false,
       arpActive        = false,
       cyberActive      = false,
       melodyActive     = false,
-      arpDensity       = 0.4,
-      cyberDensity     = 0.5,
-      bassIntensity    = 0.5,
+      arpDensity       = 0.3,
+      cyberDensity     = 0.4,
+      bassIntensity    = 0.4,
       melodicMaterial  = null,
       transitionTime   = 4,
     } = moodConfig;
@@ -446,13 +427,13 @@ export const themeLayer = {
     steelString.volume.rampTo(stringsVol,     transitionTime);
     slide.volume.rampTo(stringsVol + 2,       transitionTime);
     harmonica.volume.rampTo(brassVol,         transitionTime);
-    cosmicPad.volume.rampTo(stringsVol - 10,  transitionTime); // pad sits well back
+    cosmicPad.volume.rampTo(stringsVol - 6,   transitionTime);
     starArp.volume.rampTo(stringsVol - 4,     transitionTime);
-    cyberArp.volume.rampTo(stringsVol + 4,    transitionTime); // cyber arp sits forward
+    cyberArp.volume.rampTo(stringsVol + 2,    transitionTime);
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
     snare.volume.rampTo(percVol,              transitionTime);
-    hat.volume.rampTo(percVol - 8,            transitionTime);
+    hat.volume.rampTo(percVol - 6,            transitionTime);
     spaceReverb.wet.rampTo(reverbWet,         transitionTime);
 
     state.percussionActive = percussionActive;
@@ -465,7 +446,6 @@ export const themeLayer = {
     state.bassIntensity    = bassIntensity;
 
     if (melodicMaterial) {
-      // Queue swap for next bar boundary to avoid mid-phrase clicks
       pendingSwap = melodicMaterial;
     }
   },
@@ -489,17 +469,32 @@ export const themeLayer = {
 
     if (!steelSeq) return;
     currentProgressionIndex = 0;
+
+    // Reset generative counters on swap
+    starMotifIndex = 0;
+    starMotifStep = 0;
+    cyberMotifIndex = 0;
+    cyberMotifStep = 0;
+
     steelSeq.events    = progressions[currentProgressionIndex];
     padSeq.events      = progressions[currentProgressionIndex];
-    starArpSeq.events  = pentatonicHigh;
-    cyberArpSeq.events = cyberNotes;
-    bassSeq.events     = bassNotes;
-    slideSeq.events    = slideNotes;
-    harmonicaSeq.events = harmonicaNotes;
+
+    // Arps and Lead instruments are now generative or mapped to polymeters,
+    // so we just update their source material references.
+
+    // Re-initialize polymeter sequences if lengths changed
+    if (newSlide) {
+      slideSeq.events = new Array(20).fill(0).map((_, i) => slideNotes[i % slideNotes.length]);
+    }
+    if (newHarm) {
+      harmonicaSeq.events = new Array(12).fill(0).map((_, i) => harmonicaNotes[i % harmonicaNotes.length]);
+    }
+    if (newBass) {
+      bassSeq.events = new Array(16).fill(0).map((_, i) => bassNotes[i % bassNotes.length]);
+    }
   },
 
   swapMelody(material) {
-    // Public API — queues swap for bar boundary
     pendingSwap = material;
   },
 };

@@ -2,74 +2,60 @@
 //
 // "FIRST LIGHT ON THE FRONTIER" — Db major, 66 BPM
 //
-// The new user descends toward an unknown planet. No percussion — just the
-// vast silence of space with a harmonica calling from the surface below.
-// Db major is cinematic and slightly mysterious — used in film scores to
-// evoke discovery and grandeur. The cyber arp is barely present: a faint
-// signal from the colony below, not yet understood.
-// Maximum reverb. The frontier is enormous.
+// Expanded to 16-bar harmonic arcs. Sparse, suspended, and drifting.
+// Cinematic discovery and grandeur.
 
 export const homepageScene = {
   bpm:            66,
   transitionTime:  5,
   mood: {
-    stringsVol:       -18,
-    brassVol:         -16,
-    bassVol:          -22,
+    stringsVol:       -22,
+    brassVol:         -24,
+    bassVol:          -28,
     percVol:          -60,
-    reverbWet:         0.82,
+    reverbWet:         0.75,
     percussionActive:  false,
     choirActive:       true,
     arpActive:         false,
     cyberActive:       true,
     melodyActive:      true,
-    arpDensity:        0.15,
-    cyberDensity:      0.25,
-    bassIntensity:     0.28,
+    arpDensity:        0.1,
+    cyberDensity:      0.2,
+    bassIntensity:     0.2,
     melodicMaterial: {
       progressions: [
-        // I – IV – V – I  in Db
         [
-          { notes: ['Db3', 'F3',  'Ab3']  },
-          { notes: ['Gb3', 'Bb3', 'Db4']  },
-          { notes: ['Ab3', 'C4',  'Eb4']  },
-          { notes: ['Db3', 'F3',  'Ab3']  },
-        ],
-        // I – Bbm – Gb – Ab  (darker, more yearning)
-        [
-          { notes: ['Db3', 'F3',  'Ab3']  },
-          { notes: ['Bb2', 'Db3', 'F3']   },
-          { notes: ['Gb3', 'Bb3', 'Db4']  },
-          { notes: ['Ab3', 'C4',  'Eb4']  },
-        ],
+          { notes: ['Db2', 'Ab2', 'Eb3'] }, // Dbsus2
+          { notes: ['Bb2', 'F3', 'Ab3', 'Db4'] }, // Bbm7
+          { notes: ['Gb2', 'Db3', 'Ab3'] }, // Gbadd9
+          null,
+          { notes: ['Ab2', 'Eb3', 'Gb3', 'C4'] }, // Ab7
+          { notes: ['F2', 'C3', 'Eb3', 'Ab3'] }, // Fm7
+          null,
+          { notes: ['Gb2', 'Ab2', 'Db3'] }, // Db/Gb
+          { notes: ['Bb2', 'Db3', 'F3', 'Ab3'] },
+          { notes: ['Eb2', 'Bb2', 'Db3', 'Gb3'] }, // Ebm7
+          null,
+          { notes: ['Ab2', 'Eb3', 'Bb3'] }, // Absus4
+          { notes: ['Db2', 'Ab2', 'Eb3'] },
+          null,
+          { notes: ['Gb2', 'Bb2', 'Eb3'] },
+          { notes: ['Ab2', 'C3', 'Gb3'] },
+        ]
       ],
       pentatonicHigh: [
-        'Db5', null,  'Eb5', null, 'F5',  null, 'Ab5', null,
-        'Bb5', null,  'Db6', null, 'F6',  null, 'Ab6', null,
+        ['Db5', 'Ab5', 'Db6'],
+        ['Eb5', 'Ab5', 'Bb5'],
+        ['Db5', 'Eb5', 'Ab5', 'F5'],
       ],
-      // Cyber arp: very sparse, almost subliminal — a distant beacon
       cyberNotes: [
-        'Db5', null, null, null, 'Ab5', null, null, null,
-        'F5',  null, null, null, 'Eb5', null, null, null,
+        ['Db4', 'Ab4', 'Db5'],
+        ['F4', 'Bb4', 'Db5'],
+        ['Eb4', 'Ab4', 'C5'],
       ],
-      bassNotes: [
-        'Db1', 'Ab1', 'Db1', 'F1',
-        'Gb1', 'Db1', 'Gb1', 'Bb1',
-        'Ab1', 'Eb1', 'Ab1', 'C2',
-        'Db1', 'Ab1', 'Db1', 'Gb1',
-      ],
-      slideNotes: [
-        'F4',  'Db4', 'Eb4', 'F4',
-        'Ab4', 'F4',  'Eb4', 'Db4',
-        'Bb4', 'Ab4', 'F4',  'Eb4',
-        'Ab4', 'F4',  'Eb4', 'Db4',
-      ],
-      harmonicaNotes: [
-        'Ab4', 'Db5', 'F5',  'Db5',
-        'Ab4', 'Eb5', 'Db5', 'Ab4',
-        'Gb4', 'Ab4', 'Bb4', 'Db5',
-        'F5',  'Eb5', 'Db5', 'Ab4',
-      ],
+      bassNotes:  ['Db1', 'Ab1', 'Gb1', 'Bb1', 'Ab1', 'F1', 'Eb1', 'Db1'],
+      slideNotes: ['F4', 'Db4', 'Eb4', 'Ab4', 'Bb4', 'Ab4', 'F4', 'Eb4'],
+      harmonicaNotes: ['Ab4', 'Db5', 'F5', 'Eb5', 'Db5', 'Bb4', 'Ab4', 'Gb4'],
     },
   },
 };
