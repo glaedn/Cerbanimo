@@ -1,0 +1,236 @@
+:root {
+  --space-void: #030612;
+  --space-deep: #071025;
+  --space-panel: rgba(8, 20, 41, 0.78);
+  --space-panel-strong: rgba(12, 28, 54, 0.9);
+  --space-glass: rgba(5, 16, 34, 0.66);
+  --space-line: rgba(95, 231, 255, 0.34);
+  --space-line-soft: rgba(95, 231, 255, 0.18);
+  --space-cyan: #5ff0ff;
+  --space-blue: #7fa8ff;
+  --space-pink: #ff5ca2;
+  --space-amber: #ffce6a;
+  --space-green: #7dffb1;
+  --space-text: #f5fbff;
+  --space-muted: #a8b8d7;
+  --space-shadow: 0 18px 60px rgba(0, 0, 0, 0.45), 0 0 28px rgba(95, 240, 255, 0.12);
+}
+
+.space-shell {
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(95, 240, 255, 0.16), transparent 28vw),
+    radial-gradient(circle at 78% 18%, rgba(255, 92, 162, 0.12), transparent 24vw),
+    linear-gradient(180deg, #030612 0%, #071025 48%, #040816 100%);
+}
+
+.space-shell-content {
+  min-height: 100vh;
+  position: relative;
+  z-index: 2;
+}
+
+.space-backdrop,
+.space-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.space-backdrop {
+  z-index: 0;
+  overflow: hidden;
+}
+
+.space-scanlines {
+  z-index: 1;
+  opacity: 0.2;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  mix-blend-mode: screen;
+}
+
+.space-nebula {
+  position: absolute;
+  width: 42vmax;
+  height: 42vmax;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.34;
+  animation: space-drift 18s ease-in-out infinite alternate;
+}
+
+.space-nebula-a {
+  left: -14vmax;
+  top: 12vh;
+  background: radial-gradient(circle, rgba(95, 240, 255, 0.38), transparent 64%);
+}
+
+.space-nebula-b {
+  right: -12vmax;
+  bottom: -14vmax;
+  background: radial-gradient(circle, rgba(255, 92, 162, 0.32), transparent 65%);
+  animation-delay: -6s;
+}
+
+.space-orbit-line {
+  position: absolute;
+  border: 1px solid rgba(95, 240, 255, 0.12);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  box-shadow: 0 0 40px rgba(95, 240, 255, 0.06);
+}
+
+.space-orbit-line-a {
+  width: 58vw;
+  height: 24vw;
+  left: -12vw;
+  top: 16vh;
+}
+
+.space-orbit-line-b {
+  width: 68vw;
+  height: 30vw;
+  right: -22vw;
+  bottom: 10vh;
+  border-color: rgba(255, 206, 106, 0.1);
+}
+
+.space-comet {
+  position: absolute;
+  width: 140px;
+  height: 2px;
+  left: -160px;
+  top: 22vh;
+  background: linear-gradient(90deg, transparent, rgba(95, 240, 255, 0.9), transparent);
+  filter: drop-shadow(0 0 10px rgba(95, 240, 255, 0.8));
+  animation: space-comet 9s cubic-bezier(0.24, 0.65, 0.36, 1) infinite;
+}
+
+.space-stars {
+  position: absolute;
+  inset: 0;
+}
+
+.space-star {
+  position: absolute;
+  width: calc(3px * var(--star-scale));
+  height: calc(3px * var(--star-scale));
+  border-radius: 50%;
+  background: #ffffff;
+  opacity: 0.7;
+  box-shadow: 0 0 12px rgba(95, 240, 255, 0.7);
+  animation: space-twinkle 3.8s ease-in-out infinite;
+  animation-delay: var(--star-delay);
+}
+
+.space-pressable,
+button,
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiBottomNavigationAction-root,
+.nav-link {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
+}
+
+button:active,
+.MuiButton-root:active,
+.MuiIconButton-root:active,
+.MuiBottomNavigationAction-root:active,
+.nav-link:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.MuiPaper-root,
+.MuiCard-root,
+.MuiDialog-paper,
+.MuiMenu-paper,
+.MuiDrawer-paper {
+  background-image:
+    linear-gradient(180deg, rgba(95, 240, 255, 0.05), transparent 42%),
+    radial-gradient(circle at 12% 0%, rgba(127, 168, 255, 0.12), transparent 38%) !important;
+  border: 1px solid var(--space-line-soft);
+  box-shadow: var(--space-shadow) !important;
+  backdrop-filter: blur(16px);
+}
+
+.MuiMenuItem-root,
+.MuiListItemButton-root {
+  border-radius: 8px;
+}
+
+.MuiButton-root,
+.MuiIconButton-root {
+  position: relative;
+  overflow: hidden;
+}
+
+.MuiButton-root::after,
+.MuiIconButton-root::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.18) 50%, transparent 80%);
+  transform: translateX(-120%);
+  transition: transform 420ms ease;
+}
+
+.MuiButton-root:hover::after,
+.MuiIconButton-root:hover::after {
+  transform: translateX(120%);
+}
+
+@keyframes space-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(4vw, -3vh, 0) scale(1.08); }
+}
+
+@keyframes space-comet {
+  0%, 18% { transform: translate3d(0, 0, 0) rotate(-12deg); opacity: 0; }
+  24% { opacity: 1; }
+  42% { transform: translate3d(120vw, 38vh, 0) rotate(-12deg); opacity: 0; }
+  100% { transform: translate3d(120vw, 38vh, 0) rotate(-12deg); opacity: 0; }
+}
+
+@keyframes space-twinkle {
+  0%, 100% { opacity: 0.32; transform: scale(0.76); }
+  50% { opacity: 1; transform: scale(1.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-nebula,
+  .space-comet,
+  .space-star,
+  .MuiButton-root::after,
+  .MuiIconButton-root::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .space-scanlines {
+    opacity: 0.12;
+  }
+
+  .space-orbit-line-a,
+  .space-orbit-line-b {
+    width: 110vw;
+    height: 54vw;
+  }
+}

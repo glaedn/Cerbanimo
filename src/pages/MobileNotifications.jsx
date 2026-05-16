@@ -7,7 +7,6 @@ import {
   ListItemAvatar,
   ListItemText,
   Avatar,
-  Divider,
   Paper,
   IconButton
 } from '@mui/material';
@@ -63,7 +62,7 @@ const MobileNotifications = () => {
       component={motion.div}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      sx={{ p: 2, pb: 8, minHeight: '100vh', backgroundColor: '#000' }}
+      sx={{ p: 2, pb: 10, pt: 7, minHeight: '100vh', backgroundColor: 'transparent' }}
     >
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" sx={{ color: '#00F3FF', fontWeight: 'bold', fontFamily: 'Orbitron' }}>
@@ -77,12 +76,12 @@ const MobileNotifications = () => {
       </Box>
 
       {notifications.length === 0 ? (
-        <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'rgba(10, 10, 46, 0.8)', border: '1px solid rgba(0, 243, 255, 0.3)' }}>
+        <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: 'rgba(5, 16, 34, 0.78)', border: '1px solid rgba(95, 240, 255, 0.28)' }}>
           <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>No notifications yet.</Typography>
         </Paper>
       ) : (
         <List>
-          {notifications.map((notif, index) => (
+          {notifications.map((notif) => (
             <React.Fragment key={notif.id}>
               <ListItem
                 alignItems="flex-start"

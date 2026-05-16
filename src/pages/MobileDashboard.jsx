@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, LinearProgress, Avatar, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, Typography, LinearProgress, Avatar, Paper, List } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import MobileTaskCard from '../components/MobileTaskCard';
@@ -35,7 +35,7 @@ const MobileDashboard = () => {
 
         // Fetch Suggested (Relevant)
         const userSkills = profile.skills?.map(s => {
-            try { return typeof s === 'string' ? JSON.parse(s).name : s.name; } catch(e) { return s; }
+            try { return typeof s === 'string' ? JSON.parse(s).name : s.name; } catch { return s; }
         }) || [];
 
         if (userSkills.length > 0) {
@@ -90,7 +90,7 @@ const MobileDashboard = () => {
 
       // Background refresh to sync with server truth
       const userSkills = profile?.skills?.map(s => {
-          try { return typeof s === 'string' ? JSON.parse(s).name : s.name; } catch(e) { return s; }
+          try { return typeof s === 'string' ? JSON.parse(s).name : s.name; } catch { return s; }
       }) || [];
 
       const [suggestedRes, activeRes] = await Promise.all([
@@ -180,7 +180,7 @@ const MobileDashboard = () => {
       initial="hidden"
       animate="show"
       className="mobile-container"
-      sx={{ pb: 8, pt: 2 }}
+      sx={{ pb: 10, pt: 7 }}
     >
       {/* 1. Greeting + Level */}
       <Paper
@@ -189,8 +189,8 @@ const MobileDashboard = () => {
         sx={{
         p: 2,
         mb: 3,
-        backgroundColor: 'rgba(10, 10, 46, 0.8)',
-        border: '1px solid #00F3FF',
+        backgroundColor: 'rgba(5, 16, 34, 0.78)',
+        border: '1px solid rgba(95, 240, 255, 0.34)',
         borderRadius: '12px',
         overflow: 'hidden'
       }}>
@@ -204,10 +204,10 @@ const MobileDashboard = () => {
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 'bold' }}>
                 Welcome, {user.given_name || user.name}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#00F3FF' }}>
+              <Typography variant="body2" sx={{ color: '#5FF0FF' }}>
                 Level {currentLevel} Architect
               </Typography>
-              <Typography variant="caption" sx={{ color: '#00F3FF', mt: 0.5, display: 'block' }}>
+              <Typography variant="caption" sx={{ color: '#5FF0FF', mt: 0.5, display: 'block' }}>
                 Galactic Credits: {profile.tokens !== undefined ? profile.tokens : 'N/A'}
               </Typography>
             </Box>
@@ -215,7 +215,7 @@ const MobileDashboard = () => {
           <Box
             onClick={() => navigate('/activity-map')}
             sx={{
-              color: '#00F3FF',
+              color: '#5FF0FF',
               fontSize: '0.7rem',
               cursor: 'pointer',
               textDecoration: 'underline',
@@ -239,7 +239,7 @@ const MobileDashboard = () => {
               height: 8,
               borderRadius: 4,
               backgroundColor: 'rgba(255,255,255,0.1)',
-              '& .MuiLinearProgress-bar': { backgroundColor: '#00F3FF' }
+              '& .MuiLinearProgress-bar': { backgroundColor: '#5FF0FF' }
             }}
           />
         </Box>
@@ -301,7 +301,7 @@ const MobileDashboard = () => {
         variants={itemVariants}
         sx={{
         p: 1,
-        backgroundColor: 'rgba(28, 28, 30, 0.5)',
+        backgroundColor: 'rgba(5, 16, 34, 0.62)',
         borderRadius: '12px'
       }}>
         <ChronicleTimeline stories={userChronicle} />

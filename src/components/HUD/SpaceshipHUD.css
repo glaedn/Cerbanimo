@@ -5,7 +5,7 @@
   height: calc(100vh - 50px);
   box-sizing: border-box;
   overflow: hidden;
-  background-color: #0A0A2E; /* From theme.colors.backgroundDefault */
+  background: transparent;
   /* display: flex; Removed to allow absolute positioning of panels */
   /* flex-direction: column; */
   /* justify-content: center; */
@@ -70,8 +70,8 @@
 
 .hud-map-viewport {
   box-sizing: border-box;
-  border: 2px solid #00F3FF; /* theme.colors.primary for a subtle frame */
-  box-shadow: 0 0 15px #00F3FF, inset 0 0 15px #00F3FF; /* theme.effects.glowStrong(theme.colors.primary) */
+  border: 1px solid rgba(95, 240, 255, 0.48);
+  box-shadow: 0 0 22px rgba(95, 240, 255, 0.24), inset 0 0 22px rgba(95, 240, 255, 0.12);
   max-width: 1600px; 
   max-height: 1000px;
   position: absolute; 
@@ -79,7 +79,7 @@
   bottom: 115px;
   left: 220px;
   right: 220px;
-  background: rgba(0,0,0,0.1);
+  background: rgba(5, 16, 34, 0.18);
   /* width, height, and transform removed for new top/bottom/left/right positioning */
 }
 

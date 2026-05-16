@@ -19,6 +19,7 @@ import AuthWrapper from "./AuthWrapper.jsx";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUserProfile } from "./hooks/useUserProfile";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
+import SpaceShell from "./components/SpaceShell.jsx";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
@@ -76,10 +77,10 @@ const AdminProtectedRoute = ({ children }) => {
 
 const PageWrapper = ({ children }) => (
   <motion.div
-    initial={{ opacity: 0, x: 10 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -10 }}
-    transition={{ duration: 0.2 }}
+    initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
+    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+    exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     style={{ width: "100%" }}
   >
     {children}
@@ -89,44 +90,45 @@ const PageWrapper = ({ children }) => (
 const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
-  const { profile } = useUserProfile();
 
   return (
-    <div className="App">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#1C1C1E',
-            color: '#FFFFFF',
-            border: '1px solid #00F3FF',
-            fontFamily: 'Orbitron, sans-serif',
-            boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)',
-            fontSize: '0.9rem',
-          },
-          success: {
-            iconTheme: {
-              primary: '#00F3FF',
-              secondary: '#1C1C1E',
-            },
-          },
-          error: {
+    <SpaceShell>
+      <div className="App">
+        <Toaster
+          position="top-right"
+          toastOptions={{
             style: {
-              border: '1px solid #FF4136',
-              boxShadow: '0 0 15px rgba(255, 65, 54, 0.3)',
+              background: 'rgba(5, 16, 34, 0.92)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(95, 240, 255, 0.45)',
+              fontFamily: 'Orbitron, sans-serif',
+              boxShadow: '0 0 24px rgba(95, 240, 255, 0.28)',
+              backdropFilter: 'blur(16px)',
+              fontSize: '0.9rem',
             },
-            iconTheme: {
-              primary: '#FF4136',
-              secondary: '#FFFFFF',
+            success: {
+              iconTheme: {
+                primary: '#5FF0FF',
+                secondary: '#081429',
+              },
             },
-          },
-        }}
-      />
-      {isMobile ? <MobileBottomNav /> : <SiteNav />}
-      <AuthWrapper>
-        <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f3ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
+            error: {
+              style: {
+                border: '1px solid #FF5CA2',
+                boxShadow: '0 0 24px rgba(255, 92, 162, 0.28)',
+              },
+              iconTheme: {
+                primary: '#FF5CA2',
+                secondary: '#FFFFFF',
+              },
+            },
+          }}
+        />
+        {isMobile ? <MobileBottomNav /> : <SiteNav />}
+        <AuthWrapper>
+          <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5ff0ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
           {/* Skill Constellation defined at the top */}
           <Route
             path="/profile/skill-constellation/:userId?"
@@ -384,11 +386,12 @@ const AppContent = () => {
           />
           {/* Default Route */}
           <Route path="*" element={<PageWrapper><HomePage /></PageWrapper>} />
-          </Routes>
-        </AnimatePresence>
-        </React.Suspense>
-      </AuthWrapper>
-    </div>
+            </Routes>
+          </AnimatePresence>
+          </React.Suspense>
+        </AuthWrapper>
+      </div>
+    </SpaceShell>
   );
 };
 

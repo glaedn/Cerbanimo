@@ -7,12 +7,14 @@ import { getJsonItem, getSecureItem, setJsonItem, setSecureItem } from "./servic
 import { storageKeys } from "./config";
 import { BottomTabs } from "./components/BottomTabs";
 import { LoadingState } from "./components/AppShell";
+import { TopControls } from "./components/TopControls";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { TasksScreen } from "./screens/TasksScreen";
 import { ProjectsScreen } from "./screens/ProjectsScreen";
 import { ExchangeScreen } from "./screens/ExchangeScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { SignInScreen } from "./screens/SignInScreen";
+import { NotificationsScreen } from "./screens/NotificationsScreen";
 import { colors } from "./theme";
 
 const AppContext = createContext(null);
@@ -40,13 +42,21 @@ function AppFrame() {
     tasks: <TasksScreen />,
     projects: <ProjectsScreen />,
     exchange: <ExchangeScreen />,
-    profile: <ProfileScreen />
-  }[activeTab];
+    profile: <ProfileScreen />,
+    notifications: <NotificationsScreen />
+  }[activeTab] || <DashboardScreen />;
 
   return (
     <View style={styles.frame}>
+      <TopControls
+        profile={app.profile}
+        authUser={app.authUser}
+        unreadCount={app.unreadCount}
+        onProfile={() => setActiveTab("profile")}
+        onNotifications={() => setActiveTab("notifications")}
+      />
       {screen}
-      <BottomTabs active={activeTab} onChange={setActiveTab} />
+      <BottomTabs active={activeTab} onChange={setActiveTab} unreadCount={app.unreadCount} />
     </View>
   );
 }
@@ -58,6 +68,8 @@ export function AppRoot() {
   const [authUser, setAuthUser] = useState(null);
   const [profileSub, setProfileSub] = useState("");
   const [profile, setProfile] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [bootError, setBootError] = useState("");
   const processedAuthCode = useRef(null);
 
@@ -107,10 +119,40 @@ export function AppRoot() {
     setAuthUser(null);
     setProfileSub("");
     setProfile(null);
+    setNotifications([]);
     await setSecureItem(storageKeys.accessToken, null);
     await setSecureItem(storageKeys.profileSub, null);
     await setJsonItem(storageKeys.user, null);
   }, []);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!profile?.id) return [];
+    setNotificationsLoading(true);
+    try {
+      const data = await api.get(`/notifications/${profile.id}`);
+      const rows = Array.isArray(data?.notifications) ? data.notifications : [];
+      setNotifications(rows);
+      return rows;
+    } catch (error) {
+      setBootError(error.message);
+      return [];
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [api, profile?.id]);
+
+  const markNotificationsRead = useCallback(async (notificationIds = []) => {
+    if (!notificationIds.length) return;
+    const ids = notificationIds.map((id) => id.toString());
+    try {
+      await api.post("/notifications/read", { notificationIds: ids });
+      setNotifications((items) => items.map((item) => (
+        ids.includes(item.id?.toString()) ? { ...item, read: true } : item
+      )));
+    } catch (error) {
+      Alert.alert("Unable to mark notifications read", error.message);
+    }
+  }, [api]);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,6 +185,11 @@ export function AppRoot() {
   }, [accessToken, loadProfile, ready]);
 
   useEffect(() => {
+    if (!profile?.id) return;
+    refreshNotifications();
+  }, [profile?.id, refreshNotifications]);
+
+  useEffect(() => {
     async function completeAuth() {
       if (auth.response?.type !== "success") return;
       const code = auth.response.params.code;
@@ -162,6 +209,11 @@ export function AppRoot() {
     completeAuth();
   }, [auth, saveSession]);
 
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
+
   const value = useMemo(() => ({
     api,
     authUser,
@@ -170,6 +222,11 @@ export function AppRoot() {
     ready,
     profile,
     profileSub,
+    notifications,
+    unreadCount,
+    notificationsLoading,
+    refreshNotifications,
+    markNotificationsRead,
     refreshProfile: loadProfile,
     signInWithAuth0,
     signInWithToken,
@@ -180,12 +237,17 @@ export function AppRoot() {
     authUser,
     bootError,
     loadProfile,
+    markNotificationsRead,
+    notifications,
+    notificationsLoading,
     profile,
     profileSub,
     ready,
+    refreshNotifications,
     signInWithAuth0,
     signInWithToken,
-    signOut
+    signOut,
+    unreadCount
   ]);
 
   return (

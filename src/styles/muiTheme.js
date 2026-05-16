@@ -84,12 +84,38 @@ const muiTheme = createTheme({
         root: {
           borderRadius: theme.borders.borderRadiusSm,
           padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-          // Example: Adding a border
-          // border: `1px solid ${theme.colors.primary}`,
-          // '&:hover': {
-          //   backgroundColor: theme.colors.primary,
-          //   color: theme.colors.backgroundPaper, // Example: changing text color on hover
-          // },
+          fontWeight: 700,
+          letterSpacing: 0,
+          borderColor: theme.colors.border,
+          boxShadow: '0 0 18px rgba(95, 240, 255, 0.12)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(5, 16, 34, 0.82)',
+          backgroundImage: 'linear-gradient(180deg, rgba(95, 240, 255, 0.05), transparent)',
+          border: '1px solid rgba(95, 240, 255, 0.18)',
+          backdropFilter: 'blur(16px)',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: 'rgba(5, 16, 34, 0.94)',
+          color: theme.colors.textPrimary,
+          borderLeft: '1px solid rgba(95, 240, 255, 0.28)',
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: 'rgba(5, 16, 34, 0.94)',
+          color: theme.colors.textPrimary,
+          border: '1px solid rgba(95, 240, 255, 0.24)',
         },
       },
     },

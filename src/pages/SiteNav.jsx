@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link, useLocation } from "react-router-dom";
 import "./SiteNav.css";
 import {
+  Alert,
+  Avatar,
   Badge,
+  Button,
   IconButton,
   Menu,
   MenuItem,
-  Button,
   Modal,
   Paper,
-  Box,
   Snackbar,
-  Alert,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -21,11 +22,32 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import InfoIcon from "@mui/icons-material/Info";
-import { useNotifications } from "./NotificationProvider";
-import IdleSpaceGame from "./IdleSpaceGame";
-import LevelNotification from "../components/LevelNotification/LevelNotification";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import axios from "axios";
 import NeedDeclarationForm from "../components/NeedDeclarationForm/NeedDeclarationForm.jsx";
+import { useNotifications } from "./NotificationProvider";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { getProfileImageUrl } from "../utils/avatar";
+import { isRouteActive, platformNavItems } from "../utils/platformNavigation";
+
+const sidebarItems = platformNavItems.filter((item) => item.label !== "Notifications");
+
+const getSiteNavNotificationIcon = (type) => {
+  switch ((type || "default").toLowerCase()) {
+    case "task-approved":
+      return <TaskAltIcon fontSize="small" className="notification-type-icon" />;
+    case "task-rejected":
+      return <CancelIcon fontSize="small" className="notification-type-icon" />;
+    case "task-submitted":
+      return <NotificationsActiveIcon fontSize="small" className="notification-type-icon" />;
+    case "task":
+      return <ListAltIcon fontSize="small" className="notification-type-icon" />;
+    case "service_purchase":
+      return <NotificationsActiveIcon fontSize="small" className="notification-type-icon" />;
+    default:
+      return <InfoIcon fontSize="small" className="notification-type-icon" />;
+  }
+};
 
 const SiteNav = () => {
   const {
@@ -34,18 +56,12 @@ const SiteNav = () => {
     loginWithRedirect,
     isAuthenticated,
     getAccessTokenSilently,
-  } = useAuth0(); // Added user, getAccessTokenSilently
+  } = useAuth0();
   const location = useLocation();
+  const { profile } = useUserProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isGameOpen, setIsGameOpen] = useState(false);
-  const toggleGameTray = () => {
-    setIsGameOpen((prev) => !prev);
-  };
   const { notifications, unreadCount, markAsRead } = useNotifications();
-
   const [anchorEl, setAnchorEl] = useState(null);
-
-  // State for Need Declaration Modal
   const [isNeedModalOpen, setIsNeedModalOpen] = useState(false);
   const [userProfileId, setUserProfileId] = useState(null);
   const [notificationState, setNotificationState] = useState({
@@ -54,76 +70,24 @@ const SiteNav = () => {
     severity: "info",
   });
 
-  // State for LevelNotification demo
-  const [demoPreviousXP, setDemoPreviousXP] = useState(0);
-  const [demoNewXP, setDemoNewXP] = useState(0);
-  const [demoPreviousLevel, setDemoPreviousLevel] = useState(1);
-  const [demoNewLevel, setDemoNewLevel] = useState(1);
+  const avatarUrl = useMemo(() => getProfileImageUrl(profile, user), [profile, user]);
+  const recentNotifications = notifications.slice(0, 5);
 
-  const getSiteNavNotificationIcon = (type) => {
-    if (!type) type = "default"; // Handle undefined type
+  const toggleSidebar = () => setIsSidebarOpen((open) => !open);
+  const closeSidebar = () => setIsSidebarOpen(false);
 
-    switch (
-      type.toLowerCase() // Use toLowerCase for case-insensitive matching
-    ) {
-      case "task-approved":
-        return <TaskAltIcon style={{ marginRight: "8px" }} />;
-      case "task-rejected":
-        return <CancelIcon style={{ marginRight: "8px" }} />;
-      case "task-submitted":
-        return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
-      case "task":
-        return <ListAltIcon style={{ marginRight: "8px" }} />;
-      case "service_purchase":
-        return <NotificationsActiveIcon style={{ marginRight: "8px" }} />;
-      default:
-        return <InfoIcon style={{ marginRight: "8px" }} />;
-    }
-  };
-
-  const handleGainXP = () => {
-    setDemoPreviousXP(demoNewXP);
-    setDemoPreviousLevel(demoNewLevel);
-
-    let newXPVal = demoNewXP + 30; // Gain 30 XP
-    let newLevelVal = demoNewLevel;
-
-    if (newXPVal >= 100) {
-      newXPVal -= 100; // Reset XP for new level
-      newLevelVal += 1; // Increment level
-    }
-    setDemoNewXP(newXPVal);
-    setDemoNewLevel(newLevelVal);
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
-  // Notification handlers
-  const handleOpen = (event) => {
+  const handleOpenNotifications = (event) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
-    // Mark notifications as read when user opens the dropdown
-    const unreadNotifications = notifications.filter((n) => !n.read);
-    const unreadNotificationIds = unreadNotifications.map((n) => n.id);
-
+  const handleCloseNotifications = () => {
+    const unreadNotificationIds = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadNotificationIds.length > 0) {
-      markAsRead(unreadNotificationIds); // Call markAsRead here
+      markAsRead(unreadNotificationIds);
     }
     setAnchorEl(null);
   };
 
-  // Get the most recent 5 notifications
-  const recentNotifications = notifications.slice(0, 5);
-
-  // Fetch User Profile ID
   const fetchUserProfileId = useCallback(async () => {
     if (isAuthenticated && user?.sub && !userProfileId) {
       try {
@@ -132,7 +96,7 @@ const SiteNav = () => {
           params: { sub: user.sub, email: user.email },
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (response.data && response.data.id) {
+        if (response.data?.id) {
           setUserProfileId(response.data.id);
         }
       } catch (error) {
@@ -144,27 +108,19 @@ const SiteNav = () => {
         });
       }
     }
-  }, [
-    isAuthenticated,
-    user,
-    userProfileId,
-    getAccessTokenSilently,
-    setUserProfileId,
-  ]);
+  }, [isAuthenticated, user, userProfileId, getAccessTokenSilently]);
 
   useEffect(() => {
     fetchUserProfileId();
   }, [fetchUserProfileId]);
 
-  // Need Modal Handlers
   const handleOpenNeedModal = () => {
     if (isAuthenticated && userProfileId) {
       setIsNeedModalOpen(true);
     } else {
       setNotificationState({
         open: true,
-        message:
-          "Please log in and ensure your profile is loaded to declare a need.",
+        message: "Please log in and ensure your profile is loaded to declare a need.",
         severity: "warning",
       });
     }
@@ -175,7 +131,6 @@ const SiteNav = () => {
   const handleNeedSubmit = async (needData) => {
     try {
       const token = await getAccessTokenSilently();
-      // The NeedDeclarationForm already sets requestor_user_id to loggedInUserId (which is userProfileId here)
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/needs`, needData, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -186,91 +141,76 @@ const SiteNav = () => {
       });
       handleCloseNeedModal();
     } catch (error) {
-      console.error(
-        "Error declaring need:",
-        error.response ? error.response.data : error.message
-      );
+      console.error("Error declaring need:", error.response ? error.response.data : error.message);
       setNotificationState({
         open: true,
-        message: `Failed to declare need: ${
-          error.response?.data?.error || error.message
-        }`,
+        message: `Failed to declare need: ${error.response?.data?.error || error.message}`,
         severity: "error",
       });
     }
   };
 
   const handleCloseSnackbar = (event, reason) => {
-    if (reason === "clickaway") {
-      return;
-    }
+    if (reason === "clickaway") return;
     setNotificationState((prev) => ({ ...prev, open: false }));
   };
 
   return (
     <nav className={`site-nav ${isSidebarOpen ? "open" : ""}`}>
-      <div className="title-container">
-        <h1 className="site-title">Cerbanimo</h1>
-      </div>
+      <Link to="/dashboard" className="site-brand" onClick={closeSidebar}>
+        <span className="site-brand-mark" aria-hidden="true">
+          <RocketLaunchIcon fontSize="small" />
+        </span>
+        <span className="site-title">Cerbanimo</span>
+      </Link>
 
-      {isAuthenticated && (
-        <div className="notification-container">
-          <IconButton color="inherit" onClick={handleOpen}>
-            <Badge badgeContent={unreadCount} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            {recentNotifications.length === 0 ? (
-              <MenuItem className="notification-menu">
-                No new notifications
-              </MenuItem>
-            ) : (
-              recentNotifications.map((notif, index) => {
-                const icon = getSiteNavNotificationIcon(notif.type);
-                return (
+      <div className="site-nav-actions">
+        {isAuthenticated && (
+          <>
+            <Tooltip title="Notifications">
+              <IconButton
+                className="nav-icon-button"
+                color="inherit"
+                onClick={handleOpenNotifications}
+                aria-label="Open notifications"
+              >
+                <Badge badgeContent={unreadCount} color="error" max={99}>
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleCloseNotifications}
+              MenuListProps={{ className: "notification-list" }}
+            >
+              {recentNotifications.length === 0 ? (
+                <MenuItem className="notification-menu">No new notifications</MenuItem>
+              ) : (
+                recentNotifications.map((notif, index) => (
                   <MenuItem
-                    key={index}
-                    className="notification-menu"
-                    style={{
-                      whiteSpace: "normal",
-                      wordBreak: "break-word",
-                      maxWidth: 320,
-                      lineHeight: 1.4,
-                    }}
+                    key={notif.id || index}
+                    className={`notification-menu ${notif.read ? "read" : "unread"}`}
+                    onClick={handleCloseNotifications}
                   >
-                    {icon}
-                    <span style={{ display: "inline", whiteSpace: "normal", wordBreak: "break-word" }}>
-                      {notif.type === 'service_purchase' && notif.buyerId && notif.buyerUsername ? (
+                    {getSiteNavNotificationIcon(notif.type)}
+                    <span className="notification-copy">
+                      {notif.type === "service_purchase" && notif.buyerId && notif.buyerUsername ? (
                         <>
-                          <Link
-                            to={`/profile/public/${notif.buyerId}`}
-                            style={{ textDecoration: 'underline', color: '#ff5ca2', fontWeight: 'bold' }}
-                          >
+                          <Link className="notification-link pink" to={`/profile/public/${notif.buyerId}`}>
                             {notif.buyerUsername}
                           </Link>
-                          {' has purchased your service: '}
-                          <Link
-                            to={`/Visualizer/${notif.projectId}`}
-                            style={{ textDecoration: 'underline', color: '#00f3ff', fontWeight: 'bold' }}
-                          >
-                            {notif.serviceName || 'Project'}
+                          {" has purchased your service: "}
+                          <Link className="notification-link cyan" to={`/Visualizer/${notif.projectId}`}>
+                            {notif.serviceName || "Project"}
                           </Link>
-                          {'!'}
+                          {"!"}
                         </>
                       ) : notif.projectId ? (
                         <Link
+                          className="notification-link cyan"
                           to={notif.taskId ? `/Visualizer/${notif.projectId}/${notif.taskId}` : `/Visualizer/${notif.projectId}`}
-                          style={{
-                            textDecoration: "underline",
-                            color: "#8db8ff",
-                            wordBreak: "break-word",
-                            whiteSpace: "normal",
-                          }}
                         >
                           {notif.messageText}
                         </Link>
@@ -279,140 +219,69 @@ const SiteNav = () => {
                       )}
                     </span>
                   </MenuItem>
-                );
-              })
-            )}
-          </Menu>
-        </div>
-      )}
-
-      <div className="sidebar-toggle" onClick={toggleSidebar}>
-        <span className={`hamburger ${isSidebarOpen ? "open" : ""}`} />
-      </div>
-      <div className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-        <div className="nav-links">
-          <Link
-            className={`nav-link ${location.pathname === "/" ? "active" : ""}`}
-            to="/"
-            onClick={closeSidebar}
-          >
-            Home Page
-          </Link>
-
-          {isAuthenticated && (
-            <>
-              <Link
-                className={`nav-link ${
-                  location.pathname === "/dashboard" ? "active" : ""
-                }`}
-                to="/dashboard"
-                onClick={closeSidebar}
-              >
-                Dashboard
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname === "/profile" ? "active" : ""
-                }`}
+                ))
+              )}
+            </Menu>
+            <Tooltip title="Profile">
+              <IconButton
+                component={Link}
                 to="/profile"
-                onClick={closeSidebar}
+                className="profile-avatar-button"
+                color="inherit"
+                aria-label="Open profile"
               >
-                Profile
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname.startsWith("/projects") ? "active" : ""
-                }`}
-                to="/projects"
-                onClick={closeSidebar}
-              >
-                Projects
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname.startsWith("/communities") ? "active" : ""
-                }`}
-                to="/communities"
-                onClick={closeSidebar}
-              >
-                Communities
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname === "/guilds" ? "active" : ""
-                }`}
-                to="/guilds"
-                onClick={closeSidebar}
-              >
-                Guilds
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname === "/constellations" ? "active" : ""
-                }`}
-                to="/constellations"
-                onClick={closeSidebar}
-              >
-                Constellations
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname === "/resources-inventory" ? "active" : ""
-                }`}
-                to="/resources-inventory"
-                onClick={closeSidebar}
-              >
-                Resources
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname.startsWith("/projectcreation")
-                    ? "active"
-                    : ""
-                }`}
-                to="/projectcreation"
-                onClick={closeSidebar}
-              >
-                Create a Project
-              </Link>
-              <Link
-                className={`nav-link ${
-                  location.pathname.startsWith("/communitycreation")
-                    ? "active"
-                    : ""
-                }`}
-                to="/communitycreation"
-                onClick={closeSidebar}
-              >
-                Create a Community
-              </Link>
-              {/* Declare a Need Button */}
-              <Button
-                variant="text"
-                onClick={handleOpenNeedModal}
-                disabled={!userProfileId}
-                sx={{
-                  color: "var(--text-color)", // Use CSS variable for color
-                  justifyContent: "flex-start",
-                  padding: "10px 15px", // Match nav-link padding
-                  textTransform: "none", // Match nav-link text transform
-                  fontSize: "1rem", // Match nav-link font size
-                  "&:hover": {
-                    backgroundColor: "var(--hover-bg-color)", // Use CSS variable for hover
-                  },
-                }}
-                className="nav-link" // Apply nav-link class for consistent styling
-              >
-                Declare a Need
-              </Button>
-            </>
+                <Avatar src={avatarUrl} alt={profile?.username || user?.name || "Profile"} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+
+        <button
+          className="sidebar-toggle"
+          onClick={toggleSidebar}
+          aria-label="Toggle platform navigation"
+          aria-expanded={isSidebarOpen}
+          type="button"
+        >
+          <span className={`hamburger ${isSidebarOpen ? "open" : ""}`} />
+        </button>
+      </div>
+
+      <div className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
+        <div className="sidebar-header">
+          <span className="sidebar-kicker">NAV ARRAY</span>
+          <Typography variant="h6" className="sidebar-title">Platform Routes</Typography>
+        </div>
+
+        <div className="nav-links">
+          {isAuthenticated && (
+            <Button
+              variant="text"
+              onClick={handleOpenNeedModal}
+              disabled={!userProfileId}
+              className="nav-link nav-link-button"
+            >
+              Declare a Need
+            </Button>
           )}
+          {sidebarItems.map((item) => (
+            <Link
+              key={item.path}
+              className={`nav-link ${isRouteActive(location.pathname, item) ? "active" : ""}`}
+              to={item.path}
+              onClick={closeSidebar}
+            >
+              <span>{item.label}</span>
+              <small>{item.group}</small>
+            </Link>
+          ))}
         </div>
 
         {isAuthenticated ? (
           <button
             className="nav-button logout-button"
             onClick={() => logout({ returnTo: window.location.origin })}
+            type="button"
           >
             Logout
           </button>
@@ -420,13 +289,15 @@ const SiteNav = () => {
           <button
             className="nav-button login-button"
             onClick={() => loginWithRedirect()}
+            type="button"
           >
             Login
           </button>
         )}
       </div>
 
-      {/* Need Declaration Modal */}
+      {isSidebarOpen && <button className="nav-scrim" onClick={closeSidebar} aria-label="Close navigation" type="button" />}
+
       <Modal
         open={isNeedModalOpen}
         onClose={handleCloseNeedModal}
@@ -454,13 +325,10 @@ const SiteNav = () => {
             onSubmit={handleNeedSubmit}
             onCancel={handleCloseNeedModal}
             loggedInUserId={userProfileId}
-            // No initialNeedData as it's for new declarations
-            // No communityId as it's for individual needs from SiteNav
           />
         </Paper>
       </Modal>
 
-      {/* Snackbar for Notifications */}
       <Snackbar
         open={notificationState.open}
         autoHideDuration={6000}

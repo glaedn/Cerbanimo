@@ -4,11 +4,45 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radii, shadows, spacing } from "../theme";
 
+const stars = [
+  [9, 14, 2], [18, 46, 1], [28, 22, 2], [38, 76, 1], [52, 12, 2],
+  [64, 34, 1], [74, 66, 2], [88, 26, 1], [93, 72, 2], [13, 88, 1],
+  [45, 84, 2], [69, 89, 1], [82, 8, 1], [7, 38, 2], [58, 70, 1]
+];
+
+function SpaceField() {
+  return (
+    <View pointerEvents="none" style={styles.spaceField}>
+      <View style={styles.nebulaA} />
+      <View style={styles.nebulaB} />
+      <View style={styles.orbitA} />
+      <View style={styles.orbitB} />
+      {stars.map(([left, top, size], index) => (
+        <View
+          key={index}
+          style={[
+            styles.star,
+            {
+              left: `${left}%`,
+              top: `${top}%`,
+              width: size,
+              height: size,
+              borderRadius: size / 2
+            }
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 export function Screen({ children, refreshing, onRefresh }) {
   return (
-    <LinearGradient colors={[colors.bg, "#0b1825", "#101a2a"]} style={styles.fill}>
+    <LinearGradient colors={[colors.bg, colors.bg2, "#040816"]} style={styles.fill}>
+      <SpaceField />
       <ScrollView
         contentContainerStyle={styles.content}
+        style={styles.scroll}
         keyboardShouldPersistTaps="handled"
         refreshing={refreshing}
         onRefresh={onRefresh}
@@ -94,10 +128,64 @@ export function LoadingState({ label = "Loading" }) {
 
 export const styles = StyleSheet.create({
   fill: { flex: 1 },
+  scroll: { zIndex: 1 },
   content: {
     padding: spacing.lg,
+    paddingTop: 72,
     paddingBottom: 104,
     gap: spacing.lg
+  },
+  spaceField: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden"
+  },
+  nebulaA: {
+    position: "absolute",
+    left: -120,
+    top: 80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(95, 240, 255, 0.14)"
+  },
+  nebulaB: {
+    position: "absolute",
+    right: -130,
+    bottom: -80,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(255, 92, 162, 0.12)"
+  },
+  orbitA: {
+    position: "absolute",
+    left: -70,
+    top: 130,
+    width: 320,
+    height: 160,
+    borderRadius: 160,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(95, 240, 255, 0.18)",
+    transform: [{ rotate: "-18deg" }]
+  },
+  orbitB: {
+    position: "absolute",
+    right: -90,
+    bottom: 120,
+    width: 340,
+    height: 180,
+    borderRadius: 170,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 206, 106, 0.14)",
+    transform: [{ rotate: "-18deg" }]
+  },
+  star: {
+    position: "absolute",
+    backgroundColor: colors.white,
+    opacity: 0.82,
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.7,
+    shadowRadius: 6
   },
   header: {
     flexDirection: "row",
@@ -127,7 +215,7 @@ export const styles = StyleSheet.create({
   panel: {
     backgroundColor: colors.panel,
     borderColor: colors.line,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderRadius: radii.md,
     padding: spacing.lg,
     ...shadows.panel

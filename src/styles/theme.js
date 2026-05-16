@@ -1,17 +1,17 @@
 const theme = {
   colors: {
-    backgroundDefault: '#0A0A2E', // deep blue/purple
-    backgroundPaper: '#1C1C1E', // dark gray, like ProjectVisualizer's container
+    backgroundDefault: '#030612',
+    backgroundPaper: '#081429',
     backgroundBlack: '#000000',
-    primary: '#00F3FF', // neon cyan/blue, from cyber-modal
+    primary: '#5FF0FF',
     secondary: '#FF5CA2', // neon pink, from ProjectVisualizer tabs/nodes
-    accentGreen: '#00D787', // neon green
-    accentBlue: '#4DABF7', // bright blue
-    accentOrange: '#FF9F40', // orange
-    accentPurple: '#9C27B0', // purple
+    accentGreen: '#7DFFB1',
+    accentBlue: '#7FA8FF',
+    accentOrange: '#FFCE6A',
+    accentPurple: '#B99CFF',
     textPrimary: '#FFFFFF',
     textSecondary: '#CCCCCC',
-    border: '#444444',
+    border: 'rgba(95, 240, 255, 0.34)',
     error: '#FF4136', // a generic neon red for errors
     success: '#32CD32', // green, for success states
     warning: '#FFA500', // orange, for warnings
@@ -51,7 +51,7 @@ const theme = {
   effects: {
     glowStrong: (color) => `0 0 15px ${color}`,
     glowSubtle: (color) => `0 0 10px ${color}7A`, // 7A for ~0.5 alpha
-    glass: { backdropFilter: 'blur(10px)', backgroundColor: 'rgba(28, 28, 30, 0.75)' }, // Example, may need adjustment
+    glass: { backdropFilter: 'blur(16px)', backgroundColor: 'rgba(5, 16, 34, 0.72)' },
   },
 };
 

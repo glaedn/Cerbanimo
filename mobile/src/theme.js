@@ -1,16 +1,16 @@
 export const colors = {
-  bg: "#07111f",
-  bg2: "#0f1f2d",
-  panel: "#132335",
-  panelSoft: "#182d3f",
-  line: "#315166",
-  text: "#f5f8fb",
-  muted: "#9eb2c1",
-  cyan: "#42d9d6",
-  amber: "#f1b84b",
-  green: "#8bd17c",
-  rose: "#ef6b7b",
-  violet: "#9c8cff",
+  bg: "#030612",
+  bg2: "#071025",
+  panel: "rgba(8, 20, 41, 0.88)",
+  panelSoft: "rgba(18, 42, 76, 0.78)",
+  line: "rgba(95, 240, 255, 0.34)",
+  text: "#f5fbff",
+  muted: "#a8b8d7",
+  cyan: "#5ff0ff",
+  amber: "#ffce6a",
+  green: "#7dffb1",
+  rose: "#ff5ca2",
+  violet: "#b99cff",
   white: "#ffffff"
 };
 
@@ -31,10 +31,10 @@ export const radii = {
 
 export const shadows = {
   panel: {
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4
+    shadowColor: "#5ff0ff",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6
   }
 };
