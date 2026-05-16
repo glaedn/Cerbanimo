@@ -27,6 +27,30 @@ vi.mock('tone', () => {
     MembraneSynth: vi.fn().mockImplementation(function() { return synthMock; }),
     PolySynth: vi.fn().mockImplementation(function() { return synthMock; }),
     Synth: vi.fn().mockImplementation(function() { return synthMock; }),
+    MonoSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    DuoSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    FMSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    AMSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    NoiseSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    PluckSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    MetalSynth: vi.fn().mockImplementation(function() { return synthMock; }),
+    LFO: vi.fn().mockImplementation(function() {
+      return {
+        connect: vi.fn().mockReturnThis(),
+        start: vi.fn().mockReturnThis(),
+      };
+    }),
+    Limiter: vi.fn().mockImplementation(function() { return synthMock; }),
+    Reverb: vi.fn().mockImplementation(function() {
+      return {
+        ...synthMock,
+        generate: vi.fn().mockResolvedValue(),
+      };
+    }),
+    Filter: vi.fn().mockImplementation(function() { return synthMock; }),
+    Chorus: vi.fn().mockImplementation(function() { return synthMock; }),
+    FeedbackDelay: vi.fn().mockImplementation(function() { return synthMock; }),
+    Gain: vi.fn().mockImplementation(function() { return synthMock; }),
     Destination: {},
     Transport: {
       start: vi.fn(),
@@ -46,4 +70,7 @@ global.jest = {
   mock: vi.mock,
   fn: vi.fn,
   requireActual: vi.importActual,
+  clearAllMocks: vi.clearAllMocks,
+  resetAllMocks: vi.resetAllMocks,
+  restoreAllMocks: vi.restoreAllMocks,
 };

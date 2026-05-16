@@ -103,6 +103,7 @@ const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { profile } = useUserProfile();
 
   React.useEffect(() => {
     const initializeSocket = async () => {
