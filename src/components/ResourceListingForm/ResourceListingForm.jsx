@@ -10,11 +10,17 @@ import {
   Typography,
   Grid,
   InputLabel,
-  FormControl
+  FormControl,
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 // import './ResourceListingForm.css'; // CSS file can be created for additional styling if needed
 
 const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
+  const { getAccessTokenSilently } = useAuth0();
   const getInitialFormData = () => ({
     name: '',
     description: '',
@@ -35,6 +41,32 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
 
   useEffect(() => {
     if (initialResourceData) {
@@ -64,6 +96,24 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
       setFormData(getInitialFormData()); // Reset to initial if no data
     }
   }, [initialResourceData]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setFormData(prev => ({
+        ...prev,
+        location_text: newValue.displayName || '',
+        latitude: newValue.latitude,
+        longitude: newValue.longitude
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        location_text: '',
+        latitude: null,
+        longitude: null
+      }));
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -190,13 +240,38 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
           />
         </Grid>
         <Grid item xs={12}>
-          <TextField
-            label="Location (Address or General Area)"
-            name="location_text"
-            value={formData.location_text}
-            onChange={handleChange}
+          <Autocomplete
             fullWidth
-            variant="outlined"
+            options={locationOptions}
+            getOptionLabel={(option) => option.displayName || ''}
+            loading={isGeocoding}
+            onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+            onChange={handleLocationSelect}
+            value={formData.location_text ? { displayName: formData.location_text } : null}
+            isOptionEqualToValue={(option, value) => option.displayName === value.displayName}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Search Location (City, Address...)"
+                placeholder="Start typing..."
+                variant="outlined"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <LocationOnIcon sx={{ color: 'primary.main', mr: 1 }} />
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
         </Grid>
         <Grid item xs={12}>

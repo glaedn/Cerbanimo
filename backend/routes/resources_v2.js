@@ -23,9 +23,9 @@ router.get('/community/:communityId', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-  const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText, resourceType, availabilitySchedule, conditions } = req.body;
+  const { ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude } = req.body;
   try {
-    const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText, resourceType, availabilitySchedule, conditions);
+    const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude);
 
     // Broadcast to Discord if it's a community resource
     if (resource.owner_community_id) {
@@ -89,9 +89,9 @@ router.post('/conflicts/:conflictId/resolve', async (req, res) => {
 });
 
 router.put('/inventory/:id', async (req, res) => {
-  const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions } = req.body;
+  const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude } = req.body;
   try {
-    const result = await ResourceService.updateResource(req.params.id, { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions });
+    const result = await ResourceService.updateResource(req.params.id, { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

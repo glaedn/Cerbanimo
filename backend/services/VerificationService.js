@@ -1,5 +1,6 @@
 import pool from '../db.js';
 import { calculateVoteWeight } from '../utils/voteWeight.js';
+import CivicEventService from './CivicEventService.js';
 
 class VerificationService {
   async recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink = null, verificationType = null, needId = null) {
@@ -9,7 +10,23 @@ class VerificationService {
       RETURNING *;
     `;
     const result = await pool.query(query, [taskId, verifierId, status, proofOfWorkLink, verificationType, needId]);
-    return result.rows[0];
+    const verificationEvent = result.rows[0];
+
+    // Record Event
+    await CivicEventService.recordEvent({
+      eventType: 'impact.verified',
+      actorId: verifierId,
+      entityType: taskId ? 'task' : 'need',
+      entityId: taskId || needId,
+      payload: {
+        status,
+        verificationType,
+        verificationEventId: verificationEvent.id
+      },
+      correlationId: taskId ? `task:${taskId}` : `need:${needId}`
+    }).catch(err => console.error('Failed to record impact.verified event:', err));
+
+    return verificationEvent;
   }
 
   async validateOracleLink(url) {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox } from '@mui/material';
+import { TextField, Button, Box, Typography, Autocomplete, Chip, FormControlLabel, Checkbox, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { blue, red, green, orange, purple, teal, pink, indigo } from '@mui/material/colors';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './CommunityCreation.css';
@@ -15,7 +16,17 @@ const CommunityCreation = () => {
   const [description, setDescription] = useState('');
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [country, setCountry] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [userId, setUserId] = useState(null); // State to store user ID
 
   const colorPalette = [
@@ -64,6 +75,37 @@ const CommunityCreation = () => {
         fetchUserId();
     }, [getAccessTokenSilently]);
 
+    useEffect(() => {
+      const delayDebounceFn = setTimeout(async () => {
+        if (locationSearch && locationSearch.length > 2) {
+          setIsGeocoding(true);
+          try {
+            const token = await getAccessTokenSilently();
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setLocationOptions(response.data);
+          } catch (err) {
+            console.error('Failed to search location:', err);
+          } finally {
+            setIsGeocoding(false);
+          }
+        }
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+    }, [locationSearch, getAccessTokenSilently]);
+
+    const handleLocationSelect = (event, newValue) => {
+      if (newValue) {
+        setCity(newValue.address.city || '');
+        setState(newValue.address.state || '');
+        setCountry(newValue.address.country || '');
+        setLatitude(newValue.latitude);
+        setLongitude(newValue.longitude);
+      }
+    };
+
     const handleCreateCommunity = async () => {
       if (!name.trim()) {
         alert('Please enter a community name');
@@ -90,6 +132,11 @@ const CommunityCreation = () => {
           description: description,
           id: userId,
           tags: tagIds,
+          latitude: latitude,
+          longitude: longitude,
+          city: city,
+          state: state,
+          country: country,
         }, {
           headers: {
             Authorization: `Bearer ${token}`
@@ -132,6 +179,92 @@ const CommunityCreation = () => {
         <div className="cosmic-glow"></div>
       </div>
       
+      <div className="cosmic-field-container">
+        <Autocomplete
+          fullWidth
+          options={locationOptions}
+          getOptionLabel={(option) => option.displayName || ''}
+          loading={isGeocoding}
+          onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+          onChange={handleLocationSelect}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Search Anchor Location (City, Address...)"
+              placeholder="Establishing spatial coordinates..."
+              variant="outlined"
+              margin="normal"
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <>
+                    <LocationOnIcon sx={{ color: '#00F3FF', mr: 1 }} />
+                    {params.InputProps.startAdornment}
+                  </>
+                ),
+                endAdornment: (
+                  <>
+                    {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+      </div>
+
+      <div className="cosmic-field-container">
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+            <TextField
+                label="City"
+                variant="outlined"
+                fullWidth
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 100%' }}
+            />
+            <TextField
+                label="State / Region"
+                variant="outlined"
+                fullWidth
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
+            <TextField
+                label="Country"
+                variant="outlined"
+                fullWidth
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
+            <TextField
+                label="Latitude"
+                variant="outlined"
+                fullWidth
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
+            <TextField
+                label="Longitude"
+                variant="outlined"
+                fullWidth
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                margin="normal"
+                sx={{ flex: '1 1 45%' }}
+            />
+        </Box>
+        <div className="cosmic-glow"></div>
+      </div>
+
       <div className="cosmic-field-container">
         <TextField
           label="Community Description"

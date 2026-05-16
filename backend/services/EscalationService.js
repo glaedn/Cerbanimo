@@ -2,6 +2,8 @@ import pool from '../db.js';
 import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import ProjectConversionService from './ProjectConversionService.js';
+import CivicEventService from './CivicEventService.js';
+import FederationService from './FederationService.js';
 
 class EscalationService {
   async checkAndEscalateNeeds() {
@@ -51,7 +53,12 @@ class EscalationService {
       // If it's a community need, notify community admins
       if (need.requestor_community_id) {
         const adminsResult = await pool.query(
-          "SELECT id FROM users WHERE roles @> '{admin}'"
+          `SELECT u.id FROM users u
+           WHERE u.id = ANY(
+             SELECT unnest(members) FROM communities WHERE id = $1
+           )
+           AND u.roles @> '{admin}'`,
+           [need.requestor_community_id]
         );
         for (const admin of adminsResult.rows) {
            notifications.push(
@@ -64,6 +71,70 @@ class EscalationService {
       }
 
       await Promise.all(notifications);
+
+      // 3. Federation Broadcast
+      if (need.requestor_community_id) {
+        const activeTreaties = await pool.query(
+          "SELECT * FROM federation_treaties WHERE (community_a = $1 OR community_b = $1) AND status = 'active'",
+          [need.requestor_community_id]
+        );
+
+        for (const treaty of activeTreaties.rows) {
+          const alliedCommunityId = treaty.community_a === need.requestor_community_id ? treaty.community_b : treaty.community_a;
+
+          // Notify allied community admins
+          const alliedAdmins = await pool.query(
+            `SELECT u.id FROM users u
+             WHERE u.id = ANY(
+               SELECT unnest(members) FROM communities WHERE id = $1
+             )
+             AND u.roles @> '{admin}'`,
+             [alliedCommunityId]
+          );
+
+          for (const admin of alliedAdmins.rows) {
+            await sendNotification(admin.id, {
+              message: `ALLIED AID REQUEST: A need from allied community "${need.requestor_community_id}" is escalating: ${need.name}`,
+              type: 'federation_broadcast',
+              needId: need.id
+            });
+          }
+
+          await FederationService.recordFederationEvent(alliedCommunityId, 'federation.need_broadcast', {
+            sourceCommunityId: need.requestor_community_id,
+            needId: need.id,
+            treatyId: treaty.id
+          });
+        }
+      }
+
+      // Record Event
+      await CivicEventService.recordEvent({
+        eventType: 'mission.escalated',
+        actorId: need.requestor_user_id,
+        entityType: 'need',
+        entityId: need.id,
+        payload: {
+          matchCount: matches.users.length + matches.resources.length,
+          urgencyLevel: need.urgency_level || need.urgency
+        },
+        correlationId: `need:${need.id}`
+      }).catch(err => console.error('Failed to record mission.escalated event:', err));
+
+      // Community Alert Event
+      if (need.requestor_community_id) {
+        await CivicEventService.recordEvent({
+          eventType: 'community.alert',
+          entityType: 'community',
+          entityId: need.requestor_community_id,
+          payload: {
+            alertType: 'need_escalation',
+            needId: need.id,
+            needName: need.name
+          },
+          correlationId: `need:${need.id}`
+        }).catch(err => console.error('Failed to record community.alert event:', err));
+      }
 
       // 3. Auto-convert if high urgency
       const urgency = (need.urgency_level || need.urgency || '').toLowerCase();

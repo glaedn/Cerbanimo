@@ -18,6 +18,8 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import AuthWrapper from "./AuthWrapper.jsx";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { useUserProfile } from "./hooks/useUserProfile";
+import { socketService } from "./services/SocketService";
+import { useAuth0 } from "@auth0/auth0-react";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import SpaceShell from "./components/SpaceShell.jsx";
 import { useLocation } from "react-router-dom";
@@ -56,9 +58,18 @@ const ProjectPages = React.lazy(() => import("./pages/ProjectPages.jsx"));
 const Project = React.lazy(() => import("./pages/Project.jsx"));
 const CoordinatorHUD = React.lazy(() => import("./pages/CoordinatorHUD.jsx"));
 const ImpactAtlas = React.lazy(() => import("./pages/ImpactAtlas.jsx"));
+const CivicKernelConsole = React.lazy(() => import("./pages/CivicKernelConsole.jsx"));
 const DisputeCourt = React.lazy(() => import("./pages/DisputeCourt/DisputeCourt.jsx"));
 const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard.jsx"));
 const NeedsPage = React.lazy(() => import("./pages/NeedsPage/NeedsPage.jsx"));
+const AdaptiveHUD = React.lazy(() => import("./components/HUD/AdaptiveHUD.jsx"));
+const GovernanceChamber = React.lazy(() => import("./pages/GovernanceChamber.jsx"));
+const ConstitutionExplorer = React.lazy(() => import("./pages/ConstitutionExplorer.jsx"));
+const FederationAtlas = React.lazy(() => import("./pages/FederationAtlas.jsx"));
+const DelegationMapPage = React.lazy(() => import("./pages/DelegationMapPage.jsx"));
+const CivicSimulator = React.lazy(() => import("./pages/CivicSimulator.jsx"));
+const MediationSpace = React.lazy(() => import("./pages/MediationSpace.jsx"));
+const NarrativeIdentityHub = React.lazy(() => import("./pages/NarrativeIdentityHub.jsx"));
 
 const AdminProtectedRoute = ({ children }) => {
   const { profile, loading } = useUserProfile();
@@ -90,6 +101,26 @@ const PageWrapper = ({ children }) => (
 const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+
+  React.useEffect(() => {
+    const initializeSocket = async () => {
+      if (isAuthenticated && profile?.id) {
+        try {
+          const token = await getAccessTokenSilently();
+          socketService.connect(profile.id, token);
+        } catch (err) {
+          console.error("Socket initialization failed:", err);
+        }
+      }
+    };
+
+    initializeSocket();
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [isAuthenticated, profile?.id, getAccessTokenSilently]);
 
   return (
     <SpaceShell>
@@ -135,6 +166,54 @@ const AppContent = () => {
             element={
               <PrivateRoute>
                 <PageWrapper><SkillConstellation /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/simulator"
+            element={
+              <PrivateRoute>
+                <PageWrapper><CivicSimulator /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/mediation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><MediationSpace /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId"
+            element={
+              <PrivateRoute>
+                <PageWrapper><GovernanceChamber /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/constitution"
+            element={
+              <PrivateRoute>
+                <PageWrapper><ConstitutionExplorer /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/governance/:communityId/delegation"
+            element={
+              <PrivateRoute>
+                <PageWrapper><DelegationMapPage /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/federation-atlas"
+            element={
+              <PrivateRoute>
+                <PageWrapper><FederationAtlas /></PageWrapper>
               </PrivateRoute>
             }
           />
@@ -249,6 +328,14 @@ const AppContent = () => {
             }
           />
           <Route path="/profile/public/:userId" element={<PageWrapper><PublicProfile /></PageWrapper>} />
+          <Route
+            path="/profile/narrative-hub/:userId?"
+            element={
+              <PrivateRoute>
+                <PageWrapper><NarrativeIdentityHub /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
 
           <Route
             path="/BadgeCreation"
@@ -351,14 +438,6 @@ const AppContent = () => {
           />
           <Route path="/rezzler" element={<PageWrapper><Rezzler /></PageWrapper>} />
           <Route
-            path="/coordinator-hud"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CoordinatorHUD /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
             path="/impact-atlas"
             element={
               <PrivateRoute>
@@ -367,10 +446,18 @@ const AppContent = () => {
             }
           />
           <Route
-            path="/dispute-court"
+            path="/civic-kernel"
             element={
               <PrivateRoute>
-                <PageWrapper><DisputeCourt /></PageWrapper>
+                <PageWrapper><CivicKernelConsole /></PageWrapper>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/mediation-space"
+            element={
+              <PrivateRoute>
+                <PageWrapper><MediationSpace /></PageWrapper>
               </PrivateRoute>
             }
           />

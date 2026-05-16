@@ -1,6 +1,8 @@
 // backend/routes/exchange.js
 import express from 'express';
 import { initiateExchange } from '../services/resourceExchangeService.js';
+import { awardTokens } from '../services/tokenService.js';
+import authenticate from '../middlewares/authenticate.js';
 import db from '../db.js'; // Database pool
 
 const router = express.Router();
@@ -16,49 +18,113 @@ router.post('/initiate', async (req, res) => {
 
   try {
     const result = await initiateExchange({ needId, resourceId, loggedInUserId, notes }, db);
-    // The service is expected to return { success: true, coordinationTaskId, message }
     res.status(201).json(result);
   } catch (error) {
     console.error(`Exchange initiation failed for NeedID: ${needId}, ResourceID: ${resourceId} by UserID: ${loggedInUserId}:`, error.message);
 
-    // Handle specific error messages from the service layer
     if (error.message.toLowerCase().includes('not found')) {
-      // Covers "Need not found" or "Resource not found"
       return res.status(404).json({ message: error.message });
     }
     if (error.message.toLowerCase().includes('no longer open') || error.message.toLowerCase().includes('no longer available')) {
-      // Covers "Need is no longer open" or "Resource is no longer available"
-      // 409 Conflict is appropriate as the state of the resource prevents the operation
       return res.status(409).json({ message: error.message });
     }
     
-    // Default to 500 for other types of errors (e.g., database connection issues, unexpected errors)
     res.status(500).json({ message: 'Failed to initiate exchange due to an internal server error.' });
   }
 });
 
-// --- Future Endpoints Placeholder Comments ---
-
 // POST /exchange/confirm_pickup/:taskId 
-// Description: Confirms that the resource has been picked up by the recipient or a courier.
-// Logic: Updates the status of the coordination task and potentially the resource.
-// router.post('/confirm_pickup/:taskId', authenticate, async (req, res) => { /* ... */ });
+router.post('/confirm_pickup/:taskId', authenticate, async (req, res) => {
+  const { taskId } = req.params;
+  try {
+    await db.query('UPDATE coordination_tasks SET status = $1, updated_at = NOW() WHERE id = $2', ['picked_up', taskId]);
+    res.json({ success: true, message: 'Pickup confirmed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // POST /exchange/confirm_delivery/:taskId
-// Description: Confirms that the resource has been delivered to the need requestor.
-// Logic: Updates the status of the coordination task and potentially the resource/need.
-// router.post('/confirm_delivery/:taskId', authenticate, async (req, res) => { /* ... */ });
+router.post('/confirm_delivery/:taskId', authenticate, async (req, res) => {
+  const { taskId } = req.params;
+  try {
+    await db.query('UPDATE coordination_tasks SET status = $1, updated_at = NOW() WHERE id = $2', ['delivered', taskId]);
+    res.json({ success: true, message: 'Delivery confirmed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // POST /exchange/verify_exchange/:taskId
-// Description: Final verification by both parties (or an admin) that the exchange is complete and satisfactory.
-// Logic: Updates related task, need, and resource statuses to 'completed' or 'exchanged'. Triggers rewards/reputation updates.
-// router.post('/verify_exchange/:taskId', authenticate, async (req, res) => { /* ... */ });
+router.post('/verify_exchange/:taskId', authenticate, async (req, res) => {
+  const { taskId } = req.params;
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+
+    const taskRes = await client.query('SELECT * FROM coordination_tasks WHERE id = $1', [taskId]);
+    if (taskRes.rows.length === 0) throw new Error('Task not found');
+    const task = taskRes.rows[0];
+
+    // Update statuses
+    await client.query('UPDATE coordination_tasks SET status = $1, updated_at = NOW() WHERE id = $2', ['completed', taskId]);
+    if (task.need_id) await client.query('UPDATE needs SET status = $1 WHERE id = $2', ['fulfilled', task.need_id]);
+    if (task.resource_id) await client.query('UPDATE resources SET status = $1 WHERE id = $2', ['exchanged', task.resource_id]);
+
+    // Record reciprocity if inter-community
+    const needRes = await client.query('SELECT requestor_community_id FROM needs WHERE id = $1', [task.related_need_id || task.need_id]);
+    const resRes = await client.query('SELECT owner_community_id FROM resources WHERE id = $1', [task.related_resource_id || task.resource_id]);
+
+    if (needRes.rows.length > 0 && resRes.rows.length > 0) {
+      const recipientCommunityId = needRes.rows[0].requestor_community_id;
+      const providerCommunityId = resRes.rows[0].owner_community_id;
+
+      if (recipientCommunityId && providerCommunityId && recipientCommunityId !== providerCommunityId) {
+        await client.query(
+          `INSERT INTO community_reciprocity_ledger (from_community_id, to_community_id, aid_type, reference_need_id)
+           VALUES ($1, $2, $3, $4)`,
+          [providerCommunityId, recipientCommunityId, 'resource', task.related_need_id || task.need_id]
+        );
+      }
+    }
+
+    // Trigger reward if applicable
+    if (task.reward_amount && task.contributor_id) {
+       await awardTokens(db, task.contributor_id, task.reward_amount, `Exchange completed: Task ${taskId}`);
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Exchange verified and completed' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
 
 // POST /exchange/cancel/:taskId
-// Description: Allows a user involved in the exchange (or admin) to cancel the exchange process.
-// Logic: Updates task, need, and resource statuses to reflect cancellation (e.g., back to 'open' or 'available' if appropriate, or 'cancelled').
-// router.post('/cancel/:taskId', authenticate, async (req, res) => { /* ... */ });
+router.post('/cancel/:taskId', authenticate, async (req, res) => {
+  const { taskId } = req.params;
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const taskRes = await client.query('SELECT * FROM coordination_tasks WHERE id = $1', [taskId]);
+    const task = taskRes.rows[0];
+
+    await client.query('UPDATE coordination_tasks SET status = $1, updated_at = NOW() WHERE id = $2', ['cancelled', taskId]);
+    if (task.need_id) await client.query('UPDATE needs SET status = $1 WHERE id = $2', ['open', task.need_id]);
+    if (task.resource_id) await client.query('UPDATE resources SET status = $1 WHERE id = $2', ['available', task.resource_id]);
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Exchange cancelled' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
 
 
-export default router; // For ES6 modules
-// module.exports = router; // For CommonJS, if project uses that convention.
+export default router;

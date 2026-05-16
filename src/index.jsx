@@ -8,6 +8,9 @@ import muiTheme from './styles/muiTheme.js';
 import NotificationProvider from './pages/NotificationProvider.jsx';
 import { CrisisProvider } from './context/CrisisContext.jsx';
 import { LoFiProvider } from './context/LoFiContext.jsx';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 const onRedirectCallback = (appState) => {
   window.history.replaceState(
@@ -32,13 +35,16 @@ root.render(
       cacheLocation="localstorage"
     >
       <ThemeProvider theme={muiTheme}>
-        <CrisisProvider>
-          <LoFiProvider>
-            <NotificationProvider>
-              <App />
-            </NotificationProvider>
-          </LoFiProvider>
-        </CrisisProvider>
+        <QueryClientProvider client={queryClient}>
+          <CrisisProvider>
+            <LoFiProvider>
+              <NotificationProvider>
+                <App />
+              </NotificationProvider>
+            </LoFiProvider>
+          </CrisisProvider>
+          <ReactQueryDevtools initialIsOpen={false} position="bottom-left" />
+        </QueryClientProvider>
       </ThemeProvider>
     </Auth0Provider>
 );

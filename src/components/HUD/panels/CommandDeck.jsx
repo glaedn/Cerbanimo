@@ -2,17 +2,16 @@ import React, { useState, useEffect } from 'react'; // Correctly import useState
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useUserProjects from '../../../hooks/useUserProjects.js'; // This still needed to sum tokens from projects
 import ChronicleTimeline from '../../ChronicleTimeline';
+import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommandDeck.css'; // Optional: For specific CommandDeck styles if needed
 
-// Mock data if not available from hooks - REMOVE IF REAL DATA IS PRESENT
-const MOCKED_TOKEN_POOL = 10000; // Example global pool
-const MOCK_PROJECT_TOKENS = true; // Set to false if projects have real token data
 const accentGreen = '#00D787'; // theme.colors.accentGreen
 
 const CommandDeck = () => {
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { projects, loading: projectsLoading, error: projectsError } = useUserProjects(profile?.id);
+  const selectEntity = useAppStore(state => state.selectEntity);
   const [isMinimized, setIsMinimized] = useState(false); // Use useState
   const [chronicleData, setChronicleData] = useState([]);
   const [loadingChronicle, setLoadingChronicle] = useState(false);
@@ -87,7 +86,13 @@ const CommandDeck = () => {
 
               <div className="project-info">
 
-                <a className="project-name" href={`/visualizer/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.name}</a>
+                <span
+                  className="project-name"
+                  onClick={() => selectEntity({ id: `project-${p.id}`, type: 'project', name: p.name, status: 'active', raw: p })}
+                  style={{ textDecoration: 'none', color: '#00f3ff', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  {p.name}
+                </span>
                 <br />
                 <span className="project-details">
 

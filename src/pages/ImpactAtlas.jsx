@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Chip, Divider, IconButton, Paper, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import { useAuth0 } from '@auth0/auth0-react';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './ImpactAtlas.css';
 
 const ImpactAtlas = () => {
   const isMobile = useIsMobile();
+  const { getAccessTokenSilently } = useAuth0();
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [selectedType, setSelectedType] = useState('all');
@@ -21,7 +23,10 @@ const ImpactAtlas = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/impact_v2/atlas`);
+        const token = await getAccessTokenSilently();
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/impact_v2/atlas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const json = await res.json();
         setGraphData(json);
       } catch (err) {
@@ -29,7 +34,7 @@ const ImpactAtlas = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [getAccessTokenSilently]);
 
   const filteredNodes = graphData.nodes.filter(n => selectedType === 'all' || n.type === selectedType);
 

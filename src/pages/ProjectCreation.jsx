@@ -11,7 +11,10 @@ import {
   FormControlLabel,
   Checkbox,
   createFilterOptions,
+  Grid,
+  CircularProgress
 } from "@mui/material";
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -31,9 +34,34 @@ const ProjectCreation = () => {
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [dueDate, setDueDate] = useState(null);
+  const [location, setLocation] = useState({ text: '', latitude: null, longitude: null });
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -53,6 +81,18 @@ const ProjectCreation = () => {
     fetchTags();
   }, [getAccessTokenSilently]);
 
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setLocation({
+        text: newValue.displayName || '',
+        latitude: newValue.latitude,
+        longitude: newValue.longitude
+      });
+    } else {
+      setLocation({ text: '', latitude: null, longitude: null });
+    }
+  };
+
   const handleCreateProject = async () => {
     if (window.navigator.vibrate) window.navigator.vibrate(50);
     setLoadingPopupMessages(["Creating your project..."]);
@@ -71,6 +111,7 @@ const ProjectCreation = () => {
           auth0_id: user.sub,
           outcomeStatement: outcome,
           due_date: dueDate ? dueDate.toISOString() : null,
+          location: location.text ? location : null,
         },
         {
           headers: {
@@ -158,6 +199,41 @@ const ProjectCreation = () => {
         placeholder="e.g. Reduce food waste in the local neighborhood by 20%"
         margin="normal"
       />
+      <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid item xs={12}>
+          <Autocomplete
+            fullWidth
+            options={locationOptions}
+            getOptionLabel={(option) => option.displayName || ''}
+            loading={isGeocoding}
+            onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+            onChange={handleLocationSelect}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Search Location (City, Address...)"
+                placeholder="Start typing..."
+                variant="outlined"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <LocationOnIcon sx={{ color: 'primary.main', mr: 1 }} />
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
       <DatePicker
         label="Target Completion Date (Optional)"
         value={dueDate}

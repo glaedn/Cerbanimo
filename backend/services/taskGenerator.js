@@ -80,7 +80,7 @@ export const normalizeTaskImpactWeights = (tasks = []) => {
   }));
 };
 
-export const generateProjectIdea = async (skills, interests) => {
+export const generateProjectIdea = async (skills, interests, primeDirective = "") => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
 
@@ -88,6 +88,7 @@ export const generateProjectIdea = async (skills, interests) => {
     Context Parameters Provided:
     Skills: ${skillsString}
     Interests: ${interestsString}
+    Prime Directive (User motivations/goals): ${primeDirective}
 
     Instructions for AI Generation:
     Using the provided skills and interests, generate a unique project name that reflects this synergy.
@@ -100,8 +101,7 @@ export const generateProjectIdea = async (skills, interests) => {
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
-      //systemInstruction: systemPrompt,
+      model: "gemini-3.1-flash-lite",
     });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
@@ -208,8 +208,7 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
 
  try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
-      //systemInstruction: systemPrompt,
+      model: "gemini-3.1-flash-lite",
     });
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
@@ -244,6 +243,7 @@ Rules:
 - For every task, include:
   - "impact_label": how this task helps fulfill the need.
   - "impact_weight": integer 0-100.
+  - "is_local": boolean (true if the task requires physical presence/local routing, false otherwise).
 - The sum of all task impact_weight values must equal 100.
 - Reward Scaling: Assign base reward tokens (50-150 range). Note: these will be scaled later.
 `;
@@ -276,7 +276,7 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["${tags}"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "${now}", "due_date": "${project_due_date || ''}", "impact_label": "...", "impact_weight": 50 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "${now}", "due_date": "${project_due_date || ''}", "impact_label": "...", "impact_weight": 50, "is_local": true }
   ]
 }
 `;
@@ -291,7 +291,7 @@ Here are the rules:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
 - Maintain **relationships**: 
   - "project_id" in tasks must match the corresponding project's new ID.
-  - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit.
+  - "skill_name" in tasks must be the name of a skill. You can use existing common ones or freely generate new ones that fit. This is REQUIRED for every task.
   - "dependencies" in tasks must reference the correct **new task IDs**.
 - **Timeline Awareness**: Distribute tasks across time so the project completes by the due date.
   - Assign each task a logical start_date and due_date based on dependencies.
@@ -303,6 +303,7 @@ Here are the rules:
 - For every task, include:
   - "impact_label": one concise sentence explaining how that task contributes to the intended outcome.
   - "impact_weight": an integer from 0 to 100 representing that task's share of the total project impact.
+  - "is_local": boolean (true if the task requires physical presence or local routing, false if it can be done globally/remotely).
 - The sum of all task impact_weight values for this project must equal exactly 100.
 
 Example skills you can use or be inspired by:
@@ -338,9 +339,9 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30 },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45 },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25 }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30, "is_local": false },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45, "is_local": true },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25, "is_local": false }
   ]
 }
 
@@ -355,7 +356,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it",
+      model: "gemini-3.1-flash-lite",
       //systemInstruction: systemPrompt,
     });
     const result = await model.generateContent(userPrompt);
@@ -370,5 +371,40 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   } catch (error) {
     console.error("Error generating tasks:", error);
     throw new Error(`Failed to generate tasks: ${error.message}`);
+  }
+};
+
+export const analyzeResume = async (resumeText) => {
+  const now = new Date().toISOString();
+  const userPrompt = `
+    Analyze this user's resume for skills.
+    /*
+    Analyze durations worked. Presume part time unless listed. For instance, if the user was a web developer for a large firm, that user probably did 8-10 hours of web development per week, but also 3-6 hours of conference calls and 5-8 hours of general office work, whereas a cashier working part time consistently works 10-15 hours of customer service and money handling. Derive skill names and hours worked from this thought process, and award the user 10 times the amount of hours in skill xp (so 100 hours of labor becomes 1000 hours of skill xp).
+    */
+
+    Today's Date: ${now}
+
+    Output the results in json, using this formula:
+    {"skills": [{"name": "Skill Name", "xp": 0}]}
+
+    Resume: ${resumeText}
+  `;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+    });
+    const result = await model.generateContent(userPrompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    const data = parseLLMJsonResponse(responseText);
+    if (!data.skills || !Array.isArray(data.skills)) {
+      throw new Error("LLM response missing skills array for resume analysis.");
+    }
+    return data;
+  } catch (error) {
+    console.error("Error analyzing resume:", error);
+    throw new Error(`Failed to analyze resume: ${error.message}`);
   }
 };

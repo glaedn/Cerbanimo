@@ -26,47 +26,49 @@
   pointer-events: none;
 }
 
-/* Panel Specific Positioning */
-.command-deck-panel {
-  top: 10px;
-  left: 10px;
-}
+/* Generic Slot Positioning for Modular HUD */
+.hud-slot-0 { top: 10px; left: 10px; }
+.hud-slot-1 { top: 10px; left: 50%; transform: translateX(-50%); }
+.hud-slot-2 { top: 10px; right: 10px; }
+.hud-slot-3 { bottom: 60px; right: 10px; }
+.hud-slot-4 { bottom: 60px; left: 50%; transform: translateX(-50%); }
+.hud-slot-5 { bottom: 110px; left: 10px; } /* Elevated for button clearance */
 
 .command-deck {
   max-height: 40vh!important;
-}
-
-.targeting-scanner-panel {
-  top: 10px;
-  right: 10px;
 }
 
 .targeting-scanner {
     max-height: 40vh!important;
 }
 
-.mission-console-panel {
-  bottom: 50px; /* Adjusted to leave space for StatusBar */
-  left: 10px;
-}
-
 .mission-console {
   max-height: 40vh!important;
 }
 
-.comms-log-panel {
-  bottom: 50px; /* Adjusted to leave space for StatusBar */
-  left: 50%;
-  transform: translateX(-50%);
-}
-
 .skill-galaxy-panel {
-  bottom: 50px; /* Adjusted to leave space for StatusBar */
-  right: 10px;
   max-width: 300px;
   max-height: 40vh;
 }
-/* End Panel Specific Positioning */
+
+.signal-feed-panel {
+  width: 400px;
+  max-width: 90vw;
+  z-index: 150;
+}
+
+.signal-feed-panel .hud-panel {
+  max-width: none!important;
+  margin: 0;
+}
+
+.entity-inspector-panel {
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  position: absolute;
+  z-index: 200;
+}
 
 .hud-map-viewport {
   box-sizing: border-box;
@@ -97,6 +99,8 @@
 @media (max-width: 768px) {
   .hud-container {
     position: relative;
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
@@ -127,6 +131,23 @@
     bottom: auto !important;
     transform: none !important;
     order: -1; /* Put map at top on mobile */
+    overflow: hidden; /* Ensure D3 simulation stays within bounds */
+  }
+
+  .event-river-panel,
+  .mission-control-panel,
+  .crisis-ops-panel,
+  .pulse-hud-panel,
+  .dispatch-panel,
+  .regional-pulse-panel {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    margin-bottom: 15px;
   }
 
   /* Stack panels in logical order */

@@ -58,6 +58,14 @@ const ChronicleTimeline = ({ stories }) => {
   const summaries = safeStories.filter(s => s.summary_type === 'weekly wrap-up');
   const chronicleNodes = safeStories.filter(s => s.summary_type !== 'weekly wrap-up');
 
+  // F6: Group stories by Mission Arcs or Growth Trails if meta-data is present
+  const missionArcs = chronicleNodes.reduce((acc, story) => {
+    const arc = story.mission_arc || 'Uncategorized Activity';
+    if (!acc[arc]) acc[arc] = [];
+    acc[arc].push(story);
+    return acc;
+  }, {});
+
   return (
     <Box sx={{ bgcolor: 'background.default', p: 2 }}>
       {summaries.length > 0 && (
@@ -128,21 +136,50 @@ const ChronicleTimeline = ({ stories }) => {
         </>
       )}
 
-      <Typography variant="h5" color="primary" sx={{ fontFamily: 'Orbitron', mb: 2 }}>
-        Chronicle Timeline
+      <Typography variant="h5" color="primary" sx={{ fontFamily: 'Orbitron', mb: 3 }}>
+        LAYERED_CHRONICLE_NARRATIVE
       </Typography>
-      {chronicleNodes.length === 0 ? (
+
+      {Object.entries(missionArcs).length === 0 ? (
         <Typography color="textSecondary">No stories to display.</Typography>
       ) : (
-        chronicleNodes.map((story) => (
-          <StoryNode
-            key={story.id}
-            {...story}
-            onAddEndorsement={(endorsement) =>
-              handleAddEndorsement(story.id, endorsement)
-            }
-            verification_type={story.verification_type}
-          />
+        Object.entries(missionArcs).map(([arcName, stories], index) => (
+          <Box key={arcName} sx={{ mb: 6, position: 'relative' }}>
+             <Box sx={{
+               display: 'flex',
+               alignItems: 'center',
+               mb: 2,
+               p: 1.5,
+               bgcolor: 'rgba(0, 243, 255, 0.05)',
+               borderLeft: '4px solid #00f3ff',
+               borderRadius: '0 4px 4px 0'
+             }}>
+               <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#00f3ff', fontSize: '1rem', letterSpacing: 2 }}>
+                 {arcName.toUpperCase()}
+               </Typography>
+               <Box sx={{ flex: 1, height: '1px', bgcolor: 'rgba(0, 243, 255, 0.2)', ml: 2 }} />
+               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', ml: 2, fontFamily: 'Orbitron' }}>
+                 {stories.length} NODES
+               </Typography>
+             </Box>
+
+             <Box sx={{ pl: 2, borderLeft: '2px solid rgba(255,255,255,0.05)', ml: 1 }}>
+               {stories.map((story) => (
+                 <StoryNode
+                   key={story.id}
+                   {...story}
+                   onAddEndorsement={(endorsement) =>
+                     handleAddEndorsement(story.id, endorsement)
+                   }
+                   verification_type={story.verification_type}
+                   story_type={story.story_type}
+                   collaborators={story.collaborators}
+                   downstream_effects={story.downstream_effects}
+                   mentorship_links={story.mentorship_links}
+                 />
+               ))}
+             </Box>
+          </Box>
         ))
       )}
     </Box>

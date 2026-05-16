@@ -2,11 +2,34 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import pool from '../db.js';
-import { generateProjectIdea, autoGenerateTasks } from '../services/taskGenerator.js';
+import { generateProjectIdea, autoGenerateTasks, analyzeResume } from '../services/taskGenerator.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
+import GuildService from '../services/GuildService.js';
 import { processInterests } from '../services/interestService.js';
 
 const router = express.Router();
+
+const parseUnlockedUsers = (unlockedUsers) => {
+  if (!unlockedUsers || unlockedUsers.length === 0) return [];
+
+  return unlockedUsers
+    .map((entry) => {
+      try {
+        let parsed = typeof entry === "string" ? JSON.parse(entry) : entry;
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(
+            parsed.replace(/\\"/g, '"').replace(/^"{|}"}$/g, "")
+          );
+        }
+        return parsed;
+      } catch (e) {
+        console.error("Error parsing unlocked user entry:", e);
+        return null;
+      }
+    })
+    .filter(Boolean);
+};
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -21,7 +44,7 @@ const upload = multer({ storage });
 // POST /initiate route for onboarding
 router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
   const auth0_id = req.auth.payload.sub;
-  const { username } = req.body;
+  const { username, resumeText, primeDirective } = req.body;
   let { skills, interests } = req.body; // These might be JSON strings
 
   // Parse skills and interests if they are strings
@@ -67,46 +90,82 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
 
 
     // 3. Process and Save Skills
-    const processedSkills = [];
+    const processedSkillsMap = new Map();
+
+    // --- Resume Analysis ---
+    if (resumeText && resumeText.trim()) {
+      try {
+        const resumeData = await analyzeResume(resumeText);
+        if (resumeData && resumeData.skills) {
+          for (const resumeSkill of resumeData.skills) {
+            const skillName = resumeSkill.name;
+            // XP from resumes is temporarily disabled until guild leveling is implemented.
+            // const skillExp = resumeSkill.xp || 0;
+            // const skillLevel = Math.floor(Math.sqrt(skillExp / 40)) + 1;
+            const skillExp = 0;
+            const skillLevel = 1;
+
+            let skillId;
+            const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
+
+            if (existingSkillResult.rows.length > 0) {
+              skillId = existingSkillResult.rows[0].id;
+              let parsedUsers = parseUnlockedUsers(existingSkillResult.rows[0].unlocked_users);
+
+              const userIndex = parsedUsers.findIndex(u => u.user_id === internalUserId);
+              if (userIndex !== -1) {
+                // If user already has the skill, don't update XP/Level from resume for now.
+                // parsedUsers[userIndex].exp += skillExp;
+                // parsedUsers[userIndex].level = Math.floor(Math.sqrt(parsedUsers[userIndex].exp / 40)) + 1;
+              } else {
+                parsedUsers.push({ user_id: internalUserId, level: skillLevel, exp: skillExp });
+              }
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers.map(u => JSON.stringify(u)), skillId]);
+            } else {
+              const newSkillResult = await client.query(
+                'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2::jsonb[]) RETURNING id',
+                [skillName, [JSON.stringify({ user_id: internalUserId, level: skillLevel, exp: skillExp })]]
+              );
+              skillId = newSkillResult.rows[0].id;
+            }
+            processedSkillsMap.set(skillId, { id: skillId, name: skillName });
+          }
+        }
+      } catch (resumeError) {
+        console.error('Error processing resume during onboarding:', resumeError);
+        // Continue onboarding even if resume analysis fails
+      }
+    }
+
+    // --- Manual Skills ---
     if (skills && Array.isArray(skills)) {
       for (const skillObj of skills) {
         const skillName = skillObj.name;
         let skillId;
 
-        // Check if skill exists
         const existingSkillResult = await client.query('SELECT id, unlocked_users FROM skills WHERE name = $1', [skillName]);
         
-        let currentUnlockedUsers = []; // Default to empty array
-
         if (existingSkillResult.rows.length > 0) {
           skillId = existingSkillResult.rows[0].id;
-          currentUnlockedUsers = existingSkillResult.rows[0].unlocked_users || []; // Ensure it's an array
+          let parsedUsers = parseUnlockedUsers(existingSkillResult.rows[0].unlocked_users);
+
+          const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
+          if (!userInSkill) {
+              parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
+              await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers.map(u => JSON.stringify(u)), skillId]);
+          }
         } else {
-          // Insert new skill
-          // Assuming parent_skill_id can be NULL or you have a default
           const newSkillResult = await client.query(
-            'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2) RETURNING id, unlocked_users',
-            [skillName, JSON.stringify([{ user_id: internalUserId, level: 0, exp: 0 }])] // Initialize with current user
+            'INSERT INTO skills (name, parent_skill_id, unlocked_users) VALUES ($1, NULL, $2::jsonb[]) RETURNING id',
+            [skillName, [JSON.stringify({ user_id: internalUserId, level: 0, exp: 0 })]]
           );
           skillId = newSkillResult.rows[0].id;
-          currentUnlockedUsers = newSkillResult.rows[0].unlocked_users || []; // Should be the one just inserted
         }
-        
-        // Update unlocked_users for existing skill if user not already present
-        if (existingSkillResult.rows.length > 0) { // Only update if skill was existing, new skill already has user
-            // Parse existing array properly
-            let parsedUsers = Array.isArray(currentUnlockedUsers) ? currentUnlockedUsers : 
-                             currentUnlockedUsers.map(u => typeof u === 'string' ? JSON.parse(u) : u);
-            
-            const userInSkill = parsedUsers.find(u => u.user_id === internalUserId);
-            if (!userInSkill) {
-                parsedUsers.push({ user_id: internalUserId, level: 0, exp: 0 });
-                await client.query('UPDATE skills SET unlocked_users = $1::jsonb[] WHERE id = $2', [parsedUsers, skillId]);
-            }
-        }
-        processedSkills.push({ id: skillId, name: skillName });
+        processedSkillsMap.set(skillId, { id: skillId, name: skillName });
       }
     }
+
+    const processedSkills = Array.from(processedSkillsMap.values());
 
     // 4. Process and Save Interests
     const processedInterests = await processInterests(interests, internalUserId, client);
@@ -132,23 +191,22 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
       const skillNames = processedSkills.map(s => s.name);
       const interestNames = processedInterests.map(i => i.name);
       
-      const projectIdea = await generateProjectIdea(skillNames, interestNames);
+      const projectIdea = await generateProjectIdea(skillNames, interestNames, primeDirective);
       generatedProjectName = projectIdea.Name;
       const generatedProjectDescription = projectIdea.Description;
 
-      // 7. Create Project
+      // 7. Generate Tasks for the New Project
+      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
+      const tasksToInsert = generatedTasksData.tasks;
+      const llmProject = (generatedTasksData.projects && generatedTasksData.projects[0]) || {};
+      const projectDueDate = llmProject.due_date || null;
+
+      // 8. Create Project
       const projectInsertResult = await client.query(
-        'INSERT INTO projects (name, description, creator_id, tags) VALUES ($1, $2, $3, $4) RETURNING id',
-        [generatedProjectName, generatedProjectDescription, internalUserId, []] // Empty tags array for now
+        'INSERT INTO projects (name, description, creator_id, tags, due_date) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+        [generatedProjectName, generatedProjectDescription, internalUserId, [], projectDueDate]
       );
       newProjectId = projectInsertResult.rows[0].id;
-
-      // 8. Generate and Save Tasks for the New Project
-      // The autoGenerateTasks function from taskGenerator.js expects project name, description, tags (can be empty), and creator_id.
-      // It returns an object like { projects: [...], tasks: [...] }
-      // We are interested in the tasks part.
-      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
-      const tasksToInsert = generatedTasksData.tasks; // Assuming this structure based on taskGenerator.js
 
       if (tasksToInsert && tasksToInsert.length > 0) {
         const llmToDbIdMap = {};
@@ -158,11 +216,11 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
           // Ensure default status and reward tokens if not provided by LLM
           const status = task.status || 'inactive-unassigned';
           const reward_tokens = task.reward_tokens || 50; // Default reward tokens
-          const dependencies = task.dependencies || []; // Default to empty array
+          const skillId = await GuildService.getOrCreateSkill(task.skill_name);
 
           const taskInsertResult = await client.query(
-            'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
-            [newProjectId, task.name, task.description, task.skill_id, task.skill_level || 0, status, [], reward_tokens, internalUserId] // Insert empty dependencies first
+            'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, creator_id, start_date, due_date, is_local) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id',
+            [newProjectId, task.name, task.description, skillId, task.skill_level || 0, status, [], reward_tokens, internalUserId, task.start_date || null, task.due_date || null, task.is_local || false]
           );
           const dbId = taskInsertResult.rows[0].id;
           task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues

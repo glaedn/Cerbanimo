@@ -1,6 +1,24 @@
 import pool from '../backend/db.js'; // Standardized path
 
+const checkPostGIS = async () => {
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'postgis'
+      );
+    `);
+    return result.rows[0].exists;
+  } catch (err) {
+    console.error('PostgreSQL: Failed checking PostGIS extension:', err);
+    return false;
+  }
+};
+
 const createResourcesTable = async () => {
+  const hasPostGIS = await checkPostGIS();
+
   const tableQuery = `
     CREATE TABLE IF NOT EXISTS resources (
       id SERIAL PRIMARY KEY,
@@ -20,8 +38,10 @@ const createResourcesTable = async () => {
       is_recurring BOOLEAN DEFAULT FALSE, -- Added
       recurring_details TEXT, -- Added: e.g., 'every Monday 9-11am', 'first Sunday of month'
       location_text TEXT, -- Renamed from 'location_description'
-      latitude NUMERIC, -- Added
-      longitude NUMERIC, -- Added
+      latitude NUMERIC, -- Added (Legacy)
+      longitude NUMERIC, -- Added (Legacy)
+      ${hasPostGIS ? 'location_point GEOGRAPHY(Point, 4326),' : ''}
+      availability_radius NUMERIC, -- in meters
       access_instructions TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -57,6 +77,7 @@ const createResourcesTable = async () => {
     CREATE INDEX IF NOT EXISTS idx_resources_status ON resources(status);
     CREATE INDEX IF NOT EXISTS idx_resources_condition ON resources(condition); -- Added
     CREATE INDEX IF NOT EXISTS idx_resources_is_recurring ON resources(is_recurring); -- Added
+    ${hasPostGIS ? 'CREATE INDEX IF NOT EXISTS idx_resources_location_point ON resources USING GIST(location_point);' : ''}
   `;
 
   try {

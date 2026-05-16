@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db.js";
+import GeocodingService from "../services/GeocodingService.js";
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get("/", async (req, res) => {
     const query = `
       WITH community_data AS (
         SELECT id, name, description, members, interest_tags, proposals, 
-             approved_projects, vote_delegations
+             approved_projects, vote_delegations, city, state, country, formatted_address, ST_AsGeoJSON(location_point) as location
         FROM communities
         WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
         ORDER BY name
@@ -40,6 +41,7 @@ router.get("/", async (req, res) => {
       ...row,
       interest_tags: row.interest_names,
       interest_names: undefined, // Remove the extra field
+      location: row.location ? JSON.parse(row.location) : null,
     }));
 
     const totalCountQuery = `
@@ -138,7 +140,20 @@ router.get("/user/:userId", async (req, res) => {
 
 //Create a new community
 router.post("/", async (req, res) => {
-  const { name, id, description, tags = [] } = req.body;
+  const { name, id, description, tags = [], latitude, longitude, city, state, country, formatted_address } = req.body;
+
+  // Auto-geocoding fallback
+  let finalLat = latitude;
+  let finalLon = longitude;
+  if ((city || state) && (!latitude || !longitude)) {
+    const searchStr = `${city || ''} ${state || ''} ${country || ''}`.trim();
+    const results = await GeocodingService.search(searchStr);
+    if (results.length > 0) {
+      finalLat = results[0].latitude;
+      finalLon = results[0].longitude;
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -147,18 +162,42 @@ router.post("/", async (req, res) => {
     const tagArray = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
     const query = `
-          INSERT INTO communities (name, description, members, interest_tags)
-          VALUES ($1, $2, $3, $4) RETURNING id
+          INSERT INTO communities (name, description, members, interest_tags, location_point, city, state, country, formatted_address)
+          VALUES ($1, $2, $3, $4,
+            CASE
+              WHEN $5::numeric IS NOT NULL AND $6::numeric IS NOT NULL
+              THEN ST_SetSRID(ST_MakePoint($6::numeric, $5::numeric), 4326)::geography
+              ELSE NULL
+            END,
+            $7, $8, $9, $10
+          ) RETURNING id
       `;
     const values = [
       name,
       description,
       [id],
       tagArray.length > 0 ? tagArray : null, // Use null if empty array
+      finalLat || null,
+      finalLon || null,
+      city || null,
+      state || null,
+      country || null,
+      formatted_address || null
     ];
 
     const result = await client.query(query, values);
     const communityId = result.rows[0].id;
+
+    // Emit community.joined event for the creator
+    const CivicEventService = (await import('../services/CivicEventService.js')).default;
+    await CivicEventService.recordEvent({
+      eventType: 'community.joined',
+      actorId: id,
+      entityType: 'community',
+      entityId: communityId,
+      payload: { role: 'creator' },
+      correlationId: `community:${communityId}`
+    }, client);
 
     await client.query("COMMIT");
     res.status(201).json({ message: "Community created", communityId });
@@ -181,7 +220,7 @@ router.get("/:communityId", async (req, res) => {
               SELECT id, name, description, 
                      COALESCE(members, ARRAY[]::integer[]) as members, 
                      interest_tags, proposals, 
-                     approved_projects, vote_delegations
+                     approved_projects, vote_delegations, city, state, country, formatted_address, ST_AsGeoJSON(location_point) as location
               FROM communities 
               WHERE id = $1
           )
@@ -219,6 +258,7 @@ router.get("/:communityId", async (req, res) => {
       ...result.rows[0],
       interest_tags: result.rows[0].interest_names,
       interest_names: undefined,
+      location: result.rows[0].location ? JSON.parse(result.rows[0].location) : null,
     };
 
     res.status(200).json(community);
@@ -324,6 +364,18 @@ router.post("/:communityId/vote/member/:requestUserId", async (req, res) => {
         `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
         [requestUserId, communityId]
       );
+
+      // Emit community.joined event
+      const CivicEventService = (await import('../services/CivicEventService.js')).default;
+      await CivicEventService.recordEvent({
+        eventType: 'community.joined',
+        actorId: requestUserId,
+        entityType: 'community',
+        entityId: communityId,
+        payload: { role: 'member' },
+        correlationId: `community:${communityId}`
+      }, client);
+
       await client.query(
         `DELETE FROM membership_requests WHERE community_id = $1 AND user_id = $2`,
         [communityId, requestUserId]

@@ -10,16 +10,30 @@ export async function calculateVoteWeight(
   client,
   communityId,
   voterId = null,
-  delegations = {}
+  options = {} // domain, region
 ) {
   const communityIdInt = parseInt(communityId, 10);
   if (voterId) {
     const userIdStr = voterId.toString();
 
-    // Step 1: Find delegators who have delegated to this user
-    const delegators = Object.entries(delegations)
-      .filter(([, delegateTo]) => delegateTo === userIdStr)
-      .map(([delegator]) => parseInt(delegator));
+    // Step 1: Find delegators who have delegated to this user in the new delegations table
+    const { domain, region } = options;
+
+    let delegationQuery = `SELECT delegator_id FROM delegations WHERE delegate_id = $1 AND (expires_at IS NULL OR expires_at > NOW())`;
+    let delegationValues = [voterId];
+
+    if (domain) {
+      delegationQuery += ` AND (domain = $2 OR domain = 'all')`;
+      delegationValues.push(domain);
+    }
+
+    if (region) {
+      delegationQuery += ` AND (region = $${delegationValues.length + 1} OR region IS NULL)`;
+      delegationValues.push(region);
+    }
+
+    const delegationRes = await client.query(delegationQuery, delegationValues);
+    const delegators = delegationRes.rows.map(r => r.delegator_id);
 
     const voterIds = [parseInt(voterId), ...delegators];
 

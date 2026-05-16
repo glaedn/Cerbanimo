@@ -5,6 +5,7 @@ import { uploadFile, generatePrivateDownloadUrl } from '../utils/b2.js';
 import fs from 'fs';
 import { processInterests } from '../services/interestService.js';
 import { processSkills } from '../services/skillService.js';
+import GeocodingService from '../services/GeocodingService.js';
 
 
 // Create a router instance
@@ -166,6 +167,40 @@ router.get('/interests/grouped', async (req, res) => {
   }
 });
 
+// Endpoint to fetch all user locations (anonymized if not sharing)
+router.get('/locations', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        id,
+        CASE WHEN share_location_publicly THEN username ELSE 'Anonymous Volunteer' END as name,
+        ST_AsGeoJSON(location_point) as location,
+        share_location_publicly,
+        capacity_status,
+        CASE WHEN share_location_publicly THEN city ELSE NULL END as city,
+        CASE WHEN share_location_publicly THEN state ELSE NULL END as state,
+        CASE WHEN share_location_publicly THEN country ELSE NULL END as country
+      FROM users
+      WHERE location_point IS NOT NULL;
+    `;
+    const result = await pool.query(query);
+    const locations = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      location: JSON.parse(row.location),
+      isPublic: row.share_location_publicly,
+      capacity_status: row.capacity_status,
+      city: row.city,
+      state: row.state,
+      country: row.country
+    }));
+    res.json(locations);
+  } catch (err) {
+    console.error('Error fetching user locations:', err);
+    res.status(500).json({ message: 'Failed to fetch user locations' });
+  }
+});
+
 // Endpoint to search for users by username
 router.get('/search', async (req, res) => {
   try {
@@ -232,7 +267,7 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -251,6 +286,7 @@ router.get('/', async (req, res) => {
       ? JSON.parse(profile.interests) 
       : profile.interests || [];
     profile.contact_links = profile.contact_links || [];
+    profile.location = profile.location ? JSON.parse(profile.location) : null;
 
     if (profile.profile_picture && !profile.profile_picture.startsWith('http')) {
       try {
@@ -272,7 +308,7 @@ router.get('/', async (req, res) => {
 
 // Endpoint to update user profile
 router.post('/', upload.single('profilePicture'), async (req, res) => {
-  let { username, skills, interests, user_id, contact_links, capacity_status, discord_user_id } = req.body;
+  let { username, skills, interests, user_id, contact_links, capacity_status, discord_user_id, latitude, longitude, share_location_publicly, city, state, region, country, formatted_address } = req.body;
   const auth0Id = req.auth.payload.sub;
   // const profilePicture = req.file ? `/uploads/${req.file.filename}` : null; // For local deployment
   let valueForProfilePictureColumn = null; // Renaming for clarity for this subtask
@@ -290,6 +326,18 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
   }
 
   try {
+    // Step 0: Auto-geocoding fallback if city/state provided but coordinates are missing
+    let finalLat = latitude;
+    let finalLon = longitude;
+    if ((city || state) && (!latitude || !longitude)) {
+      const searchStr = `${city || ''} ${state || ''} ${country || ''}`.trim();
+      const results = await GeocodingService.search(searchStr);
+      if (results.length > 0) {
+        finalLat = results[0].latitude;
+        finalLon = results[0].longitude;
+      }
+    }
+
     // Get user ID if not provided in request
     let userId = user_id;
     if (!userId) {
@@ -320,9 +368,20 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
         profile_picture = COALESCE($4, profile_picture),
         contact_links = $5,
         capacity_status = COALESCE($6, capacity_status),
-        discord_user_id = $7
-      WHERE id = $8
-      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status, discord_user_id;
+        discord_user_id = $7,
+        location_point = CASE
+          WHEN $8::numeric IS NOT NULL AND $9::numeric IS NOT NULL
+          THEN ST_SetSRID(ST_MakePoint($9::numeric, $8::numeric), 4326)::geography
+          ELSE location_point
+        END,
+        share_location_publicly = COALESCE($10::boolean, share_location_publicly),
+        city = COALESCE($11, city),
+        state = COALESCE($12, state),
+        region = COALESCE($13, region),
+        country = COALESCE($14, country),
+        formatted_address = COALESCE($15, formatted_address)
+      WHERE id = $16
+      RETURNING id, username, skills, interests, profile_picture, experience, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location;
     `;
 
     // Validate and truncate contact_links
@@ -352,6 +411,14 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
       contact_links,
       capacity_status,
       discord_user_id,
+      finalLat || null,
+      finalLon || null,
+      share_location_publicly !== undefined ? share_location_publicly : null,
+      city || null,
+      state || null,
+      region || null,
+      country || null,
+      formatted_address || null,
       userId,
     ];
     const result = await pool.query(query, values);

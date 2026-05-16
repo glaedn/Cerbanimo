@@ -4,6 +4,7 @@ import ImpactGraphService from './ImpactGraphService.js';
 import TaskRoutingService from './TaskRoutingService.js';
 import { findMatchesForNeed } from './matchingService.js';
 import DiscordBotService from './DiscordBotService.js';
+import IntentEngineService from './IntentEngineService.js';
 
 class ProjectConversionService {
   async convertNeedToProject(needId) {
@@ -127,6 +128,7 @@ class ProjectConversionService {
 
       // 7. Insert Generated Tasks
       const taskIdMap = new Map(); // Maps LLM temporary IDs to DB IDs
+      const createdTasks = [];
 
       for (const taskData of generatedData.tasks) {
         const insertTaskQuery = `
@@ -154,6 +156,7 @@ class ProjectConversionService {
 
         const newTask = taskResult.rows[0];
         taskIdMap.set(taskData.id, newTask.id);
+        createdTasks.push(newTask);
 
         // Auto-assign top matched users (if any)
         if (topUsers.length > 0) {
@@ -166,8 +169,12 @@ class ProjectConversionService {
         }
 
         // Update Impact Graph for each task
-        await ImpactGraphService.syncTaskNode(newTask.id, client);
-        await ImpactGraphService.linkTaskToOutcome(newTask.id, project.id, taskData.impact_weight, client);
+        if (typeof ImpactGraphService.syncTaskNode === 'function') {
+          await ImpactGraphService.syncTaskNode(newTask.id, client);
+        }
+        if (typeof ImpactGraphService.linkTaskToOutcome === 'function') {
+          await ImpactGraphService.linkTaskToOutcome(newTask.id, project.id, taskData.impact_weight, client);
+        }
       }
 
       // 8. Handle Dependencies
@@ -186,6 +193,9 @@ class ProjectConversionService {
           }
         }
       }
+
+      await IntentEngineService.registerNeedExpansion(need, project, createdTasks, client)
+        .catch(err => console.error('Civic kernel project conversion registration failed:', err));
 
       await client.query('COMMIT');
 

@@ -9,14 +9,21 @@ import { useLoFi } from "../../context/LoFiContext";
 import { useUserProfile } from "../../hooks/useUserProfile";
 import LoFiActivityList from "./LoFiActivityList";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useAppStore } from "../../store/useAppStore";
 
-const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
+const GalacticActivityMap = React.memo(({ showLoadingText = true, enableTooltips = true, enableClicks = true }) => {
   const d3Container = useRef(null);
   const { isCrisisMode } = useCrisis();
   const { isLoFiMode } = useLoFi();
   const { profile } = useUserProfile();
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  const entities = useAppStore(state => state.entities);
+  const relationships = useAppStore(state => state.relationships);
+  const selectedEntity = useAppStore(state => state.selectedEntity);
+  const selectEntity = useAppStore(state => state.selectEntity);
+
   const isFullscreenMobile = location.pathname === '/activity-map';
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const navigate = useNavigate();
@@ -27,6 +34,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   const hasWarped = useRef(false);
   const isFetching = useRef(false);
   const simulationRef = useRef(null);
+  const nodesRef = useRef([]);
+  const lastStarDataHash = useRef("");
 
   useEffect(() => {
     const update = () => {
@@ -59,11 +68,16 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   };
 
   const getStarRadius = useCallback((item) => {
-    const age = (Date.now() - new Date(item.lastActivity).getTime()) / 86400000;
+    const activityDate = new Date(item.lastActivity);
+    const isValidDate = !isNaN(activityDate.getTime());
+    const age = isValidDate ? (Date.now() - activityDate.getTime()) / 86400000 : 0;
+
     let r = item.type === "task" ? 1.5 : item.type === "project" ? 3 : 5;
     if ((item.status || "").toLowerCase().includes("urgent")) r *= 1.5;
-    r = r * Math.max(0.5, 1 - age / 90) + Math.min((item.contributors || 0) / 4, 2);
-    return isFullscreenMobile ? r * 1.5 : r;
+    r = r * Math.max(0.5, 1 - (isNaN(age) ? 0 : age) / 90) + Math.min((item.contributors || 0) / 4, 2);
+
+    const finalR = isFullscreenMobile ? r * 1.5 : r;
+    return isNaN(finalR) ? 3 : finalR;
   }, [isFullscreenMobile]);
 
   const getRelevance = useCallback((item) => {
@@ -81,74 +95,67 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (isFetching.current) return;
-      isFetching.current = true;
-      if (starData.length === 0) setMapState(p => ({ ...p, isLoading: true, error: null }));
-      try {
-        let token = null;
-        if (isAuthenticated) {
-          try { token = await getAccessTokenSilently({ authorizationParams: { audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" } }); }
-          catch (e) { console.warn("Public access only."); }
-        }
-        const cfg = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-        const fetchW = async (u) => { try { return (await axios.get(u, cfg)).data; } catch (e) { return []; } };
-        const [tasksData, projectsData, communitiesRaw, needsData, resourcesData] = await Promise.all([
-          fetchW(`${import.meta.env.VITE_BACKEND_URL}/tasks`),
-          fetchW(`${import.meta.env.VITE_BACKEND_URL}/projects`),
-          fetchW(`${import.meta.env.VITE_BACKEND_URL}/communities`),
-          fetchW(`${import.meta.env.VITE_BACKEND_URL}/needs`),
-          fetchW(`${import.meta.env.VITE_BACKEND_URL}/resources/catalog`),
-        ]);
-        const tasks = Array.isArray(tasksData) ? tasksData : [];
-        const projects = Array.isArray(projectsData) ? projectsData : [];
-        const needs = Array.isArray(needsData) ? needsData : [];
-        const resources = Array.isArray(resourcesData) ? resourcesData : [];
-        const communities = communitiesRaw?.communities || communitiesRaw || [];
-        const nb = projects.find(p => p.name === 'Needs Board');
-        const processed = [];
-        communities.forEach(c => processed.push({ id: `community-${c.id}`, type: "community", name: c.name, status: "active", lastActivity: c.updated_at || c.created_at || Date.now(), contributors: c.members?.length || 0, raw_data: c }));
-        needs.forEach(n => processed.push({ id: `need-${n.id}`, type: "need", name: n.name, status: n.urgency_level || n.urgency || "medium", lastActivity: n.updated_at || n.created_at || Date.now(), parentId: n.requestor_community_id ? `community-${n.requestor_community_id}` : (nb ? `project-${nb.id}` : null), raw_data: n }));
-        projects.forEach(p => {
-          const pTs = tasks.filter(t => t.project_id === p.id);
-          const st = pTs.some(t => (t.status || "").toLowerCase().includes("urgent")) ? "urgent" : (pTs.some(t => (t.status || "").toLowerCase().startsWith("active")) ? "active" : "inactive");
-          const relN = needs.find(n => n.linked_project_id === p.id || n.project_id === p.id);
-          processed.push({ id: `project-${p.id}`, type: "project", name: p.name, status: st, lastActivity: p.updated_at || p.created_at || Date.now(), contributors: p.creator_id ? 1 : 0, parentId: relN ? `need-${relN.id}` : (p.community_id ? `community-${p.community_id}` : null), raw_data: p });
+    const processGraphData = () => {
+      const allNodes = Object.values(entities);
+      if (allNodes.length === 0) return;
+
+      let filtered = isCrisisMode ? allNodes.filter(d => (d.type === 'need' && /(urgent|critical|high)/.test((d.status || "").toLowerCase())) || (d.type === 'resource' && (d.status || "").toLowerCase() === 'available') || (d.type === 'task' && (d.status || "").toLowerCase().includes('urgent'))) : allNodes;
+
+      // Expand Nodes: Always include neighbors of selected entity
+      if (selectedEntity) {
+        const neighborIds = new Set(
+          relationships
+            .filter(r => r.source === selectedEntity.id || r.target === selectedEntity.id)
+            .flatMap(r => [r.source, r.target])
+        );
+
+        allNodes.forEach(node => {
+          if (neighborIds.has(node.id) && !filtered.some(f => f.id === node.id)) {
+            filtered.push(node);
+          }
         });
-        tasks.forEach(t => {
-          let pId = t.dependencies?.[0] ? `task-${t.dependencies[0]}` : (t.project_id ? (nb && t.project_id === nb.id && t.related_need_id ? `need-${t.related_need_id}` : `project-${t.project_id}`) : (t.related_need_id ? `need-${t.related_need_id}` : null));
-          processed.push({ id: `task-${t.id}`, type: "task", name: t.name, status: t.status || "inactive", lastActivity: t.updated_at || t.created_at || Date.now(), contributors: t.assigned_user_ids?.length || 0, parentId: pId, raw_data: t });
-        });
-        resources.forEach(r => {
-          const relN = r.owner_community_id ? needs.find(n => n.requestor_community_id === r.owner_community_id && n.category === r.category) : null;
-          processed.push({ id: `resource-${r.id}`, type: "resource", name: r.name, status: r.status || "available", lastActivity: r.updated_at || r.created_at || Date.now(), parentId: relN ? `need-${relN.id}` : (r.owner_community_id ? `community-${r.owner_community_id}` : null), raw_data: r });
-        });
-        let filtered = isCrisisMode ? processed.filter(d => (d.type === 'need' && /(urgent|critical|high)/.test((d.status || "").toLowerCase())) || (d.type === 'resource' && (d.status || "").toLowerCase() === 'available') || (d.type === 'task' && (d.status || "").toLowerCase().includes('urgent'))) : processed;
-        if (isMobile && !isFullscreenMobile && profile) {
-          const limit = Date.now() - 1296000000;
-          const uSkills = new Set((profile.skills || []).map(s => s.id));
-          const uComms = new Set(communities.filter(c => c.members?.includes(profile.id)).map(c => c.id));
-          const relIds = new Set();
-          filtered.forEach(item => {
-            const date = new Date(item.lastActivity).getTime();
-            const recent = !isNaN(date) && date > limit;
-            if ((item.type === 'community' && uComms.has(item.raw_data.id)) || (item.type === 'project' && (uComms.has(item.raw_data.community_id) || recent)) || (item.type === 'task' && (uSkills.has(item.raw_data.skill_id) || recent)) || ((item.type === 'need' || item.type === 'resource') && (recent || uComms.has(item.raw_data.requestor_community_id || item.raw_data.owner_community_id)))) {
-              relIds.add(item.id);
-              let curr = item, depth = 0;
-              while (curr && curr.parentId && depth < 10) { relIds.add(curr.parentId); curr = filtered.find(d => d.id === curr.parentId); depth++; }
+      }
+
+      if (isMobile && !isFullscreenMobile && profile) {
+        // ... (Mobile filtering logic remains similar, but uses entities and relationships from store)
+        const limit = Date.now() - 1296000000;
+        const uSkills = new Set((profile.skills || []).map(s => s.id));
+        const uComms = new Set((profile.communities || []).map(c => c.id));
+        const relIds = new Set();
+
+        filtered.forEach(item => {
+          const date = new Date(item.lastActivity).getTime();
+          const recent = !isNaN(date) && date > limit;
+          const raw = item.raw || {};
+          if ((item.type === 'community' && uComms.has(raw.id)) ||
+              (item.type === 'project' && (uComms.has(raw.community_id) || recent)) ||
+              (item.type === 'task' && (uSkills.has(raw.skill_id) || recent)) ||
+              ((item.type === 'need' || item.type === 'resource') && (recent || uComms.has(raw.requestor_community_id || raw.owner_community_id)))) {
+            relIds.add(item.id);
+            // Trace parents using relationships
+            let currentId = item.id;
+            for (let i = 0; i < 5; i++) {
+              const parentRel = relationships.find(r => r.target === currentId);
+              if (parentRel) {
+                relIds.add(parentRel.source);
+                currentId = parentRel.source;
+              } else break;
             }
-          });
-          if (relIds.size < 5) filtered.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity)).slice(0, 10).forEach(d => relIds.add(d.id));
-          filtered = filtered.filter(d => relIds.has(d.id));
-        }
-        const links = [];
-        filtered.forEach(item => { if (item.parentId && filtered.some(d => d.id === item.parentId)) links.push({ source: item.parentId, target: item.id }); });
-        setMapState({ starData: filtered, links, isLoading: false, error: null });
-      } catch (err) { setMapState(p => ({ ...p, error: err.message, isLoading: false })); }
-      finally { isFetching.current = false; }
+          }
+        });
+        if (relIds.size < 5) filtered.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity)).slice(0, 10).forEach(d => relIds.add(d.id));
+        filtered = filtered.filter(d => relIds.has(d.id));
+      }
+
+      const mapLinks = relationships.filter(r =>
+        filtered.some(n => n.id === r.source) && filtered.some(n => n.id === r.target)
+      );
+
+      setMapState({ starData: filtered, links: mapLinks, isLoading: false, error: null });
     };
-    fetchData();
-  }, [isAuthenticated, isCrisisMode, profile?.id, isMobile, isFullscreenMobile]);
+
+    processGraphData();
+  }, [entities, relationships, isCrisisMode, profile, isMobile, isFullscreenMobile, selectedEntity]);
 
   useEffect(() => {
     d3.select("body").selectAll(".galactic-tooltip-managed-by-d3").remove();
@@ -161,11 +168,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
 
     const nav = (d) => {
       if (!d) return;
-      const [type, idOnly] = d.id.split('-');
-      if (type === "task" && d.raw_data?.project_id) navigate(`/Visualizer/${d.raw_data.project_id}/${idOnly}`);
-      else if (type === "project") navigate(`/Visualizer/${idOnly}/`);
-      else if (type === "community") navigate(`/communityhub/${idOnly}`);
-      else if (type === "need") navigate(`/needs/${idOnly}`);
+      selectEntity(d);
+      // Optional: Auto-zoom to node
     };
 
     const hClick = (e) => {
@@ -219,29 +223,43 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         return { x: width / 2 + dist * Math.cos(ang), y: height / 2 + dist * Math.sin(ang) };
       };
 
-      const nodes = starData.map(d => ({ ...d, ...getP(d.id, w, h) }));
+      const starDataHash = starData.map(d => d.id).sort().join(",");
+      const isNewData = starDataHash !== lastStarDataHash.current;
+      lastStarDataHash.current = starDataHash;
+
+      const nodes = starData.map(d => {
+        const existing = nodesRef.current.find(n => n.id === d.id);
+        if (existing) {
+          return { ...d, x: existing.x, y: existing.y, vx: existing.vx, vy: existing.vy };
+        }
+        return { ...d, ...getP(d.id, w, h) };
+      });
+      nodesRef.current = nodes;
+
       const lks = links.map(l => ({
         id: `link-${(l.source.id || l.source)}-${(l.target.id || l.target)}`,
         source: nodes.find(n => n.id === (l.source.id || l.source)),
         target: nodes.find(n => n.id === (l.target.id || l.target))
       })).filter(l => l.source && l.target);
 
-      if (simulationRef.current) simulationRef.current.stop();
+      if (isNewData) {
+        if (simulationRef.current) simulationRef.current.stop();
 
-      // Constellation Layout: Higher link strength, center gravity, and moderate repulsion
-      simulationRef.current = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 120 : 60).strength(0.4))
-        .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -1200 : -150))
-        .force("center", d3.forceCenter(w / 2, h / 2))
-        .force("x", d3.forceX(w / 2).strength(0.1))
-        .force("y", d3.forceY(h / 2).strength(0.1))
-        .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)).strength(1))
-        .alphaDecay(0.02)
-        .stop();
+        // Constellation Layout: Higher link strength, center gravity, and moderate repulsion
+        simulationRef.current = d3.forceSimulation(nodes)
+          .force("link", d3.forceLink(lks).id(d => d.id).distance(isFullscreenMobile ? 120 : 60).strength(0.4))
+          .force("charge", d3.forceManyBody().strength(isFullscreenMobile ? -1200 : -150))
+          .force("center", d3.forceCenter(w / 2, h / 2))
+          .force("x", d3.forceX(w / 2).strength(0.1))
+          .force("y", d3.forceY(h / 2).strength(0.1))
+          .force("collide", d3.forceCollide().radius(d => getStarRadius(d) + (isFullscreenMobile ? 30 : 15)).strength(1))
+          .alphaDecay(0.02)
+          .stop();
 
-      // Optimization: drastically reduced ticks to prevent freezing, especially on mobile
-      const ticks = isMobile ? 150 : 300;
-      for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
+        // Optimization: drastically reduced ticks to prevent freezing, especially on mobile
+        const ticks = isMobile ? 150 : 300;
+        for (let i = 0; i < ticks; ++i) simulationRef.current.tick();
+      }
 
       const link = g.selectAll(".link").data(lks, d => d.id);
       link.exit().remove();
@@ -262,6 +280,8 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         .attr("cx", d => d.x).attr("cy", d => d.y)
         .attr("r", d => getStarRadius(d))
         .attr("fill", d => getStarColor(d))
+        .attr("stroke", d => (selectedEntity && d.id === selectedEntity.id) ? "#00f3ff" : "none")
+        .attr("stroke-width", d => (selectedEntity && d.id === selectedEntity.id) ? 3 : 0)
         .attr("opacity", d => Math.max(0.25, 1 - (Date.now() - new Date(d.lastActivity).getTime()) / 3888000000));
 
       const ev = g.selectAll(".ev").data(nodes, d => d.id);
@@ -308,7 +328,7 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
         })
         .on("click", (event, d) => {
           if (!enableClicks) return;
-          if (!isFullscreenMobile) nav(d);
+          nav(d);
         })
         .on("touchstart", function(event, d) {
           if (!enableClicks) return;
@@ -371,7 +391,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       document.removeEventListener('click', hClick);
     };
   }, [starData, links, isLoading, error, dimensions, isMobile, isFullscreenMobile, navigate, enableClicks, enableTooltips, getStarRadius, getRelevance]);
-
   return (
     <div className="galactic-activity-map-container">
       {isLoading && starData.length === 0 && showLoadingText && <div className="loading-overlay"><h1>Galactic Activity Map</h1><p>Loading...</p></div>}
@@ -382,6 +401,6 @@ const GalacticActivityMap = ({ showLoadingText = true, enableTooltips = true, en
       )}
     </div>
   );
-};
+});
 
 export default GalacticActivityMap;

@@ -1,17 +1,27 @@
 import globals from "globals";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import babelParser from "@babel/eslint-parser";
 
 export default [
   {
-    ignores: ["node_modules/**", ".expo/**", "dist/**"]
+    ignores: ["node_modules/**", ".expo/**", "dist/**", "src/database/models/**"]
   },
   {
     files: ["**/*.{js,jsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
+      parser: babelParser,
       parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ["babel-preset-expo"],
+          plugins: [
+            ["@babel/plugin-proposal-decorators", { legacy: true }],
+            ["@babel/plugin-transform-class-properties", { loose: true }]
+          ]
+        },
         ecmaFeatures: { jsx: true }
       },
       globals: {

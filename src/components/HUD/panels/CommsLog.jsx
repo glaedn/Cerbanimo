@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom'; // Import Link
 import { useNotifications } from '../../../pages/NotificationProvider'; // Adjusted path
+import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css'; // Shared panel styles
 // import './CommsLog.css'; // Optional: For specific CommsLog styles if needed
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
@@ -30,6 +31,7 @@ const getNotificationIcon = (type) => {
 
 const CommsLog = () => {
   const { notifications } = useNotifications(); // Consuming the context
+  const selectEntity = useAppStore(state => state.selectEntity);
   const [isMinimized, setIsMinimized] = useState(false);
 
   const toggleMinimize = (e) => {
@@ -86,12 +88,16 @@ const CommsLog = () => {
                         {'!'}
                       </span>
                     ) : notification.projectId ? (
-                      <Link 
-                        to={notification.taskId ? `/Visualizer/${notification.projectId}/${notification.taskId}` : `/Visualizer/${notification.projectId}`}
-                        style={{ textDecoration: 'underline', color: '#FFF' }} // Styling for clickable link
+                      <span
+                        onClick={() => {
+                          const id = notification.taskId ? `task-${notification.taskId}` : `project-${notification.projectId}`;
+                          const type = notification.taskId ? 'task' : 'project';
+                          selectEntity({ id, type, name: notification.messageText, status: 'active' });
+                        }}
+                        style={{ textDecoration: 'underline', color: '#FFF', cursor: 'pointer' }} // Styling for clickable link
                       >
                         {notification.messageText}
-                      </Link>
+                      </span>
                     ) : (
                       notification.messageText // Displaying parsed messageText
                     )}

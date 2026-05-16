@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM projects');
+    const result = await pool.query('SELECT *, ST_AsGeoJSON(location_point) as location_point FROM projects');
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error fetching projects:', err);
@@ -36,7 +36,7 @@ router.get('/personal', async (req, res) => {
   
       // Fetch projects, prioritizing those created by the user
       const projectsQuery = `
-        SELECT * FROM projects 
+        SELECT *, ST_AsGeoJSON(location_point) as location_point FROM projects
         WHERE 
           LOWER(name) LIKE LOWER($1) OR 
           LOWER(description) LIKE LOWER($1)
@@ -64,7 +64,7 @@ router.get('/userprojects', async (req, res) => {
 
     const query = `
       SELECT
-        p.*,
+        p.*, ST_AsGeoJSON(p.location_point) as location_point,
         c.name AS community_name,
         COUNT(t.id) as task_count,
         COUNT(t.id) FILTER (WHERE t.status::text ILIKE 'completed') as completed_task_count,
@@ -98,7 +98,7 @@ router.get('/:projectId', async (req, res) => {
   const { projectId } = req.params;
   try {
     const query = `
-      SELECT p.*, c.name AS community_name
+      SELECT p.*, ST_AsGeoJSON(p.location_point) as location_point, c.name AS community_name
       FROM projects p
       LEFT JOIN communities c ON p.community_id = c.id
       WHERE p.id = $1
@@ -139,7 +139,7 @@ router.patch('/:projectId', async (req, res) => {
 // Create a new project
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, auth0_id, outcomeStatement, due_date } = req.body;
+    const { name, description, auth0_id, outcomeStatement, due_date, location } = req.body;
     const tags = (req.body.tags || []).map(tag => tag.name);
 
     if (!name || !description || !auth0_id || !outcomeStatement) {
@@ -158,14 +158,23 @@ router.post('/create', async (req, res) => {
 
     const creator_id = userResult.rows[0].id;
 
+    // Handle location point if coordinates are provided
+    let locationPoint = null;
+    if (location && location.latitude && location.longitude) {
+      locationPoint = `POINT(${location.longitude} ${location.latitude})`;
+    }
+
     // Step 2: Insert the new project with the derived creator_id
     const insertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id, due_date)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO projects (name, description, tags, creator_id, due_date, location, location_point)
+      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'})
       RETURNING *;
     `;
 
-    const result = await pool.query(insertQuery, [name, description, tags, creator_id, due_date]);
+    const queryParams = [name, description, tags, creator_id, due_date, location];
+    if (locationPoint) queryParams.push(locationPoint);
+
+    const result = await pool.query(insertQuery, queryParams);
     const project = result.rows[0];
 
     // Step 3: Enforce Outcome authorship (Phase 0)
@@ -387,8 +396,8 @@ router.post('/auto-generate', async (req, res) => {
       const skillId = await GuildService.getOrCreateSkill(task.skill_name);
 
       const result = await pool.query(
-        'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, resource_requirements, start_date, due_date) VALUES ($1, $2, $3, $4, $5, $6, $7::int[], $8, $9, $10, $11) RETURNING id',
-        [projectId, task.name, task.description, skillId, task.skill_level || 0, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || [], task.start_date, task.due_date]
+        'INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, dependencies, reward_tokens, resource_requirements, start_date, due_date, is_local) VALUES ($1, $2, $3, $4, $5, $6, $7::int[], $8, $9, $10, $11, $12) RETURNING id',
+        [projectId, task.name, task.description, skillId, task.skill_level || 0, 'inactive-unassigned', [], task.reward_tokens, task.resource_requirements || [], task.start_date, task.due_date, task.is_local || false]
       );
       const dbId = result.rows[0].id;
       task.db_id_internal = dbId; // Store actual DB ID on task object to avoid collision issues

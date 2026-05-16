@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   TextField, Autocomplete, Button, Box, Typography, Avatar, Chip,
   Modal, Paper, List, ListItem, ListItemText, IconButton, CircularProgress, LinearProgress,
-  createFilterOptions, MenuItem, Select, FormControl, InputLabel
+  createFilterOptions, MenuItem, Select, FormControl, InputLabel, FormControlLabel, Checkbox
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -18,6 +18,7 @@ import ChronicleTimeline from '../../components/ChronicleTimeline';
 import './ProfilePage.css';
 import { Link } from 'react-router-dom';
 import ShareIcon from '@mui/icons-material/Share';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { toast } from 'react-hot-toast';
 import ResourceListingForm from '../../components/ResourceListingForm/ResourceListingForm';
 import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
@@ -58,6 +59,12 @@ const ProfilePage = () => {
     contact_links: ['', ''], // Initialize with 2 empty strings
     capacity_status: 'active',
     discord_user_id: '',
+    latitude: '',
+    longitude: '',
+    share_location_publicly: false,
+    city: '',
+    state: '',
+    country: '',
   });
   const [skillsPool, setSkillsPool] = useState([]);
   const [interestsPool, setInterestsPool] = useState([]);
@@ -83,6 +90,11 @@ const ProfilePage = () => {
   const [userBadges, setUserBadges] = useState([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [badgesError, setBadgesError] = useState(null);
+
+  // Geocoding State
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const colorPalette = [
       blue[300], red[300], green[300], orange[300], purple[300], teal[300], pink[300], indigo[300],
@@ -157,6 +169,12 @@ const ProfilePage = () => {
               : ['', ''],
             capacity_status: capacityStatus,
             discord_user_id: profileResponse.data.discord_user_id || '',
+            latitude: profileResponse.data.location?.coordinates[1] || '',
+            longitude: profileResponse.data.location?.coordinates[0] || '',
+            share_location_publicly: profileResponse.data.share_location_publicly || false,
+            city: profileResponse.data.city || '',
+            state: profileResponse.data.state || '',
+            country: profileResponse.data.country || '',
             };
 
           // Auto-populate Discord ID if provided in query params
@@ -256,6 +274,40 @@ const ProfilePage = () => {
       ...prevData,
       [field]: value,
     }));
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (locationSearch && locationSearch.length > 2) {
+        setIsGeocoding(true);
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/spatial-ops/search-location?q=${locationSearch}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setLocationOptions(response.data);
+        } catch (err) {
+          console.error('Failed to search location:', err);
+        } finally {
+          setIsGeocoding(false);
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locationSearch, getAccessTokenSilently]);
+
+  const handleLocationSelect = (event, newValue) => {
+    if (newValue) {
+      setProfileData(prev => ({
+        ...prev,
+        city: newValue.address.city || '',
+        state: newValue.address.state || '',
+        country: newValue.address.country || '',
+        latitude: newValue.latitude,
+        longitude: newValue.longitude
+      }));
+    }
   };
 
   const handleContactLinkChange = (index, value) => {
@@ -510,6 +562,12 @@ const ProfilePage = () => {
       formData.append('interests', JSON.stringify(profileData.interests));
       formData.append('capacity_status', profileData.capacity_status);
       formData.append('discord_user_id', profileData.discord_user_id);
+      formData.append('latitude', profileData.latitude);
+      formData.append('longitude', profileData.longitude);
+      formData.append('share_location_publicly', profileData.share_location_publicly);
+      formData.append('city', profileData.city);
+      formData.append('state', profileData.state);
+      formData.append('country', profileData.country);
 
       // Handle contact_links
       const cleanedContactLinks = profileData.contact_links.filter(link => link.trim() !== '');
@@ -556,6 +614,12 @@ const ProfilePage = () => {
             ? [...updatedProfile.contact_links.slice(0, 2), '', ''].slice(0, 2)
             : ['', ''],
           discord_user_id: updatedProfile.discord_user_id || prev.discord_user_id,
+          latitude: updatedProfile.location?.coordinates?.[1] || prev.latitude,
+          longitude: updatedProfile.location?.coordinates?.[0] || prev.longitude,
+          share_location_publicly: updatedProfile.share_location_publicly || false,
+          city: updatedProfile.city || prev.city,
+          state: updatedProfile.state || prev.state,
+          country: updatedProfile.country || prev.country,
         }));
       }
 
@@ -701,6 +765,46 @@ const ProfilePage = () => {
           },
         }}
       />
+      <Autocomplete
+        fullWidth
+        sx={{ maxWidth: '400px', mb: 2 }}
+        options={locationOptions}
+        getOptionLabel={(option) => option.displayName || ''}
+        loading={isGeocoding}
+        onInputChange={(event, newInputValue) => setLocationSearch(newInputValue)}
+        onChange={handleLocationSelect}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Search Location (City, Address...)"
+            placeholder="Start typing..."
+            sx={{
+              '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+              '& .MuiOutlinedInput-root': {
+                color: theme.colors.textPrimary,
+                backgroundColor: 'rgba(10, 10, 46, 0.6)',
+                '& fieldset': { borderColor: theme.colors.border },
+                '&:hover fieldset': { borderColor: theme.colors.primary },
+              }
+            }}
+            InputProps={{
+              ...params.InputProps,
+              startAdornment: (
+                <>
+                  <LocationOnIcon sx={{ color: theme.colors.primary, mr: 1 }} />
+                  {params.InputProps.startAdornment}
+                </>
+              ),
+              endAdornment: (
+                <>
+                  {isGeocoding ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
+          />
+        )}
+      />
       <FormControl fullWidth sx={{ maxWidth: '400px', mb: 2 }}>
         <InputLabel sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent }}>Capacity Status</InputLabel>
         <Select
@@ -730,6 +834,105 @@ const ProfilePage = () => {
           <MenuItem value="unavailable">Unavailable</MenuItem>
         </Select>
       </FormControl>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, width: '100%', maxWidth: '400px', mb: 2 }}>
+        <TextField
+          label="City"
+          value={profileData.city || ''}
+          onChange={(e) => handleInputChange('city', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            flex: '1 1 100%',
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+        <TextField
+          label="State / Region"
+          value={profileData.state || ''}
+          onChange={(e) => handleInputChange('state', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            flex: '1 1 48%',
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+        <TextField
+          label="Country"
+          value={profileData.country || ''}
+          onChange={(e) => handleInputChange('country', e.target.value)}
+          margin="none"
+          fullWidth
+          sx={{
+            flex: '1 1 48%',
+            '& .MuiInputLabel-root': { color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyAccent },
+            '& .MuiInputLabel-root.Mui-focused': { color: theme.colors.primary },
+            '& .MuiOutlinedInput-root': {
+              fontFamily: theme.typography.fontFamilyAccent,
+              color: theme.colors.textPrimary,
+              backgroundColor: 'rgba(10, 10, 46, 0.6)',
+              '& fieldset': { borderColor: theme.colors.border, borderRadius: theme.borders.borderRadiusMd },
+              '&:hover fieldset': { borderColor: theme.colors.primary },
+              '&.Mui-focused fieldset': { borderColor: theme.colors.primary, boxShadow: theme.effects.glowSubtle(theme.colors.primary) },
+            },
+            '& .MuiInputBase-input': { color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent },
+          }}
+        />
+        <Box sx={{ width: '100%', mt: 1, display: 'flex', gap: 1 }}>
+          <TextField
+            label="Lat"
+            value={profileData.latitude || ''}
+            onChange={(e) => handleInputChange('latitude', e.target.value)}
+            size="small"
+            sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: '0.7rem' } }}
+          />
+          <TextField
+            label="Lon"
+            value={profileData.longitude || ''}
+            onChange={(e) => handleInputChange('longitude', e.target.value)}
+            size="small"
+            sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: '0.7rem' } }}
+          />
+        </Box>
+      </Box>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={profileData.share_location_publicly}
+            onChange={(e) => handleInputChange('share_location_publicly', e.target.checked)}
+            sx={{
+              color: theme.colors.primary,
+              '&.Mui-checked': { color: theme.colors.primary },
+            }}
+          />
+        }
+        label={
+          <Typography sx={{ color: theme.colors.textPrimary, fontFamily: theme.typography.fontFamilyAccent, fontSize: '0.8rem' }}>
+            Share location with community (Enables Volunteer Heatmap)
+          </Typography>
+        }
+        sx={{ width: '100%', maxWidth: '400px', mb: 2 }}
+      />
       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '400px', gap: 1, mb: 1 }}>
         <TextField
           label="Discord User ID"
@@ -1615,7 +1818,7 @@ const ProfilePage = () => {
         </Button>
         <Button 
           variant="contained" 
-          onClick={() => logout({ returnTo: window.location.origin })}
+          onClick={() => logout({ logoutParams: { returnTo: import.meta.env.VITE_FRONTEND_URL || window.location.origin } })}
           fullWidth={isMobile}
           sx={{ 
             backgroundColor: theme.colors.error, 

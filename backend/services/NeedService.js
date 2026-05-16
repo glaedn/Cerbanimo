@@ -2,6 +2,8 @@ import pool from '../db.js';
 import { findMatchesForNeed } from './matchingService.js';
 import { sendNotification } from './NotificationService.js';
 import NeedExpansionService from './NeedExpansionService.js';
+import IntentEngineService from './IntentEngineService.js';
+import CivicEventService from './CivicEventService.js';
 
 class NeedService {
   calculateComplexityScore(need) {
@@ -72,18 +74,52 @@ class NeedService {
       throw new Error('Either requestor_user_id or requestor_community_id must be provided.');
     }
 
+    // Spatial and Textual Location Fallback Logic
+    let finalLat = latitude;
+    let finalLon = longitude;
+    let finalLocationText = location_text;
+
+    if (requestor_user_id) {
+      const userRes = await pool.query(
+        `SELECT ST_Y(u.location_point::geometry) as lat, ST_X(u.location_point::geometry) as lon,
+                u.formatted_address, u.city, u.state, p.location as profile_location
+         FROM users u
+         LEFT JOIN profiles p ON u.id = p.user_id
+         WHERE u.id = $1`,
+        [requestor_user_id]
+      );
+
+      if (userRes.rows.length > 0) {
+        const userData = userRes.rows[0];
+        if (!finalLat || !finalLon) {
+          finalLat = userData.lat;
+          finalLon = userData.lon;
+        }
+        if (!finalLocationText) {
+          finalLocationText = userData.formatted_address ||
+                              (userData.city && userData.state ? `${userData.city}, ${userData.state}` : null) ||
+                              userData.profile_location;
+        }
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO needs (name, description, category, quantity_needed, urgency,
                           urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
                           requestor_user_id, requestor_community_id, required_before_date,
-                          location_text, latitude, longitude, status, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                          location_text, latitude, longitude, status, source, location_point)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+               CASE
+                 WHEN $15::numeric IS NOT NULL AND $16::numeric IS NOT NULL
+                 THEN ST_SetSRID(ST_MakePoint($16::numeric, $15::numeric), 4326)::geography
+                 ELSE NULL
+               END)
        RETURNING *`,
       [
         name, description, category, quantity_needed, urgency,
         urgency_level, is_recurring, recurrence_pattern, location, mobility_required,
         requestor_user_id, requestor_community_id, required_before_date,
-        location_text, latitude, longitude, status, source
+        finalLocationText, finalLat, finalLon, status, source
       ]
     );
 
@@ -93,14 +129,28 @@ class NeedService {
     await pool.query('UPDATE needs SET complexity_score = $1 WHERE id = $2', [complexityScore, newNeed.id]);
     newNeed.complexity_score = complexityScore;
 
-    const EXPANSION_THRESHOLD = 2.5;
-    if (complexityScore >= EXPANSION_THRESHOLD) {
-      NeedExpansionService.expandNeed(newNeed).catch(err => console.error('Need expansion failed:', err));
-    } else {
-      this.addTaskToNeedsBoard(newNeed).catch(err => console.error('Failed to add need to Needs Board:', err));
-    }
+    // Transformation: Moving from direct service coupling to event-driven
+    // IntentEngineService.registerNeedCreated(newNeed, user)
+    //   .catch(err => console.error('Civic kernel need registration failed:', err));
 
-    this.processMatches(newNeed).catch(err => console.error('Error processing matches for new need:', err));
+    // Instead, we record a civic event, which will trigger the EventRouter
+    CivicEventService.recordEvent({
+      eventType: 'need.created',
+      actorId: user?.id || newNeed.requestor_user_id,
+      entityType: 'need',
+      entityId: newNeed.id,
+      payload: {
+        name: newNeed.name,
+        complexityScore: newNeed.complexity_score,
+        urgency: newNeed.urgency,
+        category: newNeed.category
+      },
+      correlationId: `need:${newNeed.id}`
+    }).catch(err => console.error('Failed to record need.created event:', err));
+
+    // Transformation: Moving from direct service coupling to event-driven
+    // Matches will be processed by the EventRouter or background workers
+    // this.processMatches(newNeed).catch(err => console.error('Error processing matches for new need:', err));
 
     return newNeed;
   }
@@ -123,7 +173,7 @@ class NeedService {
     ]);
   }
 
-  async markNeedComplete(needId) {
+  async markNeedComplete(needId, causationId = null) {
     const result = await pool.query(
       `UPDATE needs
        SET status = 'fulfilled', fulfilled_at = NOW(), fulfilled_via = 'system'
@@ -134,7 +184,21 @@ class NeedService {
     return result.rows[0];
   }
 
-  async processMatches(need) {
+  async getNeedWithFulfillment(needId) {
+    const needRes = await pool.query('SELECT * FROM needs WHERE id = $1', [needId]);
+    if (needRes.rows.length === 0) return null;
+    const need = needRes.rows[0];
+
+    const fulfillmentRes = await pool.query(
+      "SELECT SUM(fulfillment_percentage) as total FROM need_fulfillments WHERE need_id = $1 AND status IN ('verified', 'completed')",
+      [needId]
+    );
+
+    need.fulfillment_percentage = parseFloat(fulfillmentRes.rows[0].total || 0);
+    return need;
+  }
+
+  async processMatches(need, causationId = null) {
     const matches = await findMatchesForNeed(need.id, pool);
     const notifications = [];
 
@@ -156,6 +220,20 @@ class NeedService {
             type: 'resource_match'
           })
         );
+
+        // Record resource matching event
+        CivicEventService.recordEvent({
+          eventType: 'resource.matched',
+          actorId: resource.owner_user_id,
+          entityType: 'resource',
+          entityId: resource.id,
+          payload: {
+            needId: need.id,
+            matchScore: resource.match_score
+          },
+          correlationId: `need:${need.id}`,
+          causationId
+        }).catch(err => console.error('Failed to record resource.matched event:', err));
       }
     }
 

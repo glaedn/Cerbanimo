@@ -6,7 +6,6 @@ import { auth } from 'express-oauth2-jwt-bearer';
 import rateLimit from 'express-rate-limit';
 import http from 'http';
 import { Server } from 'socket.io';
-import cron from 'node-cron';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -26,6 +25,7 @@ import needRoutes from './routes/needs.js';
 import matchingRoutes from './routes/matching.js';
 import exchangeRoutes from './routes/exchange.js';
 import servicesRoutes from './routes/services.js';
+import spatialOpsRoutes from './routes/spatial_ops.js';
 import onboardingRoutes from './routes/onboarding.js';
 import adminRoutes from './routes/admin.js';
 import discordConfigRoutes from './routes/discord_config.js';
@@ -38,6 +38,17 @@ import guildRoutesV2 from './routes/guilds_v2.js';
 import constellationRoutesV2 from './routes/constellations_v2.js';
 import resourceRoutesV2 from './routes/resources_v2.js';
 import storyEngineRoutesV2 from './routes/story_engine_v2.js';
+import civicKernelRoutes from './routes/civic_kernel.js';
+import governanceRoutes from './routes/governance.js';
+import federationRoutes from './routes/federation.js';
+import narrativeRoutes from './routes/narrative.js';
+import walletRoutes from './routes/wallets.js';
+import treasuryRoutes from './routes/treasury.js';
+import bountyRoutes from './routes/bounties.js';
+import solidarityRoutes from './routes/solidarity.js';
+import crisisRoutes from './routes/crisis.js';
+import impactReceiptRoutes from './routes/impact_receipts.js';
+import needFulfillmentRoutes from './routes/need_fulfillments.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -47,6 +58,12 @@ import { setIo } from './services/NotificationService.js';
 import ConstellationHealthService from './services/ConstellationHealthService.js';
 import WeeklyWrapUpService from './services/WeeklyWrapUpService.js';
 import EscalationService from './services/EscalationService.js';
+import TreatyEnforcementService from './services/TreatyEnforcementService.js';
+import CrisisService from './services/CrisisService.js';
+import EventBusService from './services/EventBusService.js';
+import { startEventWorker } from './workers/eventWorker.js';
+import boss from './jobs/boss.js';
+import { startWorkers } from './jobs/startWorkers.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -62,8 +79,24 @@ import { createResourceLayerTables } from '../models/resource_layer_v2.js';
 import { createDiscordConfigTable } from '../models/discord_config.js';
 import { createNeedCommentsTable } from '../models/need_comments.js';
 import { createNeedsTable } from '../models/needs.js';
+import { createCivicKernelTables } from '../models/civic_kernel.js';
+import { createSpatialLayerTables } from '../models/spatial_layers.js';
+import { createSystemStateTable } from '../models/system_state.js';
+import { createGovernanceTables } from '../models/governance.js';
+import { createMutualAidTables } from '../models/mutual_aid.js';
+import { createBountyTables } from '../models/bounties.js';
+import { createSolidarityTables } from '../models/solidarity.js';
+import { createImpactReceiptTables } from '../models/impact_receipts.js';
+import { createNeedFulfillmentTable } from '../models/need_fulfillments.js';
+import { createAgentTables } from '../models/agents.js';
+import { createWorkflowTables } from '../models/workflows.js';
+import { createNarrativeTables } from '../models/narrative_v2.js';
+import { createWalletTable } from '../models/wallets.js';
+import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
 import { alterExistingTables } from '../models/alter_tables_v2.js';
 import { fixSequences } from './utils/dbFix.js';
+
+
 
 // Initialize app
 const app = express();
@@ -218,6 +251,7 @@ app.use('/services', (req, res, next) => {
 }, servicesRoutes);
 
 app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
+app.use('/spatial-ops', jwtCheck, resolveUser, spatialOpsRoutes);
 app.use('/admin', jwtCheck, resolveUser, adminRoutes);
 app.use('/discord-config', jwtCheck, resolveUser, discordConfigRoutes);
 app.use('/need-comments', jwtCheck, resolveUser, needCommentRoutes);
@@ -231,6 +265,23 @@ app.use('/story_engine_v2', (req, res, next) => {
   if (req.method === 'GET') return next();
   return jwtCheck(req, res, next);
 }, resolveUser, storyEngineRoutesV2);
+
+app.use('/civic-kernel', jwtCheck, resolveUser, civicKernelRoutes);
+app.use('/governance', jwtCheck, resolveUser, governanceRoutes);
+app.use('/federation', jwtCheck, resolveUser, federationRoutes);
+app.use('/narrative', (req, res, next) => {
+  if (req.method === 'GET') return next();
+  return jwtCheck(req, res, next);
+}, resolveUser, narrativeRoutes);
+
+app.use('/wallets', jwtCheck, resolveUser, walletRoutes);
+
+app.use('/treasury', jwtCheck, resolveUser, treasuryRoutes);
+app.use('/bounties', jwtCheck, resolveUser, bountyRoutes);
+app.use('/solidarity', jwtCheck, resolveUser, solidarityRoutes);
+app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
+app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
+app.use('/need-fulfillments', jwtCheck, resolveUser, needFulfillmentRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -248,113 +299,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Nightly task reset
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running nightly reset of spent points');
-  try {
-    const result = await taskController.resetAllSpentPoints();
-    console.log('Reset completed:', result);
-  } catch (error) {
-    console.error('Failed to reset spent points:', error);
-  }
-});
-
-// Nightly interest validation
-cron.schedule('0 1 * * *', async () => {
-  console.log('Running nightly interest validation...');
-  try {
-    await validatePendingInterests();
-    console.log('Interest validation completed.');
-  } catch (error) {
-    console.error('Interest validation worker failed:', error);
-  }
-});
-
-// Roadmap Background Workers
-// Sync Guild Memberships (Every 15 minutes)
-cron.schedule('*/15 * * * *', async () => {
-  console.log('Running guild membership synchronization...');
-  try {
-    await GuildService.syncMembershipsWithSkills();
-  } catch (err) {
-    console.error('Membership sync worker failed:', err);
-  }
-});
-
-// Automated Skill Enrichment (Daily at midnight)
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running daily skill enrichment...');
-  try {
-    await GuildService.enrichSkillsAndHierarchy();
-  } catch (err) {
-    console.error('Skill enrichment worker failed:', err);
-  }
-});
-
-// Weekly Wrap-up Generation (Daily at 2:00 AM)
-cron.schedule('0 2 * * *', async () => {
-  console.log('Running daily weekly wrap-up generation...');
-  try {
-    await WeeklyWrapUpService.generateWeeklyWrapUps();
-  } catch (err) {
-    console.error('Weekly wrap-up worker failed:', err);
-  }
-});
-
-// Need Escalation Engine (Daily at 3:00 AM)
-cron.schedule('0 3 * * *', async () => {
-  console.log('Running daily need escalation check...');
-  try {
-    await EscalationService.checkAndEscalateNeeds();
-  } catch (err) {
-    console.error('Need escalation worker failed:', err);
-  }
-});
-
-// Dynamic Reward & Decay Adjustment (Every 6 hours)
-cron.schedule('0 */6 * * *', async () => {
-  console.log('Running dynamic reward and decay adjustment');
-  try {
-    const adjusted = await TaskRoutingService.applyDynamicRewardAdjustment();
-    console.log(`Adjusted ${adjusted.length} tasks.`);
-  } catch (err) {
-    console.error('Reward adjustment worker failed:', err);
-  }
-});
-
-// Intelligence Scoring (Hourly)
-cron.schedule('0 * * * *', async () => {
-  console.log('Running intelligence scoring (Priority & Project Health)');
-  try {
-    // Score all unassigned tasks
-    const tasks = await pool.query("SELECT id FROM tasks WHERE status::text LIKE $1", ['%unassigned']);
-    for (const task of tasks.rows) {
-      await TaskRoutingService.calculatePriorityScore(task.id);
-    }
-
-    // Score all active projects
-    const projects = await pool.query("SELECT id FROM projects WHERE status = 'active'");
-    for (const project of projects.rows) {
-      await ProjectHealthService.calculateHealthScore(project.id);
-    }
-
-    // Score all guilds
-    const guilds = await pool.query("SELECT id FROM guilds WHERE status != 'dissolved'");
-    for (const guild of guilds.rows) {
-      await GuildHealthService.calculateGuildMetrics(guild.id);
-    }
-
-    // Score all active constellations
-    const constellations = await pool.query("SELECT id FROM constellations WHERE status NOT IN ('completed', 'dissolved')");
-    for (const constellation of constellations.rows) {
-      await ConstellationHealthService.calculateConstellationMetrics(constellation.id);
-    }
-
-    console.log('Intelligence scoring completed.');
-  } catch (err) {
-    console.error('Intelligence scoring worker failed:', err);
-  }
-});
+// Scheduled tasks moved to pg-boss in startWorkers.js
 
 // Start server
 const PORT = process.env.PORT || 4000;
@@ -401,9 +346,58 @@ async function initializeDatabase() {
     await createUserChroniclesTable();
     await createStorySummariesTable();
     await createNeedsTable(); // Ensure needs table exists before dependent tables
-    await createDiscordConfigTable();
+    await createCivicKernelTables();
+
+    // Optional Subsystems - Wrapped in try/catch for resilience
+    try {
+      await createSpatialLayerTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Spatial Layer initialization failed:', err.message);
+    }
+
+    await createSystemStateTable();
+    await createGovernanceTables();
+    await createMutualAidTables();
+    await createBountyTables();
+    await createSolidarityTables();
+    await createImpactReceiptTables();
+    await createNeedFulfillmentTable();
+    await createWalletTable();
+
+    try {
+      await createDiscordConfigTable();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Discord Config initialization failed:', err.message);
+    }
+
     await createNeedCommentsTable();
+
+    try {
+      await createAgentTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Agent Tables initialization failed:', err.message);
+    }
+
+    try {
+      await createWorkflowTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Workflow Tables initialization failed:', err.message);
+    }
+
+    try {
+      await createNarrativeTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Narrative Tables initialization failed:', err.message);
+    }
+
+    try {
+      await alterStoryNodesForNarrative();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: Narrative Story Node alteration failed:', err.message);
+    }
+
     await alterExistingTables();
+    
 
     console.log('Database tables roadmap update checked/initialized successfully.');
   } catch (error) {
@@ -413,6 +407,20 @@ async function initializeDatabase() {
 }
 
 initializeDatabase().then(async () => {
+  // Initialize Event System
+  await EventBusService.initialize();
+
+  // Start pg-boss
+  try {
+    await boss.start();
+    console.log('PgBoss started successfully');
+    await startWorkers();
+  } catch (err) {
+    console.error('Failed to start PgBoss:', err);
+  }
+
+  startEventWorker();
+
   // Post-initialization synchronization
   try {
     await GuildService.syncGuildsWithSkills();

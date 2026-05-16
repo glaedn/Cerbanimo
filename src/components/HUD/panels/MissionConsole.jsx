@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useAssignedTasks from '../../../hooks/useAssignedTasks';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { useAppStore } from '../../../store/useAppStore';
 import '../HUDPanel.css';
 import './MissionConsole.css';
 
@@ -12,12 +13,26 @@ const MissionConsole = () => {
   const isMobile = useIsMobile();
   const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { assignedTasks, loading: tasksLoading, error: tasksError, refetchTasks } = useAssignedTasks(profile?.id);
+  const selectEntity = useAppStore(state => state.selectEntity);
   const [recommendedMissions, setRecommendedMissions] = useState([]);
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [taskOutcomes, setTaskOutcomes] = useState({});
   const navigate = useNavigate();
   const { getAccessTokenSilently } = useAuth0();
+
+  const getStatusColor = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('active')) return '#32CD32'; // Green
+    if (s.includes('inactive')) return '#87CEFA'; // Blue
+    if (s.includes('submitted')) return '#FFA500'; // Orange
+    if (s.includes('completed')) return '#FF69B4'; // Pink
+    return '#CCCCCC'; // Default/Other
+  };
+
+  const handleViewTask = (task) => {
+    selectEntity({ id: `task-${task.id}`, type: 'task', name: task.name, status: task.status, raw: task });
+  };
 
   useEffect(() => {
     const fetchMissions = async () => {
@@ -58,31 +73,6 @@ const MissionConsole = () => {
     setIsMinimized(!isMinimized);
   };
 
-  if (profileLoading || tasksLoading) {
-    return <div className="hud-panel mission-console">Loading Mission Console...</div>;
-  }
-  if (profileError) {
-    return <div className="hud-panel mission-console">Error loading profile: {profileError.message}</div>;
-  }
-  if (tasksError) {
-    return <div className="hud-panel mission-console">Error loading tasks: {tasksError.message}</div>;
-  }
-  if (!profile) {
-    return <div className="hud-panel mission-console">User profile not available.</div>;
-  }
-
-  const getStatusColor = (status) => {
-    const s = status.toLowerCase();
-    if (s.includes('active')) return '#32CD32'; // Green
-    if (s.includes('inactive')) return '#87CEFA'; // Blue
-    if (s.includes('submitted')) return '#FFA500'; // Orange
-    if (s.includes('completed')) return '#FF69B4'; // Pink
-    return '#CCCCCC'; // Default/Other
-  };
-
-  const handleViewTask = (task) => {
-    navigate(`/visualizer/${task.projectId}/${task.id}`);
-  };
 
   const handleDropTask = async (taskId) => {
     if (!profile || !profile.id) {
@@ -112,8 +102,28 @@ const MissionConsole = () => {
           {isMinimized ? '+' : '-'}
         </button>
       </div>
-      {!isMinimized && (
-        <div className="hud-panel-content" style={{ p: isMobile ? 1 : 2 }}>
+      {!isMinimized && (profileLoading || tasksLoading) && (
+        <div className="hud-panel-content" style={{ padding: isMobile ? '8px' : '16px' }}>
+          <p>Loading Mission Console...</p>
+        </div>
+      )}
+      {!isMinimized && profileError && (
+        <div className="hud-panel-content" style={{ padding: isMobile ? '8px' : '16px' }}>
+          <p>Error loading profile: {profileError.message}</p>
+        </div>
+      )}
+      {!isMinimized && tasksError && (
+        <div className="hud-panel-content" style={{ padding: isMobile ? '8px' : '16px' }}>
+          <p>Error loading tasks: {tasksError.message}</p>
+        </div>
+      )}
+      {!isMinimized && !profile && !profileLoading && (
+        <div className="hud-panel-content" style={{ padding: isMobile ? '8px' : '16px' }}>
+          <p>User profile not available.</p>
+        </div>
+      )}
+      {!isMinimized && profile && !profileLoading && !tasksLoading && (
+        <div className="hud-panel-content" style={{ padding: isMobile ? '8px' : '16px' }}>
           <h5 className="section-subtitle">Assigned Tasks</h5>
           {assignedTasks.length > 0 ? (
             <ul className="task-list">
@@ -156,7 +166,7 @@ const MissionConsole = () => {
                     <span style={{ color: '#00f3ff', fontSize: '0.8rem' }}>Reward: {(mission.reward_tokens || 0)} Tokens</span>
                   </div>
                   <div className="task-actions" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
-                    <button onClick={() => navigate(`/visualizer/${mission.project_id}/${mission.id}`)} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>ACCEPT</button>
+                    <button onClick={() => selectEntity({ id: `task-${mission.id}`, type: 'task', name: mission.name, status: mission.status || 'active', raw: mission })} style={{ height: isMobile ? '48px' : 'auto', minWidth: isMobile ? '80px' : 'auto' }}>VIEW</button>
                   </div>
                 </li>
               ))}

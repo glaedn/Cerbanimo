@@ -294,20 +294,26 @@ class DiscordBotService {
         }
 
         if (interaction.commandName === 'help-offer') {
-          const needId = interaction.options.getString('need_id');
-          const message = interaction.options.getString('message') || "I'd like to help!";
-
           try {
+            await interaction.deferReply({ ephemeral: true });
+            const needId = interaction.options.getString('need_id');
+            const message = interaction.options.getString('message') || "I'd like to help!";
+
             await pool.query(
               'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
               [needId, linkedUser.id, `[Discord Help Offer] ${message}`]
             );
 
-            await interaction.reply({ content: "Your help offer has been recorded and synced to Cerbanimo!", ephemeral: true });
+            await interaction.editReply({ content: "Your help offer has been recorded and synced to Cerbanimo!" });
           } catch (err) {
             console.error('Error in help-offer command:', err);
-            await interaction.reply({ content: "Failed to record help offer.", ephemeral: true });
+            if (interaction.deferred) {
+              await interaction.editReply({ content: "Failed to record help offer." });
+            } else {
+              await interaction.reply({ content: "Failed to record help offer.", ephemeral: true }).catch(() => {});
+            }
           }
+          return;
         } else if (interaction.commandName === 'need') {
           const subcommand = interaction.options.getSubcommand();
           if (subcommand === 'create') {
@@ -361,13 +367,14 @@ class DiscordBotService {
             await interaction.showModal(modal);
           } else if (subcommand === 'fulfill') {
             try {
+                await interaction.deferReply({ ephemeral: true });
                 const needsResult = await pool.query(
                     "SELECT id, name FROM needs WHERE requestor_user_id = $1 AND status = 'open' LIMIT 25",
                     [linkedUser.id]
                 );
 
                 if (needsResult.rows.length === 0) {
-                    return interaction.reply({ content: "You have no open needs to fulfill.", ephemeral: true });
+                    return interaction.editReply({ content: "You have no open needs to fulfill." });
                 }
 
                 const select = new StringSelectMenuBuilder()
@@ -383,14 +390,17 @@ class DiscordBotService {
 
                 const row = new ActionRowBuilder().addComponents(select);
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: 'Choose a need to fulfill:',
-                    components: [row],
-                    ephemeral: true
+                    components: [row]
                 });
             } catch (err) {
                 console.error('Error fetching needs for fulfillment:', err);
-                await interaction.reply({ content: "❌ Failed to fetch your needs.", ephemeral: true });
+                if (interaction.deferred) {
+                  await interaction.editReply({ content: "❌ Failed to fetch your needs." });
+                } else {
+                  await interaction.reply({ content: "❌ Failed to fetch your needs.", ephemeral: true }).catch(() => {});
+                }
             }
           }
         } else if (interaction.commandName === 'resource') {
@@ -435,6 +445,7 @@ class DiscordBotService {
           const guildId = interaction.guildId;
 
           if (interaction.customId === 'need_create_modal') {
+              await interaction.deferReply({ ephemeral: true }).catch(() => {});
               const name = interaction.fields.getTextInputValue('need_title');
               const description = interaction.fields.getTextInputValue('need_description');
               const days = parseInt(interaction.fields.getTextInputValue('need_days')) || 0;
@@ -483,15 +494,16 @@ class DiscordBotService {
                     source: 'discord'
                   });
 
-                  await interaction.reply({ content: `✅ Need "${name}" created successfully!`, ephemeral: true });
+                  await interaction.editReply({ content: `✅ Need "${name}" created successfully!` });
                   await this.broadcastNeed(newNeed);
                   this.matchAndPing(newNeed, 'need').catch(console.error);
 
               } catch (err) {
                   console.error('Error creating need from modal:', err);
-                  await interaction.reply({ content: "❌ Failed to create need.", ephemeral: true });
+                  await interaction.editReply({ content: "❌ Failed to create need." });
               }
           } else if (interaction.customId === 'resource_create_modal') {
+              await interaction.deferReply({ ephemeral: true }).catch(() => {});
               const name = interaction.fields.getTextInputValue('resource_name');
               const description = interaction.fields.getTextInputValue('resource_description');
               const category = interaction.fields.getTextInputValue('resource_category');
@@ -521,19 +533,20 @@ class DiscordBotService {
                   await pool.query('UPDATE resources SET source = \'discord\' WHERE id = $1', [newResource.id]);
                   newResource.source = 'discord';
 
-                  await interaction.reply({ content: `✅ Resource "${name}" posted successfully!`, ephemeral: true });
+                  await interaction.editReply({ content: `✅ Resource "${name}" posted successfully!` });
                   await this.broadcastResource(newResource);
                   this.matchAndPing(newResource, 'resource').catch(console.error);
 
               } catch (err) {
                   console.error('Error creating resource from modal:', err);
-                  await interaction.reply({ content: "❌ Failed to post resource.", ephemeral: true });
+                  await interaction.editReply({ content: "❌ Failed to post resource." });
               }
           }
       } else if (interaction.isStringSelectMenu()) {
           const linkedUser = await this.getLinkedUser(interaction.user.id);
 
           if (interaction.customId === 'need_fulfill_select') {
+              await interaction.deferReply({ ephemeral: true }).catch(() => {});
               const needId = interaction.values[0];
               try {
                   const result = await pool.query(
@@ -542,11 +555,11 @@ class DiscordBotService {
                   );
 
                   if (result.rows.length === 0) {
-                      return interaction.reply({ content: "❌ Failed to fulfill need. You may not be the creator.", ephemeral: true });
+                      return interaction.editReply({ content: "❌ Failed to fulfill need. You may not be the creator." });
                   }
 
                   const fulfilledNeed = result.rows[0];
-                  await interaction.reply({ content: `🎉 Need "${fulfilledNeed.name}" has been marked as fulfilled!`, ephemeral: true });
+                  await interaction.editReply({ content: `🎉 Need "${fulfilledNeed.name}" has been marked as fulfilled!` });
 
                   // Update original Discord message if it exists
                   if (fulfilledNeed.discord_message_id && fulfilledNeed.discord_thread_id) {
@@ -555,7 +568,7 @@ class DiscordBotService {
 
               } catch (err) {
                   console.error('Error fulfilling need from select:', err);
-                  await interaction.reply({ content: "❌ Failed to fulfill need.", ephemeral: true });
+                  await interaction.editReply({ content: "❌ Failed to fulfill need." });
               }
           }
       }

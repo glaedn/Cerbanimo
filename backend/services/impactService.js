@@ -1,4 +1,5 @@
 // backend/services/impactService.js
+import CivicEventService from './CivicEventService.js';
 
 const getNeedsFulfilledCount = async (dbPool) => {
   try {

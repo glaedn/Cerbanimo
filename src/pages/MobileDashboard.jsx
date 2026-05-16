@@ -5,6 +5,7 @@ import axios from 'axios';
 import MobileTaskCard from '../components/MobileTaskCard';
 import ChronicleTimeline from '../components/ChronicleTimeline';
 import GalacticActivityMap from '../components/GalacticActivityMap/GalacticActivityMap';
+import SignalFeed from '../components/HUD/panels/SignalFeed';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -245,7 +246,27 @@ const MobileDashboard = () => {
         </Box>
       </Paper>
 
-      {/* 2. Active Tasks */}
+      {/* 2. Ecosystem Signals */}
+      <motion.div variants={itemVariants}>
+        <Typography variant="h6" sx={{ color: '#00F3FF', mb: 2, fontWeight: 'bold' }}>
+          Ecosystem Signals
+        </Typography>
+      </motion.div>
+      <Paper
+        component={motion.div}
+        variants={itemVariants}
+        sx={{
+          p: 1,
+          mb: 3,
+          backgroundColor: 'rgba(10, 10, 46, 0.6)',
+          border: '1px solid rgba(0, 243, 255, 0.4)',
+          borderRadius: '12px'
+        }}
+      >
+        <SignalFeed />
+      </Paper>
+
+      {/* 3. Active Tasks */}
       <motion.div variants={itemVariants}>
         <Typography variant="h6" sx={{ color: '#00F3FF', mb: 2, fontWeight: 'bold' }}>
           Active Missions

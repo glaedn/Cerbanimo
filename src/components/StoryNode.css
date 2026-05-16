@@ -113,6 +113,27 @@
   color: #FF5CA2;
 }
 
+/* F6: Narrative Identity System Styling */
+.story-type-chip {
+  padding: 2px 6px;
+  font-weight: bold;
+}
+
+.story-type-chip.type-operational { background-color: rgba(77, 171, 247, 0.2); color: #4DABF7; border: 1px solid #4DABF7; }
+.story-type-chip.type-human { background-color: rgba(255, 159, 64, 0.2); color: #FF9F40; border: 1px solid #FF9F40; }
+.story-type-chip.type-community { background-color: rgba(156, 39, 176, 0.2); color: #9C27B0; border: 1px solid #9C27B0; }
+.story-type-chip.type-crisis { background-color: rgba(255, 65, 54, 0.2); color: #FF4136; border: 1px solid #FF4136; }
+.story-type-chip.type-governance { background-color: rgba(0, 243, 255, 0.2); color: #00F3FF; border: 1px solid #00F3FF; }
+.story-type-chip.type-mentorship { background-color: rgba(0, 215, 135, 0.2); color: #00D787; border: 1px solid #00D787; }
+
+/* Background glows for different story types */
+.story-type-operational { border-color: rgba(77, 171, 247, 0.5); box-shadow: 0 0 15px rgba(77, 171, 247, 0.1); }
+.story-type-human { border-color: rgba(255, 159, 64, 0.5); box-shadow: 0 0 15px rgba(255, 159, 64, 0.1); }
+.story-type-community { border-color: rgba(156, 39, 176, 0.5); box-shadow: 0 0 15px rgba(156, 39, 176, 0.1); }
+.story-type-crisis { border-color: rgba(255, 65, 54, 0.5); box-shadow: 0 0 15px rgba(255, 65, 54, 0.2); }
+.story-type-governance { border-color: rgba(0, 243, 255, 0.5); box-shadow: 0 0 15px rgba(0, 243, 255, 0.1); }
+.story-type-mentorship { border-color: rgba(0, 215, 135, 0.5); box-shadow: 0 0 15px rgba(0, 215, 135, 0.1); }
+
 .media-links { /* Container for media links */
   margin-top: 0.5rem; /* theme.spacing.xs */
 }

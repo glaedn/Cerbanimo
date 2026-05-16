@@ -1,11 +1,13 @@
 import pool from '../db.js';
 import { generateTasksFromNeed } from './needsGenerator.js';
+import CivicEventService from './CivicEventService.js';
 import ImpactGraphService from './ImpactGraphService.js';
 import TaskRoutingService from './TaskRoutingService.js';
 import StoryEngineService from './StoryEngineService.js';
+import IntentEngineService from './IntentEngineService.js';
 
 class NeedExpansionService {
-  async expandNeed(need) {
+  async expandNeed(need, causationId = null) {
     console.log(`Expanding need ${need.id} into a project...`);
 
     let requiredBeforeDate = need.required_before_date;
@@ -67,6 +69,7 @@ class NeedExpansionService {
       const tasks = generatedData.tasks.slice(0, 10);
 
       const taskIdMap = new Map();
+      const createdTasks = [];
       for (const taskData of tasks) {
         const rewardTokens = Math.round((taskData.reward_tokens || baseReward) * multiplier);
 
@@ -95,8 +98,11 @@ class NeedExpansionService {
 
         const newTask = taskResult.rows[0];
         taskIdMap.set(taskData.id, newTask.id);
+        createdTasks.push(newTask);
 
-        await ImpactGraphService.syncTaskNode(newTask.id, client);
+        if (typeof ImpactGraphService.syncTaskNode === 'function') {
+          await ImpactGraphService.syncTaskNode(newTask.id, client);
+        }
       }
 
       for (const taskData of tasks) {
@@ -125,6 +131,22 @@ class NeedExpansionService {
         projectId: project.id,
         complexity: need.complexity_score
       }).catch(err => console.error('Failed to trigger story from need expansion:', err));
+
+      // await IntentEngineService.registerNeedExpansion(need, project, createdTasks, client)
+      //   .catch(err => console.error('Civic kernel need expansion registration failed:', err));
+
+      await CivicEventService.recordEvent({
+        eventType: 'task.generated',
+        actorId: need.requestor_user_id,
+        entityType: 'project',
+        entityId: project.id,
+        payload: {
+          needId: need.id,
+          taskCount: createdTasks.length
+        },
+        correlationId: `need:${need.id}`,
+        causationId
+      }, client);
 
       await client.query('COMMIT');
 

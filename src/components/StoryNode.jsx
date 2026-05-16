@@ -14,6 +14,7 @@ import {
   Menu,
   MenuItem,
   Box,
+  Avatar,
 } from '@mui/material';
 //import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -38,6 +39,10 @@ const StoryNode = ({
   outcome_statement,
   onAddEndorsement,
   verification_type,
+  story_type = 'operational', // 'operational', 'human', 'community', 'crisis', 'governance', 'mentorship'
+  collaborators = [],
+  downstream_effects = [],
+  mentorship_links = [],
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [comment, setComment] = useState('');
@@ -65,14 +70,24 @@ const StoryNode = ({
   console.log('Endorsements:', endorsements);
 
   return (
-    <Card className="story-node-card" variant="outlined">
+    <Card className={`story-node-card story-type-${story_type}`} variant="outlined">
       <CardContent>
-        <Typography variant="h6" className="story-node-header-label glow-text">
-          {task_name}
-        </Typography>
-        <Typography variant="subtitle2" className="story-node-subheader">
-          from project: {project_name}
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="h6" className="story-node-header-label glow-text">
+              {task_name}
+            </Typography>
+            <Typography variant="subtitle2" className="story-node-subheader">
+              {project_name && `from project: ${project_name}`}
+            </Typography>
+          </Box>
+          <Chip
+            label={story_type.toUpperCase()}
+            size="small"
+            className={`story-type-chip type-${story_type}`}
+            sx={{ fontFamily: 'Orbitron', fontSize: '0.6rem' }}
+          />
+        </Box>
 
         <Divider className="neon-divider" />
 
@@ -101,6 +116,47 @@ const StoryNode = ({
                 Outcome: {outcome_statement}
               </Typography>
             )}
+
+            {downstream_effects.length > 0 && (
+              <Box sx={{ mt: 1, pl: 2, borderLeft: '1px dashed rgba(255, 92, 162, 0.4)' }}>
+                <Typography variant="caption" sx={{ color: '#ff5ca2', fontWeight: 'bold', display: 'block', mb: 0.5 }}>DOWNSTREAM EFFECTS:</Typography>
+                {downstream_effects.map((effect, idx) => (
+                  <Typography key={idx} variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontStyle: 'italic' }}>
+                    ↳ {effect}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {collaborators.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+             <Typography variant="subtitle2" className="story-node-subheader">Collaborators:</Typography>
+             <Stack direction="row" spacing={1} flexWrap="wrap">
+               {collaborators.map((c, i) => (
+                 <Tooltip key={i} title={c.role || 'Contributor'}>
+                    <Chip
+                      avatar={<Avatar src={c.avatar} sx={{ width: 20, height: 20 }} />}
+                      label={c.name}
+                      size="small"
+                      variant="outlined"
+                      sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}
+                    />
+                 </Tooltip>
+               ))}
+             </Stack>
+          </Box>
+        )}
+
+        {mentorship_links.length > 0 && (
+          <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(0, 215, 135, 0.05)', borderRadius: 1, border: '1px solid rgba(0, 215, 135, 0.2)' }}>
+            <Typography variant="caption" sx={{ color: '#00D787', fontWeight: 'bold', display: 'block' }}>MENTORSHIP LINEAGE:</Typography>
+            {mentorship_links.map((link, idx) => (
+              <Typography key={idx} variant="caption" sx={{ color: '#e0e0e0', display: 'block' }}>
+                {link.type === 'mentor' ? 'Guided by' : 'Mentored'} {link.name} in {link.skill}
+              </Typography>
+            ))}
           </Box>
         )}
 
@@ -268,4 +324,16 @@ StoryNode.propTypes = {
   outcome_statement: PropTypes.string,
   onAddEndorsement: PropTypes.func,
   verification_type: PropTypes.string,
+  story_type: PropTypes.oneOf(['operational', 'human', 'community', 'crisis', 'governance', 'mentorship']),
+  collaborators: PropTypes.arrayOf(PropTypes.shape({
+    name: PropTypes.string,
+    avatar: PropTypes.string,
+    role: PropTypes.string
+  })),
+  downstream_effects: PropTypes.arrayOf(PropTypes.string),
+  mentorship_links: PropTypes.arrayOf(PropTypes.shape({
+    name: PropTypes.string,
+    type: PropTypes.string,
+    skill: PropTypes.string
+  })),
 };
