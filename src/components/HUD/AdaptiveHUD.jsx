@@ -13,7 +13,8 @@ import SignalFeed from './panels/SignalFeed';
 import EntityInspector from './panels/EntityInspector';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { useEcosystemData } from '../../hooks/useEcosystemData';
-import { ChevronUp, ChevronDown, Monitor, Layout, Settings, Check } from 'lucide-react';
+import { ChevronUp, ChevronDown, Monitor, Layout, Settings, Check, Music, Volume2, VolumeX } from 'lucide-react';
+import { audioEngine } from '../../audio/AudioEngine';
 import './SpaceshipHUD.css'; // Reusing base HUD styles
 
 const AdaptiveHUD = ({ children }) => {
@@ -36,6 +37,22 @@ const AdaptiveHUD = ({ children }) => {
   } = useAppStore();
 
   const [showConfig, setShowConfig] = React.useState(false);
+  const [musicEnabled, setMusicEnabled] = React.useState(true);
+  const [sfxEnabled, setSfxEnabled] = React.useState(true);
+
+  const toggleMusic = () => {
+    const newState = !musicEnabled;
+    setMusicEnabled(newState);
+    audioEngine.toggleTheme(newState);
+    audioEngine.trigger('ui.click');
+  };
+
+  const toggleSFX = () => {
+    const newState = !sfxEnabled;
+    setSfxEnabled(newState);
+    audioEngine.toggleUI(newState);
+    audioEngine.trigger('ui.click');
+  };
   const { width } = useWindowSize();
   const isMobile = width <= 768;
 
@@ -118,13 +135,36 @@ const AdaptiveHUD = ({ children }) => {
 
   return (
     <div className={`hud-container ${isMobile ? 'mobile-hud' : ''} context-${activeContext} mode-${hudMode}`}>
+      {/* Audio Controls */}
+      <div style={{ position: 'fixed', top: '20px', left: '20px', zIndex: 1000, display: 'flex', gap: '8px' }}>
+        <button
+          onClick={toggleMusic}
+          style={{ background: 'rgba(0, 243, 255, 0.1)', border: '1px solid #00f3ff', color: musicEnabled ? '#00f3ff' : '#666', padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Orbitron', fontSize: '0.6rem', backdropFilter: 'blur(10px)' }}
+          title="Toggle Music"
+        >
+          {musicEnabled ? <Music size={14} /> : <VolumeX size={14} />}
+          <span>MUSIC {musicEnabled ? 'ON' : 'OFF'}</span>
+        </button>
+        <button
+          onClick={toggleSFX}
+          style={{ background: 'rgba(0, 243, 255, 0.1)', border: '1px solid #00f3ff', color: sfxEnabled ? '#00f3ff' : '#666', padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Orbitron', fontSize: '0.6rem', backdropFilter: 'blur(10px)' }}
+          title="Toggle SFX"
+        >
+          {sfxEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <span>SFX {sfxEnabled ? 'ON' : 'OFF'}</span>
+        </button>
+      </div>
+
       <PresenceIndicators />
       <OverlayManager />
 
       {/* Mode Switcher & Config */}
       <div style={{ position: 'fixed', bottom: '60px', left: '20px', zIndex: 1000, display: 'flex', gap: '8px' }}>
         <button
-          onClick={() => setViewMode(viewMode === 'graph' ? 'map' : 'graph')}
+          onClick={() => {
+            audioEngine.trigger('ui.click');
+            setViewMode(viewMode === 'graph' ? 'map' : 'graph');
+          }}
           style={{ background: 'rgba(0, 243, 255, 0.3)', border: '2px solid #00f3ff', color: '#fff', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)', fontWeight: 'bold', boxShadow: '0 0 15px rgba(0,243,255,0.4)' }}
         >
           <Layout size={14} />
@@ -132,7 +172,10 @@ const AdaptiveHUD = ({ children }) => {
         </button>
 
         <button
-          onClick={() => setHudMode(hudMode === 'normal' ? 'operational' : 'normal')}
+          onClick={() => {
+            audioEngine.trigger('ui.click');
+            setHudMode(hudMode === 'normal' ? 'operational' : 'normal');
+          }}
           style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'Orbitron', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)' }}
         >
           {hudMode === 'normal' ? <Layout size={14} /> : <Monitor size={14} />}

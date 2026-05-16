@@ -5,6 +5,11 @@ export const portfolioScene = {
     brassVol: -40,
     bassVol: -15,
     percVol: -40,
-    reverbWet: 0.5
+    reverbWet: 0.5,
+    percussionActive: false,
+    choirActive: false,
+    arpActive: true,
+    melodyActive: false,
+    arpDensity: 0.4
   }
 };

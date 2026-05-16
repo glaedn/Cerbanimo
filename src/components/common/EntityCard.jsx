@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import theme from '../../styles/theme';
+import { audioEngine } from '../../audio/AudioEngine';
 
 const CardContainer = styled.div`
   background: ${theme.tokens.colors.surface.paper};
@@ -32,8 +33,17 @@ const EntityTitle = styled.h3`
 `;
 
 const EntityCard = ({ entity, onClick, children, ...props }) => {
+  const handleClick = (e) => {
+    audioEngine.trigger('ui.click');
+    if (onClick) onClick(e);
+  };
+
+  const handleMouseEnter = () => {
+    audioEngine.trigger('ui.hover');
+  };
+
   return (
-    <CardContainer onClick={onClick} {...props}>
+    <CardContainer onClick={handleClick} onMouseEnter={handleMouseEnter} {...props}>
       <EntityHeader>
         <EntityTitle>{entity.title || entity.name}</EntityTitle>
         {entity.status && <span>{entity.status}</span>}

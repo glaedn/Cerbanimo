@@ -1,24 +1,36 @@
 import * as Tone from "tone";
 
+// SHARED FX BUSES
+const uiReverb = new Tone.Reverb({
+  decay: 4,
+  wet: 0.4
+});
+
+const uiDelay = new Tone.FeedbackDelay({
+  delayTime: "8n",
+  feedback: 0.3,
+  wet: 0.2
+}).connect(uiReverb);
+
 // PERSISTENT SYNTHS
-const clickSynth = new Tone.MembraneSynth().toDestination();
+const clickSynth = new Tone.MembraneSynth().connect(uiReverb);
 
 // Tiny glass tick / digital pluck for hover
 const hoverSynth = new Tone.Synth({
   oscillator: { type: "sine" },
   envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
-}).toDestination();
+}).connect(uiDelay);
 
 const confirmSynth = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: "triangle" },
   envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
-}).toDestination();
+}).connect(uiReverb);
 
 const errorSynth = new Tone.MonoSynth({
   oscillator: { type: "square" },
   filter: { Q: 2, type: "lowpass", rolloff: -12 },
   envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.1 }
-}).toDestination();
+}).connect(uiReverb);
 
 const messageSynth = new Tone.PolySynth(Tone.DuoSynth, {
   voice0: {
@@ -29,15 +41,19 @@ const messageSynth = new Tone.PolySynth(Tone.DuoSynth, {
     oscillator: { type: "sine" },
     envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.5 }
   }
-}).toDestination();
+}).connect(uiReverb);
 
 // Reverse shimmer for modal open
 const shimmerSynth = new Tone.NoiseSynth({
   noise: { type: "white" },
   envelope: { attack: 0.1, decay: 0.2, sustain: 0.1, release: 0.3 }
-}).toDestination();
+}).connect(uiReverb);
 
 export const uiLayer = {
+  connect(target) {
+    uiReverb.connect(target);
+  },
+
   click() {
     if (Tone.getContext().state !== 'running') return;
     clickSynth.triggerAttackRelease("C2", "8n");

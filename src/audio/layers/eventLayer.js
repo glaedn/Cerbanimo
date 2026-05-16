@@ -1,24 +1,30 @@
 import * as Tone from "tone";
 
-const poly = new Tone.PolySynth().toDestination();
+const poly = new Tone.PolySynth();
 
 // Specialized Synths for Achievement Orchestration
 const brassSwell = new Tone.PolySynth(Tone.FMSynth, {
   envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 2 }
-}).toDestination();
+});
 
 const celestaSparkle = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: "sine" },
   envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 1 }
-}).toDestination();
+});
 
 const subBassLift = new Tone.MonoSynth({
   oscillator: { type: "triangle" },
   envelope: { attack: 0.1, decay: 0.5, sustain: 0.8, release: 2 }
-}).toDestination();
+});
 
 // Orchestral motifs for events
 export const eventLayer = {
+  connect(target) {
+    poly.connect(target);
+    brassSwell.connect(target);
+    celestaSparkle.connect(target);
+    subBassLift.connect(target);
+  },
   taskAccepted({ impact_weight = 0.5 } = {}) {
     const velocity = 0.5 + impact_weight * 0.5;
     poly.triggerAttackRelease(["C4", "E4", "G4"], "8n", undefined, velocity);

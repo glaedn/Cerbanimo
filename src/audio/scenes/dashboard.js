@@ -5,6 +5,11 @@ export const dashboardScene = {
     brassVol: -15,
     bassVol: -10,
     percVol: -15,
-    reverbWet: 0.45
+    reverbWet: 0.45,
+    percussionActive: true,
+    choirActive: false,
+    arpActive: true,
+    melodyActive: false,
+    arpDensity: 0.6
   }
 };

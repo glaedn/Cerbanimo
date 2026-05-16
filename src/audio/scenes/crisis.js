@@ -5,6 +5,12 @@ export const crisisScene = {
     brassVol: -5,
     bassVol: 0,
     percVol: 0,
-    reverbWet: 0.2
+    reverbWet: 0.2,
+    percussionActive: true,
+    choirActive: false,
+    arpActive: true,
+    melodyActive: false,
+    arpDensity: 0.9,
+    bassIntensity: 0.9
   }
 };

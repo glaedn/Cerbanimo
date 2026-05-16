@@ -5,6 +5,10 @@ export const homepageScene = {
     brassVol: -20,
     bassVol: -10,
     percVol: -30,
-    reverbWet: 0.8
+    reverbWet: 0.8,
+    percussionActive: false,
+    choirActive: true,
+    arpActive: false,
+    melodyActive: true
   }
 };

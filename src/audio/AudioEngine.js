@@ -1,6 +1,9 @@
 import * as Tone from "tone";
 import { AudioDirector } from "./AudioDirector";
 import { themeLayer } from "./layers/themeLayer";
+import { uiLayer } from "./layers/uiLayer";
+import { eventLayer } from "./layers/eventLayer";
+import { ambientLayer } from "./layers/ambientLayer";
 import { audioSceneManager } from "./AudioSceneManager";
 
 // Register all scenes
@@ -16,6 +19,16 @@ class AudioEngine {
     this.started = false;
     this.context = Tone.getContext();
     this.themeStarted = false;
+
+    // Master Gain Nodes for Muting
+    this.themeGain = new Tone.Gain(1).toDestination();
+    this.uiGain = new Tone.Gain(1).toDestination();
+
+    // Deferred connections to avoid initialization order issues in tests
+    themeLayer.connect(this.themeGain);
+    uiLayer.connect(this.uiGain);
+    eventLayer.connect(this.uiGain);
+    ambientLayer.connect(this.themeGain);
 
     // Register scenes with the manager
     audioSceneManager.registerScene("normal", dashboardScene);
@@ -49,6 +62,14 @@ class AudioEngine {
   stopTheme() {
     themeLayer.stop();
     this.themeStarted = false;
+  }
+
+  toggleTheme(enabled) {
+    this.themeGain.gain.rampTo(enabled ? 1 : 0, 0.5);
+  }
+
+  toggleUI(enabled) {
+    this.uiGain.gain.rampTo(enabled ? 1 : 0, 0.5);
   }
 
   trigger(eventType, payload) {

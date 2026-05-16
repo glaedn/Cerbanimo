@@ -5,6 +5,11 @@ export const governanceScene = {
     brassVol: -5,
     bassVol: -12,
     percVol: -25,
-    reverbWet: 0.7
+    reverbWet: 0.7,
+    percussionActive: false,
+    choirActive: true,
+    arpActive: false,
+    melodyActive: true,
+    bassIntensity: 0.3
   }
 };
