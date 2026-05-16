@@ -1,36 +1,41 @@
-import * as Tone from "tone";
-import { AudioDirector } from "./AudioDirector";
-import { themeLayer } from "./layers/themeLayer";
-import { uiLayer } from "./layers/uiLayer";
-import { eventLayer } from "./layers/eventLayer";
-import { tokenLayer } from "./layers/tokenLayer";
-import { socialLayer } from "./layers/socialLayer";
-import { ambientLayer } from "./layers/ambientLayer";
-import { audioSceneManager } from "./AudioSceneManager";
+// src/audio/AudioEngine.js
+import * as Tone from 'tone';
+import { AudioDirector } from './AudioDirector';
+import { themeLayer } from './layers/themeLayer';
+import { uiLayer } from './layers/uiLayer';
+import { eventLayer } from './layers/eventLayer';
+import { tokenLayer } from './layers/tokenLayer';
+import { socialLayer } from './layers/socialLayer';
+import { ambientLayer } from './layers/ambientLayer';
+import { audioSceneManager } from './AudioSceneManager';
 
-// Register all scenes
-import { homepageScene } from "./scenes/homepage";
-import { dashboardScene } from "./scenes/dashboard";
-import { workspaceScene } from "./scenes/workspace";
-import { governanceScene } from "./scenes/governance";
-import { crisisScene } from "./scenes/crisis";
-import { portfolioScene } from "./scenes/portfolio";
-import { skillGalaxyScene } from "./scenes/skillGalaxy";
-import { guildHubScene } from "./scenes/guildHub";
-import { communityScene } from "./scenes/community";
-import { onboardingScene } from "./scenes/onboarding";
+import { homepageScene }   from './scenes/homepage';
+import { dashboardScene }  from './scenes/dashboard';
+import { workspaceScene }  from './scenes/workspace';
+import { governanceScene } from './scenes/governance';
+import { crisisScene }     from './scenes/crisis';
+import { portfolioScene }  from './scenes/portfolio';
+import { skillGalaxyScene } from './scenes/skillGalaxy';
+import { guildHubScene }   from './scenes/guildHub';
+import { communityScene }  from './scenes/community';
+import { onboardingScene } from './scenes/onboarding';
 
 class AudioEngine {
   constructor() {
-    this.started = false;
-    this.context = Tone.getContext();
+    this.started      = false;
     this.themeStarted = false;
 
-    // Master Gain Nodes for Muting
-    this.themeGain = new Tone.Gain(1).toDestination();
-    this.uiGain = new Tone.Gain(1).toDestination();
+    // Increase the default 100ms look-ahead to 180ms.
+    // This schedules audio events further ahead of the playhead, giving the
+    // worklet enough buffer to survive heavy React render frames without glitching.
+    Tone.getContext().lookAhead = 0.18;
 
-    // Deferred connections to avoid initialization order issues in tests
+    // Master gain nodes — theme music and UI/event sounds stay independently
+    // controllable (music toggle, UI toggle, master volume).
+    this.themeGain = new Tone.Gain(1).toDestination();
+    this.uiGain    = new Tone.Gain(1).toDestination();
+
+    // Wire layers into their buses
     themeLayer.connect(this.themeGain);
     uiLayer.connect(this.uiGain);
     eventLayer.connect(this.uiGain);
@@ -38,26 +43,26 @@ class AudioEngine {
     socialLayer.connect(this.uiGain);
     ambientLayer.connect(this.themeGain);
 
-    // Register scenes with the manager
-    audioSceneManager.registerScene("normal", dashboardScene);
-    audioSceneManager.registerScene("landing", homepageScene);
-    audioSceneManager.registerScene("workspace", workspaceScene);
-    audioSceneManager.registerScene("governance", governanceScene);
-    audioSceneManager.registerScene("crisis", crisisScene);
-    audioSceneManager.registerScene("portfolio", portfolioScene);
-    audioSceneManager.registerScene("skill-galaxy", skillGalaxyScene);
-    audioSceneManager.registerScene("guild-hub", guildHubScene);
-    audioSceneManager.registerScene("community", communityScene);
-    audioSceneManager.registerScene("onboarding", onboardingScene);
-    audioSceneManager.registerScene("marketplace", workspaceScene);
-    audioSceneManager.registerScene("atlas", homepageScene);
+    // Register scenes
+    audioSceneManager.registerScene('normal',      dashboardScene);
+    audioSceneManager.registerScene('landing',     homepageScene);
+    audioSceneManager.registerScene('workspace',   workspaceScene);
+    audioSceneManager.registerScene('governance',  governanceScene);
+    audioSceneManager.registerScene('crisis',      crisisScene);
+    audioSceneManager.registerScene('portfolio',   portfolioScene);
+    audioSceneManager.registerScene('skill-galaxy', skillGalaxyScene);
+    audioSceneManager.registerScene('guild-hub',   guildHubScene);
+    audioSceneManager.registerScene('community',   communityScene);
+    audioSceneManager.registerScene('onboarding',  onboardingScene);
+    audioSceneManager.registerScene('marketplace', workspaceScene);
+    audioSceneManager.registerScene('atlas',       portfolioScene);
   }
 
   async start() {
     if (!this.started) {
       await Tone.start();
       this.started = true;
-      console.log("Audio Engine Started");
+      console.log('Audio Engine started (lookAhead:', Tone.getContext().lookAhead, 's)');
     }
   }
 
@@ -66,10 +71,8 @@ class AudioEngine {
     if (!this.themeStarted) {
       await themeLayer.start();
       this.themeStarted = true;
-      console.log("Theme Music Started");
-
-      // Initialize with default scene
-      audioSceneManager.transitionTo("normal");
+      console.log('Theme music started');
+      audioSceneManager.transitionTo('normal');
     }
   }
 
@@ -87,15 +90,13 @@ class AudioEngine {
   }
 
   setMasterVolume(value) {
-    // Input value from slider (0-100) to decibels
-    // Logarithmic scale is better for volume
     const db = value === 0 ? -Infinity : Tone.gainToDb(value / 100);
     Tone.getDestination().volume.rampTo(db, 0.1);
   }
 
   trigger(eventType, payload) {
     if (!this.started) {
-      console.warn(`AudioEngine not started yet. Ignoring event: ${eventType}`);
+      console.warn(`AudioEngine not started — ignoring: ${eventType}`);
       return;
     }
     AudioDirector.dispatch(eventType, payload);
