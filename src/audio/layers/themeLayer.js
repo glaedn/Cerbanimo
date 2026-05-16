@@ -212,14 +212,14 @@ export const themeLayer = {
 
     Tone.Transport.bpm.value = 76;
 
-    // 1. Steel String - Sparse harmonic anchor
+    // 1. Steel String - Rhythmic harmonic anchor
     steelSeq = new Tone.Sequence(
       (time, event) => {
         if (!event?.notes) return;
         const drift = getDrift();
-        // Lowered velocity for more intimacy
-        const vel = (0.08 + state.collaboration * 0.1) * (0.8 + Math.random() * 0.2);
-        steelString.triggerAttackRelease(event.notes, '8n', time + drift, Math.min(vel, 0.2));
+        // Slightly higher velocity for better blend
+        const vel = (0.12 + state.collaboration * 0.1) * (0.8 + Math.random() * 0.2);
+        steelString.triggerAttackRelease(event.notes, '8n', time + drift, Math.min(vel, 0.25));
       },
       progressions[currentProgressionIndex],
       '1m'
@@ -484,10 +484,10 @@ export const themeLayer = {
 
   setMood(moodConfig) {
     const {
-      stringsVol       = -30, // Lowered defaults
-      brassVol         = -34,
-      bassVol          = -28,
-      percVol          = -36,
+      stringsVol       = -20, // Improved blend
+      brassVol         = -36, // Lowered melody (Slide/Harmonica)
+      bassVol          = -20,
+      percVol          = -26,
       reverbWet        = 0.4,
       percussionActive = false,
       choirActive      = false,
@@ -503,12 +503,12 @@ export const themeLayer = {
     } = moodConfig;
 
     steelString.volume.rampTo(stringsVol,     transitionTime);
-    slide.volume.rampTo(stringsVol + 2,       transitionTime);
-    harmonica.volume.rampTo(brassVol,         transitionTime);
-    cosmicPad.volume.rampTo(stringsVol - 8,   transitionTime);
+    slide.volume.rampTo(brassVol,             transitionTime);
+    harmonica.volume.rampTo(brassVol - 2,     transitionTime);
+    cosmicPad.volume.rampTo(stringsVol - 4,   transitionTime);
     starArp.volume.rampTo(stringsVol - 6,     transitionTime);
-    cyberArp.volume.rampTo(stringsVol + 0,    transitionTime);
-    machineSynth.volume.rampTo(stringsVol - 4, transitionTime);
+    cyberArp.volume.rampTo(stringsVol - 2,    transitionTime);
+    machineSynth.volume.rampTo(stringsVol - 6, transitionTime); // Lower machine scale
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
     snare.volume.rampTo(percVol,              transitionTime);
