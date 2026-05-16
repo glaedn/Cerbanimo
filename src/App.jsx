@@ -6,6 +6,7 @@ import PrivateRoute from "./components/PrivateRoute.jsx";
 //import Orbit from "./pages/Orbit.jsx";
 //import IntentionPages from "./pages/IntentionPages.jsx";
 import SiteNav from "./pages/SiteNav.jsx";
+import MusicController from "./components/MusicController.jsx";
 //import IntentionCreation from "./pages/IntentionCreation.jsx";
 //import Intention from "./pages/Intention.jsx";
 //import CapabilityTree from "./pages/CapabilityTree.jsx";
@@ -124,6 +125,7 @@ const AppContent = () => {
 
   return (
     <div className="App">
+      {isAuthenticated && <MusicController />}
       <Toaster
         position="top-right"
         toastOptions={{
