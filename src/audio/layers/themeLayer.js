@@ -52,32 +52,32 @@ const noiseSwell = new Tone.NoiseSynth({
 const steelString = new Tone.PolySynth(Tone.AMSynth, {
   harmonicity:        3.5,
   oscillator:         { type: 'triangle' },
-  envelope:           { attack: 0.005, decay: 0.35, sustain: 0.08, release: 1.4 },
+  envelope:           { attack: 0.1, decay: 0.6, sustain: 0.1, release: 2 },
   modulation:         { type: 'square' },
-  modulationEnvelope: { attack: 0.002, decay: 0.18, sustain: 0, release: 0.4 },
+  modulationEnvelope: { attack: 0.05, decay: 0.3, sustain: 0, release: 0.8 },
 }).connect(canyonDelay);
 
 const slide = new Tone.MonoSynth({
   oscillator:      { type: 'sawtooth' },
-  filter:          { Q: 3, type: 'lowpass', rolloff: -24 },
-  filterEnvelope:  { attack: 0.06, decay: 0.5, sustain: 0.5, release: 2.5, baseFrequency: 280, octaves: 3.5 },
-  envelope:        { attack: 0.1, decay: 0.6, sustain: 0.6, release: 3 },
-  portamento:       0.25, // increased for emotional bends
+  filter:          { Q: 2, type: 'lowpass', rolloff: -24 },
+  filterEnvelope:  { attack: 0.2, decay: 0.8, sustain: 0.5, release: 4, baseFrequency: 200, octaves: 3 },
+  envelope:        { attack: 0.4, decay: 1, sustain: 0.7, release: 5 },
+  portamento:       0.4, // increased for more fluid, less gridlocked transitions
 }).connect(canyonDelay);
 
 const harmonica = new Tone.PolySynth(Tone.FMSynth, {
-  harmonicity:        2,
-  modulationIndex:    4.5,
-  oscillator:         { type: 'triangle' },
-  envelope:           { attack: 0.12, decay: 0.25, sustain: 0.65, release: 1.8 }, // slightly slower attack
-  modulation:         { type: 'sawtooth' },
-  modulationEnvelope: { attack: 0.12, decay: 0.2, sustain: 0.5, release: 1.2 },
+  harmonicity:        1.5,
+  modulationIndex:    3,
+  oscillator:         { type: 'sine' },
+  envelope:           { attack: 0.3, decay: 0.4, sustain: 0.6, release: 2.5 },
+  modulation:         { type: 'triangle' },
+  modulationEnvelope: { attack: 0.2, decay: 0.3, sustain: 0.4, release: 1.5 },
 }).connect(canyonDelay);
 
 const cosmicPad = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: 'sine' },
-  envelope:   { attack: 8, decay: 1, sustain: 0.8, release: 10 },
-  volume:     -16,
+  envelope:   { attack: 12, decay: 1, sustain: 0.8, release: 12 },
+  volume:     -22,
 }).connect(spaceReverb);
 
 const starArp = new Tone.Synth({
@@ -134,13 +134,19 @@ const getDrift = () => (Math.random() - 0.5) * 0.03;
 
 function mutatePhrase(phrase, chance = 0.15) {
   if (!phrase) return null;
-  return phrase.map(note => {
-    if (!note || Math.random() > chance) return note;
+  return phrase.map(item => {
+    if (!item || Math.random() > chance) return item;
+
+    // Handle both string notes and event objects
+    const isObject = typeof item === 'object' && item.note;
+    const note = isObject ? item.note : item;
+
     const interval = Math.random() > 0.5 ? 2 : -2;
     try {
-      return Tone.Frequency(note).transpose(interval).toNote();
+      const newNote = Tone.Frequency(note).transpose(interval).toNote();
+      return isObject ? { ...item, note: newNote } : newNote;
     } catch {
-      return note;
+      return item;
     }
   });
 }
@@ -206,13 +212,14 @@ export const themeLayer = {
 
     Tone.Transport.bpm.value = 76;
 
-    // 1. Steel String - Repetitive rhythmic anchor
+    // 1. Steel String - Sparse harmonic anchor
     steelSeq = new Tone.Sequence(
       (time, event) => {
         if (!event?.notes) return;
         const drift = getDrift();
-        const vel = (0.15 + state.collaboration * 0.15) * (0.8 + Math.random() * 0.2);
-        steelString.triggerAttackRelease(event.notes, '16n', time + drift, Math.min(vel, 0.35));
+        // Lowered velocity for more intimacy
+        const vel = (0.08 + state.collaboration * 0.1) * (0.8 + Math.random() * 0.2);
+        steelString.triggerAttackRelease(event.notes, '8n', time + drift, Math.min(vel, 0.2));
       },
       progressions[currentProgressionIndex],
       '1m'
@@ -241,32 +248,36 @@ export const themeLayer = {
       '1m'
     );
 
-    // 3. Slide Guitar - Long emotional bends (Phrase A/B)
+    // 3. Slide Guitar - Now supports fluid rhythmic cells
     slideSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.melodyActive && note) {
+      (time, event) => {
+        if (state.melodyActive && event?.note) {
           const drift = getDrift();
           const chord = progressions[currentProgressionIndex][measureCounter % 16];
-          const anchoredNote = anchorToChord(note, chord?.notes);
-          slide.triggerAttackRelease(anchoredNote, '2n', time + drift, 0.22);
+          const anchoredNote = anchorToChord(event.note, chord?.notes);
+          const dur = event.dur || '4n';
+          const vel = (event.vel || 0.12) * (0.8 + Math.random() * 0.4);
+          slide.triggerAttackRelease(anchoredNote, dur, time + drift, vel);
         }
       },
-      new Array(8).fill(null), // Placeholder, updated by Conductor
-      '2n'
+      new Array(32).fill(null),
+      '8n'
     );
 
-    // 4. Harmonica - Sparse answering phrases (Response)
+    // 4. Harmonica - Answering with rhythmic diversity
     harmonicaSeq = new Tone.Sequence(
-      (time, note) => {
-        if (state.choirActive && note) {
+      (time, event) => {
+        if (state.choirActive && event?.note) {
           const drift = getDrift();
           const chord = progressions[currentProgressionIndex][measureCounter % 16];
-          const anchoredNote = anchorToChord(note, chord?.notes);
-          harmonica.triggerAttackRelease([anchoredNote], '2n', time + drift, 0.18);
+          const anchoredNote = anchorToChord(event.note, chord?.notes);
+          const dur = event.dur || '4n';
+          const vel = (event.vel || 0.1) * (0.8 + Math.random() * 0.4);
+          harmonica.triggerAttackRelease([anchoredNote], dur, time + drift, vel);
         }
       },
-      new Array(8).fill(null), // Placeholder, updated by Conductor
-      '2n'
+      new Array(32).fill(null),
+      '8n'
     );
 
     // 5. Stellar Arp - Embellishments
@@ -358,14 +369,12 @@ export const themeLayer = {
 
     // 10. The Conductor - Manages Call & Response and Phrase Evolution
     conductorId = Tone.Transport.scheduleRepeat(() => {
-      const phraseIdx = Math.floor((measureCounter % 16) / 4); // 0,1,2,3 for A,A',B,A
-
       // Update Arp Motifs every 4 bars
       if (measureCounter % 4 === 0) {
-        const starCell = melodicMaterial.starCells[measureCounter % melodicMaterial.starCells.length];
+        const starCell = melodicMaterial.starCells[Math.floor(Math.random() * melodicMaterial.starCells.length)];
         starArpSeq.events = mutatePhrase(starCell, 0.1);
 
-        const cyberCell = melodicMaterial.cyberCells[measureCounter % melodicMaterial.cyberCells.length];
+        const cyberCell = melodicMaterial.cyberCells[Math.floor(Math.random() * melodicMaterial.cyberCells.length)];
         cyberArpSeq.events = mutatePhrase(cyberCell, 0.05);
       }
 
@@ -374,12 +383,12 @@ export const themeLayer = {
         // Bar 1-4: Slide plays
         activeSlide = melodicMaterial.slideCells[Math.floor(Math.random() * melodicMaterial.slideCells.length)];
         slideSeq.events = activeSlide;
-        harmonicaSeq.events = new Array(8).fill(null);
+        harmonicaSeq.events = new Array(32).fill(null);
       } else if (measureCounter % 8 === 4) {
         // Bar 5-8: Harmonica responds
-        slideSeq.events = new Array(8).fill(null);
+        slideSeq.events = new Array(32).fill(null);
         const harmCell = melodicMaterial.harmonicaCells[Math.floor(Math.random() * melodicMaterial.harmonicaCells.length)];
-        activeHarmonica = mutatePhrase(harmCell, 0.2); // slight variation in response
+        activeHarmonica = mutatePhrase(harmCell, 0.2);
         harmonicaSeq.events = activeHarmonica;
       }
 
@@ -475,10 +484,10 @@ export const themeLayer = {
 
   setMood(moodConfig) {
     const {
-      stringsVol       = -22,
-      brassVol         = -26,
-      bassVol          = -22,
-      percVol          = -28,
+      stringsVol       = -30, // Lowered defaults
+      brassVol         = -34,
+      bassVol          = -28,
+      percVol          = -36,
       reverbWet        = 0.4,
       percussionActive = false,
       choirActive      = false,
@@ -494,16 +503,16 @@ export const themeLayer = {
     } = moodConfig;
 
     steelString.volume.rampTo(stringsVol,     transitionTime);
-    slide.volume.rampTo(stringsVol + 3,       transitionTime);
+    slide.volume.rampTo(stringsVol + 2,       transitionTime);
     harmonica.volume.rampTo(brassVol,         transitionTime);
-    cosmicPad.volume.rampTo(stringsVol - 6,   transitionTime);
-    starArp.volume.rampTo(stringsVol - 4,     transitionTime);
-    cyberArp.volume.rampTo(stringsVol + 2,    transitionTime);
-    machineSynth.volume.rampTo(stringsVol - 2, transitionTime);
+    cosmicPad.volume.rampTo(stringsVol - 8,   transitionTime);
+    starArp.volume.rampTo(stringsVol - 6,     transitionTime);
+    cyberArp.volume.rampTo(stringsVol + 0,    transitionTime);
+    machineSynth.volume.rampTo(stringsVol - 4, transitionTime);
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
     snare.volume.rampTo(percVol,              transitionTime);
-    hat.volume.rampTo(percVol - 6,            transitionTime);
+    hat.volume.rampTo(percVol - 8,            transitionTime);
     spaceReverb.wet.rampTo(reverbWet,         transitionTime);
 
     state.percussionActive = percussionActive;
