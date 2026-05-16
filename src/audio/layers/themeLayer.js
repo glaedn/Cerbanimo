@@ -341,7 +341,7 @@ export const themeLayer = {
           snare.triggerAttackRelease('8n', time + getDrift(), 0.12);
         }
       },
-      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
       '8n'
     );
 
