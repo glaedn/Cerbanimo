@@ -142,6 +142,9 @@ let mutationId   = null;
 let started      = false;
 let pendingSwap  = null;
 
+let steelSeq, padSeq, slideSeq, harmonicaSeq, starArpSeq, cyberArpSeq, bassSeq,
+    kickSeq, snareSeq, hatSeq;
+
 // Generative State Tracking
 let starMotifIndex = 0;
 let starMotifStep  = 0;
