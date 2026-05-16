@@ -63,6 +63,18 @@ const pulseHat = new Tone.MetalSynth({
   modulationIndex: 32
 }).connect(reverb);
 
+const kick = new Tone.MembraneSynth({
+  pitchDecay: 0.05,
+  octaves: 4,
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 }
+}).connect(limiter);
+
+const snare = new Tone.NoiseSynth({
+  noise: { type: "white" },
+  envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
+}).connect(reverb);
+
 const arp = new Tone.Synth({
   oscillator: { type: "square" },
   envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
@@ -74,10 +86,26 @@ const melody = new Tone.DuoSynth({
 }).connect(reverb);
 
 // MUSICAL DATA
+// Chords are wrapped in objects to prevent Tone.Sequence from subdividing them
 const progressions = [
-  [["D3","F3","A3"], ["Bb2","D3","F3"], ["F3","A3","C4"], ["C3","E3","G3"]],
-  [["D3","A3","C4"], ["G2","Bb2","D3"], ["Bb2","D3","F3"], ["A2","C3","E3"]],
-  [["D3","F3","A3"], ["F3","A3","C4"], ["Bb2","D3","F3"], ["A2","C3","E3"]]
+  [
+    { notes: ["D3","F3","A3"] },
+    { notes: ["Bb2","D3","F3"] },
+    { notes: ["F3","A3","C4"] },
+    { notes: ["C3","E3","G3"] }
+  ],
+  [
+    { notes: ["D3","A3","C4"] },
+    { notes: ["G2","Bb2","D3"] },
+    { notes: ["Bb2","D3","F3"] },
+    { notes: ["A2","C3","E3"] }
+  ],
+  [
+    { notes: ["D3","F3","A3"] },
+    { notes: ["F3","A3","C4"] },
+    { notes: ["Bb2","D3","F3"] },
+    { notes: ["A2","C3","E3"] }
+  ]
 ];
 
 let currentProgressionIndex = 0;
@@ -113,47 +141,55 @@ export const themeLayer = {
 
     Tone.Transport.bpm.value = 88;
 
-    const stringSeq = new Tone.Sequence((time, chord) => {
-      strings.triggerAttackRelease(chord, "2n", time);
+    const stringSeq = new Tone.Sequence((time, event) => {
+      if (event?.notes) strings.triggerAttackRelease(event.notes, "2n", time);
     }, progressions[currentProgressionIndex], "1m");
 
-    const choirSeq = new Tone.Sequence((time, chord) => {
-      if (state.choirActive) {
-        choir.triggerAttackRelease(chord.map(n => Tone.Frequency(n).transpose(12).toNote()), "1n", time);
+    const choirSeq = new Tone.Sequence((time, event) => {
+      if (state.choirActive && event?.notes) {
+        choir.triggerAttackRelease(event.notes.map(n => Tone.Frequency(n).transpose(12).toNote()), "1n", time);
       }
     }, progressions[currentProgressionIndex], "2m");
 
-    const brassSeq = new Tone.Sequence((time, chord) => {
-      if (state.collaboration > 0.6) {
-         brass.triggerAttackRelease(chord[0], "1n", time);
+    const brassSeq = new Tone.Sequence((time, event) => {
+      if (state.collaboration > 0.6 && event?.notes) {
+         brass.triggerAttackRelease(event.notes[0], "1n", time);
       }
     }, progressions[currentProgressionIndex], "1m");
 
     const bassSeq = new Tone.Sequence((time, note) => {
-      if (state.bassIntensity > 0.2) {
+      if (state.bassIntensity > 0.2 && note) {
         bass.triggerAttackRelease(note, "8n", time);
         if (state.bassIntensity > 0.7) subBass.triggerAttackRelease(Tone.Frequency(note).transpose(-12).toNote(), "4n", time);
       }
     }, bassNotes, "4n");
 
-    const taikoSeq = new Tone.Sequence((time) => {
-      if (state.percussionActive) taiko.triggerAttackRelease("D1", "8n", time);
-    }, [0, null, 2, null, 4, 5, null, 7], "8n");
+    const taikoSeq = new Tone.Sequence((time, event) => {
+      if (state.percussionActive && event) taiko.triggerAttackRelease(event, "8n", time);
+    }, ["D1", null, "A1", null, "D1", "A1", null, "E1"], "8n");
 
-    const hatSeq = new Tone.Sequence((time) => {
-      if (state.percussionActive) pulseHat.triggerAttackRelease("16n", time);
-    }, [0, 1, 2, 3, 4, 5, 6, 7], "8n");
+    const kickSeq = new Tone.Sequence((time, active) => {
+      if (state.percussionActive && active) kick.triggerAttackRelease("D1", "8n", time);
+    }, [1, 0, 0, 1, 1, 0, 0, 0], "8n");
 
-    const arpSeq = new Tone.Sequence((time, chord) => {
-      if (state.arpActive && Math.random() < state.arpDensity) {
-        const note = chord[Math.floor(Math.random() * chord.length)];
+    const snareSeq = new Tone.Sequence((time, active) => {
+      if (state.percussionActive && active) snare.triggerAttackRelease("8n", time);
+    }, [0, 0, 1, 0, 0, 0, 1, 0], "8n");
+
+    const hatSeq = new Tone.Sequence((time, active) => {
+      if (state.percussionActive && active) pulseHat.triggerAttackRelease("16n", time);
+    }, [1, 1, 1, 1, 1, 1, 1, 1], "16n");
+
+    const arpSeq = new Tone.Sequence((time, event) => {
+      if (state.arpActive && event?.notes && Math.random() < state.arpDensity) {
+        const note = event.notes[Math.floor(Math.random() * event.notes.length)];
         arp.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), "16n", time);
       }
     }, progressions[currentProgressionIndex], "8n");
 
-    const melodySeq = new Tone.Sequence((time, chord) => {
-      if (state.melodyActive) {
-         const note = chord[2]; // Use the 5th or 3rd
+    const melodySeq = new Tone.Sequence((time, event) => {
+      if (state.melodyActive && event?.notes) {
+         const note = event.notes[2] || event.notes[0];
          melody.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), "2n", time);
       }
     }, progressions[currentProgressionIndex], "2m");
@@ -168,7 +204,7 @@ export const themeLayer = {
       melodySeq.events = nextProg;
     }, "16m");
 
-    sequences = [stringSeq, choirSeq, brassSeq, bassSeq, taikoSeq, hatSeq, arpSeq, melodySeq];
+    sequences = [stringSeq, choirSeq, brassSeq, bassSeq, taikoSeq, kickSeq, snareSeq, hatSeq, arpSeq, melodySeq];
 
     Tone.Transport.loop = true;
     Tone.Transport.loopStart = "0:0:0";
@@ -215,10 +251,10 @@ export const themeLayer = {
 
   setMood(moodConfig) {
     const {
-      stringsVol = -5,
-      brassVol = -15,
-      bassVol = -10,
-      percVol = -15,
+      stringsVol = -12,
+      brassVol = -22,
+      bassVol = -18,
+      percVol = -20,
       reverbWet = 0.45,
       percussionActive = false,
       choirActive = false,
@@ -232,7 +268,9 @@ export const themeLayer = {
     brass.volume.rampTo(brassVol, 4);
     bass.volume.rampTo(bassVol, 4);
     taiko.volume.rampTo(percVol, 4);
-    pulseHat.volume.rampTo(percVol, 4);
+    kick.volume.rampTo(percVol, 4);
+    snare.volume.rampTo(percVol, 4);
+    pulseHat.volume.rampTo(percVol + 6, 4);
     reverb.wet.rampTo(reverbWet, 4);
 
     state.percussionActive = percussionActive;

@@ -72,6 +72,13 @@ class AudioEngine {
     this.uiGain.gain.rampTo(enabled ? 1 : 0, 0.5);
   }
 
+  setMasterVolume(value) {
+    // Input value from slider (0-100) to decibels
+    // Logarithmic scale is better for volume
+    const db = value === 0 ? -Infinity : Tone.gainToDb(value / 100);
+    Tone.getDestination().volume.rampTo(db, 0.1);
+  }
+
   trigger(eventType, payload) {
     if (!this.started) {
       console.warn(`AudioEngine not started yet. Ignoring event: ${eventType}`);

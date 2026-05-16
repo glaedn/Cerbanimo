@@ -12,7 +12,9 @@ import {
   MenuItem,
   Modal,
   Paper,
+  Slider,
   Snackbar,
+  Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -23,12 +25,17 @@ import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import InfoIcon from "@mui/icons-material/Info";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import MusicNoteIcon from "@mui/icons-material/MusicNote";
+import MusicOffIcon from "@mui/icons-material/MusicOff";
 import axios from "axios";
 import NeedDeclarationForm from "../components/NeedDeclarationForm/NeedDeclarationForm.jsx";
 import { useNotifications } from "./NotificationProvider";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { getProfileImageUrl } from "../utils/avatar";
 import { isRouteActive, platformNavItems } from "../utils/platformNavigation";
+import { audioEngine } from "../audio/AudioEngine";
 
 const sidebarItems = platformNavItems.filter((item) => item.label !== "Notifications");
 
@@ -69,6 +76,28 @@ const SiteNav = () => {
     message: "",
     severity: "info",
   });
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [masterVolume, setMasterVolume] = useState(80);
+
+  const toggleMusic = () => {
+    const newState = !musicEnabled;
+    setMusicEnabled(newState);
+    audioEngine.toggleTheme(newState);
+    audioEngine.trigger("ui.click");
+  };
+
+  const toggleSFX = () => {
+    const newState = !sfxEnabled;
+    setSfxEnabled(newState);
+    audioEngine.toggleUI(newState);
+    audioEngine.trigger("ui.click");
+  };
+
+  const handleVolumeChange = (event, newValue) => {
+    setMasterVolume(newValue);
+    audioEngine.setMasterVolume(newValue);
+  };
 
   const avatarUrl = useMemo(() => getProfileImageUrl(profile, user), [profile, user]);
   const recentNotifications = notifications.slice(0, 5);
@@ -165,6 +194,38 @@ const SiteNav = () => {
       </Link>
 
       <div className="site-nav-actions">
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 2, display: { xs: 'none', md: 'flex' } }}>
+          <Tooltip title={`Music ${musicEnabled ? 'On' : 'Off'}`}>
+            <IconButton size="small" onClick={toggleMusic} sx={{ color: musicEnabled ? '#5ff0ff' : '#666' }}>
+              {musicEnabled ? <MusicNoteIcon fontSize="small" /> : <MusicOffIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={`SFX ${sfxEnabled ? 'On' : 'Off'}`}>
+            <IconButton size="small" onClick={toggleSFX} sx={{ color: sfxEnabled ? '#5ff0ff' : '#666' }}>
+              {sfxEnabled ? <VolumeUpIcon fontSize="small" /> : <VolumeOffIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+          <Stack spacing={2} direction="row" sx={{ width: 100, ml: 1 }} alignItems="center">
+            <VolumeOffIcon sx={{ color: '#666', fontSize: 16 }} />
+            <Slider
+              size="small"
+              value={masterVolume}
+              onChange={handleVolumeChange}
+              aria-label="Volume"
+              sx={{
+                color: '#5ff0ff',
+                '& .MuiSlider-thumb': {
+                  width: 12,
+                  height: 12,
+                  '&:before': { boxShadow: '0 0 10px rgba(95, 240, 255, 0.4)' },
+                },
+                '& .MuiSlider-rail': { opacity: 0.2 },
+              }}
+            />
+            <VolumeUpIcon sx={{ color: '#5ff0ff', fontSize: 16 }} />
+          </Stack>
+        </Stack>
+
         {isAuthenticated && (
           <>
             <Tooltip title="Notifications">

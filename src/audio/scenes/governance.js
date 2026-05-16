@@ -1,10 +1,10 @@
 export const governanceScene = {
   bpm: 68,
   mood: {
-    stringsVol: -2,
-    brassVol: -5,
-    bassVol: -12,
-    percVol: -25,
+    stringsVol: -12,
+    brassVol: -25,
+    bassVol: -18,
+    percVol: -20,
     reverbWet: 0.7,
     percussionActive: false,
     choirActive: true,

@@ -1,10 +1,10 @@
 export const workspaceScene = {
   bpm: 96,
   mood: {
-    stringsVol: -10,
-    brassVol: -10,
-    bassVol: -5,
-    percVol: -5,
+    stringsVol: -12,
+    brassVol: -25,
+    bassVol: -18,
+    percVol: -20,
     reverbWet: 0.3,
     percussionActive: true,
     choirActive: false,

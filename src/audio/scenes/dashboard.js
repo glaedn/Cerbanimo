@@ -1,10 +1,10 @@
 export const dashboardScene = {
   bpm: 88,
   mood: {
-    stringsVol: -5,
-    brassVol: -15,
-    bassVol: -10,
-    percVol: -15,
+    stringsVol: -12,
+    brassVol: -25,
+    bassVol: -18,
+    percVol: -20,
     reverbWet: 0.45,
     percussionActive: true,
     choirActive: false,

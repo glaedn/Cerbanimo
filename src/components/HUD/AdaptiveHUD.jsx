@@ -13,7 +13,7 @@ import SignalFeed from './panels/SignalFeed';
 import EntityInspector from './panels/EntityInspector';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import { useEcosystemData } from '../../hooks/useEcosystemData';
-import { ChevronUp, ChevronDown, Monitor, Layout, Settings, Check, Music, Volume2, VolumeX } from 'lucide-react';
+import { ChevronUp, ChevronDown, Monitor, Layout, Settings, Check } from 'lucide-react';
 import { audioEngine } from '../../audio/AudioEngine';
 import './SpaceshipHUD.css'; // Reusing base HUD styles
 
@@ -37,22 +37,6 @@ const AdaptiveHUD = ({ children }) => {
   } = useAppStore();
 
   const [showConfig, setShowConfig] = React.useState(false);
-  const [musicEnabled, setMusicEnabled] = React.useState(true);
-  const [sfxEnabled, setSfxEnabled] = React.useState(true);
-
-  const toggleMusic = () => {
-    const newState = !musicEnabled;
-    setMusicEnabled(newState);
-    audioEngine.toggleTheme(newState);
-    audioEngine.trigger('ui.click');
-  };
-
-  const toggleSFX = () => {
-    const newState = !sfxEnabled;
-    setSfxEnabled(newState);
-    audioEngine.toggleUI(newState);
-    audioEngine.trigger('ui.click');
-  };
   const { width } = useWindowSize();
   const isMobile = width <= 768;
 
@@ -135,26 +119,6 @@ const AdaptiveHUD = ({ children }) => {
 
   return (
     <div className={`hud-container ${isMobile ? 'mobile-hud' : ''} context-${activeContext} mode-${hudMode}`}>
-      {/* Audio Controls */}
-      <div style={{ position: 'fixed', top: '20px', left: '20px', zIndex: 1000, display: 'flex', gap: '8px' }}>
-        <button
-          onClick={toggleMusic}
-          style={{ background: 'rgba(0, 243, 255, 0.1)', border: '1px solid #00f3ff', color: musicEnabled ? '#00f3ff' : '#666', padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Orbitron', fontSize: '0.6rem', backdropFilter: 'blur(10px)' }}
-          title="Toggle Music"
-        >
-          {musicEnabled ? <Music size={14} /> : <VolumeX size={14} />}
-          <span>MUSIC {musicEnabled ? 'ON' : 'OFF'}</span>
-        </button>
-        <button
-          onClick={toggleSFX}
-          style={{ background: 'rgba(0, 243, 255, 0.1)', border: '1px solid #00f3ff', color: sfxEnabled ? '#00f3ff' : '#666', padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Orbitron', fontSize: '0.6rem', backdropFilter: 'blur(10px)' }}
-          title="Toggle SFX"
-        >
-          {sfxEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          <span>SFX {sfxEnabled ? 'ON' : 'OFF'}</span>
-        </button>
-      </div>
-
       <PresenceIndicators />
       <OverlayManager />
 
