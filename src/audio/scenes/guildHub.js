@@ -2,13 +2,13 @@
 //
 // "GUILD HUB" — G Major, 78 BPM
 //
-// 16-bar communal phrase. Warm, welcoming, and grounded.
+// Warm communal motifs. Conversational call and response.
 
 export const guildHubScene = {
   bpm: 78,
   transitionTime: 3,
   mood: {
-    stringsVol: -18,
+    stringsVol: -20,
     brassVol: -24,
     bassVol: -20,
     percVol: -28,
@@ -28,8 +28,8 @@ export const guildHubScene = {
           { notes: ['C3', 'G3', 'E4'] },     // C
           { notes: ['D3', 'A3', 'F#4'] },    // D
           null,
-          { notes: ['E3', 'G3', 'B3'] },
-          { notes: ['A2', 'C3', 'E3'] },
+          { notes: ['E3', 'G3', 'B3'] },     // Em
+          { notes: ['A2', 'C3', 'E3'] },     // Am
           null,
           { notes: ['D3', 'F#3', 'C4'] },    // D7
           { notes: ['G2', 'B2', 'D3', 'F#3'] }, // Gmaj7
@@ -42,19 +42,21 @@ export const guildHubScene = {
           { notes: ['C3', 'D3', 'G3'] },     // G/C
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['B3', 'D4', 'G3', 'A3', 'C4', 'B3', 'G3', 'D4'],
+      ],
+      harmonicaCells: [
+        ['D4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4', 'G4'],
+      ],
+      starCells: [
         ['G5', 'B5', 'D6'],
         ['A5', 'C#6', 'E6'],
-        ['G5', 'A5', 'B5', 'D6'],
       ],
-      cyberNotes: [
-        ['G4', 'B4', 'D5'],
-        ['C5', 'E5', 'G5'],
-        ['D5', 'F#5', 'A5'],
+      cyberCells: [
+        ['G4', 'B4', 'D5', 'G5'],
+        ['D5', 'F#5', 'A5', 'F#5'],
       ],
       bassNotes:  ['G1', 'D1', 'C1', 'E1', 'D1', 'A1', 'G1', 'B1'],
-      slideNotes: ['B3', 'D4', 'G3', 'A3', 'C4', 'B3', 'G3', 'D4'],
-      harmonicaNotes: ['D4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4', 'G4'],
     },
   }
 };

@@ -2,17 +2,17 @@
 //
 // "COMMUNITY HUB" — G Major, 84 BPM
 //
-// 16-bar busy phrase. All layers active. A sense of life and population.
+// Busy conversational motifs. Diverse cell-based melodies.
 
 export const communityScene = {
   bpm: 84,
   transitionTime: 2,
   mood: {
-    stringsVol: -16,
-    brassVol: -20,
-    bassVol: -18,
+    stringsVol: -20,
+    brassVol: -22,
+    bassVol: -20,
     percVol: -22,
-    reverbWet: 0.3,
+    reverbWet: 0.35,
     percussionActive: true,
     choirActive: true,
     arpActive: true,
@@ -42,19 +42,22 @@ export const communityScene = {
           { notes: ['C3', 'D3', 'G3', 'B3'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['G3', 'B3', 'D4', 'B3', 'C4', 'E4', 'G4', 'E4'],
+        ['D4', 'F#4', 'A4', 'F#4', 'G4', 'D4', 'B3', 'G3'],
+      ],
+      harmonicaCells: [
+        ['D4', 'G4', 'B4', 'G4', 'C5', 'E5', 'D5', 'B4'],
+      ],
+      starCells: [
         ['G5', 'B5', 'D6'],
         ['C6', 'E6', 'G6'],
-        ['D6', 'F#6', 'A6', 'G6'],
       ],
-      cyberNotes: [
-        ['G4', 'B4', 'D5'],
-        ['C5', 'E5', 'G5'],
-        ['D5', 'F#5', 'A5'],
+      cyberCells: [
+        ['G4', 'B4', 'D5', 'G5'],
+        ['C5', 'E5', 'G5', 'E5'],
       ],
       bassNotes:  ['G1', 'D1', 'C1', 'E1', 'D1', 'A1', 'B1', 'G1'],
-      slideNotes: ['G3', 'B3', 'D4', 'B3', 'C4', 'E4', 'G4', 'E4'],
-      harmonicaNotes: ['D4', 'G4', 'B4', 'G4', 'C5', 'E5', 'D5', 'B4'],
     }
   }
 };

@@ -2,8 +2,7 @@
 //
 // "THE SKILL GALAXY" — E major, 58 BPM
 //
-// 16-bar mapping phrase. Discovery and self-reflection.
-// Maximum shimmering arps, no percussion or bass.
+// Shimmering structured motifs. Reflective and evolving.
 
 export const skillGalaxyScene = {
   bpm: 58,
@@ -43,19 +42,17 @@ export const skillGalaxyScene = {
           { notes: ['A3', 'B3', 'E4'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [['G#4', 'E4', 'F#4', 'B4']],
+      harmonicaCells: [['B4', 'E5', 'G#5', 'C#5']],
+      starCells: [
         ['E5', 'G#5', 'B5'],
-        ['F#5', 'B5', 'C#6'],
-        ['G#5', 'B5', 'E6', 'C#6'],
+        ['G#5', 'B5', 'E6'],
       ],
-      cyberNotes: [
-        ['E4', 'G#4', 'B4'],
-        ['A4', 'C#5', 'E5'],
-        ['B4', 'D#5', 'F#5'],
+      cyberCells: [
+        ['E4', 'G#4', 'B4', 'E5'],
+        ['A4', 'C#5', 'E5', 'C#5'],
       ],
       bassNotes:  ['E1', 'B1', 'A1', 'F#1', 'G#1', 'C#1', 'B1', 'E1'],
-      slideNotes: ['G#4', 'E4', 'F#4', 'B4'],
-      harmonicaNotes: ['B4', 'E5', 'G#5', 'C#5'],
     }
   }
 };

@@ -2,25 +2,24 @@
 //
 // "NEON SALOON" — Bb major / Bb Mixolydian, 76 BPM
 //
-// 16-bar narrative phrase. Drifting neon fog, digital tumbleweeds.
-// Key shift from G to Bb adds a half-step of brightness.
+// Structured neon motifs. Repetitive rhythmic anchors.
 
 export const dashboardScene = {
   bpm:            76,
   transitionTime:  2,
   mood: {
-    stringsVol:       -20,
+    stringsVol:       -22,
     brassVol:         -32,
-    bassVol:          -22,
+    bassVol:          -24,
     percVol:          -30,
-    reverbWet:         0.45,
+    reverbWet:         0.4,
     percussionActive:  true,
     choirActive:       false,
     arpActive:         true,
     cyberActive:       true,
     melodyActive:      false,
-    arpDensity:        0.3,
-    cyberDensity:      0.35,
+    arpDensity:        0.2,
+    cyberDensity:      0.3,
     bassIntensity:     0.5,
     melodicMaterial: {
       progressions: [
@@ -43,19 +42,21 @@ export const dashboardScene = {
           { notes: ['F3', 'A3', 'Eb4'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['D4', 'F4', 'Bb3', 'D4', 'Eb4', 'G3', 'F4', 'Bb3'],
+      ],
+      harmonicaCells: [
+        ['F4', 'Bb4', 'D5', 'G5'],
+      ],
+      starCells: [
         ['Bb5', 'F6', 'G6'],
         ['C6', 'F6', 'G6'],
-        ['Bb5', 'C6', 'F6', 'D6'],
       ],
-      cyberNotes: [
-        ['Bb4', 'D5', 'F5'],
-        ['Eb5', 'G5', 'Bb5'],
-        ['F5', 'A5', 'C6', 'Bb5'],
+      cyberCells: [
+        ['Bb4', 'D5', 'F5', 'Bb5'],
+        ['Eb5', 'G5', 'Bb5', 'G5'],
       ],
       bassNotes:  ['Bb1', 'F1', 'Eb1', 'G1', 'F1', 'D1', 'C1', 'Bb1'],
-      slideNotes: ['D4', 'F4', 'Bb3', 'Eb4', 'G4', 'F4', 'D4', 'Bb3'],
-      harmonicaNotes: ['F4', 'Bb4', 'D5', 'G5', 'F5', 'D5', 'C5', 'Bb4'],
     },
   },
 };

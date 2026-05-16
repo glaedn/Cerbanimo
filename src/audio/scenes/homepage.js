@@ -2,18 +2,17 @@
 //
 // "FIRST LIGHT ON THE FRONTIER" — Db major, 66 BPM
 //
-// Expanded to 16-bar harmonic arcs. Sparse, suspended, and drifting.
-// Cinematic discovery and grandeur.
+// Structured motifs for cinematic discovery. Long emotional bends on slide.
 
 export const homepageScene = {
   bpm:            66,
   transitionTime:  5,
   mood: {
-    stringsVol:       -22,
-    brassVol:         -24,
+    stringsVol:       -24,
+    brassVol:         -26,
     bassVol:          -28,
     percVol:          -60,
-    reverbWet:         0.75,
+    reverbWet:         0.7,
     percussionActive:  false,
     choirActive:       true,
     arpActive:         false,
@@ -43,19 +42,23 @@ export const homepageScene = {
           { notes: ['Ab2', 'C3', 'Gb3'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['F4', null, 'Db4', 'Eb4', 'F4', null, 'Ab4', 'F4'],
+        ['Bb4', 'Ab4', 'F4', null, 'Eb4', null, 'Db4', null],
+      ],
+      harmonicaCells: [
+        ['Ab4', 'Db5', 'F5', 'Db5'],
+        ['F5', 'Eb5', 'Db5', 'Ab4'],
+      ],
+      starCells: [
         ['Db5', 'Ab5', 'Db6'],
         ['Eb5', 'Ab5', 'Bb5'],
-        ['Db5', 'Eb5', 'Ab5', 'F5'],
       ],
-      cyberNotes: [
-        ['Db4', 'Ab4', 'Db5'],
-        ['F4', 'Bb4', 'Db5'],
-        ['Eb4', 'Ab4', 'C5'],
+      cyberCells: [
+        ['Db4', 'Ab4', 'Db5', 'Ab4'],
+        ['F4', 'Bb4', 'Db5', 'Bb4'],
       ],
       bassNotes:  ['Db1', 'Ab1', 'Gb1', 'Bb1', 'Ab1', 'F1', 'Eb1', 'Db1'],
-      slideNotes: ['F4', 'Db4', 'Eb4', 'Ab4', 'Bb4', 'Ab4', 'F4', 'Eb4'],
-      harmonicaNotes: ['Ab4', 'Db5', 'F5', 'Eb5', 'Db5', 'Bb4', 'Ab4', 'Gb4'],
     },
   },
 };

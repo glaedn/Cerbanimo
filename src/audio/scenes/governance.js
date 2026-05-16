@@ -2,8 +2,7 @@
 //
 // "THE IRON VOTE" — F# minor / F# Aeolian, 56 BPM
 //
-// 16-bar solemn phrase. Gravity, distance, and permanence.
-// Slow, deliberate pulses. Like a blockchain confirming history.
+// Solemn structured phrases. Gravitas and deliberation.
 
 export const governanceScene = {
   bpm:            56,
@@ -43,19 +42,21 @@ export const governanceScene = {
           { notes: ['C#3', 'E3', 'G#3', 'B3'] }, // C#m7
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['A3', 'F#3', 'G#3', 'A3', 'C#4', 'B3', 'A3', 'F#3'],
+      ],
+      harmonicaCells: [
+        ['C#4', 'F#4', 'A4', 'E5', 'C#5', 'B4', 'A4', 'F#4'],
+      ],
+      starCells: [
         ['F#5', 'C#6', 'E6'],
         ['A5', 'C#6', 'F#6'],
-        ['F#5', 'A5', 'B5', 'C#6'],
       ],
-      cyberNotes: [
-        ['F#4', 'A4', 'C#5'],
-        ['D5', 'F#5', 'A5'],
-        ['E5', 'G#5', 'B5'],
+      cyberCells: [
+        ['F#4', 'A4', 'C#5', 'A4'],
+        ['D5', 'F#5', 'A5', 'F#5'],
       ],
       bassNotes:  ['F#1', 'C#1', 'D1', 'A1', 'E1', 'B1', 'F#1', 'C#1'],
-      slideNotes: ['A3', 'F#3', 'G#3', 'A3', 'C#4', 'B3', 'A3', 'F#3'],
-      harmonicaNotes: ['C#4', 'F#4', 'A4', 'E5', 'C#5', 'B4', 'A4', 'F#4'],
     },
   },
 };

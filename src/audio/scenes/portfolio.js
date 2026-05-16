@@ -2,14 +2,13 @@
 //
 // "THE TRAIL'S END" — G Major, 70 BPM
 //
-// 16-bar contemplative phrase. Gentle memory-texture, star arp sparse and wide.
-// Looking back at the sunset on the frontier.
+// Reflective structured motifs. Emotional bends on slide.
 
 export const portfolioScene = {
   bpm: 70,
   transitionTime: 4,
   mood: {
-    stringsVol: -22,
+    stringsVol: -24,
     brassVol: -32,
     bassVol: -26,
     percVol: -60,
@@ -43,19 +42,23 @@ export const portfolioScene = {
           { notes: ['D3', 'F#3', 'C4'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['B3', null, 'G3', 'A3', 'B3', null, 'E4', 'G3'],
+        ['F#4', 'D4', 'B3', null, 'G3', null, 'A3', null],
+      ],
+      harmonicaCells: [
+        ['D4', 'G4', 'B4', 'D5'],
+        ['G4', 'B4', 'D5', 'G5'],
+      ],
+      starCells: [
         ['G5', 'B5', 'D6'],
         ['A5', 'D6', 'E6'],
-        ['G5', 'A5', 'D6', 'B5'],
       ],
-      cyberNotes: [
-        ['G4', 'B4', 'D5'],
-        ['C5', 'E5', 'G5'],
-        ['D5', 'F#5', 'A5'],
+      cyberCells: [
+        ['G4', 'B4', 'D5', 'B4'],
+        ['C5', 'E5', 'G5', 'E5'],
       ],
       bassNotes:  ['G1', 'D1', 'E1', 'C1', 'D1', 'B1', 'A1', 'G1'],
-      slideNotes: ['B3', 'G3', 'A3', 'B3', 'E4', 'G3', 'F#4', 'D4'],
-      harmonicaNotes: ['D4', 'G4', 'B4', 'D5', 'G4', 'B4', 'D5', 'G5'],
     },
   },
 };

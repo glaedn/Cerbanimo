@@ -2,14 +2,13 @@
 //
 // "DATA STREAM" — C Dorian, 92 BPM
 //
-// 16-bar industrial/minor phrase. Relentless focus, precise digital pulses.
-// Systems optimal. The cowboy has become the machine.
+// Relentless hypnotic pulses. Industrial focus.
 
 export const workspaceScene = {
   bpm:            92,
   transitionTime:  2,
   mood: {
-    stringsVol:       -16,
+    stringsVol:       -18,
     brassVol:         -60,
     bassVol:          -18,
     percVol:          -22,
@@ -43,19 +42,17 @@ export const workspaceScene = {
           { notes: ['D2', 'F3', 'C4'] },     // Dm7b5
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [['G4', 'Eb4', 'F4', 'G4']],
+      harmonicaCells: [['G4', 'C5', 'Eb5', 'G5']],
+      starCells: [
         ['C5', 'Eb5', 'G5'],
         ['G5', 'Bb5', 'C6'],
-        ['Eb5', 'G5', 'Bb5'],
       ],
-      cyberNotes: [
+      cyberCells: [
         ['C4', 'Eb4', 'G4', 'Bb4'],
-        ['F4', 'Ab4', 'C5', 'Eb5'],
         ['G4', 'Bb4', 'D5', 'F5'],
       ],
       bassNotes:  ['C1', 'G1', 'Bb1', 'Ab1', 'G1', 'Eb1', 'F1', 'C1'],
-      slideNotes: ['G4', 'Eb4', 'F4', 'G4'],
-      harmonicaNotes: ['G4', 'C5', 'Eb5', 'G5'],
     },
   },
 };

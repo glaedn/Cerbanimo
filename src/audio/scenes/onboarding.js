@@ -2,7 +2,7 @@
 //
 // "THE ARRIVAL" — A major, 62 BPM
 //
-// 16-bar harmonic arc. Starts sparse, building a sense of unfolding destiny.
+// Structured unfolding destiny. Long emotional bends.
 
 export const onboardingScene = {
   bpm: 62,
@@ -42,19 +42,21 @@ export const onboardingScene = {
           { notes: ['E3', 'G#3', 'D4'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [
+        ['C#4', null, 'E4', 'A3', 'D4', null, 'F#4', 'E4'],
+      ],
+      harmonicaCells: [
+        ['E4', 'A4', 'C#5', 'F#5'],
+      ],
+      starCells: [
         ['A5', 'E6', 'F#6'],
         ['B5', 'E6', 'G#6'],
-        ['A5', 'B5', 'E6', 'C#6'],
       ],
-      cyberNotes: [
-        ['A4', 'C#5', 'E5'],
-        ['D5', 'F#5', 'A5'],
-        ['E5', 'G#5', 'B5'],
+      cyberCells: [
+        ['A4', 'C#5', 'E5', 'C#5'],
+        ['D5', 'F#5', 'A5', 'F#5'],
       ],
       bassNotes:  ['A1', 'E1', 'D1', 'F#1', 'E1', 'C#1', 'B1', 'A1'],
-      slideNotes: ['C#4', 'E4', 'A3', 'D4', 'F#4', 'E4', 'C#4', 'A3'],
-      harmonicaNotes: ['E4', 'A4', 'C#5', 'F#5', 'E5', 'C#5', 'B4', 'A4'],
     },
   }
 };

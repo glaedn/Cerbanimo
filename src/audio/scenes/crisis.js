@@ -2,14 +2,13 @@
 //
 // "STAMPEDE / HULL BREACH" — E minor, 104 BPM
 //
-// 16-bar tension phrase. Driving, unresolved, and frantic.
-// Minimal reverb, maximum urgency.
+// Frantic tension phrases. Repetitive rhythmic anchors.
 
 export const crisisScene = {
   bpm: 104,
   transitionTime: 0.3,
   mood: {
-    stringsVol: -12,
+    stringsVol: -14,
     brassVol: -60,
     bassVol: -16,
     percVol: -18,
@@ -43,19 +42,17 @@ export const crisisScene = {
           { notes: ['B2', 'D#3', 'A3'] },
         ]
       ],
-      pentatonicHigh: [
+      slideCells: [['E4', 'G4', 'F#4', 'B3']],
+      harmonicaCells: [['B4', 'E5', 'G5', 'F#5']],
+      starCells: [
         ['E5', 'G5', 'B5'],
         ['F#5', 'A5', 'C6'],
-        ['B5', 'D#6', 'A6'],
       ],
-      cyberNotes: [
+      cyberCells: [
         ['E4', 'G4', 'B4', 'D5'],
-        ['C4', 'E4', 'G4', 'B4'],
         ['B3', 'D#4', 'F#4', 'A4'],
       ],
       bassNotes:  ['E1', 'E1', 'C1', 'C1', 'B1', 'B1', 'A1', 'F#1'],
-      slideNotes: ['E4', 'G4', 'F#4', 'B3'],
-      harmonicaNotes: ['B4', 'E5', 'G5', 'F#5'],
     },
   },
 };
