@@ -248,15 +248,17 @@ export const themeLayer = {
       '1m'
     );
 
-    // 3. Slide Guitar - Now supports fluid rhythmic cells
+    // 3. Slide Guitar - Narrative phrasing engine
     slideSeq = new Tone.Sequence(
       (time, event) => {
         if (state.melodyActive && event?.note) {
           const drift = getDrift();
-          const chord = progressions[currentProgressionIndex][measureCounter % 16];
+          // Use measureCounter to ensure we stay synced to the 16-bar harmonic narrative
+          const progressionIdx = measureCounter % 16;
+          const chord = progressions[currentProgressionIndex][progressionIdx];
           const anchoredNote = anchorToChord(event.note, chord?.notes);
           const dur = event.dur || '4n';
-          const vel = (event.vel || 0.12) * (0.8 + Math.random() * 0.4);
+          const vel = (event.vel || 0.12) * (0.7 + Math.random() * 0.4);
           slide.triggerAttackRelease(anchoredNote, dur, time + drift, vel);
         }
       },
@@ -264,15 +266,16 @@ export const themeLayer = {
       '8n'
     );
 
-    // 4. Harmonica - Answering with rhythmic diversity
+    // 4. Harmonica - Bluesy response engine
     harmonicaSeq = new Tone.Sequence(
       (time, event) => {
         if (state.choirActive && event?.note) {
           const drift = getDrift();
-          const chord = progressions[currentProgressionIndex][measureCounter % 16];
+          const progressionIdx = measureCounter % 16;
+          const chord = progressions[currentProgressionIndex][progressionIdx];
           const anchoredNote = anchorToChord(event.note, chord?.notes);
           const dur = event.dur || '4n';
-          const vel = (event.vel || 0.1) * (0.8 + Math.random() * 0.4);
+          const vel = (event.vel || 0.1) * (0.7 + Math.random() * 0.4);
           harmonica.triggerAttackRelease([anchoredNote], dur, time + drift, vel);
         }
       },
@@ -378,18 +381,25 @@ export const themeLayer = {
         cyberArpSeq.events = mutatePhrase(cyberCell, 0.05);
       }
 
-      // Call and Response Logic (8 bar cycles)
-      if (measureCounter % 8 === 0) {
-        // Bar 1-4: Slide plays
+      // Narrative Phrasing Logic (8 bar cycles)
+      // We use the full 32-step arrays (4 measures of 8th notes).
+      // measureCounter % 16 is our loop relative to the 16-bar progression.
+
+      const cyclePos = measureCounter % 8;
+
+      if (cyclePos === 0) {
+        // Measures 1-4: Slide takes the lead with its 4-bar phrase
         activeSlide = melodicMaterial.slideCells[Math.floor(Math.random() * melodicMaterial.slideCells.length)];
         slideSeq.events = activeSlide;
         harmonicaSeq.events = new Array(32).fill(null);
-      } else if (measureCounter % 8 === 4) {
-        // Bar 5-8: Harmonica responds
+        console.log("Conductor: Slide Solo (Measures 1-4)");
+      } else if (cyclePos === 4) {
+        // Measures 5-8: Harmonica responds with its 4-bar phrase
         slideSeq.events = new Array(32).fill(null);
         const harmCell = melodicMaterial.harmonicaCells[Math.floor(Math.random() * melodicMaterial.harmonicaCells.length)];
-        activeHarmonica = mutatePhrase(harmCell, 0.2);
+        activeHarmonica = mutatePhrase(harmCell, 0.15);
         harmonicaSeq.events = activeHarmonica;
+        console.log("Conductor: Harmonica Response (Measures 5-8)");
       }
 
     }, '1m');
@@ -484,10 +494,10 @@ export const themeLayer = {
 
   setMood(moodConfig) {
     const {
-      stringsVol       = -20, // Improved blend
-      brassVol         = -36, // Lowered melody (Slide/Harmonica)
-      bassVol          = -20,
-      percVol          = -26,
+      stringsVol       = -20, // Brought back up for better blend
+      brassVol         = -40, // Further lowered melody for subtlety
+      bassVol          = -20, // Stronger foundation
+      percVol          = -24, // Better presence
       reverbWet        = 0.4,
       percussionActive = false,
       choirActive      = false,
@@ -505,9 +515,9 @@ export const themeLayer = {
     steelString.volume.rampTo(stringsVol,     transitionTime);
     slide.volume.rampTo(brassVol,             transitionTime);
     harmonica.volume.rampTo(brassVol - 2,     transitionTime);
-    cosmicPad.volume.rampTo(stringsVol - 4,   transitionTime);
-    starArp.volume.rampTo(stringsVol - 6,     transitionTime);
-    cyberArp.volume.rampTo(stringsVol - 2,    transitionTime);
+    cosmicPad.volume.rampTo(stringsVol - 2,   transitionTime);
+    starArp.volume.rampTo(stringsVol - 4,     transitionTime);
+    cyberArp.volume.rampTo(stringsVol + 2,    transitionTime);
     machineSynth.volume.rampTo(stringsVol - 6, transitionTime); // Lower machine scale
     bass.volume.rampTo(bassVol,               transitionTime);
     kick.volume.rampTo(percVol,               transitionTime);
