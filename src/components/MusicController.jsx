@@ -10,8 +10,11 @@ const MusicController = () => {
   // Handle context changes
   useEffect(() => {
     console.log(`MusicController: activeContext changed to ${activeContext}`);
-    trigger('context.change', { context: activeContext });
-  }, [activeContext, trigger]);
+    // If we're in crisis mode, keep the crisis context
+    if (!isCrisisMode) {
+      trigger('context.change', { context: activeContext });
+    }
+  }, [activeContext, isCrisisMode, trigger]);
 
   // Handle crisis mode
   useEffect(() => {

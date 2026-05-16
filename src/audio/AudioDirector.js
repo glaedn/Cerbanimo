@@ -2,9 +2,21 @@ import { uiLayer } from "./layers/uiLayer";
 import { eventLayer } from "./layers/eventLayer";
 import { ambientLayer } from "./layers/ambientLayer";
 import { themeLayer } from "./layers/themeLayer";
+import { audioSceneManager } from "./AudioSceneManager";
 
-export function handleEvent(eventType, payload) {
-  console.log(`Handling audio event: ${eventType}`, payload);
+const musicState = {
+  urgency: 0.2,
+  collaboration: 0.8,
+  exploration: 0.5,
+  governance: 0.1,
+  socialDensity: 0.7
+};
+
+export function handleEvent(eventType, payload = {}) {
+  console.log(`AudioDirector dispatch: ${eventType}`, payload);
+
+  const { emotionalWeight = 0.5, urgency = 0.5 } = payload;
+
   switch (eventType) {
     case "ui.click":
       uiLayer.click();
@@ -21,12 +33,18 @@ export function handleEvent(eventType, payload) {
     case "ui.message":
       uiLayer.message();
       break;
+    case "ui.modal_open":
+      uiLayer.openModal();
+      break;
 
     case "task.accepted":
       eventLayer.taskAccepted(payload);
       break;
     case "task.submitted":
       eventLayer.taskSubmitted(payload);
+      // Boost collaboration state on task submission
+      musicState.collaboration = Math.min(1, musicState.collaboration + 0.1);
+      themeLayer.updateState({ collaboration: musicState.collaboration });
       break;
     case "task.approved":
       eventLayer.taskApproved(payload);
@@ -56,18 +74,20 @@ export function handleEvent(eventType, payload) {
 
     case "task.decaying":
       ambientLayer.increaseTension(payload);
-      themeLayer.updateState({ urgency: payload.decay_factor || 0.5 });
+      musicState.urgency = payload.decay_factor || 0.5;
+      themeLayer.updateState({ urgency: musicState.urgency });
       break;
     case "project.health.update":
       ambientLayer.updateProjectTone(payload);
-      themeLayer.updateState({ growth: payload.health_score || 0.5 });
+      musicState.exploration = payload.health_score || 0.5;
+      themeLayer.updateState({ growth: musicState.exploration });
       break;
     case "guild.demand.spike":
       eventLayer.guildSpike(payload);
       break;
 
     case "context.change":
-      themeLayer.setContext(payload.context);
+      audioSceneManager.transitionTo(payload.context);
       break;
     case "state.update":
       themeLayer.updateState(payload);
@@ -78,3 +98,8 @@ export function handleEvent(eventType, payload) {
       break;
   }
 }
+
+// Map the dispatch function for a cleaner API
+export const AudioDirector = {
+  dispatch: handleEvent
+};

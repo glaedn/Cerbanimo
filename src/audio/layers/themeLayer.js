@@ -29,7 +29,7 @@ const bass = new Tone.MonoSynth({
 const kick = new Tone.MembraneSynth().connect(reverb);
 const hat = new Tone.NoiseSynth({
   noise: { type: "white" },
-  envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
+  envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
 }).connect(reverb);
 
 // MUSICAL DATA
@@ -58,10 +58,6 @@ const state = {
   collaboration: 0,
   growth: 0,
   context: "normal"
-};
-
-const synthMap = {
-  strings, brass, bass, kick, hat
 };
 
 export const themeLayer = {
@@ -122,67 +118,15 @@ export const themeLayer = {
     const lowpass = state.urgency > 0.5 ? 400 : 2000;
     bass.filter.frequency.rampTo(lowpass, 2);
 
-    // Growth affects volume and complexity (simplified here as volume)
+    // Growth affects volume
     const growthVol = Tone.gainToDb(Math.max(0.1, state.growth));
     strings.volume.rampTo(growthVol, 2);
 
-    // Collaboration affects stereo width (simplified as reverb wet)
+    // Collaboration affects reverb wet
     reverb.wet.rampTo(0.3 + state.collaboration * 0.4, 2);
   },
 
-  setContext(context) {
-    state.context = context;
-    console.log(`Setting audio context to: ${context}`);
-
-    switch (context) {
-      case "landing":
-        this.setMood({
-          stringsVol: 0,
-          brassVol: -20,
-          bassVol: -10,
-          percVol: -30,
-          reverbWet: 0.8
-        });
-        break;
-      case "portfolio":
-        this.setMood({
-          stringsVol: -5,
-          brassVol: -40,
-          bassVol: -15,
-          percVol: -40,
-          reverbWet: 0.5
-        });
-        break;
-      case "workspace":
-        this.setMood({
-          stringsVol: -10,
-          brassVol: -10,
-          bassVol: -5,
-          percVol: -5,
-          reverbWet: 0.3
-        });
-        break;
-      case "crisis":
-        this.setMood({
-          stringsVol: -2,
-          brassVol: -5,
-          bassVol: 0,
-          percVol: 0,
-          reverbWet: 0.2
-        });
-        break;
-      default:
-        this.setMood({
-          stringsVol: -5,
-          brassVol: -15,
-          bassVol: -10,
-          percVol: -15,
-          reverbWet: 0.45
-        });
-    }
-  },
-
-  setMood({ stringsVol, brassVol, bassVol, percVol, reverbWet }) {
+  setMood({ stringsVol = -5, brassVol = -15, bassVol = -10, percVol = -15, reverbWet = 0.45 }) {
     strings.volume.rampTo(stringsVol, 4);
     brass.volume.rampTo(brassVol, 4);
     bass.volume.rampTo(bassVol, 4);

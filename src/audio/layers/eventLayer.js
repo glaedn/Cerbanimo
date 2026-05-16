@@ -2,6 +2,21 @@ import * as Tone from "tone";
 
 const poly = new Tone.PolySynth().toDestination();
 
+// Specialized Synths for Achievement Orchestration
+const brassSwell = new Tone.PolySynth(Tone.FMSynth, {
+  envelope: { attack: 0.5, decay: 0.5, sustain: 1, release: 2 }
+}).toDestination();
+
+const celestaSparkle = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 1 }
+}).toDestination();
+
+const subBassLift = new Tone.MonoSynth({
+  oscillator: { type: "triangle" },
+  envelope: { attack: 0.1, decay: 0.5, sustain: 0.8, release: 2 }
+}).toDestination();
+
 // Orchestral motifs for events
 export const eventLayer = {
   taskAccepted({ impact_weight = 0.5 } = {}) {
@@ -10,8 +25,10 @@ export const eventLayer = {
   },
 
   taskSubmitted({ impact_weight = 0.5 } = {}) {
-    // Blueprint: Ascending orchestral flourish
-    poly.triggerAttackRelease(["D4", "F4", "A4", "D5"], "4n");
+    // BIG moment: low drum hit + ascending flourish
+    const now = Tone.now();
+    subBassLift.triggerAttackRelease("D2", "4n", now);
+    poly.triggerAttackRelease(["D4", "F4", "A4", "D5"], "4n", now + 0.1);
   },
 
   taskApproved({ impact_weight = 1.0 } = {}) {
@@ -41,12 +58,23 @@ export const eventLayer = {
   },
 
   levelUp() {
-    // Shimmering choir/brass bloom
+    // Shimmering choir/brass bloom stack
     const now = Tone.now();
-    poly.triggerAttackRelease("D4", "4n", now);
-    poly.triggerAttackRelease("F4", "4n", now + 0.1);
-    poly.triggerAttackRelease("A4", "4n", now + 0.2);
-    poly.triggerAttackRelease("D5", "2n", now + 0.3);
+
+    // Sub bass grounding
+    subBassLift.triggerAttackRelease("D1", "1n", now);
+
+    // Brass swell
+    brassSwell.triggerAttackRelease(["D3", "A3", "D4"], "1n", now);
+
+    // Celesta sparkles
+    const sparkles = ["D6", "F#6", "A6", "D7"];
+    sparkles.forEach((note, i) => {
+      celestaSparkle.triggerAttackRelease(note, "4n", now + i * 0.1);
+    });
+
+    // Main choir-like poly accent
+    poly.triggerAttackRelease(["D4", "F#4", "A4", "D5"], "1n", now + 0.3);
   },
 
   collaborationInvite() {
@@ -55,7 +83,10 @@ export const eventLayer = {
   },
 
   votePassed() {
-    poly.triggerAttackRelease(["D4", "F#4", "A4", "D5"], "2n");
+    // Ceremonial horn cadence
+    const now = Tone.now();
+    brassSwell.triggerAttackRelease(["D3", "F#3", "A3"], "2n", now);
+    brassSwell.triggerAttackRelease(["D4", "F#4", "A4"], "2n", now + 0.2);
   },
 
   voteFailed() {

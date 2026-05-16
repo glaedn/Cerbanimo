@@ -3,9 +3,10 @@ import * as Tone from "tone";
 // PERSISTENT SYNTHS
 const clickSynth = new Tone.MembraneSynth().toDestination();
 
+// Tiny glass tick / digital pluck for hover
 const hoverSynth = new Tone.Synth({
   oscillator: { type: "sine" },
-  envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+  envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
 }).toDestination();
 
 const confirmSynth = new Tone.PolySynth(Tone.Synth, {
@@ -30,6 +31,12 @@ const messageSynth = new Tone.PolySynth(Tone.DuoSynth, {
   }
 }).toDestination();
 
+// Reverse shimmer for modal open
+const shimmerSynth = new Tone.NoiseSynth({
+  noise: { type: "white" },
+  envelope: { attack: 0.1, decay: 0.2, sustain: 0.1, release: 0.3 }
+}).toDestination();
+
 export const uiLayer = {
   click() {
     if (Tone.getContext().state !== 'running') return;
@@ -38,7 +45,8 @@ export const uiLayer = {
 
   hover() {
     if (Tone.getContext().state !== 'running') return;
-    hoverSynth.triggerAttackRelease("A5", "32n");
+    // High frequency "glass tick"
+    hoverSynth.triggerAttackRelease("C6", "32n");
   },
 
   confirm() {
@@ -53,7 +61,13 @@ export const uiLayer = {
 
   message() {
     if (Tone.getContext().state !== 'running') return;
-    // Soft marimba-like tone
     messageSynth.triggerAttackRelease(["C5", "G5"], "16n");
+  },
+
+  openModal() {
+    if (Tone.getContext().state !== 'running') return;
+    const now = Tone.now();
+    shimmerSynth.triggerAttackRelease("16n", now);
+    hoverSynth.triggerAttackRelease("C5", "8n", now + 0.1);
   }
 };
