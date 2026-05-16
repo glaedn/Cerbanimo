@@ -1,14 +1,18 @@
+// Landing — wide open sky, you just rode in to a new frontier
+// Slow, ambient, cosmic pad dominant; harmonica and slide tell you this place has stories
 export const homepageScene = {
-  bpm: 72,
+  bpm: 68,
   mood: {
-    stringsVol: -12,
-    brassVol: -25,
-    bassVol: -18,
-    percVol: -20,
-    reverbWet: 0.8,
+    stringsVol: -16,     // steel string barely audible — just texture
+    brassVol: -18,       // harmonica forward — sets the emotional tone
+    bassVol: -20,        // bass present but soft
+    percVol: -60,        // no drums — silence of space
+    reverbWet: 0.8,      // maximum reverb — you're out in the open
     percussionActive: false,
-    choirActive: true,
-    arpActive: false,
-    melodyActive: true
-  }
+    choirActive: true,   // harmonica: yes — this is the face of the platform
+    arpActive: false,    // no star arp — don't overcrowd the arrival
+    melodyActive: true,  // slide: yes — gives the landing page a voice
+    arpDensity: 0.2,
+    bassIntensity: 0.3,
+  },
 };
