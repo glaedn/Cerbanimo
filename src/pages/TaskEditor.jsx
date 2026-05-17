@@ -76,7 +76,7 @@ const TaskEditor = ({
       if (currentUser?.sub) {
         try {
           const token = await getAccessTokenSilently({
-            audience: `${import.meta.env.VITE_BACKEND_URL}`,
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: "openid profile email",
           });
           const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile`, {
@@ -101,7 +101,7 @@ const TaskEditor = ({
     const fetchProjectTasks = async () => {
       try {
         const token = await getAccessTokenSilently({
-          audience: `${import.meta.env.VITE_BACKEND_URL}`,
+          audience: import.meta.env.VITE_BACKEND_URL,
           scope: "openid profile email",
         });
         const response = await axios.get(
@@ -136,7 +136,7 @@ const TaskEditor = ({
             taskForm.dependencies.map(async (depId) => {
               try {
                 const token = await getAccessTokenSilently({
-                  audience: `${import.meta.env.VITE_BACKEND_URL}`,
+                  audience: import.meta.env.VITE_BACKEND_URL,
                   scope: "openid profile email",
                 });
                 const response = await axios.get(

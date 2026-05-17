@@ -59,7 +59,7 @@ const CommunityMarketplace = ({ communityId }) => {
 
     try {
       const token = await getAccessTokenSilently({
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+        audience: import.meta.env.VITE_BACKEND_URL,
       });
       const payload = { ...newGood, communityId: parseInt(communityId), price: parseInt(newGood.price) };
       const response = await axios.post(`${apiBaseUrl}/goods`, payload, {

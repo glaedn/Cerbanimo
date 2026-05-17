@@ -365,7 +365,7 @@ const ProjectVisualizer = () => {
   const fetchUserCommunities = useCallback(async () => {
     if (!userId) return;
     try {
-      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/user/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error(`Failed to fetch communities`);
       const data = await response.json();
@@ -377,7 +377,7 @@ const ProjectVisualizer = () => {
     if (!window.confirm('Are you sure? This will delete and replace ALL tasks in the project.')) return;
     setLoading(true);
     try {
-      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/tasks/${pid}/granularize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -396,7 +396,7 @@ const ProjectVisualizer = () => {
   const handleSubmitCommunityProposal = async () => {
     if (!selectedCommunity) return;
     try {
-      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/communities/${selectedCommunity.id}/submit/${projectId}`, {
         method: 'POST', headers: { Authorization: `Bearer ${token}` },
       });
@@ -415,7 +415,7 @@ const ProjectVisualizer = () => {
     });
 
     try {
-      const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+      const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tags: processedTags }),
@@ -428,7 +428,7 @@ const ProjectVisualizer = () => {
   useEffect(() => {
     const fetchInterests = async () => {
       try {
-        const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+        const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/options`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await response.json();
         const pool = data.interestsPool || [];
@@ -468,7 +468,7 @@ const ProjectVisualizer = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = await getAccessTokenSilently({ audience: `${import.meta.env.VITE_BACKEND_URL}`, scope: "openid profile email" });
+        const token = await getAccessTokenSilently({ audience: import.meta.env.VITE_BACKEND_URL, scope: "openid profile email" });
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/profile/userId`, { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
         const data = await response.json();
         setUserId(data.id);

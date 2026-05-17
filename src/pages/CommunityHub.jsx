@@ -354,7 +354,7 @@ const CommunityHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
     
@@ -402,7 +402,7 @@ const CommunityHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
 
@@ -448,7 +448,7 @@ const CommunityHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
 
@@ -482,7 +482,7 @@ const CommunityHub = () => {
         if (!isMember) return;
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
             await axios.post(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/${inviteId}/vote`,
@@ -524,7 +524,7 @@ const CommunityHub = () => {
         
         try {
             const token = await getAccessTokenSilently({
-                audience: 'import.meta.env.VITE_BACKEND_URL',
+                audience: import.meta.env.VITE_BACKEND_URL,
                 scope: 'openid profile email',
             });
 

@@ -115,7 +115,7 @@ const ProfilePage = () => {
           }
 
           const token = await getAccessTokenSilently({
-            audience: 'import.meta.env.VITE_BACKEND_URL',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:write:profile',
           });
           
@@ -223,7 +223,7 @@ const ProfilePage = () => {
       try {
         if (profileData.experience && profileData.experience.length > 0) {
           const token = await getAccessTokenSilently({
-            audience: 'import.meta.env.VITE_BACKEND_URL',
+            audience: import.meta.env.VITE_BACKEND_URL,
             scope: 'openid profile email read:profile',
           });
 
@@ -358,7 +358,7 @@ const ProfilePage = () => {
     setResourceError(null);
     try {
       const token = await getAccessTokenSilently({
-        audience: 'import.meta.env.VITE_BACKEND_URL/',
+        audience: import.meta.env.VITE_BACKEND_URL,
         scope: 'openid profile email read:profile', 
       });
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/inventory/${profileData.id}`, {
@@ -433,7 +433,7 @@ const ProfilePage = () => {
     setBadgesError(null);
     try {
       const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}/`, // Make sure audience is just the backend URL
+        audience: import.meta.env.VITE_BACKEND_URL, // Make sure audience is just the backend URL
         scope: 'openid profile email read:profile', // Adjust scope as needed for badges
       });
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rewards/user/${profileData.id}`, {
@@ -496,7 +496,7 @@ const ProfilePage = () => {
     try {
       // console.log('Submitting resource:', resourceData);
       const token = await getAccessTokenSilently({
-        audience: `${import.meta.env.VITE_BACKEND_URL}/`,
+        audience: import.meta.env.VITE_BACKEND_URL,
         // Ensure appropriate scope for writing resources
         scope: 'read:write:profile openid profile email read:profile',
         ignoreCache: true
@@ -533,7 +533,7 @@ const ProfilePage = () => {
     if (window.confirm('Are you sure you want to delete this resource?')) {
       try {
         const token = await getAccessTokenSilently({
-          audience: `${import.meta.env.VITE_BACKEND_URL}`,
+          audience: import.meta.env.VITE_BACKEND_URL,
           scope: 'write:profile, openid profile email read:profile', // Placeholder, adjust scope
         });
         await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/resources/inventory/${resourceId}`, {
