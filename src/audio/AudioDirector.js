@@ -59,6 +59,27 @@ export function handleEvent(eventType, payload = {}) {
     case "ui.sidebar_close":
       uiLayer.sidebarClose();
       break;
+    case "ui.map_tap":
+      uiLayer.mapTap();
+      break;
+    case "ui.map_move":
+      uiLayer.mapMove();
+      break;
+    case "ui.map_lock":
+      uiLayer.mapLock();
+      break;
+    case "ui.map_zoom_in":
+      uiLayer.zoomIn();
+      break;
+    case "ui.map_zoom_out":
+      uiLayer.zoomOut();
+      break;
+    case "ui.hud_appear":
+      uiLayer.hudAppear();
+      break;
+    case "ui.hud_disappear":
+      uiLayer.hudDisappear();
+      break;
 
     case "task.accepted":
       eventLayer.taskAccepted(payload);

@@ -25,6 +25,13 @@ const DEBOUNCE_MS = {
   'ui.sidebar_close':     200,
   'ui.notification_arrive':200,
   'ui.copy_success':      300,
+  'ui.map_tap':           100,
+  'ui.map_move':           50,
+  'ui.map_lock':          150,
+  'ui.map_zoom_in':       100,
+  'ui.map_zoom_out':      100,
+  'ui.hud_appear':        150,
+  'ui.hud_disappear':     150,
 };
 const DEFAULT_DEBOUNCE = 30;
 

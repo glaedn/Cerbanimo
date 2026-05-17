@@ -14,9 +14,21 @@ import { audioEventQueue as q } from '../AudioEventQueue';
 
 // ─── FX BUSES ─────────────────────────────────────────────────────────────────
 
-const uiReverb = new Tone.Reverb({ decay: 3, wet: 0.35 });
-const uiDelay  = new Tone.FeedbackDelay({ delayTime: '8n', feedback: 0.2, wet: 0.18 })
-  .connect(uiReverb);
+const uiVerb = new Tone.Reverb({
+  decay: 2.5,
+  wet: 0.18
+});
+
+const crystalDelay = new Tone.FeedbackDelay({
+  delayTime: "16n",
+  feedback: 0.12,
+  wet: 0.08
+}).connect(uiVerb);
+
+const navFilter = new Tone.Filter({
+  frequency: 2200,
+  type: "lowpass"
+}).connect(uiVerb);
 
 // ─── SYNTHS ───────────────────────────────────────────────────────────────────
 
@@ -25,58 +37,91 @@ const clickSynth = new Tone.MembraneSynth({
   pitchDecay: 0.04,
   octaves:    4,
   envelope:   { attack: 0.001, decay: 0.18, sustain: 0, release: 0.1 },
-}).connect(uiReverb);
+}).connect(uiVerb);
 
 // Hover — glass tick (high, very short)
 const hoverSynth = new Tone.Synth({
   oscillator: { type: 'sine' },
   envelope:   { attack: 0.001, decay: 0.04, sustain: 0, release: 0.04 },
-}).connect(uiDelay);
+}).connect(crystalDelay);
 
 // Confirm / success chord (max 3 voices so rapid fires don't stack)
 const confirmSynth = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: 'triangle' },
   envelope:   { attack: 0.01, decay: 0.18, sustain: 0.15, release: 0.45 },
-}, 3).connect(uiReverb);
+}, 3).connect(uiVerb);
 
 // Error — square wave growl
 const errorSynth = new Tone.MonoSynth({
   oscillator: { type: 'square' },
   filter:     { Q: 2, type: 'lowpass', rolloff: -12 },
   envelope:   { attack: 0.01, decay: 0.25, sustain: 0, release: 0.08 },
-}).connect(uiReverb);
+}).connect(uiVerb);
 
 // Notification / message — DuoSynth chime (max 2 voices)
 const notificationSynth = new Tone.PolySynth(Tone.DuoSynth, {
   voice0: { oscillator: { type: 'sine' },     envelope: { attack: 0.01, decay: 0.3,  sustain: 0, release: 0.5 } },
   voice1: { oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.2,  sustain: 0, release: 0.2 } },
-}, 2).connect(uiDelay);
-
-// Modal shimmer
-const shimmerSynth = new Tone.NoiseSynth({
-  noise:    { type: 'white' },
-  envelope: { attack: 0.08, decay: 0.18, sustain: 0.08, release: 0.25 },
-}).connect(uiReverb);
+}, 2).connect(crystalDelay);
 
 // Toggle — short triangle ping (2 voices max)
 const toggleSynth = new Tone.PolySynth(Tone.Synth, {
   oscillator: { type: 'triangle' },
   envelope:   { attack: 0.001, decay: 0.08, sustain: 0, release: 0.08 },
-}, 2).connect(uiReverb);
-
-// Sidebar — brown noise slide
-const sidebarFilter = new Tone.Filter(700, 'lowpass').connect(uiReverb);
-const slideSynth = new Tone.NoiseSynth({
-  noise:    { type: 'brown' },
-  envelope: { attack: 0.04, decay: 0.09, sustain: 0.04, release: 0.09 },
-}).connect(sidebarFilter);
+}, 2).connect(uiVerb);
 
 // Drag — membrane for grab, hover for drop
 const dragSynth = new Tone.MembraneSynth({
   pitchDecay: 0.04,
   octaves:    2,
   envelope:   { attack: 0.001, decay: 0.12, sustain: 0, release: 0.08 },
-}).connect(uiReverb);
+}).connect(uiVerb);
+
+// Navigation — Tiny Synth Pluck
+const navSynth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "triangle" },
+  envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+}).connect(navFilter);
+
+// Approval — Warm affirmative chord
+const acceptSynth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.5 }
+}).connect(uiVerb);
+
+// Rejection — Soft muted downward tone
+const rejectionSynth = new Tone.MonoSynth({
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 },
+  filter: { Q: 1, type: "lowpass", frequency: 1000 }
+}).connect(uiVerb);
+
+// Map Interactions — Radar pulse and spatial hum
+const mapSynth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.01, decay: 0.4, sustain: 0.1, release: 0.4 }
+}).connect(crystalDelay);
+
+// HUD — High-tech appear/disappear
+const hudSynth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "sine" },
+  envelope: { attack: 0.02, decay: 0.2, sustain: 0, release: 0.2 }
+}).connect(uiVerb);
+
+// ─── VOICE LIMITING ───────────────────────────────────────────────────────────
+
+let activeSounds = 0;
+const MAX_UI_SOUNDS = 8;
+
+function canPlayUI() {
+  if (activeSounds >= MAX_UI_SOUNDS) return false;
+  activeSounds++;
+  // Auto-decrement after a short window (average UI sound length)
+  setTimeout(() => {
+    activeSounds = Math.max(0, activeSounds - 1);
+  }, 500);
+  return true;
+}
 
 // ─── LAYER API ────────────────────────────────────────────────────────────────
 
@@ -86,126 +131,173 @@ function running() {
 
 export const uiLayer = {
   connect(target) {
-    uiReverb.connect(target);
+    uiVerb.connect(target);
   },
 
   click() {
-    if (!running() || !q.canFire('ui.click')) return;
-    clickSynth.triggerAttackRelease('C2', '8n', q.at());
+    if (!running() || !q.canFire('ui.click') || !canPlayUI()) return;
+    navSynth.triggerAttackRelease('D5', '64n', q.at());
   },
 
   hover() {
-    if (!running() || !q.canFire('ui.hover')) return;
-    hoverSynth.triggerAttackRelease('C6', '32n', q.at());
+    if (!running() || !q.canFire('ui.hover') || !canPlayUI()) return;
+    hoverSynth.triggerAttackRelease('A5', '128n', q.at());
   },
 
   confirm() {
-    if (!running() || !q.canFire('ui.confirm')) return;
-    confirmSynth.triggerAttackRelease(['D4', 'F4', 'A4'], '16n', q.at());
+    if (!running() || !q.canFire('ui.confirm') || !canPlayUI()) return;
+    acceptSynth.triggerAttackRelease(['D4', 'A4'], '16n', q.at());
   },
 
   error() {
-    if (!running() || !q.canFire('ui.error')) return;
-    errorSynth.triggerAttackRelease('G1', '8n', q.at());
+    if (!running() || !q.canFire('ui.error') || !canPlayUI()) return;
+    rejectionSynth.triggerAttackRelease('A4', '16n', q.at());
+    rejectionSynth.triggerAttackRelease('F4', '16n', q.at() + 0.1);
   },
 
   message() {
-    if (!running() || !q.canFire('ui.message')) return;
+    if (!running() || !q.canFire('ui.message') || !canPlayUI()) return;
     notificationSynth.triggerAttackRelease(['C5', 'G5'], '16n', q.at());
   },
 
   openModal() {
-    if (!running() || !q.canFire('ui.modal_open')) return;
+    if (!running() || !q.canFire('ui.modal_open') || !canPlayUI()) return;
     const t = q.at();
-    shimmerSynth.triggerAttackRelease('16n', t);
-    hoverSynth.triggerAttackRelease('C5', '8n', t + 0.1);
+    hudSynth.triggerAttackRelease('D5', '16n', t);
+    hoverSynth.triggerAttackRelease('A5', '32n', t + 0.05);
   },
 
   closeModal() {
-    if (!running() || !q.canFire('ui.modal_close')) return;
+    if (!running() || !q.canFire('ui.modal_close') || !canPlayUI()) return;
     const t = q.at();
-    hoverSynth.triggerAttackRelease('C5', '32n', t);
-    hoverSynth.triggerAttackRelease('A4', '16n', t + 0.055);
+    hudSynth.triggerAttackRelease('A4', '16n', t);
+    hoverSynth.triggerAttackRelease('D4', '32n', t + 0.05);
   },
 
   tabSwitch() {
-    if (!running() || !q.canFire('ui.tab_switch')) return;
-    hoverSynth.triggerAttackRelease('E5', '32n', q.at());
+    if (!running() || !q.canFire('ui.tab_switch') || !canPlayUI()) return;
+    navSynth.triggerAttackRelease('E5', '64n', q.at());
   },
 
   dropdownOpen() {
-    if (!running() || !q.canFire('ui.dropdown_open')) return;
-    hoverSynth.triggerAttackRelease('G4', '32n', q.at());
+    if (!running() || !q.canFire('ui.dropdown_open') || !canPlayUI()) return;
+    navSynth.triggerAttackRelease('G4', '64n', q.at());
   },
 
   dropdownClose() {
-    if (!running() || !q.canFire('ui.dropdown_close')) return;
-    hoverSynth.triggerAttackRelease('D4', '32n', q.at());
+    if (!running() || !q.canFire('ui.dropdown_close') || !canPlayUI()) return;
+    navSynth.triggerAttackRelease('D4', '64n', q.at());
   },
 
   toggleOn() {
-    if (!running() || !q.canFire('ui.toggle_on')) return;
+    if (!running() || !q.canFire('ui.toggle_on') || !canPlayUI()) return;
     const t = q.at();
     toggleSynth.triggerAttackRelease('C5', '32n', t);
     toggleSynth.triggerAttackRelease('E5', '32n', t + 0.02);
   },
 
   toggleOff() {
-    if (!running() || !q.canFire('ui.toggle_off')) return;
+    if (!running() || !q.canFire('ui.toggle_off') || !canPlayUI()) return;
     const t = q.at();
     toggleSynth.triggerAttackRelease('E5', '32n', t);
     toggleSynth.triggerAttackRelease('C4', '32n', t + 0.02);
   },
 
   notificationArrive() {
-    if (!running() || !q.canFire('ui.notification_arrive')) return;
+    if (!running() || !q.canFire('ui.notification_arrive') || !canPlayUI()) return;
     notificationSynth.triggerAttackRelease(['G5', 'D6'], '8n', q.at());
   },
 
   notificationDismiss() {
-    if (!running() || !q.canFire('ui.notification_dismiss')) return;
-    hoverSynth.triggerAttackRelease('G5', '32n', q.at());
+    if (!running() || !q.canFire('ui.notification_dismiss') || !canPlayUI()) return;
+    hoverSynth.triggerAttackRelease('G5', '128n', q.at());
   },
 
   filterApply() {
-    if (!running() || !q.canFire('ui.filter_apply')) return;
-    confirmSynth.triggerAttackRelease(['C4', 'G4'], '16n', q.at());
+    if (!running() || !q.canFire('ui.filter_apply') || !canPlayUI()) return;
+    acceptSynth.triggerAttackRelease(['C4', 'G4'], '16n', q.at());
   },
 
   listSelect() {
-    if (!running() || !q.canFire('ui.list_select')) return;
-    hoverSynth.triggerAttackRelease('A5', '32n', q.at());
+    if (!running() || !q.canFire('ui.list_select') || !canPlayUI()) return;
+    navSynth.triggerAttackRelease('A5', '64n', q.at());
   },
 
   sidebarOpen() {
-    if (!running() || !q.canFire('ui.sidebar_open')) return;
-    slideSynth.triggerAttackRelease('110ms', q.at());
+    if (!running() || !q.canFire('ui.sidebar_open') || !canPlayUI()) return;
+    const t = q.at();
+    hudSynth.triggerAttackRelease('D5', '8n', t);
+    navSynth.triggerAttackRelease('A5', '16n', t + 0.05);
   },
 
   sidebarClose() {
-    if (!running() || !q.canFire('ui.sidebar_close')) return;
-    slideSynth.triggerAttackRelease('90ms', q.at());
+    if (!running() || !q.canFire('ui.sidebar_close') || !canPlayUI()) return;
+    const t = q.at();
+    hudSynth.triggerAttackRelease('A4', '8n', t);
+    navSynth.triggerAttackRelease('D4', '16n', t + 0.05);
+  },
+
+  mapTap() {
+    if (!running() || !q.canFire('ui.map_tap') || !canPlayUI()) return;
+    const t = q.at();
+    mapSynth.triggerAttackRelease('A4', '32n', t);
+    hoverSynth.triggerAttackRelease('A5', '64n', t + 0.05);
+  },
+
+  mapMove() {
+    // Low frequency hum/pulse while dragging
+    if (!running() || !q.canFire('ui.map_move') || !canPlayUI()) return;
+    mapSynth.triggerAttackRelease('D3', '16n', q.at(), 0.2);
+  },
+
+  mapLock() {
+    if (!running() || !q.canFire('ui.map_lock') || !canPlayUI()) return;
+    mapSynth.triggerAttackRelease('D4', '16n', q.at());
+  },
+
+  zoomIn() {
+    if (!running() || !q.canFire('ui.map_zoom_in') || !canPlayUI()) return;
+    const t = q.at();
+    navSynth.triggerAttackRelease('D5', '32n', t);
+    navSynth.triggerAttackRelease('A5', '32n', t + 0.05);
+  },
+
+  zoomOut() {
+    if (!running() || !q.canFire('ui.map_zoom_out') || !canPlayUI()) return;
+    const t = q.at();
+    navSynth.triggerAttackRelease('A4', '32n', t);
+    navSynth.triggerAttackRelease('D4', '32n', t + 0.05);
+  },
+
+  hudAppear() {
+    if (!running() || !q.canFire('ui.hud_appear') || !canPlayUI()) return;
+    hudSynth.triggerAttackRelease('D5', '16n', q.at());
+  },
+
+  hudDisappear() {
+    if (!running() || !q.canFire('ui.hud_disappear') || !canPlayUI()) return;
+    hudSynth.triggerAttackRelease('A4', '16n', q.at());
   },
 
   dragStart() {
-    if (!running() || !q.canFire('ui.drag_start')) return;
+    if (!running() || !q.canFire('ui.drag_start') || !canPlayUI()) return;
     dragSynth.triggerAttackRelease('A1', '32n', q.at());
   },
 
   dragDrop() {
-    if (!running() || !q.canFire('ui.drag_drop')) return;
+    if (!running() || !q.canFire('ui.drag_drop') || !canPlayUI()) return;
     const t = q.at();
     dragSynth.triggerAttackRelease('D6', '32n', t);
     hoverSynth.triggerAttackRelease('D6', '16n', t + 0.015);
   },
 
   copySuccess() {
-    if (!running() || !q.canFire('ui.copy_success')) return;
-    confirmSynth.triggerAttackRelease(['C5', 'E5', 'G5'], '16n', q.at());
+    if (!running() || !q.canFire('ui.copy_success') || !canPlayUI()) return;
+    acceptSynth.triggerAttackRelease(['C5', 'E5', 'G5'], '16n', q.at());
   },
 
   connectionOn() {
-    if (!running() || !q.canFire('ui.connection_on')) return;
+    if (!running() || !q.canFire('ui.connection_on') || !canPlayUI()) return;
     const t = q.at();
     notificationSynth.triggerAttackRelease('G4', '16n', t);
     notificationSynth.triggerAttackRelease('B4', '16n', t + 0.1);
@@ -213,7 +305,7 @@ export const uiLayer = {
   },
 
   connectionLost() {
-    if (!running() || !q.canFire('ui.connection_lost')) return;
+    if (!running() || !q.canFire('ui.connection_lost') || !canPlayUI()) return;
     const t = q.at();
     notificationSynth.triggerAttackRelease('D5',  '16n', t);
     notificationSynth.triggerAttackRelease('Bb4', '16n', t + 0.1);

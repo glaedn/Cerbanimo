@@ -35,18 +35,6 @@ const dryReverb = new Tone.Reverb({
   wet:   0.22,
 }).connect(hpFilter);
 
-// Noise Swell for textural percussion
-const noiseFilter = new Tone.Filter({
-  frequency: 1200,
-  type: 'lowpass',
-  Q: 1
-}).connect(dryReverb);
-
-const noiseSwell = new Tone.NoiseSynth({
-  noise: { type: 'pink' },
-  envelope: { attack: 4, decay: 4, sustain: 0.1, release: 4 }
-}).connect(noiseFilter);
-
 // ─── INSTRUMENTS ──────────────────────────────────────────────────────────────
 
 const steelString = new Tone.PolySynth(Tone.AMSynth, {
@@ -390,10 +378,6 @@ export const themeLayer = {
     mutationId = Tone.Transport.scheduleRepeat(() => {
       canyonDelay.feedback.rampTo(0.05 + Math.random() * 0.1, 8);
       spaceReverb.wet.rampTo(0.3 + Math.random() * 0.2, 8);
-
-      if (state.percussionActive && Math.random() > 0.7) {
-        noiseSwell.triggerAttackRelease('4m', Tone.now(), 0.04);
-      }
     }, '16m');
 
     sequences = [
