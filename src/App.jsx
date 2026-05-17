@@ -24,6 +24,7 @@ import { socketService } from "./services/SocketService";
 import { useAuth0 } from "@auth0/auth0-react";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import SpaceShell from "./components/SpaceShell.jsx";
+import ExperienceShell from "./components/ExperienceShell/ExperienceShell.jsx";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
@@ -87,6 +88,11 @@ const AdminProtectedRoute = ({ children }) => {
   // Render HomePage as if the route didn't resolve
   return <HomePage />;
 } ;
+
+const OrbitPage = React.lazy(() => import("./pages/Orbit/OrbitPage.jsx"));
+const MissionsPage = React.lazy(() => import("./pages/Missions/MissionsPage.jsx"));
+const CommonsPage = React.lazy(() => import("./pages/Commons/CommonsPage.jsx"));
+const SignalsPage = React.lazy(() => import("./pages/Signals/SignalsPage.jsx"));
 
 const PageWrapper = ({ children }) => (
   <motion.div
@@ -160,327 +166,92 @@ const AppContent = () => {
             },
           }}
         />
-        {isMobile ? <MobileBottomNav /> : <SiteNav />}
         <AuthWrapper>
-          <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5ff0ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>
-          <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
-          {/* Skill Constellation defined at the top */}
-          <Route
-            path="/profile/skill-constellation/:userId?"
-            element={
-              <PrivateRoute>
-                <PageWrapper><SkillConstellation /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/governance/:communityId/simulator"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CivicSimulator /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/governance/:communityId/mediation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><MediationSpace /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/governance/:communityId"
-            element={
-              <PrivateRoute>
-                <PageWrapper><GovernanceChamber /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/governance/:communityId/constitution"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ConstitutionExplorer /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/governance/:communityId/delegation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><DelegationMapPage /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/federation-atlas"
-            element={
-              <PrivateRoute>
-                <PageWrapper><FederationAtlas /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/needs/:needId?"
-            element={
-              <PrivateRoute>
-                <PageWrapper><NeedsPage /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile/skill-library"
-            element={
-              <PrivateRoute>
-                <PageWrapper><SkillLibrary /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile/interest-library"
-            element={
-              <PrivateRoute>
-                <PageWrapper><InterestLibrary /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
+          <ExperienceShell>
+            <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5ff0ff', fontFamily: 'Orbitron' }}>INITIALIZING_HUD...</div>}>
+              <AnimatePresence mode="wait">
+                <Routes location={location} key={location.pathname}>
+              {/* ORBIT MODE */}
+              <Route path="/orbit/*" element={<PrivateRoute><PageWrapper><OrbitPage /></PageWrapper></PrivateRoute>}>
+                  <Route path="focus" element={isMobile ? <MobileDashboard /> : <Dashboard />} />
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="skills/:userId?" element={<SkillConstellation />} />
+                <Route path="skill-library" element={<SkillLibrary />} />
+                <Route path="interest-library" element={<InterestLibrary />} />
+                <Route path="narrative-hub/:userId?" element={<NarrativeIdentityHub />} />
+                <Route path="notifications" element={<MobileNotifications />} />
+                  <Route index element={<div className="orbit-index-placeholder" style={{ display: 'none' }}>Index is handled by OrbitPage layout</div>} />
+              </Route>
 
-          {/* Public Routes */}
-          <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
-          <Route path="/waiting-list" element={<PageWrapper><WaitingListPage /></PageWrapper>} />
+              {/* MISSIONS MODE */}
+              <Route path="/missions/*" element={<PrivateRoute><PageWrapper><MissionsPage /></PageWrapper></PrivateRoute>}>
+                <Route path="projects" element={<ProjectPages />} />
+                <Route path="project/:projectId" element={<Project />} />
+                <Route path="projectcreation" element={<ProjectCreation />} />
+                <Route path="tasks" element={<TaskBrowser />} />
+                <Route path="visualizer/:projectId/:taskId?" element={isMobile ? <MobileTaskDetail /> : <ProjectVisualizer />} />
+                <Route index element={<ProjectPages />} />
+              </Route>
 
-          {/* Private Routes */}
-          <Route
-            path="/onboarding"
-            element={
-              <PrivateRoute>
-                <PageWrapper><OnboardingPage /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <PrivateRoute>
-                <PageWrapper><MobileNotifications /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile/skill-constellation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><SkillConstellation /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/tasks"
-            element={
-              <PrivateRoute>
-                <PageWrapper><TaskBrowser /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/guilds/:id"
-            element={
-              <PrivateRoute>
-                <PageWrapper><GuildHub /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/resources-inventory"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ResourcesDashboard /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/guilds"
-            element={
-              <PrivateRoute>
-                <PageWrapper><GuildsDashboard /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/constellations"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ConstellationHub /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <PageWrapper>{isMobile ? <MobileDashboard /> : <Dashboard />}</PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ProfilePage /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route path="/profile/public/:userId" element={<PageWrapper><PublicProfile /></PageWrapper>} />
-          <Route
-            path="/profile/narrative-hub/:userId?"
-            element={
-              <PrivateRoute>
-                <PageWrapper><NarrativeIdentityHub /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
+              {/* COMMONS MODE */}
+              <Route path="/commons/*" element={<PrivateRoute><PageWrapper><CommonsPage /></PageWrapper></PrivateRoute>}>
+                <Route path="communities" element={<Communities />} />
+                <Route path="community/:communityId" element={<CommunityHub />} />
+                <Route path="communitycreation" element={<CommunityCreation />} />
+                <Route path="marketplace" element={<CommunityMarketplace />} />
+                <Route path="needs/:needId?" element={<NeedsPage />} />
+                <Route path="guilds" element={<GuildsDashboard />} />
+                <Route path="guild/:id" element={<GuildHub />} />
+                <Route index element={<Communities />} />
+              </Route>
 
-          <Route
-            path="/BadgeCreation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><BadgeCreation /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-           <Route
-            path="/projects"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ProjectPages /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projectcreation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ProjectCreation /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/project/:projectId"
-            element={
-              <PrivateRoute>
-                <PageWrapper><Project /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/communitycreation"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CommunityCreation /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/communityhub/:communityId"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CommunityHub /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/communities"
-            element={
-              <PrivateRoute>
-                <PageWrapper><Communities /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/Visualizer/:projectId"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ProjectVisualizer /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/Visualizer/:projectId/:taskId"
-            element={
-              <PrivateRoute>
-                <PageWrapper>{isMobile ? <MobileTaskDetail /> : <ProjectVisualizer />}</PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/userportfolio/:userId"
-            element={
+              {/* SIGNALS MODE */}
+              <Route path="/signals/*" element={<PrivateRoute><PageWrapper><SignalsPage /></PageWrapper></PrivateRoute>}>
+                <Route path="governance/:communityId" element={<GovernanceChamber />} />
+                <Route path="governance/:communityId/simulator" element={<CivicSimulator />} />
+                <Route path="governance/:communityId/mediation" element={<MediationSpace />} />
+                <Route path="governance/:communityId/constitution" element={<ConstitutionExplorer />} />
+                <Route path="governance/:communityId/delegation" element={<DelegationMapPage />} />
+                <Route path="impact" element={<ImpactAtlas />} />
+                <Route path="federation" element={<FederationAtlas />} />
+                <Route path="activity-map" element={<GalacticActivityMap />} />
+                <Route index element={<CivicKernelConsole />} />
+              </Route>
+
+              {/* LEGACY / COMPATIBILITY REDIRECTS */}
+              <Route path="/dashboard" element={<PrivateRoute><PageWrapper><OrbitPage /></PageWrapper></PrivateRoute>} />
+              <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage /></PageWrapper></PrivateRoute>} />
+              <Route path="/projects" element={<PrivateRoute><PageWrapper><ProjectPages /></PageWrapper></PrivateRoute>} />
+              <Route path="/tasks" element={<PrivateRoute><PageWrapper><TaskBrowser /></PageWrapper></PrivateRoute>} />
+              <Route path="/communities" element={<PrivateRoute><PageWrapper><Communities /></PageWrapper></PrivateRoute>} />
+
+              {/* Public Routes */}
+              <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
+              <Route path="/waiting-list" element={<PageWrapper><WaitingListPage /></PageWrapper>} />
+              <Route path="/onboarding" element={<PrivateRoute><PageWrapper><OnboardingPage /></PageWrapper></PrivateRoute>} />
+
+              <Route path="/admin-dashboard" element={
+                <PrivateRoute>
+                  <AdminProtectedRoute>
+                    <PageWrapper><AdminDashboard /></PageWrapper>
+                  </AdminProtectedRoute>
+                </PrivateRoute>
+              } />
+
+              <Route path="/userportfolio/:userId" element={
                 <PageWrapper>
                   <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <UserPortfolio />
                   </LocalizationProvider>
                 </PageWrapper>
-            }
-          />
-          {/* New Route for Galactic Activity Map */}
-          <Route
-            path="/activity-map"
-            element={
-              <PrivateRoute>
-                <PageWrapper><GalacticActivityMap /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/marketplace"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CommunityMarketplace /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route path="/rezzler" element={<PageWrapper><Rezzler /></PageWrapper>} />
-          <Route
-            path="/impact-atlas"
-            element={
-              <PrivateRoute>
-                <PageWrapper><ImpactAtlas /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/civic-kernel"
-            element={
-              <PrivateRoute>
-                <PageWrapper><CivicKernelConsole /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/mediation-space"
-            element={
-              <PrivateRoute>
-                <PageWrapper><MediationSpace /></PageWrapper>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin-dashboard"
-            element={
-              <PrivateRoute>
-                <AdminProtectedRoute>
-                  <PageWrapper><AdminDashboard /></PageWrapper>
-                </AdminProtectedRoute>
-              </PrivateRoute>
-            }
-          />
-          {/* Default Route */}
-          <Route path="*" element={<PageWrapper><HomePage /></PageWrapper>} />
-            </Routes>
-          </AnimatePresence>
-          </React.Suspense>
+              } />
+
+                  {/* Default Route */}
+                  <Route path="*" element={<PageWrapper><HomePage /></PageWrapper>} />
+                </Routes>
+              </AnimatePresence>
+            </React.Suspense>
+          </ExperienceShell>
         </AuthWrapper>
       </div>
     </SpaceShell>

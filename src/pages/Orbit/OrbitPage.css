@@ -1,0 +1,41 @@
+.orbit-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.orbit-hud-layer {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.orbit-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 32px;
+}
+
+.orbit-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.orbit-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.orbit-section {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+@media (max-width: 1024px) {
+  .orbit-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}

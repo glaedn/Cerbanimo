@@ -1,0 +1,63 @@
+.signals-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 60px 20px;
+}
+
+.signals-index-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 32px;
+}
+
+.signals-main {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.signals-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.governance-access-panel {
+  background: rgba(95, 240, 255, 0.05);
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(95, 240, 255, 0.2);
+}
+
+.governance-access-panel h4 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  color: #5ff0ff;
+  margin: 0 0 20px 0;
+  text-transform: uppercase;
+}
+
+.signals-btn {
+  background: transparent;
+  border: 1px solid #5ff0ff;
+  color: #5ff0ff;
+  padding: 10px 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.signals-btn:hover {
+  background: rgba(95, 240, 255, 0.1);
+  box-shadow: 0 0 15px rgba(95, 240, 255, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .signals-index-layout {
+    grid-template-columns: 1fr;
+  }
+}

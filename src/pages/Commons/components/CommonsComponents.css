@@ -1,0 +1,30 @@
+.pulse-card.commons {
+  border-bottom-color: #a855f7;
+}
+
+.communities-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.exchange-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.exchange-item p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .communities-row {
+    grid-template-columns: 1fr;
+  }
+}

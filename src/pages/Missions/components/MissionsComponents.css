@@ -1,0 +1,49 @@
+.pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.pulse-card {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 4px;
+  text-align: center;
+  border-bottom: 2px solid rgba(95, 240, 255, 0.2);
+}
+
+.pulse-label {
+  display: block;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.pulse-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  color: #5ff0ff;
+}
+
+.review-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.review-item p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.missions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}

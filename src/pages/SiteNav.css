@@ -194,6 +194,35 @@
   font-size: 1.05rem;
 }
 
+.sidebar-section-title {
+  padding: 10px 4px 5px;
+  font-size: 0.7rem;
+  font-family: 'Orbitron', sans-serif;
+  color: rgba(95, 240, 255, 0.4);
+  letter-spacing: 1.5px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(95, 240, 255, 0.1);
+  margin: 10px 4px;
+}
+
+.mode-icon-mini {
+  margin-right: 12px;
+  font-size: 1.1rem;
+}
+
+.core-mode-link {
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.core-mode-link.active {
+  border-left-color: #5ff0ff;
+  background: rgba(95, 240, 255, 0.05);
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;

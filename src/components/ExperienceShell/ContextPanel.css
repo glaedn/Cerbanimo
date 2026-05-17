@@ -1,0 +1,77 @@
+.context-panel-content {
+  padding: 32px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.context-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(95, 240, 255, 0.2);
+  padding-bottom: 24px;
+}
+
+.context-icon {
+  font-size: 2rem;
+}
+
+.context-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  color: #5ff0ff;
+  letter-spacing: 2px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.context-secondary-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.context-nav-item {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 1px;
+}
+
+.context-nav-item:hover {
+  background: rgba(95, 240, 255, 0.1);
+  color: #5ff0ff;
+}
+
+.context-nav-item.active {
+  background: rgba(95, 240, 255, 0.15);
+  color: #5ff0ff;
+  border-left: 3px solid #5ff0ff;
+}
+
+.context-widgets {
+  margin-top: auto;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.context-widget-placeholder {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.context-widget-placeholder small {
+  color: rgba(255, 255, 255, 0.3);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+}

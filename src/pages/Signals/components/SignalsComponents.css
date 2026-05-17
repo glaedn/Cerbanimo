@@ -1,0 +1,16 @@
+.pulse-card.signals {
+  border-bottom-color: #5ff0ff;
+  background: rgba(95, 240, 255, 0.02);
+}
+
+.proposals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alerts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

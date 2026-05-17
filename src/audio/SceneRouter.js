@@ -3,19 +3,23 @@ import { useLocation } from 'react-router-dom';
 import { audioEngine } from './AudioEngine';
 
 const routeToSceneMap = [
+  { pattern: /^\/orbit/, scene: 'dashboard' },
+  { pattern: /^\/missions/, scene: 'workspace' },
+  { pattern: /^\/commons/, scene: 'community' },
+  { pattern: /^\/signals/, scene: 'governance' },
   { pattern: /^\/governance/, scene: 'governance' },
   { pattern: /^\/profile\/skill-constellation/, scene: 'skill-galaxy' },
   { pattern: /^\/guilds/, scene: 'guild-hub' },
   { pattern: /^\/communities/, scene: 'community' },
   { pattern: /^\/communityhub/, scene: 'community' },
   { pattern: /^\/onboarding/, scene: 'onboarding' },
-  { pattern: /^\/dashboard/, scene: 'normal' },
-  { pattern: /^\/marketplace/, scene: 'marketplace' },
-  { pattern: /^\/tasks/, scene: 'marketplace' },
-  { pattern: /^\/needs/, scene: 'marketplace' },
-  { pattern: /^\/impact-atlas/, scene: 'atlas' },
-  { pattern: /^\/federation-atlas/, scene: 'atlas' },
-  { pattern: /^\/$/, scene: 'landing' }
+  { pattern: /^\/dashboard/, scene: 'dashboard' },
+  { pattern: /^\/marketplace/, scene: 'community' },
+  { pattern: /^\/tasks/, scene: 'workspace' },
+  { pattern: /^\/needs/, scene: 'community' },
+  { pattern: /^\/impact-atlas/, scene: 'governance' },
+  { pattern: /^\/federation-atlas/, scene: 'governance' },
+  { pattern: /^\/$/, scene: 'homepage' }
 ];
 
 const SceneRouter = () => {

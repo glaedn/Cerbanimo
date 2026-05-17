@@ -1,0 +1,79 @@
+.experience-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: transparent;
+  color: #fff;
+  position: relative;
+}
+
+.experience-left-rail {
+  width: 260px;
+  height: 100%;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(95, 240, 255, 0.15);
+  background: rgba(8, 20, 41, 0.4);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.experience-content-area {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.experience-top-bar {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  background: rgba(8, 20, 41, 0.2);
+  border-bottom: 1px solid rgba(95, 240, 255, 0.05);
+  z-index: 90;
+}
+
+.experience-main-viewport {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.experience-scrolling-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 24px;
+  position: relative;
+  padding-top: 80px; /* Offset for absolute SiteNav if needed */
+}
+
+.experience-context-panel {
+  width: 320px;
+  height: 100%;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(95, 240, 255, 0.1);
+  background: rgba(8, 20, 41, 0.3);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.experience-shell.mobile .experience-left-rail {
+  display: none;
+}
+
+.experience-shell.mobile .experience-context-panel {
+  display: none;
+}
+
+.experience-bottom-nav {
+  height: 64px;
+  flex-shrink: 0;
+  z-index: 100;
+}

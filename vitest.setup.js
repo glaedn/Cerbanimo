@@ -20,6 +20,7 @@ const synthMock = {
   oscillator: { type: 'sine' },
   envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 },
   connect: vi.fn().mockReturnThis(),
+  chain: vi.fn().mockReturnThis(),
 };
 
 vi.mock('tone', () => {
@@ -51,6 +52,8 @@ vi.mock('tone', () => {
     Chorus: vi.fn().mockImplementation(function() { return synthMock; }),
     FeedbackDelay: vi.fn().mockImplementation(function() { return synthMock; }),
     Gain: vi.fn().mockImplementation(function() { return synthMock; }),
+    EQ3: vi.fn().mockImplementation(function() { return synthMock; }),
+    Compressor: vi.fn().mockImplementation(function() { return synthMock; }),
     Destination: {},
     Transport: {
       start: vi.fn(),
@@ -73,4 +76,9 @@ global.jest = {
   clearAllMocks: vi.clearAllMocks,
   resetAllMocks: vi.resetAllMocks,
   restoreAllMocks: vi.restoreAllMocks,
+  spyOn: vi.spyOn,
+  useFakeTimers: vi.useFakeTimers,
+  useRealTimers: vi.useRealTimers,
+  runAllTimers: vi.runAllTimers,
+  advanceTimersByTime: vi.advanceTimersByTime,
 };

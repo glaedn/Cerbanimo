@@ -1,0 +1,287 @@
+/* Orbit Mode Specific Components */
+
+.orbit-section-header {
+  margin-bottom: 24px;
+  border-left: 2px solid #5ff0ff;
+  padding-left: 12px;
+}
+
+.orbit-kicker {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  color: rgba(95, 240, 255, 0.5);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.orbit-section-header h3 {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.secondary-focus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mini-focus-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-focus-item span {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.orbit-btn {
+  padding: 10px 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border: 1px solid #5ff0ff;
+  transition: all 0.3s ease;
+}
+
+.orbit-btn.primary {
+  background: #5ff0ff;
+  color: #081429;
+}
+
+.orbit-btn.ghost {
+  background: transparent;
+  color: #5ff0ff;
+  margin-left: 12px;
+}
+
+.orbit-btn.x-small {
+  padding: 4px 8px;
+  font-size: 0.6rem;
+}
+
+/* Momentum */
+.momentum-grid {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.momentum-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 20px;
+  border-radius: 4px;
+  border-right: 2px solid rgba(95, 240, 255, 0.2);
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.stat-value {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.8rem;
+  color: #5ff0ff;
+}
+
+.stat-sub {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 8px;
+  text-align: right;
+}
+
+.momentum-mini-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mini-stat {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.mini-label {
+  display: block;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.mini-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.skill-growth-preview h4 {
+  font-size: 0.75rem;
+  font-family: 'Orbitron', sans-serif;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+}
+
+.skill-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.skill-bar span {
+  width: 100px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.skill-bar .bar {
+  flex-grow: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.skill-bar .fill {
+  height: 100%;
+  background: #5ff0ff;
+  border-radius: 2px;
+}
+
+.stat-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #5ff0ff;
+  box-shadow: 0 0 10px #5ff0ff;
+}
+
+/* Chronicle / Activity */
+.chronicle-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chronicle-item {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.event-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.event-dot.team { background: #5ff0ff; box-shadow: 0 0 5px #5ff0ff; }
+.event-dot.community { background: #a855f7; box-shadow: 0 0 5px #a855f7; }
+.event-dot.story { background: #f97316; box-shadow: 0 0 5px #f97316; }
+
+.event-content p {
+  margin: 0 0 4px 0;
+  font-size: 0.9rem;
+}
+
+.event-content small {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Quick Actions */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 12px;
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  border-color: #5ff0ff;
+  background: rgba(95, 240, 255, 0.05);
+}
+
+/* HUD Overlay */
+.orbit-hud-overlay {
+  display: flex;
+  gap: 24px;
+}
+
+.hud-metric {
+  background: rgba(8, 20, 41, 0.8);
+  border: 1px solid rgba(95, 240, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 200px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metric-label {
+  font-size: 0.6rem;
+  color: rgba(95, 240, 255, 0.7);
+  font-family: 'Orbitron', sans-serif;
+}
+
+.metric-value {
+  font-size: 0.8rem;
+  color: #5ff0ff;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.opp-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opp-details p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}

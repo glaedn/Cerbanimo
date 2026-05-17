@@ -1,8 +1,15 @@
+export const CORE_MODES = [
+  { label: "Orbit", path: "/orbit", match: ["/orbit"], icon: "🪐", group: "Experience" },
+  { label: "Missions", path: "/missions", match: ["/missions"], icon: "🚀", group: "Experience" },
+  { label: "Commons", path: "/commons", match: ["/commons"], icon: "🌱", group: "Experience" },
+  { label: "Signals", path: "/signals", match: ["/signals"], icon: "📡", group: "Experience" },
+];
+
 export const primaryMobileNavItems = [
-  { label: "Home", path: "/dashboard", match: ["/", "/dashboard"], icon: "home" },
-  { label: "Projects", path: "/projects", match: ["/projects", "/project/", "/projectcreation", "/Visualizer"], icon: "projects" },
-  { label: "Tasks", path: "/tasks", match: ["/tasks"], icon: "tasks" },
-  { label: "Communities", path: "/communities", match: ["/communities", "/communityhub", "/communitycreation"], icon: "communities" },
+  { label: "Orbit", path: "/orbit", match: ["/orbit"], icon: "orbit" },
+  { label: "Missions", path: "/missions", match: ["/missions"], icon: "missions" },
+  { label: "Commons", path: "/commons", match: ["/commons"], icon: "commons" },
+  { label: "Signals", path: "/signals", match: ["/signals"], icon: "signals" },
 ];
 
 export const platformNavItems = [

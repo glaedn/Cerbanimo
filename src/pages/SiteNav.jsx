@@ -34,10 +34,10 @@ import NeedDeclarationForm from "../components/NeedDeclarationForm/NeedDeclarati
 import { useNotifications } from "./NotificationProvider";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { getProfileImageUrl } from "../utils/avatar";
-import { isRouteActive, platformNavItems } from "../utils/platformNavigation";
+import { isRouteActive, platformNavItems, CORE_MODES } from "../utils/platformNavigation";
 import { audioEngine } from "../audio/AudioEngine";
 
-const sidebarItems = platformNavItems.filter((item) => item.label !== "Notifications");
+const sidebarItems = []; // Pruned for Phase 1: Everything is now contextual or in core modes
 
 const getSiteNavNotificationIcon = (type) => {
   switch ((type || "default").toLowerCase()) {
@@ -357,6 +357,21 @@ const SiteNav = () => {
               Declare a Need
             </Button>
           )}
+          <div className="sidebar-section-title">CORE MODES</div>
+          {CORE_MODES.map((item) => (
+            <Link
+              key={item.path}
+              className={`nav-link core-mode-link ${isRouteActive(location.pathname, item) ? "active" : ""}`}
+              to={item.path}
+              onClick={closeSidebar}
+            >
+              <span className="mode-icon-mini">{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          <div className="sidebar-divider" />
+
           {sidebarItems.map((item) => (
             <Link
               key={item.path}
