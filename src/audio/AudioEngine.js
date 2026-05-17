@@ -58,8 +58,8 @@ class AudioEngine {
 
     // Master gain nodes — theme music and UI/event sounds stay independently
     // controllable (music toggle, UI toggle, master volume).
-    this.themeGain = new Tone.Gain(1).connect(this.masterEQ);
-    this.uiGain    = new Tone.Gain(1).connect(this.masterEQ);
+    this.themeGain = new Tone.Gain(1.4).connect(this.masterEQ);
+    this.uiGain    = new Tone.Gain(0.7).connect(this.masterEQ);
 
     // Wire layers into their buses
     themeLayer.connect(this.themeGain);
