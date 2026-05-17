@@ -5,6 +5,7 @@ import { socialLayer } from "./layers/socialLayer";
 import { ambientLayer } from "./layers/ambientLayer";
 import { themeLayer } from "./layers/themeLayer";
 import { audioSceneManager } from "./AudioSceneManager";
+import { audioQualityManager } from "./AudioQualityManager";
 
 const musicState = {
   urgency: 0.2,
@@ -14,7 +15,25 @@ const musicState = {
   socialDensity: 0.7
 };
 
+const PRIORITY = {
+  "ui.click": 10,
+  "ui.confirm": 10,
+  "ui.error": 10,
+  "ui.message": 8,
+  "ui.notification_arrive": 8,
+  "ui.hover": 2,
+  "ui.map_move": 1,
+  "task.approved": 10,
+  "reputation.levelup": 15,
+  "crisis.declared": 20
+};
+
 export function handleEvent(eventType, payload = {}) {
+  // Simple priority filter: if FPS is low, drop low priority sounds
+  const p = PRIORITY[eventType] || 5;
+  if (audioQualityManager.quality === 'low' && p < 5) return;
+  if (audioQualityManager.quality === 'balanced' && p < 2) return;
+
   console.log(`AudioDirector dispatch: ${eventType}`, payload);
 
   const { emotionalWeight = 0.5, urgency = 0.5 } = payload;

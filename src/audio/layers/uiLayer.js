@@ -11,18 +11,19 @@
 
 import * as Tone from 'tone';
 import { audioEventQueue as q } from '../AudioEventQueue';
+import { audioQualityManager as quality } from '../AudioQualityManager';
 
 // ─── FX BUSES ─────────────────────────────────────────────────────────────────
 
 const uiVerb = new Tone.Reverb({
-  decay: 2.5,
-  wet: 0.18
+  decay: quality.useReducedFX ? 1.5 : 2.5,
+  wet: quality.useReducedFX ? 0.1 : 0.18
 });
 
 const crystalDelay = new Tone.FeedbackDelay({
   delayTime: "16n",
-  feedback: 0.12,
-  wet: 0.08
+  feedback: quality.useReducedFX ? 0.08 : 0.12,
+  wet: quality.useReducedFX ? 0.05 : 0.08
 }).connect(uiVerb);
 
 const navFilter = new Tone.Filter({
@@ -31,6 +32,8 @@ const navFilter = new Tone.Filter({
 }).connect(uiVerb);
 
 // ─── SYNTHS ───────────────────────────────────────────────────────────────────
+
+const maxUI = quality.isMobile ? 2 : 4;
 
 // Click — membrane thud (buttons, cards)
 const clickSynth = new Tone.MembraneSynth({
@@ -41,19 +44,19 @@ const clickSynth = new Tone.MembraneSynth({
 
 // Hover — glass tick (high, very short)
 const hoverSynth = new Tone.Synth({
-  oscillator: { type: 'sine' },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope:   { attack: 0.001, decay: 0.04, sustain: 0, release: 0.04 },
 }).connect(crystalDelay);
 
 // Confirm / success chord (max 3 voices so rapid fires don't stack)
 const confirmSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: 'triangle' },
+  oscillator: { type: quality.oscillatorType('triangle') },
   envelope:   { attack: 0.01, decay: 0.18, sustain: 0.15, release: 0.45 },
-}, 3).connect(uiVerb);
+}, maxUI).connect(uiVerb);
 
 // Error — square wave growl
 const errorSynth = new Tone.MonoSynth({
-  oscillator: { type: 'square' },
+  oscillator: { type: quality.oscillatorType('triangle') }, // Switched from square for hygiene
   filter:     { Q: 2, type: 'lowpass', rolloff: -12 },
   envelope:   { attack: 0.01, decay: 0.25, sustain: 0, release: 0.08 },
 }).connect(uiVerb);
@@ -62,13 +65,13 @@ const errorSynth = new Tone.MonoSynth({
 const notificationSynth = new Tone.PolySynth(Tone.DuoSynth, {
   voice0: { oscillator: { type: 'sine' },     envelope: { attack: 0.01, decay: 0.3,  sustain: 0, release: 0.5 } },
   voice1: { oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.2,  sustain: 0, release: 0.2 } },
-}, 2).connect(crystalDelay);
+}, Math.min(2, maxUI)).connect(crystalDelay);
 
 // Toggle — short triangle ping (2 voices max)
 const toggleSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: 'triangle' },
+  oscillator: { type: quality.oscillatorType('triangle') },
   envelope:   { attack: 0.001, decay: 0.08, sustain: 0, release: 0.08 },
-}, 2).connect(uiVerb);
+}, Math.min(2, maxUI)).connect(uiVerb);
 
 // Drag — membrane for grab, hover for drop
 const dragSynth = new Tone.MembraneSynth({
@@ -79,39 +82,39 @@ const dragSynth = new Tone.MembraneSynth({
 
 // Navigation — Tiny Synth Pluck
 const navSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: "triangle" },
+  oscillator: { type: quality.oscillatorType('triangle') },
   envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
-}).connect(navFilter);
+}, maxUI).connect(navFilter);
 
 // Approval — Warm affirmative chord
 const acceptSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: "sine" },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.5 }
-}).connect(uiVerb);
+}, maxUI).connect(uiVerb);
 
 // Rejection — Soft muted downward tone
 const rejectionSynth = new Tone.MonoSynth({
-  oscillator: { type: "sine" },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 },
   filter: { Q: 1, type: "lowpass", frequency: 1000 }
 }).connect(uiVerb);
 
 // Map Interactions — Radar pulse and spatial hum
 const mapSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: "sine" },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope: { attack: 0.01, decay: 0.4, sustain: 0.1, release: 0.4 }
-}).connect(crystalDelay);
+}, maxUI).connect(crystalDelay);
 
 // HUD — High-tech appear/disappear
 const hudSynth = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: "sine" },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope: { attack: 0.02, decay: 0.2, sustain: 0, release: 0.2 }
-}).connect(uiVerb);
+}, maxUI).connect(uiVerb);
 
 // ─── VOICE LIMITING ───────────────────────────────────────────────────────────
 
 let activeSounds = 0;
-const MAX_UI_SOUNDS = 8;
+const MAX_UI_SOUNDS = quality.isMobile ? 4 : 8;
 
 function canPlayUI() {
   if (activeSounds >= MAX_UI_SOUNDS) return false;

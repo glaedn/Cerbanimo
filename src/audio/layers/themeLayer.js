@@ -1,52 +1,46 @@
 // src/audio/layers/themeLayer.js
 import * as Tone from 'tone';
+import { audioQualityManager as quality } from '../AudioQualityManager';
 
 // ─── FX CHAIN ─────────────────────────────────────────────────────────────────
 
-const masterLimiter = new Tone.Limiter(-2);
-
-const masterCompressor = new Tone.Compressor({
-  threshold: -14,
-  knee:       6,
-  ratio:      4,
-  attack:     0.003,
-  release:    0.15,
-}).connect(masterLimiter);
-
+// High-pass filter to clean up low-end mud before the global mastering chain.
 const hpFilter = new Tone.Filter({
   frequency: 60,
   type:      'highpass',
   rolloff:   -12,
-}).connect(masterCompressor);
+});
 
 const spaceReverb = new Tone.Reverb({
-  decay: 7,
-  wet:   0.5,
+  decay: quality.useReducedFX ? 4 : 7,
+  wet:   quality.useReducedFX ? 0.3 : 0.5,
 }).connect(hpFilter);
 
 const canyonDelay = new Tone.FeedbackDelay({
   delayTime: '8n.',
-  feedback:   0.12,
-  wet:        0.18,
+  feedback:   quality.useReducedFX ? 0.08 : 0.12,
+  wet:        quality.useReducedFX ? 0.1 : 0.18,
 }).connect(spaceReverb);
 
 const dryReverb = new Tone.Reverb({
-  decay: 1.5,
-  wet:   0.22,
+  decay: quality.useReducedFX ? 1 : 1.5,
+  wet:   quality.useReducedFX ? 0.15 : 0.22,
 }).connect(hpFilter);
 
 // ─── INSTRUMENTS ──────────────────────────────────────────────────────────────
 
+const maxPoly = quality.maxPolyphony;
+
 const steelString = new Tone.PolySynth(Tone.AMSynth, {
   harmonicity:        3.5,
-  oscillator:         { type: 'triangle' },
+  oscillator:         { type: quality.oscillatorType('triangle') },
   envelope:           { attack: 0.1, decay: 0.6, sustain: 0.1, release: 2 },
-  modulation:         { type: 'square' },
+  modulation:         { type: quality.oscillatorType('square') },
   modulationEnvelope: { attack: 0.05, decay: 0.3, sustain: 0, release: 0.8 },
-}).connect(canyonDelay);
+}, Math.min(6, maxPoly)).connect(canyonDelay);
 
 const slide = new Tone.MonoSynth({
-  oscillator:      { type: 'sawtooth' },
+  oscillator:      { type: quality.oscillatorType('sawtooth') },
   filter:          { Q: 2, type: 'lowpass', rolloff: -24 },
   filterEnvelope:  { attack: 0.2, decay: 0.8, sustain: 0.5, release: 4, baseFrequency: 200, octaves: 3 },
   envelope:        { attack: 0.4, decay: 1, sustain: 0.7, release: 5 },
@@ -56,17 +50,17 @@ const slide = new Tone.MonoSynth({
 const harmonica = new Tone.PolySynth(Tone.FMSynth, {
   harmonicity:        1.5,
   modulationIndex:    3,
-  oscillator:         { type: 'sine' },
+  oscillator:         { type: quality.oscillatorType('sine') },
   envelope:           { attack: 0.3, decay: 0.4, sustain: 0.6, release: 2.5 },
-  modulation:         { type: 'triangle' },
+  modulation:         { type: quality.oscillatorType('triangle') },
   modulationEnvelope: { attack: 0.2, decay: 0.3, sustain: 0.4, release: 1.5 },
-}).connect(canyonDelay);
+}, Math.min(4, maxPoly)).connect(canyonDelay);
 
 const cosmicPad = new Tone.PolySynth(Tone.Synth, {
-  oscillator: { type: 'sine' },
+  oscillator: { type: quality.oscillatorType('sine') },
   envelope:   { attack: 12, decay: 1, sustain: 0.8, release: 12 },
   volume:     -22,
-}).connect(spaceReverb);
+}, Math.min(4, maxPoly)).connect(spaceReverb);
 
 const starArp = new Tone.Synth({
   oscillator: { type: 'sine' },
@@ -412,7 +406,7 @@ export const themeLayer = {
   },
 
   connect(target) {
-    masterLimiter.connect(target);
+    hpFilter.connect(target);
   },
 
   updateState(newState) {

@@ -12,9 +12,9 @@ import * as Tone from 'tone';
 
 // Minimum ms between successive fires of the same event type.
 const DEBOUNCE_MS = {
-  'ui.hover':              80,
-  'ui.click':              50,
-  'ui.tab_switch':        120,
+  'ui.hover':             120,
+  'ui.click':              80,
+  'ui.tab_switch':        200,
   'ui.dropdown_open':      80,
   'ui.dropdown_close':     80,
   'ui.toggle_on':          60,

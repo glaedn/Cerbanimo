@@ -31,10 +31,35 @@ class AudioEngine {
     // worklet enough buffer to survive heavy React render frames without glitching.
     Tone.getContext().lookAhead = 0.18;
 
+    // Global Mastering Chain
+    this.masterLimiter = new Tone.Limiter(-1).toDestination();
+
+    this.masterEQ = new Tone.EQ3({
+      low: -2,
+      mid: 0,
+      high: -4
+    });
+
+    this.masterCompressor = new Tone.Compressor({
+      threshold: -18,
+      ratio: 3,
+      attack: 0.02,
+      release: 0.2
+    });
+
+    this.masterLowpass = new Tone.Filter({
+      type: "lowpass",
+      frequency: 12000,
+      rolloff: -12
+    });
+
+    // Connect the chain
+    this.masterEQ.chain(this.masterCompressor, this.masterLowpass, this.masterLimiter);
+
     // Master gain nodes — theme music and UI/event sounds stay independently
     // controllable (music toggle, UI toggle, master volume).
-    this.themeGain = new Tone.Gain(1).toDestination();
-    this.uiGain    = new Tone.Gain(1).toDestination();
+    this.themeGain = new Tone.Gain(1).connect(this.masterEQ);
+    this.uiGain    = new Tone.Gain(1).connect(this.masterEQ);
 
     // Wire layers into their buses
     themeLayer.connect(this.themeGain);
