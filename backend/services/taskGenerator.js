@@ -58,9 +58,9 @@ export const normalizeTaskImpactWeights = (tasks = []) => {
   const baseWeights = total > 0
     ? parsedWeights.map((weight) => (weight / total) * 100)
     : tasks.map((task) => {
-        const reward = Number(task.reward_tokens);
-        return Number.isFinite(reward) && reward > 0 ? reward : 1;
-      });
+      const reward = Number(task.reward_tokens);
+      return Number.isFinite(reward) && reward > 0 ? reward : 1;
+    });
   const baseTotal = baseWeights.reduce((sum, weight) => sum + weight, 0) || tasks.length;
 
   let roundedWeights = baseWeights.map((weight) => Math.floor((weight / baseTotal) * 100));
@@ -204,27 +204,42 @@ ONLY return the JSON object described.
 Dependencies are the IDs of the tasks that must be completed before this task can be started. There can be multiple.
 Include "resource_requirements" (array of strings) for each task if labor alone is not sufficient.
 `;
- //const systemPrompt = "You are an expert project manager and task engineer.";
+  //const systemPrompt = "You are an expert project manager and task engineer.";
 
- try {
+  try {
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite",
     });
-    const result = await model.generateContent(userPrompt);
+
+    // Maximize the capability of the call with targeted configuration
+    const generationConfig = {
+      responseMimeType: "application/json", // Hard-forces valid JSON schema focus
+      temperature: 0.55,                    // Slightly lower for less generic, more precise details                // Open up the ceiling so it doesn't rush to finish the array
+
+      thinkingConfig: {
+        thinkingLevel: 'MEDIUM'             // Escalates reasoning to track your complex ID/dependency graph
+      }
+    };
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: generationConfig
+    });
+
     const response = await result.response;
     const text = response.text();
-  console.log("LLM response:", text);
+    console.log("LLM response:", text);
 
-  // Attempt to safely parse JSON from LLM output
-  const data = parseLLMJsonResponse(text);
-  if (!data.tasks || !Array.isArray(data.tasks)) {
-    throw new Error("Tasks array missing or invalid in LLM response");
+    // Attempt to safely parse JSON from LLM output
+    const data = parseLLMJsonResponse(text);
+    if (!data.tasks || !Array.isArray(data.tasks)) {
+      throw new Error("Tasks array missing or invalid in LLM response");
+    }
+    return data;
+  } catch (err) {
+    console.error("Failed to parse LLM response for subtasks:", text);
+    throw new Error("Failed to parse tasks from LLM output for subtasks");
   }
-  return data;
- } catch (err) {
-  console.error("Failed to parse LLM response for subtasks:", text);
-  throw new Error("Failed to parse tasks from LLM output for subtasks");
- }
 };
 
 export const NEED_PROMPT = `
@@ -357,9 +372,22 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite",
-      //systemInstruction: systemPrompt,
     });
-    const result = await model.generateContent(userPrompt);
+
+    // Maximize the capability of the call with targeted configuration
+    const generationConfig = {
+      responseMimeType: "application/json", // Hard-forces valid JSON schema focus
+      temperature: 0.55,                    // Slightly lower for less generic, more precise details                // Open up the ceiling so it doesn't rush to finish the array
+
+      thinkingConfig: {
+        thinkingLevel: 'MEDIUM'             // Escalates reasoning to track your complex ID/dependency graph
+      }
+    };
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: generationConfig
+    });
     const response = await result.response;
     const responseText = response.text();
 

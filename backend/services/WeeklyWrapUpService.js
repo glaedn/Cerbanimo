@@ -130,19 +130,15 @@ class WeeklyWrapUpService {
           - ONLY return the JSON array. Do not include markdown markers.
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemma-4-26b-it" });
+        // Swapping to the official hosted flash tier for fast batch processing
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
 
-        // Build the configuration, adding thinkingConfig alongside generation parameters
         const generationConfig = {
-          maxOutputTokens: 2048,
           temperature: 0.75,
           topP: 0.90,
-          frequencyPenalty: 0.2,
-          presencePenalty: 0.1,
 
-          // Explicitly direct the model's reasoning process
+          // Note: Thinking mode is fully supported on Gemini 3+ models!
           thinkingConfig: {
-            // Keeps latency low for fast batch summaries while keeping reasoning active
             thinkingLevel: 'LOW'
           }
         };
@@ -152,7 +148,6 @@ class WeeklyWrapUpService {
           generationConfig: generationConfig
         });
 
-        // Your response parsing layer remains entirely untouched
         const response = await result.response;
         const text = response.text();
         const summaries = parseLLMJsonResponse(text);
