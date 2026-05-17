@@ -1,13 +1,18 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { GlobalPulse, ActiveProposals, RegionalAlerts } from './components';
 import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import './SignalsPage.css';
 
 const SignalsPage = () => {
   const { isNewUser } = useUserRoleProfile();
+  const { profile } = useUserProfile();
   const location = useLocation();
   const isIndex = location.pathname === '/signals' || location.pathname === '/signals/';
+
+  // Use profile's community or default to 1 for global governance
+  const primaryCommunityId = profile?.primary_community_id || 1;
 
   return (
     <div className="signals-page-container mode-page">
@@ -28,9 +33,9 @@ const SignalsPage = () => {
               {!isNewUser && (
                 <div className="governance-access-panel">
                   <h4>Advanced Systems</h4>
-                  <button className="signals-btn">Open Full Governance</button>
-                  <button className="signals-btn">View Impact Atlas</button>
-                  <button className="signals-btn">Regional Coordination</button>
+                  <Link to={`/signals/governance/${primaryCommunityId}`} className="signals-btn">Open Full Governance</Link>
+                  <Link to="/signals/impact" className="signals-btn">View Impact Atlas</Link>
+                  <Link to="/signals/activity-map" className="signals-btn">Regional Coordination</Link>
                 </div>
               )}
             </div>

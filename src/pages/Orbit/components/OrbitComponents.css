@@ -239,6 +239,8 @@
   cursor: pointer;
   text-align: left;
   transition: all 0.3s ease;
+  text-decoration: none;
+  display: block;
 }
 
 .action-btn:hover {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { FocusCard, SignalChip, ExpandablePanel } from '../../../components/shared/Primitives';
 import './OrbitComponents.css';
 
@@ -136,11 +137,11 @@ export const QuickActions = () => {
         <h3>Quick Actions</h3>
       </div>
       <div className="action-buttons">
-        <button className="action-btn">Create Task</button>
-        <button className="action-btn">Offer Resource</button>
-        <button className="action-btn">Ask for Help</button>
-        <button className="action-btn">Open Mission</button>
-        <button className="action-btn">Log Contribution</button>
+        <Link to="/missions/projects" className="action-btn">Open Mission</Link>
+        <Link to="/commons/marketplace" className="action-btn">Offer Resource</Link>
+        <Link to="/commons/needs" className="action-btn">Ask for Help</Link>
+        <Link to="/missions/tasks" className="action-btn">Create Task</Link>
+        <Link to="/orbit/focus" className="action-btn">Log Contribution</Link>
       </div>
     </div>
   );
