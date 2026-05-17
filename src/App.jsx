@@ -5,7 +5,6 @@ import LoginPage from "./pages/LoginPage";
 import PrivateRoute from "./components/PrivateRoute.jsx";
 //import Orbit from "./pages/Orbit.jsx";
 //import IntentionPages from "./pages/IntentionPages.jsx";
-import SiteNav from "./pages/SiteNav.jsx";
 import MusicController from "./components/MusicController.jsx";
 import SceneRouter from "./audio/SceneRouter";
 //import IntentionCreation from "./pages/IntentionCreation.jsx";

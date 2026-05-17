@@ -4,6 +4,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import SiteNav from '../../pages/SiteNav';
 import MobileBottomNav from '../MobileBottomNav';
 import ContextPanel from './ContextPanel';
+import ModeRail from './ModeRail';
 
 const ExperienceShell = ({ children, topBar, leftRail, bottomNav, contextPanel }) => {
   const isMobile = useIsMobile();
@@ -12,14 +13,14 @@ const ExperienceShell = ({ children, topBar, leftRail, bottomNav, contextPanel }
     <div className={`experience-shell ${isMobile ? 'mobile' : 'desktop'}`}>
       {!isMobile && (
         <aside className="experience-left-rail">
-          {leftRail || <SiteNav />}
+          {leftRail || <ModeRail />}
         </aside>
       )}
 
       <div className="experience-content-area">
-        {!isMobile && topBar && (
+        {!isMobile && (
           <header className="experience-top-bar">
-            {topBar}
+            {topBar || <SiteNav inShell={true} />}
           </header>
         )}
 

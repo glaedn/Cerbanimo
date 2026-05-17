@@ -56,7 +56,7 @@ const getSiteNavNotificationIcon = (type) => {
   }
 };
 
-const SiteNav = () => {
+const SiteNav = ({ inShell = false }) => {
   const {
     user,
     logout,
@@ -200,7 +200,7 @@ const SiteNav = () => {
   };
 
   return (
-    <nav className={`site-nav ${isSidebarOpen ? "open" : ""}`}>
+    <nav className={`site-nav ${isSidebarOpen ? "open" : ""} ${inShell ? "in-shell" : ""}`}>
       <Link to="/dashboard" className="site-brand" onClick={closeSidebar}>
         <span className="site-brand-mark" aria-hidden="true">
           <RocketLaunchIcon fontSize="small" />

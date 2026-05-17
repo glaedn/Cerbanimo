@@ -55,10 +55,10 @@ import {
 } from "../utils/platformNavigation";
 
 const mobileIconMap = {
-  home: <HomeIcon />,
-  projects: <AccountTreeIcon />,
-  tasks: <AssignmentTurnedInIcon />,
-  communities: <LanguageIcon />,
+  orbit: <PublicIcon />,
+  missions: <RocketLaunchIcon />,
+  commons: <GroupsIcon />,
+  signals: <TravelExploreIcon />,
 };
 
 const trayIconMap = {
