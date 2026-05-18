@@ -357,20 +357,6 @@ const SiteNav = ({ inShell = false }) => {
               Declare a Need
             </Button>
           )}
-          <div className="sidebar-section-title">CORE MODES</div>
-          {CORE_MODES.map((item) => (
-            <Link
-              key={item.path}
-              className={`nav-link core-mode-link ${isRouteActive(location.pathname, item) ? "active" : ""}`}
-              to={item.path}
-              onClick={closeSidebar}
-            >
-              <span className="mode-icon-mini">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-
-          <div className="sidebar-divider" />
 
           {sidebarItems.map((item) => (
             <Link

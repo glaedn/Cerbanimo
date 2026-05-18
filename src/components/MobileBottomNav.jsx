@@ -37,6 +37,8 @@ import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import GavelIcon from "@mui/icons-material/Gavel";
 import HubIcon from "@mui/icons-material/Hub";
 import SchoolIcon from "@mui/icons-material/School";
+import LogoutIcon from "@mui/icons-material/Logout";
+import HandshakeIcon from "@mui/icons-material/Handshake";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
@@ -90,7 +92,7 @@ function resolveBottomValue(pathname) {
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated, loginWithRedirect } = useAuth0();
+  const { user, isAuthenticated, loginWithRedirect, logout } = useAuth0();
   const { profile } = useUserProfile();
   const { unreadCount } = useNotifications();
   const [trayOpen, setTrayOpen] = React.useState(false);
@@ -244,6 +246,28 @@ const MobileBottomNav = () => {
               fullWidth
             />
           </Box>
+
+          {isAuthenticated && (
+            <List sx={{ px: 1, borderBottom: '1px solid rgba(95, 240, 255, 0.1)' }}>
+              <ListItemButton
+                onClick={() => {
+                  setTrayOpen(false);
+                  // We can't easily trigger the modal from here without passing state up
+                  // but we can redirect to a page that has it or just show the link to commons/needs
+                  navigate("/commons/needs");
+                }}
+              >
+                <ListItemIcon><HandshakeIcon /></ListItemIcon>
+                <ListItemText primary="Declare a Need" />
+              </ListItemButton>
+              <ListItemButton
+                onClick={() => logout({ returnTo: window.location.origin })}
+              >
+                <ListItemIcon><LogoutIcon /></ListItemIcon>
+                <ListItemText primary="Logout" />
+              </ListItemButton>
+            </List>
+          )}
 
           <List className="mobile-tray-list">
             {Object.entries(groupedItems).map(([group, items]) => (

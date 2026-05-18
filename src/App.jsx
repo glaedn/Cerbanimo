@@ -1,6 +1,6 @@
 import "./App.css";
 import * as React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import PrivateRoute from "./components/PrivateRoute.jsx";
 //import Orbit from "./pages/Orbit.jsx";
@@ -218,11 +218,11 @@ const AppContent = () => {
               </Route>
 
               {/* LEGACY / COMPATIBILITY REDIRECTS */}
-              <Route path="/dashboard" element={<PrivateRoute><PageWrapper><OrbitPage /></PageWrapper></PrivateRoute>} />
-              <Route path="/profile" element={<PrivateRoute><PageWrapper><ProfilePage /></PageWrapper></PrivateRoute>} />
-              <Route path="/projects" element={<PrivateRoute><PageWrapper><ProjectPages /></PageWrapper></PrivateRoute>} />
-              <Route path="/tasks" element={<PrivateRoute><PageWrapper><TaskBrowser /></PageWrapper></PrivateRoute>} />
-              <Route path="/communities" element={<PrivateRoute><PageWrapper><Communities /></PageWrapper></PrivateRoute>} />
+              <Route path="/dashboard" element={<Navigate to="/orbit" replace />} />
+              <Route path="/profile" element={<Navigate to="/orbit/profile" replace />} />
+              <Route path="/projects" element={<Navigate to="/missions" replace />} />
+              <Route path="/tasks" element={<Navigate to="/missions/tasks" replace />} />
+              <Route path="/communities" element={<Navigate to="/commons" replace />} />
 
               {/* Public Routes */}
               <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
