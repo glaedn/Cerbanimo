@@ -93,6 +93,11 @@ const MissionsPage = React.lazy(() => import("./pages/Missions/MissionsPage.jsx"
 const CommonsPage = React.lazy(() => import("./pages/Commons/CommonsPage.jsx"));
 const SignalsPage = React.lazy(() => import("./pages/Signals/SignalsPage.jsx"));
 
+const LegacyRedirect = ({ to }) => {
+  const location = useLocation();
+  return <Navigate to={`${to}${location.search}`} replace />;
+};
+
 const PageWrapper = ({ children }) => (
   <motion.div
     initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
@@ -218,11 +223,11 @@ const AppContent = () => {
               </Route>
 
               {/* LEGACY / COMPATIBILITY REDIRECTS */}
-              <Route path="/dashboard" element={<Navigate to="/orbit" replace />} />
-              <Route path="/profile" element={<Navigate to="/orbit/profile" replace />} />
-              <Route path="/projects" element={<Navigate to="/missions" replace />} />
-              <Route path="/tasks" element={<Navigate to="/missions/tasks" replace />} />
-              <Route path="/communities" element={<Navigate to="/commons" replace />} />
+              <Route path="/dashboard" element={<PrivateRoute><LegacyRedirect to="/orbit" /></PrivateRoute>} />
+              <Route path="/profile" element={<PrivateRoute><LegacyRedirect to="/orbit/profile" /></PrivateRoute>} />
+              <Route path="/projects" element={<PrivateRoute><LegacyRedirect to="/missions" /></PrivateRoute>} />
+              <Route path="/tasks" element={<PrivateRoute><LegacyRedirect to="/missions/tasks" /></PrivateRoute>} />
+              <Route path="/communities" element={<PrivateRoute><LegacyRedirect to="/commons" /></PrivateRoute>} />
 
               {/* Public Routes */}
               <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />

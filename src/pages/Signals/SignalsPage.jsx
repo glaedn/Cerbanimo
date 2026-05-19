@@ -9,7 +9,7 @@ const SignalsPage = () => {
   const { isNewUser } = useUserRoleProfile();
   const { profile } = useUserProfile();
   const location = useLocation();
-  const isIndex = location.pathname === '/signals' || location.pathname === '/signals/';
+  const isIndex = location.pathname.replace(/\/$/, '') === '/signals';
 
   // Use profile's community or default to 1 for global governance
   const primaryCommunityId = profile?.primary_community_id || 1;

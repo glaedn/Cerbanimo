@@ -12,7 +12,8 @@ import './OrbitPage.css';
 
 const OrbitPage = () => {
   const location = useLocation();
-  const isIndex = location.pathname === '/orbit' || location.pathname === '/orbit/';
+  // Resilient index detection that ignores trailing slashes and search params
+  const isIndex = location.pathname.replace(/\/$/, '') === '/orbit';
 
   return (
     <div className="orbit-page-container">

@@ -5,7 +5,7 @@ import './CommonsPage.css';
 
 const CommonsPage = () => {
   const location = useLocation();
-  const isIndex = location.pathname === '/commons' || location.pathname === '/commons/';
+  const isIndex = location.pathname.replace(/\/$/, '') === '/commons';
 
   return (
     <div className="commons-page-container mode-page">

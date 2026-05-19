@@ -5,7 +5,7 @@ import './MissionsPage.css';
 
 const MissionsPage = () => {
   const location = useLocation();
-  const isIndex = location.pathname === '/missions' || location.pathname === '/missions/';
+  const isIndex = location.pathname.replace(/\/$/, '') === '/missions';
 
   return (
     <div className="missions-page-container mode-page">
