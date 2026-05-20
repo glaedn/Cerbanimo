@@ -1,11 +1,12 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import './CommonsPage.css';
 
 const CommonsPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isIndex = location.pathname.replace(/\/$/, '') === '/commons';
 
   return (
@@ -45,6 +46,28 @@ const CommonsPage = () => {
                   <div className="placeholder-content">TRENDS_LOADING...</div>
                 </div>
               </div>
+
+              <section className="commons-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate('/commons/communities')} className="nav-card">
+                    <span className="icon">🏛️</span>
+                    <span className="label">Communities</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/marketplace')} className="nav-card">
+                    <span className="icon">🏪</span>
+                    <span className="label">Marketplace</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/needs')} className="nav-card">
+                    <span className="icon">🤝</span>
+                    <span className="label">Needs</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/guilds')} className="nav-card">
+                    <span className="icon">⚒️</span>
+                    <span className="label">Guilds</span>
+                  </button>
+                </div>
+              </section>
             </div>
 
             <div className="commons-sidebar">

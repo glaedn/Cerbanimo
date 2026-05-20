@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import { useUserProfile } from '../../hooks/useUserProfile';
@@ -7,6 +7,7 @@ import './SignalsPage.css';
 
 const SignalsPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile } = useUserProfile();
   const isIndex = location.pathname.replace(/\/$/, '') === '/signals';
 
@@ -53,6 +54,28 @@ const SignalsPage = () => {
                   <div className="placeholder-content">NET_TRAFFIC_STABLE</div>
                 </div>
               </div>
+
+              <section className="signals-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate(`/signals/governance/${profile?.primary_community_id || 1}`)} className="nav-card">
+                    <span className="icon">⚖️</span>
+                    <span className="label">Governance</span>
+                  </button>
+                  <button onClick={() => navigate('/signals/impact')} className="nav-card">
+                    <span className="icon">💎</span>
+                    <span className="label">Impact</span>
+                  </button>
+                  <button onClick={() => navigate('/signals/activity-map')} className="nav-card">
+                    <span className="icon">🗺️</span>
+                    <span className="label">Map</span>
+                  </button>
+                  <button onClick={() => navigate('/signals/federation')} className="nav-card">
+                    <span className="icon">🌐</span>
+                    <span className="label">Federation</span>
+                  </button>
+                </div>
+              </section>
             </div>
 
             <div className="signals-sidebar">

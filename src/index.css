@@ -37,9 +37,9 @@ body {
   color: #FFFFFF; /* theme.colors.textPrimary */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   width: 100vw;
+  height: 100vh;
 }
 
 #root {

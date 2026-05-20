@@ -68,8 +68,6 @@
 /* Global Mobile Styles */
 @media (max-width: 600px) {
   .App {
-    padding-top: 18px;
-    padding-bottom: 92px;
     background: transparent;
   }
 

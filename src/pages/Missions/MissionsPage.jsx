@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
@@ -8,6 +8,7 @@ import './MissionsPage.css';
 
 const MissionsPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isCoordinator } = useUserRoleProfile();
   // Index view for Missions is now specifically the '/missions/active' route
   const isIndex = location.pathname.replace(/\/$/, '') === '/missions' ||
@@ -50,6 +51,28 @@ const MissionsPage = () => {
                 <h3>Active Missions</h3>
                 <ActiveMissionsList />
               </div>
+
+              <section className="missions-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate('/missions/projects')} className="nav-card">
+                    <span className="icon">📂</span>
+                    <span className="label">Projects</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/tasks')} className="nav-card">
+                    <span className="icon">✅</span>
+                    <span className="label">Tasks</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/projectcreation')} className="nav-card">
+                    <span className="icon">➕</span>
+                    <span className="label">New Project</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/review')} className="nav-card">
+                    <span className="icon">🔍</span>
+                    <span className="label">Review</span>
+                  </button>
+                </div>
+              </section>
             </div>
             <div className="missions-sidebar">
               {isCoordinator && <ReviewQueue />}

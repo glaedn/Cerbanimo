@@ -97,6 +97,28 @@ const OrbitPage = () => {
               <section className="orbit-section activity">
                 <ConstellationActivity />
               </section>
+
+              <section className="orbit-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate('/orbit/profile')} className="nav-card">
+                    <span className="icon">👤</span>
+                    <span className="label">Profile</span>
+                  </button>
+                  <button onClick={() => navigate('/orbit/skills')} className="nav-card">
+                    <span className="icon">💠</span>
+                    <span className="label">Skills</span>
+                  </button>
+                  <button onClick={() => navigate('/orbit/notifications')} className="nav-card">
+                    <span className="icon">🔔</span>
+                    <span className="label">Notifications</span>
+                  </button>
+                  <button onClick={() => navigate('/orbit/interest-library')} className="nav-card">
+                    <span className="icon">🧠</span>
+                    <span className="label">Interests</span>
+                  </button>
+                </div>
+              </section>
             </>
           ) : (
             <div className="orbit-sub-content">
