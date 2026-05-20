@@ -47,6 +47,31 @@
   letter-spacing: -0.5px;
 }
 
+@media (max-width: 600px) {
+  .focus-card {
+    padding: 1.25rem;
+  }
+
+  .focus-card-title {
+    font-size: 1.4rem;
+  }
+
+  .focus-card-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .focus-card-actions button {
+    width: 100%;
+  }
+
+  .focus-card-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 .focus-card-status {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.65rem;

@@ -10,6 +10,22 @@
   transition: all 0.2s ease;
 }
 
+@media (max-width: 480px) {
+  .signal-chip {
+    padding: 0.5rem 0.75rem;
+    min-width: auto;
+    flex: 1;
+  }
+
+  .signal-chip-icon {
+    font-size: 1rem;
+  }
+
+  .signal-chip-value {
+    font-size: 0.9rem;
+  }
+}
+
 .signal-chip:hover {
   background: rgba(95, 240, 255, 0.05);
   border-color: rgba(95, 240, 255, 0.2);

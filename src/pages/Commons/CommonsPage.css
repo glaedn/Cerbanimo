@@ -93,3 +93,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 600px) {
+  .commons-page-container {
+    padding: 16px;
+    padding-bottom: 92px;
+  }
+
+  .commons-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-header > div {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+}

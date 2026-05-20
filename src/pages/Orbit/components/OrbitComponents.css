@@ -78,6 +78,40 @@
   margin-bottom: 24px;
 }
 
+@media (max-width: 600px) {
+  .momentum-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .momentum-mini-stats {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .mini-stat {
+    flex: 1;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .orbit-hud-overlay {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hud-metric {
+    padding: 4px 12px;
+  }
+
+  .metric-value {
+    font-size: 0.7rem;
+  }
+}
+
 .momentum-stat-card {
   background: rgba(255, 255, 255, 0.03);
   padding: 20px;
@@ -152,6 +186,16 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 12px;
+}
+
+@media (max-width: 600px) {
+  .secondary-focus-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-bar span {
+    width: 80px;
+  }
 }
 
 .skill-bar span {

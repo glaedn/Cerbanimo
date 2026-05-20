@@ -91,18 +91,10 @@ const OrbitPage = () => {
               </section>
 
               <section className="orbit-section momentum">
-                <div className="section-header">
-                  <h3>Momentum</h3>
-                  <div className="signal-row">
-                    <SignalChip label="Daily XP" value="+1,240" trend={5} />
-                    <SignalChip label="Streak" value="12 Days" icon="🔥" />
-                  </div>
-                </div>
                 <MomentumPanel />
               </section>
 
               <section className="orbit-section activity">
-                <h3>Constellation Activity</h3>
                 <ConstellationActivity />
               </section>
             </>

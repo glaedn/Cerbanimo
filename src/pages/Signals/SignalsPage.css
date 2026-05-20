@@ -16,10 +16,32 @@
   gap: 32px;
 }
 
+.signals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
 .signals-sidebar {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.signals-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.signal-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.emergency-signals {
+  margin-top: 1rem;
 }
 
 .governance-access-panel {
@@ -70,5 +92,33 @@
 @media (max-width: 1024px) {
   .signals-index-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .signals-header-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .signals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signals-index-layout {
+    gap: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Alert-oriented: Move emergency signals to top if needed,
+     but for now we just ensure they are visible and not too wide */
+  .signals-sidebar {
+    order: -1; /* Move sidebar (with Emergency Signals) to top on mobile */
+  }
+
+  .signals-main {
+    order: 0;
   }
 }

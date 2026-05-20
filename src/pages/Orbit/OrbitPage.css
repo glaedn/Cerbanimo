@@ -40,3 +40,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 600px) {
+  .orbit-page-container {
+    padding: 16px;
+    padding-bottom: 92px; /* Extra padding for mobile bottom nav */
+  }
+
+  .orbit-layout-grid {
+    gap: 20px;
+  }
+
+  .orbit-section {
+    padding: 16px;
+  }
+
+  .orbit-hud-layer {
+    margin-bottom: 20px;
+    justify-content: center;
+    padding-right: 60px; /* Avoid overlap with mobile top actions */
+  }
+}

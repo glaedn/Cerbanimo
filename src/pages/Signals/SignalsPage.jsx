@@ -14,10 +14,10 @@ const SignalsPage = () => {
     <div className="signals-page-container mode-page">
       <div className="mode-header">
         <span className="mode-kicker">SIGNALS</span>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+        <div className="signals-header-main">
           <h2>{isIndex ? 'Governance & Governance' : 'Signal Details'}</h2>
           {isIndex && (
-            <div className="signal-group" style={{ display: 'flex', gap: '1rem' }}>
+            <div className="signal-group">
               <SignalChip label="Proposals" value="3" icon="⚖️" type="accent" />
               <SignalChip label="Impact Score" value="842" trend={8} icon="💎" />
             </div>
@@ -64,7 +64,7 @@ const SignalsPage = () => {
                  </Link>
                </div>
 
-               <div className="sidebar-section glass-panel" style={{ marginTop: '1rem' }}>
+               <div className="sidebar-section glass-panel emergency-signals">
                  <h4>Emergency Signals</h4>
                  <div className="placeholder-content">NO_CRISIS_DETECTED</div>
                </div>

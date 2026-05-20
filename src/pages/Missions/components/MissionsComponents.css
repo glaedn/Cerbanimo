@@ -5,6 +5,13 @@
   margin-bottom: 32px;
 }
 
+@media (max-width: 600px) {
+  .pulse-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
 .pulse-card {
   background: rgba(255, 255, 255, 0.03);
   padding: 16px;

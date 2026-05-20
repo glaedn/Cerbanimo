@@ -48,3 +48,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 600px) {
+  .missions-page-container {
+    padding: 16px;
+    padding-bottom: 92px;
+  }
+
+  .missions-index-layout {
+    gap: 20px;
+  }
+
+  .mode-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mode-header > div {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+}

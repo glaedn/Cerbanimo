@@ -8,6 +8,12 @@
   gap: 24px;
 }
 
+@media (max-width: 600px) {
+    .communities-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .exchange-item {
   display: flex;
   gap: 12px;

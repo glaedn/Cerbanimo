@@ -39,6 +39,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  width: 100vw;
+}
+
+#root {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.mode-page {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .mode-page {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
 }
 
 code {
