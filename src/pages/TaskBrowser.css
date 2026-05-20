@@ -35,20 +35,16 @@
 }
 
 .task-browser-container {
-    padding: 0px;
+    padding: 24px;
     color: #ffffff;
     font-family: 'Orbitron', sans-serif;
     text-align: center;
-    background: radial-gradient(circle at center, #11112d, #000000); /* Updated to match navbar gradient */
-    background-size: cover;
-    background-attachment: fixed;
+    background: transparent;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    border: 1px solid rgba(109, 213, 237, 0.919); /* Added border like navbar */
-    /*box-shadow: 0 0 15px rgba(109, 213, 237, 0.6); /* Added box shadow like navbar */
 }
 
 /* Title Styling */
@@ -65,22 +61,25 @@
 .task-list {
     max-height: 70vh;
     overflow-y: auto;
-    background: rgba(26, 9, 57, 0.8)!important; /* Updated to match nav-link background */
-    border-radius: 8px; /* Matched to nav-link border-radius */
-    padding: 10px;
-    box-shadow: 0 0 15px rgba(109, 213, 237, 0.6);
+    background: rgba(8, 20, 41, 0.4) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(95, 240, 255, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     width: 90%;
+    max-width: 1000px;
     margin: 0 auto;
 }
 
 /* Task Item Styling */
 .task-item {
     padding: 15px;
-    border-bottom: 1px solid rgba(109, 213, 237, 0.3);
-    transition: all 0.3s ease-in-out; /* Matched transition timing from navbar */
+    border: 1px solid rgba(95, 240, 255, 0.1);
+    transition: all 0.3s ease-in-out;
     border-radius: 8px;
-    margin-bottom: 10px;
-    background-color: rgba(26, 9, 57, 0.8); /* Matched from nav-link */
+    margin-bottom: 12px;
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 .task-item:hover {

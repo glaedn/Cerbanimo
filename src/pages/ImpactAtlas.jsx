@@ -71,7 +71,14 @@ const ImpactAtlas = () => {
               />
             </Box>
 
-            <Paper sx={{ bgcolor: 'rgba(10, 10, 46, 0.8)', border: '1px solid rgba(0, 243, 255, 0.3)', borderRadius: 2, mb: 3 }}>
+            <Paper sx={{
+              background: 'rgba(8, 20, 41, 0.4)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(0, 243, 255, 0.15)',
+              borderRadius: 2,
+              mb: 3,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}>
               <List>
                 {filteredNodes.length > 0 ? filteredNodes.map(node => (
                   <ListItem key={node.id} divider sx={{ borderColor: 'rgba(0, 243, 255, 0.2)' }}>

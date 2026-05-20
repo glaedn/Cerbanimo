@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import theme from '../../styles/theme';
 
 export const PageContainer = styled.div`
-  background-color: #050510;
-  height: calc(100vh - 50px);
+  background-color: transparent;
+  height: 100%;
   color: #ffffff;
   font-family: 'Inter', sans-serif;
   padding: 2rem;

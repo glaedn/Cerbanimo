@@ -1,6 +1,6 @@
 .skill-library-container {
-  min-height: 100vh;
-  background-color: #0A0A2E;
+  min-height: 100%;
+  background-color: transparent;
   color: #FFFFFF;
   display: flex;
   flex-direction: column;
@@ -12,11 +12,11 @@
   display: flex;
   align-items: center;
   border-bottom: 1px solid rgba(255, 92, 162, 0.3);
-  background-color: rgba(10, 10, 46, 0.9);
+  background: rgba(8, 20, 41, 0.6);
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
 }
 
 .skill-library-content {

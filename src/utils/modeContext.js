@@ -8,7 +8,11 @@ export const MODE_CONFIGS = {
       { label: "Skills", path: "/orbit/skills" },
       { label: "Activity", path: "/orbit/activity" }
     ],
-    hudPanels: ['signals', 'pulse', 'regional']
+    hudPanels: ['signals', 'pulse', 'regional'],
+    widgets: [
+      { id: 'daily-focus', label: 'Daily Focus', type: 'focus' },
+      { id: 'momentum-summary', label: 'Momentum', type: 'stats' }
+    ]
   },
   missions: {
     label: "Mission Control",
@@ -19,7 +23,11 @@ export const MODE_CONFIGS = {
       { label: "Tasks", path: "/missions/tasks" },
       { label: "Review", path: "/missions/review" }
     ],
-    hudPanels: ['mission', 'dispatch', 'river']
+    hudPanels: ['mission', 'dispatch', 'river'],
+    widgets: [
+      { id: 'active-assignments', label: 'My Assignments', type: 'task-list' },
+      { id: 'mission-critical', label: 'Mission Critical', type: 'alerts' }
+    ]
   },
   commons: {
     label: "Commons",
@@ -30,7 +38,11 @@ export const MODE_CONFIGS = {
       { label: "Guilds", path: "/commons/guilds" },
       { label: "Activity", path: "/commons/activity" }
     ],
-    hudPanels: ['regional', 'signals', 'river']
+    hudPanels: ['regional', 'signals', 'river'],
+    widgets: [
+      { id: 'nearby-needs', label: 'Nearby Needs', type: 'matches' },
+      { id: 'guild-signals', label: 'Guild Signals', type: 'signals' }
+    ]
   },
   signals: {
     label: "Signals",
@@ -41,7 +53,11 @@ export const MODE_CONFIGS = {
       { label: "Crisis", path: "/signals/crisis" },
       { label: "Federation", path: "/signals/federation" }
     ],
-    hudPanels: ['signals', 'crisis', 'river']
+    hudPanels: ['signals', 'crisis', 'river'],
+    widgets: [
+      { id: 'urgent-proposals', label: 'Urgent Proposals', type: 'governance' },
+      { id: 'impact-pulse', label: 'Impact Pulse', type: 'analytics' }
+    ]
   }
 };
 

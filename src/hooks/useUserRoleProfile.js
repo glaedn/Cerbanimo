@@ -1,46 +1,54 @@
-import { useUserProfile } from "./useUserProfile";
+import { useMemo } from 'react';
+import { useUserProfile } from './useUserProfile';
 
 /**
- * useUserRoleProfile
- *
- * Provides a simplified view of the user's roles and permissions
- * for the Experience Spine to determine what systems to surface.
+ * Hook to derive role-based permissions and profile state.
+ * Used for progressive disclosure of systems.
  */
 export const useUserRoleProfile = () => {
   const { profile, loading } = useUserProfile();
 
-  if (loading || !profile) {
+  const roleProfile = useMemo(() => {
+    if (loading || !profile.id) {
+      return {
+        isNewUser: true,
+        isCoordinator: false,
+        isContributor: false,
+        isGovernanceActive: false,
+        isCommunityLeader: false,
+        isAdmin: false,
+        permissions: []
+      };
+    }
+
+    // Role definitions based on profile data
+    const isContributor = profile.experience?.total_xp > 100 || profile.skills?.length > 0;
+
+    // Community-based roles
+    const isCoordinator = profile.communities?.some(c =>
+      c.role === 'coordinator' || c.role === 'admin' || c.role === 'lead'
+    );
+
+    const isCommunityLeader = profile.communities?.some(c =>
+      c.role === 'founder' || c.role === 'admin'
+    );
+
+    const isGovernanceActive = profile.delegations?.length > 0 || profile.experience?.total_xp > 500;
+
+    const isAdmin = Number(profile.id) === 15; // Known admin ID
+
+    const isNewUser = !isContributor && profile.experience?.total_xp < 50;
+
     return {
-      isNewUser: true,
-      isCoordinator: false,
-      isContributor: false,
-      isGovernanceActive: false,
-      isCommunityLeader: false,
-      loading
+      isNewUser,
+      isCoordinator,
+      isContributor,
+      isGovernanceActive,
+      isCommunityLeader,
+      isAdmin,
+      permissions: profile.permissions || []
     };
-  }
+  }, [profile, loading]);
 
-  // Determine coordinator status (example: based on high level or specific flag)
-  const isCoordinator = profile.level >= 10 || profile.is_coordinator;
-
-  // Determine if they are a contributor (they have at least some XP)
-  const isContributor = profile.total_exp > 0;
-
-  // Determine if they are a community leader
-  const isCommunityLeader = profile.is_admin || profile.is_moderator;
-
-  // Governance active if they have joined communities or have high impact
-  const isGovernanceActive = profile.impact_score > 50 || profile.is_delegate;
-
-  // A user is "new" if they haven't completed onboarding or have 0 XP
-  const isNewUser = profile.total_exp === 0 && !isCoordinator;
-
-  return {
-    isNewUser,
-    isCoordinator,
-    isContributor,
-    isGovernanceActive,
-    isCommunityLeader,
-    loading: false
-  };
+  return { ...roleProfile, loading };
 };

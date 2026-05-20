@@ -11,28 +11,52 @@ const ContextPanel = () => {
   if (!config) return null;
 
   return (
-    <div className="context-panel-content">
+    <div className="context-panel-content glass-panel">
       <div className="context-header">
         <span className="context-icon">{config.icon}</span>
-        <h3 className="context-title">{config.label}</h3>
+        <div className="context-info">
+          <h3 className="context-title">{config.label}</h3>
+          <span className="context-status">SYSTEM_ACTIVE</span>
+        </div>
       </div>
 
       <nav className="context-secondary-nav">
-        {config.secondaryNav.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`context-nav-item ${location.pathname === item.path ? 'active' : ''}`}
-          >
-            {item.label}
-          </Link>
-        ))}
+        {config.secondaryNav.map((item) => {
+          const isActive = location.pathname === item.path ||
+                          (item.path !== '/' && location.pathname.startsWith(item.path));
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`context-nav-item ${isActive ? 'active' : ''}`}
+            >
+              <span className="nav-indicator"></span>
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="context-widgets">
-        <div className="context-widget-placeholder">
-          <small>CONTEXTUAL_SYSTEMS_ACTIVE</small>
-        </div>
+        <h4 className="widgets-label">Contextual Systems</h4>
+        {config.widgets?.map(widget => (
+          <div key={widget.id} className="context-widget-card">
+            <div className="widget-header">
+              <span className="widget-label">{widget.label}</span>
+              <span className="widget-type-tag">{widget.type.toUpperCase()}</span>
+            </div>
+            <div className="widget-body">
+              <div className="widget-placeholder-content">
+                <div className="shimmer-line"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {!config.widgets && (
+          <div className="context-widget-placeholder">
+            <small>NO_CONTEXTUAL_WIDGETS_AVAILABLE</small>
+          </div>
+        )}
       </div>
     </div>
   );

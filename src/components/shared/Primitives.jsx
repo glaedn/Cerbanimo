@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import './SharedComponents.css';
 
+/**
+ * Shared primitive UI components for the Experience Spine.
+ */
+
 export const ExpandablePanel = ({ title, children, summary }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -18,29 +22,7 @@ export const ExpandablePanel = ({ title, children, summary }) => {
   );
 };
 
-export const ContextTray = ({ isOpen, onClose, children, title }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="context-tray-overlay" onClick={onClose}>
-      <div className="context-tray" onClick={(e) => e.stopPropagation()}>
-        <div className="tray-header">
-          <h3>{title}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
-        </div>
-        <div className="tray-body">{children}</div>
-      </div>
-    </div>
-  );
-};
-
-export const FocusCard = ({ title, description, actionLabel, onAction }) => (
-  <div className="focus-card">
-    <h3>{title}</h3>
-    <p>{description}</p>
-    {actionLabel && <button onClick={onAction}>{actionLabel}</button>}
-  </div>
-);
-
-export const SignalChip = ({ label, type = 'info' }) => (
-  <span className={`signal-chip ${type}`}>{label}</span>
-);
+// Re-export specific implementations from their dedicated files to avoid duplication
+export { default as FocusCard } from './FocusCard';
+export { default as SignalChip } from './SignalChip';
+export { default as ContextTray } from '../ExperienceShell/ContextTray';

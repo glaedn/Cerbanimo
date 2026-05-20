@@ -92,7 +92,7 @@ const GuildsDashboard = () => {
     if (user) fetchData();
   }, [getAccessTokenSilently, user]);
 
-  if (loading) return <Box p={4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress sx={{ color: '#00f3ff' }} /></Box>;
+  if (loading) return <Box p={4} sx={{ backgroundColor: 'transparent', minHeight: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress sx={{ color: '#00f3ff' }} /></Box>;
 
   return (
     <Box className={`guilds-dashboard-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>

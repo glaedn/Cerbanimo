@@ -166,9 +166,10 @@ const SkillLibrary = () => {
           sx={{
             p: 2,
             borderRadius: '12px',
-            border: `1px solid ${isUnlocked ? theme.colors.secondary : 'rgba(255, 92, 162, 0.1)'}`,
+            border: `1px solid ${isUnlocked ? theme.colors.secondary : 'rgba(255, 92, 162, 0.15)'}`,
             cursor: 'pointer',
-            backgroundColor: isUnlocked ? 'rgba(255, 92, 162, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+            background: isUnlocked ? 'rgba(255, 92, 162, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(10px)',
             color: isUnlocked ? theme.colors.secondary : '#FFF',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             boxShadow: isUnlocked ? `0 0 20px ${theme.colors.secondary}33` : 'none',
@@ -236,7 +237,7 @@ const SkillLibrary = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#0A0A2E' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: 'transparent' }}>
         <CircularProgress sx={{ color: theme.colors.secondary }} />
       </Box>
     );

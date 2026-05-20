@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { CommunityPulse, FeaturedCommunities, RecentExchange } from './components';
+import FocusCard from '../../components/shared/FocusCard';
+import SignalChip from '../../components/shared/SignalChip';
 import './CommonsPage.css';
 
 const CommonsPage = () => {
@@ -11,24 +12,50 @@ const CommonsPage = () => {
     <div className="commons-page-container mode-page">
       <div className="mode-header">
         <span className="mode-kicker">COMMONS</span>
-        <h2>{isIndex ? 'Ecosystem Overview' : 'Community Details'}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <h2>{isIndex ? 'Community Exchange' : 'Network Hub'}</h2>
+          {isIndex && (
+            <div className="signal-group" style={{ display: 'flex', gap: '1rem' }}>
+              <SignalChip label="Guilds" value="12" icon="⚒️" />
+              <SignalChip label="Members" value="1.2k" icon="👥" />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mode-content">
         {isIndex ? (
           <div className="commons-index-layout">
             <div className="commons-main">
-              <CommunityPulse />
-              <FeaturedCommunities />
-            </div>
-            <div className="commons-sidebar">
-              <RecentExchange />
-              <div className="commons-discovery-panel">
-                <h4>Discovery</h4>
-                <button className="commons-btn">Browse All Guilds</button>
-                <button className="commons-btn">Open Marketplace</button>
-                <button className="commons-btn">Find Nearby Needs</button>
+              <FocusCard
+                title="Support Local Skill Sharing"
+                kicker="Community Highlight"
+                status="NEEDS_PARTICIPATION"
+              >
+                <p>Join the upcoming "Circular Economics 101" workshop hosted by the Guild of Architects.</p>
+              </FocusCard>
+
+              <div className="commons-grid">
+                <div className="commons-card glass-panel">
+                  <h3>Featured Communities</h3>
+                  <div className="placeholder-content">COMMUNITIES_LIST_LOADING...</div>
+                </div>
+                <div className="commons-card glass-panel">
+                  <h3>Marketplace Trends</h3>
+                  <div className="placeholder-content">TRENDS_LOADING...</div>
+                </div>
               </div>
+            </div>
+
+            <div className="commons-sidebar">
+               <div className="sidebar-section glass-panel">
+                 <h4>Active Needs</h4>
+                 <div className="placeholder-content">NEEDS_FEED...</div>
+               </div>
+               <div className="sidebar-section glass-panel" style={{ marginTop: '1rem' }}>
+                 <h4>Nearby Resources</h4>
+                 <div className="placeholder-content">RESOURCES_MAP...</div>
+               </div>
             </div>
           </div>
         ) : (

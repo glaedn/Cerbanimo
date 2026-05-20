@@ -127,7 +127,20 @@ const CommunityMarketplace = ({ communityId }) => {
           ) : (
             goods.map(good => (
               <Grid item xs={12} sm={6} key={good.id}>
-                <Card sx={{ bgcolor: '#111', border: '1px solid #333', color: '#fff', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Card sx={{
+                  background: 'rgba(8, 20, 41, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(95, 240, 255, 0.15)',
+                  color: '#fff',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'rgba(95, 240, 255, 0.5)',
+                    boxShadow: '0 0 20px rgba(95, 240, 255, 0.2)'
+                  }
+                }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                       <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#00ffff', fontSize: '1rem' }}>
@@ -179,7 +192,12 @@ const CommunityMarketplace = ({ communityId }) => {
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: isMobile ? '100%' : 500, height: isMobile ? '100%' : 'auto', bgcolor: '#0a0a0a', border: isMobile ? 'none' : '2px solid #00ffff', p: isMobile ? 3 : 4, borderRadius: isMobile ? 0 : 2,
+          width: isMobile ? '100%' : 500, height: isMobile ? '100%' : 'auto',
+          background: 'rgba(8, 20, 41, 0.9)',
+          backdropFilter: 'blur(20px)',
+          border: isMobile ? 'none' : '1px solid rgba(95, 240, 255, 0.3)',
+          p: isMobile ? 3 : 4, borderRadius: isMobile ? 0 : 4,
+          boxShadow: '0 0 40px rgba(0, 0, 0, 0.6)',
           maxHeight: isMobile ? '100vh' : '90vh', overflowY: 'auto'
         }}>
           <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#00ffff', mb: 3 }}>LIST_GOOD_PROTOCOL</Typography>

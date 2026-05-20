@@ -1,0 +1,68 @@
+.signal-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  min-width: 140px;
+  transition: all 0.2s ease;
+}
+
+.signal-chip:hover {
+  background: rgba(95, 240, 255, 0.05);
+  border-color: rgba(95, 240, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.signal-chip-icon {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.signal-chip-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.signal-chip-label {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.signal-chip-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signal-chip-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.signal-chip-trend {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.signal-chip-trend.up {
+  color: #5ff0ff;
+}
+
+.signal-chip-trend.down {
+  color: #ff5ca2;
+}
+
+.signal-chip.accent {
+  border-left: 2px solid #5ff0ff;
+}
+
+.signal-chip.danger {
+  border-left: 2px solid #ff5ca2;
+}
