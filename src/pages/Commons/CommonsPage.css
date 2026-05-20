@@ -2,6 +2,8 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px 60px 20px;
+  --commons-accent: #ffae6d; /* Warm amber/orange accent */
+  --commons-glow: rgba(255, 174, 109, 0.3);
 }
 
 .commons-index-layout {
@@ -32,15 +34,15 @@
 .commons-discovery-panel h4 {
   font-family: 'Orbitron', sans-serif;
   font-size: 0.85rem;
-  color: #a855f7;
+  color: var(--commons-accent);
   margin: 0 0 20px 0;
   text-transform: uppercase;
 }
 
 .commons-btn {
   background: transparent;
-  border: 1px solid #a855f7;
-  color: #a855f7;
+  border: 1px solid var(--commons-accent);
+  color: var(--commons-accent);
   padding: 10px 20px;
   font-family: 'Orbitron', sans-serif;
   font-size: 0.75rem;
@@ -52,8 +54,38 @@
 }
 
 .commons-btn:hover {
-  background: rgba(168, 85, 247, 0.1);
-  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+  background: rgba(255, 174, 109, 0.1);
+  box-shadow: 0 0 15px var(--commons-glow);
+}
+
+.commons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.commons-card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: var(--commons-accent);
+    margin-bottom: 1rem;
+    letter-spacing: 1px;
+}
+
+.placeholder-content {
+    font-family: 'monospace';
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px dashed rgba(255, 174, 109, 0.2);
+    padding: 2rem;
+    text-align: center;
+}
+
+.sidebar-section h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: var(--commons-accent);
+    margin-bottom: 1rem;
 }
 
 @media (max-width: 1024px) {

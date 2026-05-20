@@ -1,11 +1,13 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import './SignalsPage.css';
 
 const SignalsPage = () => {
   const location = useLocation();
+  const { profile } = useUserProfile();
   const isIndex = location.pathname.replace(/\/$/, '') === '/signals';
 
   return (
@@ -54,13 +56,17 @@ const SignalsPage = () => {
             </div>
 
             <div className="signals-sidebar">
-               <div className="sidebar-section glass-panel highlight-border">
+               <div className="governance-access-panel glass-panel highlight-border">
+                 <h4>Governance Systems</h4>
+                 <p className="panel-hint">Advanced administrative controls and coordination protocols.</p>
+                 <Link to={`/signals/governance/${profile?.primary_community_id || 1}`} className="signals-btn">
+                   Open Full Governance View
+                 </Link>
+               </div>
+
+               <div className="sidebar-section glass-panel" style={{ marginTop: '1rem' }}>
                  <h4>Emergency Signals</h4>
                  <div className="placeholder-content">NO_CRISIS_DETECTED</div>
-               </div>
-               <div className="sidebar-section glass-panel" style={{ marginTop: '1rem' }}>
-                 <h4>My Delegations</h4>
-                 <div className="placeholder-content">LOAD_DELEGATIONS...</div>
                </div>
             </div>
           </div>

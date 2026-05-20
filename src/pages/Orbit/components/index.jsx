@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FocusCard, SignalChip, ExpandablePanel } from '../../../components/shared/Primitives';
+import { useUserProfile } from '../../../hooks/useUserProfile';
+import useRelevantTasks from '../../../hooks/useRelevantTasks';
 import './OrbitComponents.css';
 
 export const FocusPanel = () => {
@@ -33,6 +35,16 @@ export const FocusPanel = () => {
 };
 
 export const MomentumPanel = () => {
+  const { profile } = useUserProfile();
+  const exp = profile?.experience || { total_xp: 0, current_level: 0, xp_for_next_level: 0 };
+
+  // Calculate progress to next level
+  const xpCurrentLevel = Math.pow((exp.current_level - 1), 2) * 40;
+  const xpNextLevel = Math.pow(exp.current_level, 2) * 40;
+  const progressInLevel = exp.total_xp - xpCurrentLevel;
+  const totalInLevel = xpNextLevel - xpCurrentLevel;
+  const progressPercent = totalInLevel > 0 ? Math.min(100, Math.max(0, (progressInLevel / totalInLevel) * 100)) : 0;
+
   return (
     <div className="orbit-momentum-panel">
       <div className="orbit-section-header">
@@ -43,36 +55,39 @@ export const MomentumPanel = () => {
         <div className="momentum-stat-card">
           <div className="stat-header">
             <span className="stat-label">TOTAL_XP</span>
-            <span className="stat-value">12,450</span>
+            <span className="stat-value">{exp.total_xp.toLocaleString()}</span>
           </div>
           <div className="stat-progress-bar">
-            <div className="progress-fill" style={{ width: '65%' }}></div>
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
           </div>
-          <span className="stat-sub">340 XP to Level 19</span>
+          <span className="stat-sub">Level {exp.current_level} &bull; {exp.xp_for_next_level.toLocaleString()} XP to Level {exp.current_level + 1}</span>
         </div>
 
         <div className="momentum-mini-stats">
           <div className="mini-stat">
-            <span className="mini-label">STREAK</span>
-            <span className="mini-value">5 DAYS</span>
+            <span className="mini-label">CREDITS</span>
+            <span className="mini-value">{profile?.tokens?.toLocaleString() || 0}</span>
           </div>
           <div className="mini-stat">
             <span className="mini-label">IMPACT</span>
-            <span className="mini-value">HIGH</span>
+            <span className="mini-value">STABLE</span>
           </div>
         </div>
       </div>
 
       <div className="skill-growth-preview">
-        <h4>Recent Skill Growth</h4>
-        <div className="skill-bar">
-          <span>Spatial Logic</span>
-          <div className="bar"><div className="fill" style={{ width: '80%' }}></div></div>
-        </div>
-        <div className="skill-bar">
-          <span>Logistics</span>
-          <div className="bar"><div className="fill" style={{ width: '45%' }}></div></div>
-        </div>
+        <h4>Top Skills</h4>
+        {profile?.skills?.length > 0 ? (
+          profile.skills.slice(0, 3).map(skill => (
+            <div key={skill.id} className="skill-bar">
+              <span>{skill.name}</span>
+              <div className="bar"><div className="fill" style={{ width: `${Math.min(100, (skill.exp / 1000) * 100)}%` }}></div></div>
+              <span className="skill-lvl">Lvl {skill.level}</span>
+            </div>
+          ))
+        ) : (
+          <p className="empty-state">No skills registered yet. Start a mission to earn XP.</p>
+        )}
       </div>
     </div>
   );
@@ -107,6 +122,9 @@ export const ConstellationActivity = () => {
 };
 
 export const OpportunityPanel = () => {
+  const { profile } = useUserProfile();
+  const { relevantTasks, loading } = useRelevantTasks(profile?.id);
+
   return (
     <div className="orbit-opportunity-panel">
       <div className="orbit-section-header">
@@ -114,16 +132,26 @@ export const OpportunityPanel = () => {
         <h3>Nearby Opportunities</h3>
       </div>
       <div className="opportunity-list">
-        <ExpandablePanel
-          title="Infrastructure Support Needed"
-          summary="3 active needs in your area"
-        >
-          <div className="opp-details">
-            <p>Nexus Bridge: Backend optimization</p>
-            <p>Sector 7: Water quality sensors</p>
-            <button className="orbit-btn ghost x-small">Explore Commons</button>
-          </div>
-        </ExpandablePanel>
+        {loading ? (
+          <p className="placeholder-text">SCANNING_FOR_MATCHES...</p>
+        ) : relevantTasks?.length > 0 ? (
+          relevantTasks.slice(0, 3).map(task => (
+            <ExpandablePanel
+              key={task.id}
+              title={task.name}
+              summary={`${task.project_name} • ${task.skill_name || 'General'}`}
+            >
+              <div className="opp-details">
+                <p><strong>Project:</strong> {task.project_name}</p>
+                <p><strong>Skill Required:</strong> {task.skill_name || 'General'} (Lvl {task.requiredSkillLevel})</p>
+                <p><strong>Status:</strong> {task.status}</p>
+                <Link to={`/missions/visualizer/${task.project_id}/${task.id}`} className="orbit-btn ghost x-small">View Task Details</Link>
+              </div>
+            </ExpandablePanel>
+          ))
+        ) : (
+          <p className="empty-state">No matching opportunities found in your immediate vicinity.</p>
+        )}
       </div>
     </div>
   );
@@ -148,11 +176,21 @@ export const QuickActions = () => {
 };
 
 export const OrbitHUD = () => {
+  const { profile } = useUserProfile();
+
   return (
     <div className="orbit-hud-overlay">
       <div className="hud-metric">
+        <span className="metric-label">CITIZEN_ID</span>
+        <span className="metric-value">#{profile?.id || '---'}</span>
+      </div>
+      <div className="hud-metric">
         <span className="metric-label">SYS_STABILITY</span>
         <span className="metric-value">98.4%</span>
+      </div>
+      <div className="hud-metric mobile-hide">
+        <span className="metric-label">NET_CREDITS</span>
+        <span className="metric-value">{profile?.tokens?.toLocaleString() || 0}</span>
       </div>
     </div>
   );

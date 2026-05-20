@@ -189,12 +189,14 @@ const AppContent = () => {
 
               {/* MISSIONS MODE */}
               <Route path="/missions/*" element={<PrivateRoute><PageWrapper><MissionsPage /></PageWrapper></PrivateRoute>}>
+                <Route path="active" element={<div className="mode-index-view">Index handled by MissionsPage</div>} />
                 <Route path="projects" element={<ProjectPages />} />
                 <Route path="project/:projectId" element={<Project />} />
                 <Route path="projectcreation" element={<ProjectCreation />} />
                 <Route path="tasks" element={<TaskBrowser />} />
+                <Route path="review" element={<TaskBrowser initialTab={2} />} />
                 <Route path="visualizer/:projectId/:taskId?" element={isMobile ? <MobileTaskDetail /> : <ProjectVisualizer />} />
-                <Route index element={<ProjectPages />} />
+                <Route index element={<Navigate to="active" replace />} />
               </Route>
 
               {/* COMMONS MODE */}

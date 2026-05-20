@@ -1,13 +1,17 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
+import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
 import { MissionPulse, ActiveMissionsList, ReviewQueue } from './components';
 import './MissionsPage.css';
 
 const MissionsPage = () => {
   const location = useLocation();
-  const isIndex = location.pathname.replace(/\/$/, '') === '/missions';
+  const { isCoordinator } = useUserRoleProfile();
+  // Index view for Missions is now specifically the '/missions/active' route
+  const isIndex = location.pathname.replace(/\/$/, '') === '/missions' ||
+                  location.pathname.replace(/\/$/, '') === '/missions/active';
 
   return (
     <div className="missions-page-container mode-page">
@@ -48,11 +52,11 @@ const MissionsPage = () => {
               </div>
             </div>
             <div className="missions-sidebar">
-              <ReviewQueue />
+              {isCoordinator && <ReviewQueue />}
               <div className="quick-actions-panel glass-panel">
                 <h4>Quick Actions</h4>
-                <button className="orbit-btn primary full-width" style={{ marginBottom: '0.5rem' }}>Create New Project</button>
-                <button className="orbit-btn ghost full-width">Browse All Tasks</button>
+                <Link to="/missions/projectcreation" className="orbit-btn primary full-width" style={{ marginBottom: '0.5rem', display: 'block', textAlign: 'center', textDecoration: 'none' }}>Create New Project</Link>
+                <Link to="/missions/tasks" className="orbit-btn ghost full-width" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Browse All Tasks</Link>
               </div>
             </div>
           </div>

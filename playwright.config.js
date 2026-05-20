@@ -16,9 +16,6 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
-        launchOptions: {
-          executablePath: '/home/jules/.cache/ms-playwright/firefox-1509/firefox/firefox'
-        }
       },
     },
   ],

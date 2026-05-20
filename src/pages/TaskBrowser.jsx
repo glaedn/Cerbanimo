@@ -8,9 +8,9 @@ import MobileTaskCard from '../components/MobileTaskCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import './TaskBrowser.css';
 
-const TaskBrowser = () => {
+const TaskBrowser = ({ initialTab = 0 }) => {
   const isMobile = useIsMobile();
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(initialTab);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);

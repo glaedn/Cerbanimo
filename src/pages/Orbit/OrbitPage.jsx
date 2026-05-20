@@ -2,6 +2,9 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
+import useAssignedTasks from '../../hooks/useAssignedTasks';
 import {
   MomentumPanel,
   ConstellationActivity,
@@ -14,8 +17,14 @@ import './OrbitPage.css';
 const OrbitPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const { isCoordinator } = useUserRoleProfile();
+  const { assignedTasks, loading: tasksLoading } = useAssignedTasks(profile?.id);
+
   // Resilient index detection that ignores trailing slashes and search params
   const isIndex = location.pathname.replace(/\/$/, '') === '/orbit';
+
+  const primaryTask = assignedTasks?.length > 0 ? assignedTasks[0] : null;
 
   return (
     <div className="orbit-page-container">
@@ -28,23 +37,57 @@ const OrbitPage = () => {
           {isIndex ? (
             <>
               <section className="orbit-section focus">
-                <FocusCard
-                  title="Optimize Community Wealth"
-                  kicker="Primary Objective"
-                  status="IN_PROGRESS"
-                  actions={
-                    <>
-                      <button className="orbit-btn primary" onClick={() => navigate('/missions')}>Execute Mission</button>
-                      <button className="orbit-btn ghost">View Details</button>
-                    </>
-                  }
-                >
-                  <p>Current focus: Facilitating the transition to local resource circularity in the Sector 7 community.</p>
-                  <div className="focus-stats-row" style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
-                    <SignalChip label="Progress" value="68%" trend={12} icon="📈" />
-                    <SignalChip label="Alignment" value="High" icon="🎯" type="accent" />
+                {isCoordinator && (
+                  <div className="coordinator-badge" style={{
+                    fontFamily: 'Orbitron',
+                    fontSize: '0.65rem',
+                    color: '#5ff0ff',
+                    marginBottom: '0.5rem',
+                    border: '1px solid rgba(95, 240, 255, 0.3)',
+                    padding: '2px 8px',
+                    display: 'inline-block',
+                    borderRadius: '4px'
+                  }}>
+                    COORDINATOR_MODE_ACTIVE
                   </div>
-                </FocusCard>
+                )}
+                {tasksLoading ? (
+                  <p className="placeholder-text">LOADING_FOCUS_OBJECTIVE...</p>
+                ) : primaryTask ? (
+                  <FocusCard
+                    title={primaryTask.name}
+                    kicker="Current Focus"
+                    status={primaryTask.status.toUpperCase()}
+                    actions={
+                      <>
+                        <button
+                          className="orbit-btn primary"
+                          onClick={() => navigate(`/missions/visualizer/${primaryTask.projectId}/${primaryTask.id}`)}
+                        >
+                          Execute Mission
+                        </button>
+                        <button className="orbit-btn ghost" onClick={() => navigate('/missions')}>View All</button>
+                      </>
+                    }
+                  >
+                    <p>Current assignment within <strong>{primaryTask.projectName}</strong>. Your immediate contribution is requested to maintain momentum.</p>
+                    <div className="focus-stats-row" style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
+                      <SignalChip label="Project" value={primaryTask.projectName} icon="🚀" />
+                      <SignalChip label="Status" value={primaryTask.status} icon="📡" type="accent" />
+                    </div>
+                  </FocusCard>
+                ) : (
+                  <FocusCard
+                    title="No Active Missions"
+                    kicker="Strategic Advisory"
+                    status="READY"
+                    actions={
+                      <button className="orbit-btn primary" onClick={() => navigate('/missions')}>Browse Missions</button>
+                    }
+                  >
+                    <p>You have no current assignments. Explore Mission Control to find projects aligning with your skills or check the Commons for community needs.</p>
+                  </FocusCard>
+                )}
               </section>
 
               <section className="orbit-section momentum">

@@ -93,7 +93,7 @@ const CommunityMarketplace = ({ communityId }) => {
   return (
     <Box sx={{ color: '#e0e0e0' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#00ffff' }}>
+        <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', textShadow: '0 0 10px rgba(255, 174, 109, 0.3)' }}>
           MARKETPLACE
         </Typography>
         <Button
@@ -101,8 +101,8 @@ const CommunityMarketplace = ({ communityId }) => {
           startIcon={<Plus size={18} />}
           onClick={() => setIsModalOpen(true)}
           sx={{
-            color: '#00ffff',
-            borderColor: 'rgba(0, 255, 255, 0.5)',
+            color: '#ffae6d',
+            borderColor: 'rgba(255, 174, 109, 0.5)',
             height: isMobile ? '44px' : 'auto'
           }}
         >
@@ -117,7 +117,7 @@ const CommunityMarketplace = ({ communityId }) => {
       )}
 
       {isLoading ? (
-        <Box display="flex" justifyContent="center" py={4}><CircularProgress sx={{ color: '#00ffff' }} /></Box>
+        <Box display="flex" justifyContent="center" py={4}><CircularProgress sx={{ color: '#ffae6d' }} /></Box>
       ) : (
         <Grid container spacing={2}>
           {goods.length === 0 ? (
@@ -128,28 +128,28 @@ const CommunityMarketplace = ({ communityId }) => {
             goods.map(good => (
               <Grid item xs={12} sm={6} key={good.id}>
                 <Card sx={{
-                  background: 'rgba(8, 20, 41, 0.4)',
+                  background: 'rgba(25, 15, 8, 0.4)',
                   backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(95, 240, 255, 0.15)',
+                  border: '1px solid rgba(255, 174, 109, 0.15)',
                   color: '#fff',
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                   transition: 'all 0.3s ease-in-out',
                   '&:hover': {
-                    borderColor: 'rgba(95, 240, 255, 0.5)',
-                    boxShadow: '0 0 20px rgba(95, 240, 255, 0.2)'
+                    borderColor: 'rgba(255, 174, 109, 0.5)',
+                    boxShadow: '0 0 20px rgba(255, 174, 109, 0.2)'
                   }
                 }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                      <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#00ffff', fontSize: '1rem' }}>
+                      <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', fontSize: '1rem' }}>
                         {good.name.toUpperCase()}
                       </Typography>
                       <Chip
                         label={`${good.price} Ȼ`}
                         size="small"
-                        sx={{ bgcolor: 'rgba(0, 255, 255, 0.1)', color: '#00ffff', fontWeight: 'bold' }}
+                        sx={{ bgcolor: 'rgba(255, 174, 109, 0.1)', color: '#ffae6d', fontWeight: 'bold' }}
                       />
                     </Box>
                     <Typography variant="body2" sx={{ mb: 2, opacity: 0.8, minHeight: '3em' }}>
@@ -171,11 +171,11 @@ const CommunityMarketplace = ({ communityId }) => {
                       startIcon={<ShoppingCart size={18} />}
                       onClick={() => handlePurchase(good.id)}
                       sx={{
-                        bgcolor: '#00ffff',
+                        bgcolor: '#ffae6d',
                         color: '#000',
                         fontWeight: 'bold',
                         height: isMobile ? '48px' : 'auto',
-                        '&:hover': { bgcolor: '#00cccc' }
+                        '&:hover': { bgcolor: '#f97316' }
                       }}
                     >
                       PURCHASE
@@ -193,14 +193,14 @@ const CommunityMarketplace = ({ communityId }) => {
         <Box sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           width: isMobile ? '100%' : 500, height: isMobile ? '100%' : 'auto',
-          background: 'rgba(8, 20, 41, 0.9)',
+          background: 'rgba(25, 15, 8, 0.9)',
           backdropFilter: 'blur(20px)',
-          border: isMobile ? 'none' : '1px solid rgba(95, 240, 255, 0.3)',
+          border: isMobile ? 'none' : '1px solid rgba(255, 174, 109, 0.3)',
           p: isMobile ? 3 : 4, borderRadius: isMobile ? 0 : 4,
           boxShadow: '0 0 40px rgba(0, 0, 0, 0.6)',
           maxHeight: isMobile ? '100vh' : '90vh', overflowY: 'auto'
         }}>
-          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#00ffff', mb: 3 }}>LIST_GOOD_PROTOCOL</Typography>
+          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', mb: 3 }}>LIST_GOOD_PROTOCOL</Typography>
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -210,8 +210,8 @@ const CommunityMarketplace = ({ communityId }) => {
               value={newGood.name}
               onChange={handleInputChange}
               required
-              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(0,255,255,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#00ffff' } }}
+              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
+              InputLabelProps={{ style: { color: '#ffae6d' } }}
             />
             <TextField
               fullWidth
@@ -221,8 +221,8 @@ const CommunityMarketplace = ({ communityId }) => {
               name="description"
               value={newGood.description}
               onChange={handleInputChange}
-              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(0,255,255,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#00ffff' } }}
+              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
+              InputLabelProps={{ style: { color: '#ffae6d' } }}
             />
             <TextField
               fullWidth
@@ -232,8 +232,8 @@ const CommunityMarketplace = ({ communityId }) => {
               value={newGood.price}
               onChange={handleInputChange}
               required
-              sx={{ mb: 3, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(0,255,255,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#00ffff' } }}
+              sx={{ mb: 3, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
+              InputLabelProps={{ style: { color: '#ffae6d' } }}
             />
 
             <Box display="flex" gap={2}>
@@ -249,7 +249,7 @@ const CommunityMarketplace = ({ communityId }) => {
                 fullWidth
                 type="submit"
                 variant="contained"
-                sx={{ bgcolor: '#00ffff', color: '#000', fontWeight: 'bold', height: isMobile ? '48px' : 'auto' }}
+                sx={{ bgcolor: '#ffae6d', color: '#000', fontWeight: 'bold', height: isMobile ? '48px' : 'auto' }}
               >
                 INITIALIZE_LISTING
               </Button>

@@ -8,17 +8,12 @@ const routeToSceneMap = [
   { pattern: /^\/commons/, scene: 'community' },
   { pattern: /^\/signals/, scene: 'governance' },
   { pattern: /^\/governance/, scene: 'governance' },
-  { pattern: /^\/profile\/skill-constellation/, scene: 'skill-galaxy' },
-  { pattern: /^\/guilds/, scene: 'guild-hub' },
-  { pattern: /^\/communities/, scene: 'community' },
-  { pattern: /^\/communityhub/, scene: 'community' },
+  { pattern: /^\/orbit\/skills/, scene: 'skill-galaxy' },
+  { pattern: /^\/commons\/guilds/, scene: 'guild-hub' },
+  { pattern: /^\/commons\/marketplace/, scene: 'community' },
+  { pattern: /^\/commons\/communities/, scene: 'community' },
+  { pattern: /^\/missions\/tasks/, scene: 'workspace' },
   { pattern: /^\/onboarding/, scene: 'onboarding' },
-  { pattern: /^\/dashboard/, scene: 'dashboard' },
-  { pattern: /^\/marketplace/, scene: 'community' },
-  { pattern: /^\/tasks/, scene: 'workspace' },
-  { pattern: /^\/needs/, scene: 'community' },
-  { pattern: /^\/impact-atlas/, scene: 'governance' },
-  { pattern: /^\/federation-atlas/, scene: 'governance' },
   { pattern: /^\/$/, scene: 'homepage' }
 ];
 

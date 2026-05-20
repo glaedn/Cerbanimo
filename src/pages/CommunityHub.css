@@ -1,20 +1,22 @@
-/* CommunityHub Styling - Space HUD Update */
+/* CommunityHub Styling - Warm Commons Theme */
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 :root {
+    --commons-accent: #ffae6d;
+    --commons-glow: rgba(255, 174, 109, 0.3);
     --hud-bg-color: #000000;
-    --hud-panel-bg-color: rgba(0, 18, 25, 0.7);
-    --hud-panel-bg-opaque: #001219;
-    --hud-primary-color: #00F3FF;
-    --hud-primary-color-rgb: 0, 243, 255;
-    --hud-secondary-color: #FF00FF;
-    --hud-secondary-color-rgb: 255, 0, 255;
+    --hud-panel-bg-color: rgba(25, 15, 8, 0.6);
+    --hud-panel-bg-opaque: #1a0f08;
+    --hud-primary-color: var(--commons-accent);
+    --hud-primary-color-rgb: 255, 174, 109;
+    --hud-secondary-color: #f97316;
+    --hud-secondary-color-rgb: 249, 115, 22;
     --hud-text-color: #E0E0E0;
-    --hud-text-primary: #00F3FF;
-    --hud-text-secondary: rgba(0, 243, 255, 0.6);
-    --hud-border-color: rgba(0, 243, 255, 0.3);
-    --hud-glow-color: #00F3FF;
+    --hud-text-primary: var(--commons-accent);
+    --hud-text-secondary: rgba(255, 174, 109, 0.6);
+    --hud-border-color: rgba(255, 174, 109, 0.2);
+    --hud-glow-color: var(--commons-accent);
     --hud-font-family: 'Space Mono', monospace;
 }
 
@@ -25,7 +27,7 @@
     align-items: center;
     padding: 40px 20px;
     padding-top: 50px;
-    background: radial-gradient(circle at center, #001219 0%, #000000 100%);
+    background: radial-gradient(circle at center, rgba(45, 26, 10, 0.4) 0%, #000000 100%);
     color: var(--hud-text-color);
     margin-top: 0;
     font-family: var(--hud-font-family);
@@ -39,6 +41,7 @@
     letter-spacing: 4px;
     text-shadow: 0 0 20px var(--hud-glow-color);
     font-size: 2.8rem;
+    font-family: 'Orbitron', sans-serif;
 }
 
 .community-info {
@@ -46,9 +49,9 @@
     text-align: center;
     margin-bottom: 40px;
     background: var(--hud-panel-bg-color);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
     padding: 30px;
-    border-radius: 4px;
+    border-radius: 12px;
     border: 1px solid var(--hud-border-color);
     border-top: 4px solid var(--hud-primary-color);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -84,8 +87,9 @@
 
 .hub-card {
     background: var(--hud-panel-bg-opaque);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--hud-border-color);
-    border-radius: 4px;
+    border-radius: 12px;
     padding: 24px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
@@ -107,7 +111,7 @@
 .hub-card:hover {
     transform: translateY(-5px);
     border-color: var(--hud-primary-color);
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+    box-shadow: 0 0 20px var(--commons-glow);
 }
 
 .hub-icon {
@@ -123,21 +127,22 @@
     letter-spacing: 2px;
     margin-bottom: 20px;
     color: #fff;
+    font-family: 'Orbitron', sans-serif;
 }
 
 /* List Items */
 .member-entry, .proposal-entry, .request-entry {
-    background: rgba(0, 243, 255, 0.03);
+    background: rgba(255, 174, 109, 0.03);
     margin-bottom: 12px;
-    border: 1px solid rgba(0, 243, 255, 0.1);
+    border: 1px solid rgba(255, 174, 109, 0.1);
     padding: 16px;
-    border-radius: 2px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .member-entry:hover, .proposal-entry:hover, .request-entry:hover {
-    background: rgba(0, 243, 255, 0.08);
-    border-color: rgba(0, 243, 255, 0.4);
+    background: rgba(255, 174, 109, 0.08);
+    border-color: rgba(255, 174, 109, 0.4);
 }
 
 /* Projects Grid */
@@ -150,9 +155,9 @@
 
 .project-card {
     background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(0, 243, 255, 0.1);
+    border: 1px solid rgba(255, 174, 109, 0.1);
     padding: 20px;
-    border-radius: 4px;
+    border-radius: 8px;
     border-left: 3px solid var(--hud-primary-color);
     display: flex;
     flex-direction: column;
@@ -164,6 +169,7 @@
     text-transform: uppercase;
     margin-bottom: 12px;
     color: #fff;
+    font-family: 'Orbitron', sans-serif;
 }
 
 /* Buttons */
@@ -174,11 +180,11 @@
 }
 
 .join-request-container {
-    background: rgba(255, 0, 255, 0.05);
-    border: 1px solid rgba(255, 0, 255, 0.3);
+    background: rgba(249, 115, 22, 0.05);
+    border: 1px solid rgba(249, 115, 22, 0.3);
     padding: 24px;
     margin-bottom: 30px;
-    border-radius: 4px;
+    border-radius: 12px;
 }
 
 .join-request-container h2 {
