@@ -12,10 +12,13 @@ class RoleProfileEngine {
       // Fetch user basic info and activity stats
       const [userRes, tasksRes, projectsRes, communitiesRes, governanceRes] = await Promise.all([
         client.query('SELECT * FROM users WHERE id = $1', [userId]),
-        client.query('SELECT COUNT(*) as count FROM tasks WHERE assigned_user_id = $1 AND status = \'completed\'', [userId]),
+        client.query(
+          `SELECT COUNT(*) as count FROM tasks WHERE $1 = ANY(assigned_user_ids) AND status = 'completed'`,
+          [userId]
+        ),
         client.query('SELECT COUNT(*) as count FROM projects WHERE creator_id = $1', [userId]),
-        client.query('SELECT COUNT(*) as count FROM communities WHERE id IN (SELECT community_id FROM community_members WHERE user_id = $1)', [userId]),
-        client.query('SELECT COUNT(*) as count FROM proposals WHERE creator_id = $1', [userId])
+        client.query('SELECT COUNT(*) as count FROM communities WHERE id IN (SELECT id FROM communities WHERE $1 = ANY(members))', [userId]),
+        client.query('SELECT COUNT(*) as count FROM proposals WHERE created_by = $1', [userId])
       ]);
 
       if (userRes.rows.length === 0) return null;
