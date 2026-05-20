@@ -1,12 +1,16 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { getModeFromPath, MODE_CONFIGS } from '../../utils/modeContext';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import './ContextPanel.css';
 
 const ContextPanel = () => {
   const location = useLocation();
+  const { profile } = useUserProfile();
   const modeKey = getModeFromPath(location.pathname);
   const config = MODE_CONFIGS[modeKey];
+
+  const unlockedSystems = profile?.unlockedSystems || {};
 
   if (!config) return null;
 
@@ -21,7 +25,12 @@ const ContextPanel = () => {
       </div>
 
       <nav className="context-secondary-nav">
-        {config.secondaryNav.map((item) => {
+        {config.secondaryNav.filter(item => {
+          if (item.label === 'Federation' && !unlockedSystems.federation) return false;
+          if (item.label === 'Crisis' && !unlockedSystems.crisisManagement) return false;
+          if (item.label === 'Review' && profile?.roleProfile?.primaryRole !== 'Coordinator') return false;
+          return true;
+        }).map((item) => {
           const isActive = location.pathname === item.path ||
                           (item.path !== '/' && location.pathname.startsWith(item.path));
           return (

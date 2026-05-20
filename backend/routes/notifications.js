@@ -1,5 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
+import NotificationPriorityEngine from '../services/NotificationPriorityEngine.js';
+import RoleProfileEngine from '../services/RoleProfileEngine.js';
 
 const router = express.Router();
 
@@ -16,9 +18,13 @@ router.get('/:userId', async (req, res) => {
     
     console.log(`Found ${result.rows.length} notifications for user ${userId}`);
     
+    // Get role profile for ranking
+    const roleProfile = await RoleProfileEngine.calculateRoleProfile(userId);
+    const rankedNotifications = NotificationPriorityEngine.rankNotifications(result.rows, roleProfile);
+
     // Structure the response to match what the frontend expects
     res.json({ 
-      notifications: result.rows 
+      notifications: rankedNotifications
     });
   } catch (err) {
     console.error('Error fetching notifications:', err);

@@ -47,7 +47,7 @@ import MusicOffIcon from "@mui/icons-material/MusicOff";
 import { Slider, Stack } from "@mui/material";
 import { useNotifications } from "../pages/NotificationProvider";
 import { useUserProfile } from "../hooks/useUserProfile";
-import { useUserRoleProfile } from "../hooks/useUserRoleProfile";
+import { useAdaptiveNavigation } from "../hooks/useAdaptiveNavigation";
 import { getProfileImageUrl } from "../utils/avatar";
 import { audioEngine } from "../audio/AudioEngine";
 import {
@@ -95,7 +95,7 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const { user, isAuthenticated, loginWithRedirect, logout } = useAuth0();
   const { profile } = useUserProfile();
-  const { isNewUser, isGovernanceActive } = useUserRoleProfile();
+  const { visibleModes: adaptiveVisibleModes } = useAdaptiveNavigation(profile);
   const { unreadCount } = useNotifications();
   const [trayOpen, setTrayOpen] = React.useState(false);
   const [routeQuery, setRouteQuery] = React.useState("");
@@ -127,13 +127,10 @@ const MobileBottomNav = () => {
 
   // Filter modes for mobile bottom bar
   const visibleMobileNavItems = React.useMemo(() => {
-    return primaryMobileNavItems.filter(item => {
-      if (item.label === 'Signals' && isNewUser && !isGovernanceActive) {
-        return false;
-      }
-      return true;
-    });
-  }, [isNewUser, isGovernanceActive]);
+    return primaryMobileNavItems.filter(item =>
+      adaptiveVisibleModes.some(am => am.label === item.label)
+    );
+  }, [adaptiveVisibleModes]);
 
   const filteredItems = React.useMemo(() => {
     const normalized = routeQuery.trim().toLowerCase();

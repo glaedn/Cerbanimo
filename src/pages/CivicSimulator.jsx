@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Shield, Zap, TrendingUp, AlertTriangle, Play, RefreshCcw } from 'lucide-react';
 import * as d3 from 'd3';
 import * as S from '../components/Governance/GovernanceStyles';
+import { ProgressionGuard } from '../components/ProgressionGuard';
 
 const CivicSimulator = () => {
   const { communityId } = useParams();
@@ -111,6 +112,7 @@ const CivicSimulator = () => {
   }, [results]);
 
   return (
+    <ProgressionGuard system="civicSimulation" lockOverlay={true}>
     <S.PageContainer>
       <S.Header>
         <S.TitleBlock>
@@ -235,6 +237,7 @@ const CivicSimulator = () => {
         </S.GridItem>
       </S.LayoutGrid>
     </S.PageContainer>
+    </ProgressionGuard>
   );
 };
 

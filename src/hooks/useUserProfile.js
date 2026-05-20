@@ -52,6 +52,8 @@ const useUserProfile = () => {
       communities: profileData.communities || [],
       delegations: profileData.delegations || [],
       crisis_roles: profileData.crisis_roles || [],
+      roleProfile: profileData.roleProfile || null,
+      unlockedSystems: profileData.unlockedSystems || null,
     };
   };
 
@@ -73,6 +75,8 @@ const useUserProfile = () => {
       communities: [],
       delegations: [],
       crisis_roles: [],
+      roleProfile: null,
+      unlockedSystems: null,
     },
     loading: isLoading,
     error

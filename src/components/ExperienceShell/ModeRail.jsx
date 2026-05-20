@@ -1,22 +1,15 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Tooltip } from '@mui/material';
-import { CORE_MODES, isRouteActive } from '../../utils/platformNavigation';
-import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
+import { isRouteActive } from '../../utils/platformNavigation';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useAdaptiveNavigation } from '../../hooks/useAdaptiveNavigation';
 import './ModeRail.css';
 
 const ModeRail = () => {
   const location = useLocation();
-  const { isNewUser, isGovernanceActive } = useUserRoleProfile();
-
-  // Filter modes based on role/experience
-  const visibleModes = CORE_MODES.filter(mode => {
-    // Signals mode is hidden for brand new users unless they have governance activity
-    if (mode.label === 'Signals' && isNewUser && !isGovernanceActive) {
-      return false;
-    }
-    return true;
-  });
+  const { profile } = useUserProfile();
+  const { visibleModes } = useAdaptiveNavigation(profile);
 
   return (
     <div className="mode-rail">

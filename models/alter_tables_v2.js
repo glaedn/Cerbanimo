@@ -81,7 +81,13 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS formatted_address TEXT,
     ADD COLUMN IF NOT EXISTS mobility_range NUMERIC, -- in meters
     ADD COLUMN IF NOT EXISTS emergency_response_capable BOOLEAN DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS share_location_publicly BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS share_location_publicly BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS participation_modes jsonb DEFAULT '[]',
+    ADD COLUMN IF NOT EXISTS trust_level int DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS onboarding_stage text DEFAULT 'orientation',
+    ADD COLUMN IF NOT EXISTS role_weights jsonb DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS mentorship_status jsonb DEFAULT '{"is_mentor": false, "mentees": []}',
+    ADD COLUMN IF NOT EXISTS adaptive_preferences jsonb DEFAULT '{"density": "standard", "theme_accent": "default"}';
   `;
 
   const alterSkillsQuery = `

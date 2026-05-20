@@ -3,13 +3,17 @@ import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { useAdaptiveNavigation } from '../../hooks/useAdaptiveNavigation';
 import './SignalsPage.css';
 
 const SignalsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile } = useUserProfile();
+  const { visibleModes } = useAdaptiveNavigation(profile);
   const isIndex = location.pathname.replace(/\/$/, '') === '/signals';
+
+  const unlockedSystems = profile?.unlockedSystems || {};
 
   return (
     <div className="signals-page-container mode-page">
@@ -49,10 +53,12 @@ const SignalsPage = () => {
                   <h3>Major Shifts</h3>
                   <div className="placeholder-content">SIGNALS_DECODING...</div>
                 </div>
-                <div className="signals-card glass-panel">
-                  <h3>Federation Updates</h3>
-                  <div className="placeholder-content">NET_TRAFFIC_STABLE</div>
-                </div>
+                {unlockedSystems.federation && (
+                  <div className="signals-card glass-panel highlight-cyan">
+                    <h3>Federation Updates</h3>
+                    <div className="placeholder-content">NET_TRAFFIC_STABLE</div>
+                  </div>
+                )}
               </div>
 
               <section className="signals-mobile-nav mobile-only">
@@ -70,10 +76,12 @@ const SignalsPage = () => {
                     <span className="icon">🗺️</span>
                     <span className="label">Map</span>
                   </button>
-                  <button onClick={() => navigate('/signals/federation')} className="nav-card">
-                    <span className="icon">🌐</span>
-                    <span className="label">Federation</span>
-                  </button>
+                  {unlockedSystems.federation && (
+                    <button onClick={() => navigate('/signals/federation')} className="nav-card">
+                      <span className="icon">🌐</span>
+                      <span className="label">Federation</span>
+                    </button>
+                  )}
                 </div>
               </section>
             </div>

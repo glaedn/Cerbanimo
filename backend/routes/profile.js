@@ -6,6 +6,8 @@ import fs from 'fs';
 import { processInterests } from '../services/interestService.js';
 import { processSkills } from '../services/skillService.js';
 import GeocodingService from '../services/GeocodingService.js';
+import RoleProfileEngine from '../services/RoleProfileEngine.js';
+import ProgressionEngine from '../services/ProgressionEngine.js';
 
 
 // Create a router instance
@@ -267,7 +269,8 @@ router.get('/', async (req, res) => {
     }
 
     const query = `
-      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location
+      SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location,
+             participation_modes, trust_level, onboarding_stage, role_weights, mentorship_status, adaptive_preferences
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -298,7 +301,15 @@ router.get('/', async (req, res) => {
       }
     }
 
-    res.status(200).json(profile);
+    // Enrich with RoleProfileEngine
+    const roleProfile = await RoleProfileEngine.calculateRoleProfile(profile.id);
+    const unlockedSystems = ProgressionEngine.getUnlockedSystems(roleProfile);
+
+    res.status(200).json({
+      ...profile,
+      roleProfile,
+      unlockedSystems
+    });
   } catch (err) {
     console.error('Error fetching profile:', err);
     res.status(500).json({ message: 'Failed to fetch profile' });

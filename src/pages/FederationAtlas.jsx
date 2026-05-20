@@ -4,6 +4,7 @@ import { useGovernanceStore } from '../store/useGovernanceStore';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Globe, Shield, Zap, Activity, Filter, Search, X } from 'lucide-react';
 import * as S from '../components/Governance/GovernanceStyles';
+import { ProgressionGuard } from '../components/ProgressionGuard';
 
 const FederationAtlas = () => {
   const d3Container = useRef(null);
@@ -105,6 +106,7 @@ const FederationAtlas = () => {
   }, [treaties]);
 
   return (
+    <ProgressionGuard system="federation" lockOverlay={true}>
     <S.PageContainer>
       <S.Header>
         <S.TitleBlock>
@@ -224,6 +226,7 @@ const FederationAtlas = () => {
          </S.GridItem>
       </S.LayoutGrid>
     </S.PageContainer>
+    </ProgressionGuard>
   );
 };
 
