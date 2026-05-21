@@ -55,6 +55,7 @@ const MobileTaskDetail = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!taskId || taskId === 'undefined') return;
       try {
         const token = await getAccessTokenSilently();
 

@@ -120,6 +120,16 @@ const PageWrapper = ({ children }) => (
   </motion.div>
 );
 
+const VisualizerDispatcher = () => {
+  const isMobile = useIsMobile();
+  const { taskId } = useParams();
+
+  if (isMobile && taskId) {
+    return <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5ff0ff', fontFamily: 'Orbitron' }}>LOADING_MISSION...</div>}><MobileTaskDetail /></React.Suspense>;
+  }
+  return <React.Suspense fallback={<div className="hub-loader" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5ff0ff', fontFamily: 'Orbitron' }}>INITIALIZING_SCANNER...</div>}><ProjectVisualizer /></React.Suspense>;
+};
+
 const AppContent = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -208,7 +218,7 @@ const AppContent = () => {
                 <Route path="projectcreation" element={<ProjectCreation />} />
                 <Route path="tasks" element={<TaskBrowser />} />
                 <Route path="review" element={<TaskBrowser initialTab={2} />} />
-                <Route path="visualizer/:projectId/:taskId?" element={isMobile ? <MobileTaskDetail /> : <ProjectVisualizer />} />
+                <Route path="visualizer/:projectId/:taskId?" element={<VisualizerDispatcher />} />
                 <Route index element={<Navigate to="active" replace />} />
               </Route>
 
