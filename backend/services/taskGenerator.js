@@ -1,5 +1,6 @@
 // services/taskGenerator.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { max } from "d3";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -263,6 +264,65 @@ Rules:
 - Reward Scaling: Assign base reward tokens (50-150 range). Note: these will be scaled later.
 `;
 
+export const autogeneratePlan = async (
+  projectName,
+  projectDescription,
+  tags,
+  creator_id,
+  project_due_date = null,
+  outcomeStatement = '',
+  context = 'project_generation'
+)  => {
+  const now = new Date().toISOString();
+  let userPrompt = '';
+
+  userPrompt =  ` 
+  Current Date/Time: ${now}
+  Project Name: ${projectName}
+  Description: ${projectDescription}
+  Interest tags: ${tags}
+  Required Before: ${project_due_date || 'None provided'}
+  Intended Outcome: ${outcomeStatement || 'None provided'}
+  
+  Your objective is to take the given project name, description, required before date, and intended outcome and output a detailed project plan with tasks and dependencies. The format should be markdown.
+  `
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite",
+    });
+
+    // Maximize the capability of the call with targeted configuration
+    const generationConfig = {
+      temperature: 0.55,                    // Slightly lower for less generic, more precise details
+      maxOutputTokens: 2048,                 // Open up the ceiling so it doesn't rush to finish the plan
+    };
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: generationConfig
+    });
+    const response = await result.response;
+    const responseText = response.text();
+
+    // Replace projectDescription with the LLM's output (markdown plan)
+    const newProjectDescription = responseText;
+
+    // Call autoGenerateTasks with the new description, passing all other variables
+    return await autoGenerateTasks(
+      projectName,
+      newProjectDescription,
+      tags,
+      creator_id,
+      project_due_date,
+      outcomeStatement,
+      context
+    );
+  } catch (error) {
+    console.error("Error generating tasks:", error);
+    throw new Error(`Failed to generate tasks: ${error.message}`);
+  }
+};
+
 export const autoGenerateTasks = async (
   projectName,
   projectDescription,
@@ -377,11 +437,8 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
     // Maximize the capability of the call with targeted configuration
     const generationConfig = {
       responseMimeType: "application/json", // Hard-forces valid JSON schema focus
-      temperature: 0.55,                    // Slightly lower for less generic, more precise details                // Open up the ceiling so it doesn't rush to finish the array
-
-      thinkingConfig: {
-        thinkingLevel: 'MEDIUM'             // Escalates reasoning to track your complex ID/dependency graph
-      }
+      temperature: 0.55,                    // Slightly lower for less generic, more precise details
+      maxOutputTokens: 4096,                // Open up the ceiling so it doesn't rush to finish the array
     };
 
     const result = await model.generateContent({
