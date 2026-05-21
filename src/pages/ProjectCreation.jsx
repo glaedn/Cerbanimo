@@ -38,7 +38,7 @@ const ProjectCreation = () => {
   const [locationSearch, setLocationSearch] = useState('');
   const [locationOptions, setLocationOptions] = useState([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [autoGenerateTasks, setAutoGenerateTasks] = useState(true);
+  const [autoGeneratePlan, setAutoGeneratePlan] = useState(true);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
 
@@ -124,7 +124,7 @@ const ProjectCreation = () => {
         const projectId = response.data.id;
         setLoadingPopupMessages(prevMessages => [...prevMessages, "Project created successfully!"]);
 
-        if (autoGenerateTasks) {
+        if (autoGeneratePlan) {
           setLoadingPopupMessages(prevMessages => [...prevMessages, "Generating task data..."]);
           // Step 2: Auto-generate tasks using LLM
           const generateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/projects/auto-generate`, {
@@ -310,8 +310,8 @@ const ProjectCreation = () => {
       <FormControlLabel
         control={
           <Checkbox
-            checked={autoGenerateTasks}
-            onChange={(e) => setAutoGenerateTasks(e.target.checked)}
+            checked={autoGeneratePlan}
+            onChange={(e) => setAutoGeneratePlan(e.target.checked)}
             color="primary"
           />
         }
