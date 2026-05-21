@@ -119,22 +119,6 @@ router.get("/accepted", async (req, res) => {
   }
 });
 
-router.get('/:taskId', async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    const task = await taskController.findById(taskId);
-
-    if (task.error) {
-      return res.status(task.status).json({ error: task.error });
-    }
-
-    res.json(task);
-  } catch (error) {
-    console.error('Error fetching task:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Fetch tasks by project ID
 router.get('/p/:projectId', async (req, res) => {
   try {
@@ -440,6 +424,22 @@ router.get('/pm-approval/:userId', async (req, res) => {
         console.error('Error fetching PM approval tasks:', error);
         res.status(500).json({ error: 'Failed to fetch PM approval tasks' });
     }
+});
+
+router.get('/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await taskController.findById(taskId);
+
+    if (task.error) {
+      return res.status(task.status).json({ error: task.error });
+    }
+
+    res.json(task);
+  } catch (error) {
+    console.error('Error fetching task:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;
