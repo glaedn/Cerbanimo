@@ -350,7 +350,7 @@ const GovernanceChamber = () => {
                  </S.MetricItem>
               </div>
 
-              <S.NeonButton variant="outline" className="w-full mt-8" onClick={() => navigate(`/governance/${communityId}/delegation`)}>
+              <S.NeonButton variant="outline" className="w-full mt-8" onClick={() => navigate(`/signals/governance/${communityId}/delegation`)}>
                  <Users size={14} /> EXPLORE DELEGATION
               </S.NeonButton>
            </S.GlassPanel>
@@ -364,7 +364,7 @@ const GovernanceChamber = () => {
                    "{activeConstitution?.content?.identity?.purpose || 'Establishing a resilient framework for mutual aid and resource autonomy.'}"
                  </p>
               </div>
-              <S.NeonButton variant="outline" className="w-full text-[9px]" onClick={() => navigate(`/governance/${communityId}/constitution`)}>
+              <S.NeonButton variant="outline" className="w-full text-[9px]" onClick={() => navigate(`/signals/governance/${communityId}/constitution`)}>
                 View Living Constitution
               </S.NeonButton>
            </S.GlassPanel>

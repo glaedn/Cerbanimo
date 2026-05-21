@@ -3,8 +3,15 @@ import FocusCard from '../../../components/shared/FocusCard';
 import SignalChip from '../../../components/shared/SignalChip';
 import CoordinationSignal from '../../../components/shared/CoordinationSignal';
 import { MomentumPanel, ConstellationActivity } from '../components';
+import useUserProjects from '../../../hooks/useUserProjects';
+import useBlockedProjects from '../../../hooks/useBlockedProjects';
 
 const CoordinatorOrbitView = ({ profile, navigate, signals = [] }) => {
+  const { projects } = useUserProjects(profile?.id);
+  const { blockedProjects } = useBlockedProjects(profile?.id);
+
+  const projectCount = projects?.length || 0;
+  const blockerCount = blockedProjects?.length || 0;
   return (
     <div className="orbit-view coordinator-view">
       {signals.length > 0 && (
@@ -25,7 +32,7 @@ const CoordinatorOrbitView = ({ profile, navigate, signals = [] }) => {
           status="ACTIVE"
           actions={
             <>
-              <button className="orbit-btn primary" onClick={() => navigate('/coordinator-hud')}>Open HUD</button>
+              <button className="orbit-btn primary" onClick={() => navigate('/orbit/coordinator-hud')}>Open HUD</button>
               <button className="orbit-btn ghost" onClick={() => navigate('/missions')}>Manage Projects</button>
             </>
           }
@@ -42,10 +49,10 @@ const CoordinatorOrbitView = ({ profile, navigate, signals = [] }) => {
           }}>
             COORDINATOR_MODE_ACTIVE
           </div>
-          <p>You are overseeing 3 active projects. One project has unassigned tasks that require attention.</p>
+          <p>You are overseeing {projectCount} active projects. {blockerCount > 0 ? `${blockerCount} project${blockerCount > 1 ? 's' : ''} require attention.` : 'All projects are operating within normal parameters.'}</p>
           <div className="focus-stats-row" style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
-            <SignalChip label="Active Projects" value="3" icon="🏗️" />
-            <SignalChip label="Blockers" value="1" icon="⚠️" type="accent" />
+            <SignalChip label="Active Projects" value={projectCount.toString()} icon="🏗️" />
+            <SignalChip label="Blockers" value={blockerCount.toString()} icon="⚠️" type={blockerCount > 0 ? "accent" : "default"} />
           </div>
         </FocusCard>
       </section>

@@ -1,4 +1,6 @@
 import pool from '../../db.js';
+import { findMatchesForNeed } from '../matchingService.js';
+import BountyService from '../BountyService.js';
 
 class OpportunityEngine {
   async getOpportunities(userId, context) {
@@ -34,13 +36,34 @@ class OpportunityEngine {
   }
 
   async matchResources(userId, context) {
-    // Placeholder for resource matching logic
-    return [];
+    const resources = await pool.query('SELECT id, name FROM resources WHERE owner_id = $1', [userId]);
+    if (!resources.rowCount) return [];
+
+    const matches = [];
+    for (const resource of resources.rows) {
+      const matchResults = await findMatchesForNeed(resource.id); // Reusing logic if applicable or need to find needs for resource
+      if (matchResults.needs?.length) {
+        matches.push(...matchResults.needs.map(n => ({
+          id: n.id,
+          title: n.title,
+          type: 'opportunity',
+          match_type: 'resource_match',
+          message: `Your resource '${resource.name}' matches a need: ${n.title}`
+        })));
+      }
+    }
+    return matches.slice(0, 3);
   }
 
   async matchSocial(userId, context) {
-    // Matches based on previous collaborators
-    return [];
+    const bounties = await pool.query('SELECT * FROM bounties WHERE status = \'open\' LIMIT 3');
+    return bounties.rows.map(b => ({
+      id: b.id,
+      title: b.title,
+      type: 'opportunity',
+      match_type: 'bounty',
+      message: `Active Bounty: ${b.title} (${b.reward_amount} credits)`
+    }));
   }
 }
 

@@ -699,7 +699,7 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             startIcon={<GavelIcon />}
-                            onClick={() => navigate(`/governance/${communityId}`)}
+                            onClick={() => navigate(`/signals/governance/${communityId}`)}
                             sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                         >
                             GOVERNANCE CHAMBER
@@ -707,7 +707,7 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             startIcon={<MenuBookIcon />}
-                            onClick={() => navigate(`/governance/${communityId}/constitution`)}
+                            onClick={() => navigate(`/signals/governance/${communityId}/constitution`)}
                             sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                         >
                             CONSTITUTION
@@ -715,7 +715,7 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             startIcon={<GroupIcon />}
-                            onClick={() => navigate(`/governance/${communityId}/delegation`)}
+                            onClick={() => navigate(`/signals/governance/${communityId}/delegation`)}
                             sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                         >
                             DELEGATION MAP
@@ -723,7 +723,7 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             startIcon={<InsightsIcon />}
-                            onClick={() => navigate(`/governance/${communityId}/simulator`)}
+                            onClick={() => navigate(`/signals/governance/${communityId}/simulator`)}
                             sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                         >
                             SIMULATOR
@@ -731,7 +731,7 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             startIcon={<HealthAndSafetyIcon />}
-                            onClick={() => navigate(`/governance/${communityId}/mediation`)}
+                            onClick={() => navigate(`/signals/governance/${communityId}/mediation`)}
                             sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
                         >
                             MEDIATION

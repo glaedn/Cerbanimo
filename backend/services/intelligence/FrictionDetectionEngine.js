@@ -25,6 +25,22 @@ class FrictionDetectionEngine {
       });
     }
 
+    // Detect overdue tasks
+    const overdueTasks = await pool.query(
+      'SELECT id, name FROM tasks WHERE assigned_to = $1 AND deadline < NOW() AND status != \'completed\'',
+      [userId]
+    );
+
+    if (overdueTasks.rowCount > 0) {
+      frictions.push({
+        type: 'friction',
+        priority: 'high',
+        category: 'deadline',
+        message: `You have ${overdueTasks.rowCount} overdue task(s).`,
+        data: overdueTasks.rows
+      });
+    }
+
     return frictions;
   }
 }

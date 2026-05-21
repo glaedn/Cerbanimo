@@ -7,7 +7,6 @@ const routeToSceneMap = [
   { pattern: /^\/missions/, scene: 'workspace' },
   { pattern: /^\/commons/, scene: 'community' },
   { pattern: /^\/signals/, scene: 'governance' },
-  { pattern: /^\/governance/, scene: 'governance' },
   { pattern: /^\/orbit\/skills/, scene: 'skill-galaxy' },
   { pattern: /^\/commons\/guilds/, scene: 'guild-hub' },
   { pattern: /^\/commons\/marketplace/, scene: 'community' },

@@ -4,12 +4,20 @@ import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
 import { MissionPulse, ActiveMissionsList, ReviewQueue } from './components';
+import { useIntelligence } from '../../hooks/useIntelligence';
 import './MissionsPage.css';
 
 const MissionsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isCoordinator } = useUserRoleProfile();
+  const { pulse } = useIntelligence({ pollInterval: 45000 });
+
+  const activeGuidance = React.useMemo(() =>
+    pulse?.signals?.find(s => s.type === 'guidance'),
+    [pulse]
+  );
+
   // Index view for Missions is now specifically the '/missions/active' route
   const isIndex = location.pathname.replace(/\/$/, '') === '/missions' ||
                   location.pathname.replace(/\/$/, '') === '/missions/active';
@@ -33,14 +41,27 @@ const MissionsPage = () => {
         {isIndex ? (
           <div className="missions-index-layout">
             <div className="missions-main">
-              <FocusCard
-                title="Sustain Local Food Sovereignty"
-                kicker="Active Mission"
-                status="ACTION_REQUIRED"
-                type="urgent"
-              >
-                <p>Strategic intervention required in the regional distribution hub. Coordinate with community leaders to resolve logistic bottlenecks.</p>
-              </FocusCard>
+              {activeGuidance ? (
+                <FocusCard
+                  title={activeGuidance.title || "Strategic Guidance"}
+                  kicker="Active Guidance"
+                  status="ACTION_REQUIRED"
+                  type="urgent"
+                  onAction={() => activeGuidance.path && navigate(activeGuidance.path)}
+                  actionLabel="Address Signal"
+                >
+                  <p>{activeGuidance.message}</p>
+                </FocusCard>
+              ) : (
+                <FocusCard
+                  title="Sustain Local Food Sovereignty"
+                  kicker="Active Mission"
+                  status="ACTION_REQUIRED"
+                  type="urgent"
+                >
+                  <p>Strategic intervention required in the regional distribution hub. Coordinate with community leaders to resolve logistic bottlenecks.</p>
+                </FocusCard>
+              )}
 
               <div className="missions-section">
                 <h3>Pulse</h3>

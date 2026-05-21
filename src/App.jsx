@@ -1,19 +1,10 @@
 import "./App.css";
 import * as React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import PrivateRoute from "./components/PrivateRoute.jsx";
-//import Orbit from "./pages/Orbit.jsx";
-//import IntentionPages from "./pages/IntentionPages.jsx";
 import MusicController from "./components/MusicController.jsx";
 import SceneRouter from "./audio/SceneRouter";
-//import IntentionCreation from "./pages/IntentionCreation.jsx";
-//import Intention from "./pages/Intention.jsx";
-//import CapabilityTree from "./pages/CapabilityTree.jsx";
-//import IntentionLotusMap from "./pages/IntentionLotusMap.jsx";
-//import RealmCreation from "./pages/RealmCreation.jsx";
-//import RealmHub from "./pages/RealmHub.jsx";
-//import Realms from "./pages/Realms.jsx";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import AuthWrapper from "./AuthWrapper.jsx";
@@ -24,7 +15,6 @@ import { useAuth0 } from "@auth0/auth0-react";
 import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import SpaceShell from "./components/SpaceShell.jsx";
 import ExperienceShell from "./components/ExperienceShell/ExperienceShell.jsx";
-import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 
@@ -100,6 +90,22 @@ const SignalsPage = React.lazy(() => import("./pages/Signals/SignalsPage.jsx"));
 const LegacyRedirect = ({ to }) => {
   const location = useLocation();
   return <Navigate to={`${to}${location.search}`} replace />;
+};
+
+const ParamRedirect = ({ to }) => {
+  const params = useParams();
+  const location = useLocation();
+  let target = to;
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) {
+      target = target.replace(`:${k}`, v);
+    }
+  });
+  // Clean up any remaining optional parameters that weren't provided
+  target = target.replace(/\/:[^/]+\?$/, '').replace(/\/:[^/]+$/, (match) => {
+    return match.includes(':') ? '' : match;
+  });
+  return <Navigate to={`${target}${location.search}`} replace />;
 };
 
 const PageWrapper = ({ children }) => (
@@ -188,6 +194,9 @@ const AppContent = () => {
                 <Route path="interest-library" element={<InterestLibrary />} />
                 <Route path="narrative-hub/:userId?" element={<NarrativeIdentityHub />} />
                 <Route path="notifications" element={<MobileNotifications />} />
+                <Route path="coordinator-hud" element={<CoordinatorHUD />} />
+                <Route path="chronicle" element={<div className="stub-page">Chronicle: Coming Soon</div>} />
+                <Route path="activity" element={<div className="stub-page">Activity: Coming Soon</div>} />
                   <Route index element={<div className="orbit-index-placeholder" style={{ display: 'none' }}>Index is handled by OrbitPage layout</div>} />
               </Route>
 
@@ -208,6 +217,8 @@ const AppContent = () => {
                 <Route path="communities" element={<Communities />} />
                 <Route path="community/:communityId" element={<CommunityHub />} />
                 <Route path="communitycreation" element={<CommunityCreation />} />
+                <Route path="constellations/:id?" element={<ConstellationHub />} />
+                <Route path="resources" element={<ResourcesDashboard />} />
                 <Route path="marketplace/*" element={<MarketplacePage />}>
                   <Route path="discover" element={<MarketplaceFeed />} />
                   <Route path="nearby" element={<MarketplaceMap />} />
@@ -221,6 +232,7 @@ const AppContent = () => {
                 <Route path="needs/:needId?" element={<NeedsPage />} />
                 <Route path="guilds" element={<GuildsDashboard />} />
                 <Route path="guild/:id" element={<GuildHub />} />
+                <Route path="activity" element={<div className="stub-page">Commons Activity: Coming Soon</div>} />
                 <Route index element={<Communities />} />
               </Route>
 
@@ -231,9 +243,11 @@ const AppContent = () => {
                 <Route path="governance/:communityId/mediation" element={<MediationSpace />} />
                 <Route path="governance/:communityId/constitution" element={<ConstitutionExplorer />} />
                 <Route path="governance/:communityId/delegation" element={<DelegationMapPage />} />
+                <Route path="dispute-court" element={<DisputeCourt />} />
                 <Route path="impact" element={<ImpactAtlas />} />
                 <Route path="federation" element={<FederationAtlas />} />
                 <Route path="activity-map" element={<GalacticActivityMap />} />
+                <Route path="crisis" element={<div className="stub-page">Crisis Management: Coming Soon</div>} />
                 <Route index element={<CivicKernelConsole />} />
               </Route>
 
@@ -243,6 +257,25 @@ const AppContent = () => {
               <Route path="/projects" element={<PrivateRoute><LegacyRedirect to="/missions" /></PrivateRoute>} />
               <Route path="/tasks" element={<PrivateRoute><LegacyRedirect to="/missions/tasks" /></PrivateRoute>} />
               <Route path="/communities" element={<PrivateRoute><LegacyRedirect to="/commons" /></PrivateRoute>} />
+
+              <Route path="/Visualizer/:projectId/:taskId?" element={<ParamRedirect to="/missions/visualizer/:projectId/:taskId" />} />
+              <Route path="/visualizer/:projectId/:taskId?" element={<ParamRedirect to="/missions/visualizer/:projectId/:taskId" />} />
+              <Route path="/communityhub/:communityId" element={<ParamRedirect to="/commons/community/:communityId" />} />
+              <Route path="/governance/:communityId/*" element={<ParamRedirect to="/signals/governance/:communityId" />} />
+              <Route path="/guilds/:id" element={<ParamRedirect to="/commons/guild/:id" />} />
+              <Route path="/needs/:needId?" element={<ParamRedirect to="/commons/needs/:needId" />} />
+              <Route path="/needs" element={<LegacyRedirect to="/commons/needs" />} />
+              <Route path="/profile/public/:userId" element={<ParamRedirect to="/userportfolio/:userId" />} />
+              <Route path="/profile/skill-constellation/:userId" element={<ParamRedirect to="/orbit/skills/:userId" />} />
+              <Route path="/profile/skill-library" element={<LegacyRedirect to="/orbit/skill-library" />} />
+              <Route path="/profile/interest-library" element={<LegacyRedirect to="/orbit/interest-library" />} />
+              <Route path="/profile/narrative-hub/:userId" element={<ParamRedirect to="/orbit/narrative-hub/:userId" />} />
+              <Route path="/communitycreation" element={<LegacyRedirect to="/commons/communitycreation" />} />
+              <Route path="/projectcreation" element={<LegacyRedirect to="/missions/projectcreation" />} />
+              <Route path="/activity-map" element={<LegacyRedirect to="/signals/activity-map" />} />
+              <Route path="/federation-atlas" element={<LegacyRedirect to="/signals/federation" />} />
+              <Route path="/marketplace" element={<LegacyRedirect to="/commons/marketplace" />} />
+              <Route path="/notifications" element={<LegacyRedirect to="/orbit/notifications" />} />
 
               {/* Public Routes */}
               <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />

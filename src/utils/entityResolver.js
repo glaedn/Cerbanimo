@@ -17,20 +17,20 @@ const ENTITY_TYPES = {
 };
 
 const ENTITY_NAV_PATHS = {
-  [ENTITY_TYPES.MISSION]: (id) => `/Visualizer/${id}`,
-  [ENTITY_TYPES.NEED]: (id) => `/needs/${id}`,
-  [ENTITY_TYPES.RESOURCE]: (id) => `/resources-inventory?id=${id}`,
-  [ENTITY_TYPES.COMMUNITY]: (id) => `/communityhub/${id}`,
-  [ENTITY_TYPES.PROJECT]: (id) => `/project/${id}`,
-  [ENTITY_TYPES.TASK]: (id) => `/Visualizer/${id}`, // Assuming tasks resolved via Visualizer
+  [ENTITY_TYPES.MISSION]: (id) => `/missions/visualizer/${id}`,
+  [ENTITY_TYPES.NEED]: (id) => `/commons/needs/${id}`,
+  [ENTITY_TYPES.RESOURCE]: (id) => `/commons/resources?id=${id}`,
+  [ENTITY_TYPES.COMMUNITY]: (id) => `/commons/community/${id}`,
+  [ENTITY_TYPES.PROJECT]: (id) => `/missions/project/${id}`,
+  [ENTITY_TYPES.TASK]: (id) => `/missions/visualizer/${id}`, // Assuming tasks resolved via Visualizer
   [ENTITY_TYPES.USER]: (id) => `/userportfolio/${id}`,
-  [ENTITY_TYPES.DISPATCH]: (id) => `/dashboard?dispatch=${id}`,
-  [ENTITY_TYPES.AGENT]: (id) => `/dashboard?agent=${id}`
+  [ENTITY_TYPES.DISPATCH]: (id) => `/orbit?dispatch=${id}`,
+  [ENTITY_TYPES.AGENT]: (id) => `/orbit?agent=${id}`
 };
 
 export const resolveEntityPath = (type, id) => {
   const resolver = ENTITY_NAV_PATHS[type.toLowerCase()];
-  return resolver ? resolver(id) : '/dashboard';
+  return resolver ? resolver(id) : '/orbit';
 };
 
 export const getEntityIcon = (type) => {

@@ -59,9 +59,20 @@ class ContextEngine {
   }
 
   async getSocialContext(userId) {
+    const collaborators = await pool.query(
+      'SELECT DISTINCT assigned_to FROM tasks WHERE project_id IN (SELECT project_id FROM tasks WHERE assigned_to = $1) AND assigned_to != $1',
+      [userId]
+    );
+
+    const constellations = await pool.query(
+      'SELECT community_id FROM community_members WHERE user_id = $1',
+      [userId]
+    );
+
     return {
-      collaboratorCount: 0,
-      mentorshipStatus: 'active'
+      collaboratorCount: collaborators.rowCount,
+      activeConstellations: constellations.rows,
+      mentorshipStatus: collaborators.rowCount > 5 ? 'mentor' : 'active'
     };
   }
 
