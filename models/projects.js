@@ -12,6 +12,8 @@ const createProjectsTable = async () => {
       used_tokens NUMERIC DEFAULT 0,
       reserved_tokens NUMERIC DEFAULT 0,
       community_votes JSONB DEFAULT '{}'::jsonb,
+      project_plan TEXT,
+      auto_assign BOOLEAN DEFAULT FALSE,
       status VARCHAR(50) DEFAULT 'planning', -- e.g., 'planning', 'recruiting', 'active', 'completed', 'on_hold', 'cancelled'
       tags TEXT[] DEFAULT '{}',
       visibility VARCHAR(50) DEFAULT 'public', -- e.g., 'public', 'private', 'community_only'

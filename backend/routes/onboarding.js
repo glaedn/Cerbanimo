@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import pool from '../db.js';
-import { generateProjectIdea, autoGenerateTasks, analyzeResume } from '../services/taskGenerator.js';
+import { generateProjectIdea, autoGenerateTasks, analyzeResume, autogeneratePlan } from '../services/taskGenerator.js';
+import TaskRoutingService from '../services/TaskRoutingService.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import GuildService from '../services/GuildService.js';
 import { processInterests } from '../services/interestService.js';
@@ -195,16 +196,17 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
       generatedProjectName = projectIdea.Name;
       const generatedProjectDescription = projectIdea.Description;
 
-      // 7. Generate Tasks for the New Project
-      const generatedTasksData = await autoGenerateTasks(generatedProjectName, generatedProjectDescription, [], internalUserId);
+      // 7. Generate Tasks for the New Project using the more robust plan flow
+      const generatedTasksData = await autogeneratePlan(generatedProjectName, generatedProjectDescription, [], internalUserId);
       const tasksToInsert = generatedTasksData.tasks;
       const llmProject = (generatedTasksData.projects && generatedTasksData.projects[0]) || {};
       const projectDueDate = llmProject.due_date || null;
+      const projectPlan = generatedTasksData.projectPlan || null;
 
       // 8. Create Project
       const projectInsertResult = await client.query(
-        'INSERT INTO projects (name, description, creator_id, tags, due_date) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [generatedProjectName, generatedProjectDescription, internalUserId, [], projectDueDate]
+        'INSERT INTO projects (name, description, creator_id, tags, due_date, project_plan) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [generatedProjectName, generatedProjectDescription, internalUserId, [], projectDueDate, projectPlan]
       );
       newProjectId = projectInsertResult.rows[0].id;
 
@@ -244,6 +246,48 @@ router.post('/initiate', upload.single('profilePicture'), async (req, res) => {
               [resolvedDeps, dbId]
             );
           }
+        }
+
+        // Step 9: Perform individualized task assignment for the new user
+        // Query all active and urgent unassigned tasks that match the user's skills and interests
+        const userSkills = processedSkills.map(s => s.id);
+        const userInterests = processedInterests.map(i => i.name);
+
+        const matchingTasksQuery = `
+          SELECT t.id, t.status, t.project_id, t.name
+          FROM tasks t
+          JOIN projects p ON t.project_id = p.id
+          WHERE (t.skill_id = ANY($1) OR t.skill_id IS NULL)
+          AND t.status::text LIKE '%unassigned' AND t.status::text NOT LIKE 'inactive%'
+          ORDER BY (
+            CASE WHEN p.tags && $2::text[] THEN 1 ELSE 0 END +
+            CASE WHEN t.skill_id = ANY($1) THEN 1 ELSE 0 END
+          ) DESC, t.id ASC
+          LIMIT 1
+        `;
+        const matchingTasksResult = await client.query(matchingTasksQuery, [userSkills, userInterests]);
+
+        if (matchingTasksResult.rows.length > 0) {
+          const matchedTask = matchingTasksResult.rows[0];
+          const newStatus = matchedTask.status.replace('unassigned', 'assigned');
+
+          await client.query(
+            'UPDATE tasks SET assigned_user_ids = array_append(assigned_user_ids, $1), status = $2, accepted_at = NOW() WHERE id = $3',
+            [internalUserId, newStatus, matchedTask.id]
+          );
+
+          console.log(`Onboarding: Auto-assigned task ${matchedTask.id} to new user ${internalUserId}`);
+
+          // Note: NotificationService might need a separate client or we can just insert into notifications table
+          const notificationDetails = JSON.stringify({
+            text: `Welcome! You've been assigned your first task to get started: ${matchedTask.name}`,
+            projectId: matchedTask.project_id,
+            taskId: matchedTask.id,
+          });
+          await client.query(
+            'INSERT INTO notifications (user_id, message, type, created_at, read) VALUES ($1, $2, $3, NOW(), false)',
+            [internalUserId, notificationDetails, 'task']
+          );
         }
       }
     } catch (genError) {

@@ -279,12 +279,21 @@ export const autogeneratePlan = async (
   userPrompt =  ` 
   Current Date/Time: ${now}
   Project Name: ${projectName}
-  Description: ${projectDescription}
+  Initial Description: ${projectDescription}
   Interest tags: ${tags}
   Required Before: ${project_due_date || 'None provided'}
   Intended Outcome: ${outcomeStatement || 'None provided'}
   
-  Your objective is to take the given project name, description, required before date, and intended outcome and output a detailed project plan with tasks and dependencies. The format should be markdown.
+  Your objective is to act as an elite Strategic Project Architect.
+  Generate a comprehensive, robust, and deep textual project plan in Markdown format.
+
+  The plan must include:
+  1. Executive Summary: High-level overview of the strategic approach.
+  2. Phased Roadmap: Break down the project into logical phases (e.g., Research, Development, Launch, Optimization).
+  3. Risk Mitigation: Identify potential bottlenecks and how to navigate them.
+  4. Success Metrics: Clear KPIs beyond just "completion".
+
+  Maximize depth and tactical detail. This plan will serve as the foundation for granular task generation.
   `
   try {
     const model = genAI.getGenerativeModel({
@@ -304,19 +313,25 @@ export const autogeneratePlan = async (
     const response = await result.response;
     const responseText = response.text();
 
-    // Replace projectDescription with the LLM's output (markdown plan)
-    const newProjectDescription = responseText;
+    // The LLM's output is the robust textual project plan
+    const projectPlan = responseText;
+    console.log(`Generated project plan for "${projectName}":\n${projectPlan}`);
 
-    // Call autoGenerateTasks with the new description, passing all other variables
-    return await autoGenerateTasks(
+    // Call autoGenerateTasks with the new plan as context, passing all other variables
+    const taskData = await autoGenerateTasks(
       projectName,
-      newProjectDescription,
+      projectPlan,
       tags,
       creator_id,
       project_due_date,
       outcomeStatement,
       context
     );
+
+    return {
+      ...taskData,
+      projectPlan: projectPlan
+    };
   } catch (error) {
     console.error("Error generating tasks:", error);
     throw new Error(`Failed to generate tasks: ${error.message}`);
@@ -357,12 +372,15 @@ Expected Output Format:
 `;
   } else {
     userPrompt = `
-Your objective is to take the given project name, description, and intended outcome and output the tasks and dependencies necessary to complete the project. You will generate output for the following database tables: projects and tasks.
+Your objective is to take the provided Project Name, Intended Outcome, and the Strategic Project Plan below, and deconstruct them into a highly granular, execution-ready task graph.
+
+Strategic Project Plan:
+${projectDescription}
 
 Current Date/Time: ${now}
 Intended Outcome: ${outcomeStatement || 'None provided'}
 
-Here are the rules:
+Here are the rules for task generation:
 - All IDs (project IDs, task IDs) must be **unique integers starting at 1**.
 - Maintain **relationships**: 
   - "project_id" in tasks must match the corresponding project's new ID.

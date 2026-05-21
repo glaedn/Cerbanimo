@@ -9,12 +9,14 @@ import useUserProjects from "../hooks/useUserProjects";
 import "./ProjectVisualizer.css";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Chip, Box, Typography, IconButton, Modal, Autocomplete, TextField } from "@mui/material";
+import { Chip, Box, Typography, IconButton, Modal, Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 import { useIsMobile } from "../hooks/useIsMobile";
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import GroupIcon from '@mui/icons-material/Group';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -332,6 +334,7 @@ const ProjectVisualizer = () => {
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [loading, setLoading] = useState(false);
   const [popupLaunched, setPopupLaunched] = useState(false);
+  const [showPlanPopup, setShowPlanPopup] = useState(false);
   const [outcomes, setOutcomes] = useState([]);
   const [interests, setInterests] = useState([]);
   const linksGroupRef = useRef(null);
@@ -463,6 +466,25 @@ const ProjectVisualizer = () => {
     const sid = activeSkillId;
     await fetchTasks();
     if (cat) { setActiveCategory(cat); setActiveSkillId(sid); }
+  };
+
+  const handleToggleAutoAssign = async (e) => {
+    const newVal = e.target.checked;
+    try {
+      const token = await getAccessTokenSilently();
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`,
+        { ...project, auto_assign: newVal },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      updateProject({ auto_assign: newVal });
+    } catch (err) {
+      console.error("Failed to toggle auto-assign:", err);
+    }
+  };
+
+  const copyPlanToClipboard = () => {
+    navigator.clipboard.writeText(project.project_plan);
+    alert("Project plan copied to clipboard!");
   };
 
   useEffect(() => {
@@ -973,20 +995,41 @@ const ProjectVisualizer = () => {
                     <GroupIcon />
                   </IconButton>
                 )}
-                {isEditMode && (
+                {project?.project_plan && (
                   <IconButton
                     sx={{
                       width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
                       borderRadius: '50%', padding: 0,
-                      bgcolor: '#FFA500', color: '#fff',
+                      bgcolor: 'rgba(0,0,0,0.9)', color: '#fff',
                       boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
-                      border: '1.5px solid rgba(255,255,255,0.3)',
+                      border: '1.5px solid rgba(0,243,255,0.3)',
                       '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
                     }}
-                    onClick={() => handleAddTask()}
+                    onClick={() => setShowPlanPopup(true)}
                   >
-                    <AddIcon />
+                    <DescriptionIcon />
                   </IconButton>
+                )}
+                {isEditMode && (
+                  <>
+                    <Box sx={{ bgcolor: 'rgba(0,0,0,0.9)', p: 1, borderRadius: '12px', border: '1px solid rgba(0,243,255,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.6rem', color: '#fff', mb: 0.5 }}>AUTO-ASSIGN</Typography>
+                      <Switch checked={project?.auto_assign || false} onChange={handleToggleAutoAssign} size="small" color="secondary" />
+                    </Box>
+                    <IconButton
+                      sx={{
+                        width: 56, height: 56, minWidth: 56, minHeight: 56, flexShrink: 0,
+                        borderRadius: '50%', padding: 0,
+                        bgcolor: '#FFA500', color: '#fff',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
+                        border: '1.5px solid rgba(255,255,255,0.3)',
+                        '& .MuiSvgIcon-root': { fontSize: '1.8rem' }
+                      }}
+                      onClick={() => handleAddTask()}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </>
                 )}
               </Box>
             )}
@@ -1008,8 +1051,16 @@ const ProjectVisualizer = () => {
             {isProjectCreator && (
               <div className="edit-buttons">
                 {isEditMode && <button className="new-task-button" onClick={() => handleAddTask()}>+ New Task</button>}
+                {isEditMode && (
+                  <FormControlLabel
+                    control={<Switch checked={project?.auto_assign || false} onChange={handleToggleAutoAssign} color="secondary" />}
+                    label={<Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.8rem', color: '#fff' }}>AUTO-ASSIGN</Typography>}
+                    sx={{ ml: 1, mr: 1, bgcolor: 'rgba(0,0,0,0.6)', pl: 1, pr: 1, borderRadius: '4px', border: '1px solid rgba(0,243,255,0.2)' }}
+                  />
+                )}
                 {!projectIsActive && <button className={`new-task-button ${loading ? 'disabled' : ''}`} onClick={() => handleGranularizeTasks(projectId)} disabled={loading}>{loading ? 'Granularizing...' : 'Granularize all project tasks'}</button>}
                 {project?.community_id === null && <button className="community-proposal-button" onClick={() => { fetchUserCommunities(); setShowCommunityProposalPopup(true); }}>Propose to Community</button>}
+                {project?.project_plan && <button className="edit-mode-button" onClick={() => setShowPlanPopup(true)}>View Project Plan</button>}
                 <button className="edit-mode-button" onClick={() => setShowServiceModal(true)}>Make a Service</button>
                 <button className="edit-mode-button" onClick={() => setIsEditMode(!isEditMode)}>{isEditMode ? "Exit Edit Mode" : "Edit Mode"}</button>
               </div>
@@ -1107,6 +1158,23 @@ const ProjectVisualizer = () => {
       </div>
       <Modal open={showCommunityProposalPopup} onClose={() => setShowCommunityProposalPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="cyber-modal"><div className="cyber-border"><h3 className="cyber-title">Submit to Community</h3><div className="cyber-content"><Autocomplete options={userCommunities} getOptionLabel={o => o.name} onChange={(e, v) => setSelectedCommunity(v)} renderInput={p => <TextField {...p} label="Select Community" variant="outlined" fullWidth />} /><div className="cyber-button-group"><button onClick={() => setShowCommunityProposalPopup(false)} className="cyber-button cancel">Cancel</button><button onClick={handleSubmitCommunityProposal} className="community-proposal-button" disabled={!selectedCommunity}>Submit Proposal</button></div></div></div></div>
+      </Modal>
+
+      <Modal open={showPlanPopup} onClose={() => setShowPlanPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="cyber-modal" style={{ maxWidth: '800px', width: '90%' }}>
+          <div className="cyber-border">
+            <h3 className="cyber-title">Textual Project Plan</h3>
+            <div className="cyber-content" style={{ maxHeight: '60vh', overflowY: 'auto', textAlign: 'left', background: 'rgba(0,0,0,0.8)', padding: '20px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+              {project?.project_plan}
+            </div>
+            <div className="cyber-button-group">
+              <button onClick={copyPlanToClipboard} className="cyber-button" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ContentCopyIcon fontSize="small" /> Copy Plan
+              </button>
+              <button onClick={() => setShowPlanPopup(false)} className="cyber-button cancel">Close</button>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

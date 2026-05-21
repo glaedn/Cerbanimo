@@ -1,5 +1,6 @@
 import pool from '../db.js';
 import ImpactGraphService from './ImpactGraphService.js';
+import { sendNotification } from './NotificationService.js';
 
 class TaskRoutingService {
   async calculatePriorityScore(taskId) {
@@ -158,6 +159,188 @@ class TaskRoutingService {
     `;
     const result = await pool.query(query, ['%unassigned']);
     return result.rows;
+  }
+
+  async runDailyTaskActivationAndAssignment() {
+    console.log('Running daily task activation and assignment...');
+
+    // A, B, C - Activate tasks based on dependencies and due dates
+    const inactiveTasksQuery = `
+      SELECT id, project_id, dependencies, status, due_date
+      FROM tasks
+      WHERE status::text LIKE 'inactive%'
+    `;
+    const { rows: inactiveTasks } = await pool.query(inactiveTasksQuery);
+
+    for (const task of inactiveTasks) {
+      let shouldActivate = false;
+
+      if (!task.dependencies || task.dependencies.length === 0) {
+        shouldActivate = true;
+      } else {
+        const depsQuery = `
+          SELECT status FROM tasks WHERE id = ANY($1)
+        `;
+        const { rows: depStatuses } = await pool.query(depsQuery, [task.dependencies]);
+        if (depStatuses.every(d => d.status === 'completed')) {
+          shouldActivate = true;
+        }
+      }
+
+      if (shouldActivate) {
+        const now = new Date();
+        const due = task.due_date ? new Date(task.due_date) : null;
+        const isUrgent = due && (due - now) < (24 * 60 * 60 * 1000);
+
+        let newStatus;
+        if (task.status.includes('assigned')) {
+          newStatus = isUrgent ? 'urgent-assigned' : 'active-assigned';
+        } else {
+          newStatus = isUrgent ? 'urgent-unassigned' : 'active-unassigned';
+        }
+
+        await pool.query('UPDATE tasks SET status = $1 WHERE id = $2', [newStatus, task.id]);
+        console.log(`Task ${task.id} activated with status ${newStatus}`);
+      }
+    }
+
+    // D, E, F, G - Auto-assign unassigned tasks
+    const projectsWithAutoAssign = await pool.query('SELECT id FROM projects WHERE auto_assign = TRUE');
+    const autoAssignProjectIds = projectsWithAutoAssign.rows.map(p => p.id);
+
+    if (autoAssignProjectIds.length === 0) {
+      console.log('No projects with auto-assign enabled.');
+      return;
+    }
+
+    const unassignedTasksQuery = `
+      SELECT t.id, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      WHERE t.status::text LIKE '%unassigned' AND t.status::text NOT LIKE 'inactive%'
+      AND t.project_id = ANY($1)
+    `;
+    const { rows: unassignedTasks } = await pool.query(unassignedTasksQuery, [autoAssignProjectIds]);
+
+    for (const task of unassignedTasks) {
+      await this.autoAssignTask(task);
+    }
+  }
+
+  async activateProjectTasks(projectId) {
+    const projectResult = await pool.query('SELECT auto_assign FROM projects WHERE id = $1', [projectId]);
+    if (projectResult.rows.length === 0) return;
+    const { auto_assign } = projectResult.rows[0];
+
+    const tasksQuery = `
+      SELECT id, dependencies, status, due_date
+      FROM tasks
+      WHERE project_id = $1 AND status::text LIKE 'inactive%'
+    `;
+    const { rows: tasks } = await pool.query(tasksQuery, [projectId]);
+
+    for (const task of tasks) {
+      let shouldActivate = false;
+      if (!task.dependencies || task.dependencies.length === 0) {
+        shouldActivate = true;
+      } else {
+        const depsQuery = `SELECT status FROM tasks WHERE id = ANY($1)`;
+        const { rows: depStatuses } = await pool.query(depsQuery, [task.dependencies]);
+        if (depStatuses.every(d => d.status === 'completed')) {
+          shouldActivate = true;
+        }
+      }
+
+      if (shouldActivate) {
+        const now = new Date();
+        const due = task.due_date ? new Date(task.due_date) : null;
+        const isUrgent = due && (due - now) < (24 * 60 * 60 * 1000);
+
+        let newStatus;
+        if (task.status.includes('assigned')) {
+          newStatus = isUrgent ? 'urgent-assigned' : 'active-assigned';
+        } else {
+          newStatus = isUrgent ? 'urgent-unassigned' : 'active-unassigned';
+        }
+
+        await pool.query('UPDATE tasks SET status = $1 WHERE id = $2', [newStatus, task.id]);
+
+        if (auto_assign && newStatus.includes('unassigned')) {
+          const taskData = await pool.query(`
+            SELECT t.id, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            WHERE t.id = $1
+          `, [task.id]);
+          await this.autoAssignTask(taskData.rows[0]);
+        }
+      }
+    }
+  }
+
+  async autoAssignTask(task) {
+    // E - Query active users, skills and interests
+    const activeUsersQuery = `
+      SELECT u.id, u.skills, u.interests, count(t.id) as current_assignments
+      FROM users u
+      LEFT JOIN tasks t ON u.id = ANY(t.assigned_user_ids) AND t.status NOT IN ('completed', 'cancelled')
+      WHERE u.capacity_status = 'active'
+      GROUP BY u.id
+      HAVING count(t.id) < 3
+    `;
+    const { rows: candidates } = await pool.query(activeUsersQuery);
+
+    if (candidates.length === 0) return;
+
+    // F - Filter and match
+    const communityTags = [];
+    if (task.community_id) {
+      const commResult = await pool.query('SELECT interest_tags FROM communities WHERE id = $1', [task.community_id]);
+      if (commResult.rows.length > 0 && commResult.rows[0].interest_tags) {
+        const tagNamesResult = await pool.query('SELECT name FROM interests WHERE id = ANY($1)', [commResult.rows[0].interest_tags]);
+        communityTags.push(...tagNamesResult.rows.map(r => r.name));
+      }
+    }
+    const combinedTags = [...new Set([...(task.project_tags || []), ...communityTags])];
+
+    const scoredUsers = candidates.filter(user => {
+      // Skill match
+      const userSkills = (user.skills || []).map(s => typeof s === 'string' ? JSON.parse(s).id : s.id);
+      return task.skill_id ? userSkills.includes(task.skill_id) : true;
+    }).map(user => {
+      // Interest match
+      const userInterests = (user.interests || []).map(i => typeof i === 'string' ? JSON.parse(i).name : i.name);
+      const matches = combinedTags.filter(tag => userInterests.includes(tag)).length;
+      return { ...user, matches };
+    });
+
+    if (scoredUsers.length === 0) return;
+
+    // G - Prioritize users with fewer tasks, then most matches
+    scoredUsers.sort((a, b) => {
+      if (a.current_assignments !== b.current_assignments) {
+        return a.current_assignments - b.current_assignments;
+      }
+      return b.matches - a.matches;
+    });
+
+    const bestUser = scoredUsers[0];
+
+    // Assign user to task
+    const newStatus = task.status ? task.status.replace('unassigned', 'assigned') : 'active-assigned';
+    await pool.query(
+      'UPDATE tasks SET assigned_user_ids = array_append(assigned_user_ids, $1), status = $2, accepted_at = NOW() WHERE id = $3',
+      [bestUser.id, newStatus, task.id]
+    );
+
+    // Notify user
+    await sendNotification(bestUser.id, {
+      taskId: task.id,
+      message: `You have been automatically assigned to a new task: ${task.id}. It matches your skills and interests!`,
+      type: 'task'
+    });
+
+    console.log(`Task ${task.id} auto-assigned to user ${bestUser.id}`);
   }
 }
 

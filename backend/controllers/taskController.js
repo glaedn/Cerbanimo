@@ -3,6 +3,7 @@ import {
   autoGenerateTasks,
   autoGenerateSubtasks,
 } from "../services/taskGenerator.js";
+import TaskRoutingService from "../services/TaskRoutingService.js";
 import StoryEngineService from "../services/StoryEngineService.js";
 import NeedService from "../services/NeedService.js";
 import NeedExpansionService from "../services/NeedExpansionService.js";
@@ -1061,8 +1062,14 @@ const approveTask = async (taskId, io, client) => {
       correlationId: `project:${project_id}`
     }, localClient);
 
-    // Step 9: Notify users
-    // This section seems redundant as notifications are already created above.
+    // Step 9: Trigger next task activation
+    try {
+      await TaskRoutingService.activateProjectTasks(project_id);
+    } catch (actErr) {
+      console.error("Failed to activate project tasks after approval:", actErr);
+    }
+
+    // Step 10: Notify users
     // However, if it's intended for a different purpose or audience, it should also be updated.
     // For now, assuming the earlier notification is the primary one.
     // If this is a separate notification, it needs similar JSON stringify treatment.
@@ -2214,6 +2221,13 @@ const approveByPM = async (req, res, io) => {
     );
 
     const finalizeResult = await finalizeTask(taskId, client, io);
+
+    // Trigger next task activation
+    try {
+      await TaskRoutingService.activateProjectTasks(task.project_id);
+    } catch (actErr) {
+      console.error("Failed to activate project tasks after PM approval:", actErr);
+    }
 
     // Record event
     await CivicEventService.recordEvent({

@@ -32,7 +32,8 @@ export async function startWorkers() {
       'treaty-enforcement-job',
       'crisis-evaluation-job',
       'reward-adjustment-job',
-      'intelligence-scoring-job'
+      'intelligence-scoring-job',
+      'daily-task-activation-job'
     ];
 
     for (const queue of queues) {
@@ -77,12 +78,15 @@ export async function startWorkers() {
           return await TaskRoutingService.applyDynamicRewardAdjustment();
         case 'intelligence-scoring':
           return await runIntelligenceScoring();
+        case 'daily-task-activation':
+          return await TaskRoutingService.runDailyTaskActivationAndAssignment();
         default:
           console.warn(`Unknown scheduled task type: ${type}`);
       }
     });
 
     // Schedule tasks with UNIQUE names to prevent overwriting
+    await boss.schedule('daily-task-activation-job', '0 6 * * *', { type: 'daily-task-activation' }, { queue: 'scheduled-tasks' });
     await boss.schedule('nightly-reset-job', '0 0 * * *', { type: 'nightly-reset' }, { queue: 'scheduled-tasks' });
     await boss.schedule('interest-validation-job', '0 1 * * *', { type: 'interest-validation' }, { queue: 'scheduled-tasks' });
     await boss.schedule('guild-membership-sync-job', '*/15 * * * *', { type: 'guild-membership-sync' }, { queue: 'scheduled-tasks' });
