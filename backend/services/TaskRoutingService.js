@@ -74,7 +74,7 @@ class TaskRoutingService {
       return [];
     }
 
-    const userSkillsRaw = userResult.rows[0].skills || []; // Assuming skill objects {id, name}
+    const userSkillsRaw = userResult.rows[0].skills || [];
     const userSkills = Array.isArray(userSkillsRaw)
       ? userSkillsRaw.map(s => {
           if (typeof s === 'string' && s.startsWith('{')) {
@@ -87,8 +87,6 @@ class TaskRoutingService {
         }).map(id => parseInt(id, 10)).filter(id => !isNaN(id))
       : [];
 
-    // Phase 4: Matching with Impact Alignment
-    // Boost tasks that are linked to outcomes the user has successfully contributed to before.
     const matchingTasksQuery = `
       WITH user_impacted_outcomes AS (
         SELECT DISTINCT o.id
@@ -119,15 +117,12 @@ class TaskRoutingService {
       )) DESC
       LIMIT 20;
     `;
-    // Note: Applying the boost in ORDER BY would be ideal:
-    // ORDER BY (t.priority_score * (CASE WHEN ... THEN 1.2 ELSE 1.0 END)) DESC
 
     try {
       const result = await pool.query(matchingTasksQuery, [parseInt(userId), userSkills, '%unassigned']);
       return result.rows;
     } catch (queryErr) {
       console.error(`Complex matching query failed for userId ${userId}, attempting fallback:`, queryErr.message);
-      // Fallback to a simpler query that doesn't rely on Phase 4 impact tables
       const fallbackQuery = `
         SELECT t.*, p.name as project_name
         FROM tasks t
@@ -147,7 +142,6 @@ class TaskRoutingService {
   }
 
   async applyDynamicRewardAdjustment() {
-    // Increase rewards for aging tasks
     const query = `
       UPDATE tasks
       SET
@@ -161,10 +155,9 @@ class TaskRoutingService {
     return result.rows;
   }
 
-  async runDailyTaskActivationAndAssignment() {
-    console.log('Running daily task activation and assignment...');
+  async runDailyTaskActivationAndNotification() {
+    console.log('Running daily task activation and notification...');
 
-    // A, B, C - Activate tasks based on dependencies and due dates
     const inactiveTasksQuery = `
       SELECT id, project_id, dependencies, status, due_date
       FROM tasks
@@ -204,17 +197,16 @@ class TaskRoutingService {
       }
     }
 
-    // D, E, F, G - Auto-assign unassigned tasks
     const projectsWithAutoAssign = await pool.query('SELECT id FROM projects WHERE auto_assign = TRUE');
     const autoAssignProjectIds = projectsWithAutoAssign.rows.map(p => p.id);
 
     if (autoAssignProjectIds.length === 0) {
-      console.log('No projects with auto-assign enabled.');
+      console.log('No projects with auto-notify enabled.');
       return;
     }
 
     const unassignedTasksQuery = `
-      SELECT t.id, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
+      SELECT t.id, t.name, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
       WHERE t.status::text LIKE '%unassigned' AND t.status::text NOT LIKE 'inactive%'
@@ -223,7 +215,7 @@ class TaskRoutingService {
     const { rows: unassignedTasks } = await pool.query(unassignedTasksQuery, [autoAssignProjectIds]);
 
     for (const task of unassignedTasks) {
-      await this.autoAssignTask(task);
+      await this.notifyMatchingUsers(task);
     }
   }
 
@@ -233,7 +225,7 @@ class TaskRoutingService {
     const { auto_assign } = projectResult.rows[0];
 
     const tasksQuery = `
-      SELECT id, dependencies, status, due_date
+      SELECT id, name, dependencies, status, due_date
       FROM tasks
       WHERE project_id = $1 AND status::text LIKE 'inactive%'
     `;
@@ -267,19 +259,18 @@ class TaskRoutingService {
 
         if (auto_assign && newStatus.includes('unassigned')) {
           const taskData = await pool.query(`
-            SELECT t.id, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
+            SELECT t.id, t.name, t.skill_id, t.project_id, p.community_id, p.tags as project_tags
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
             WHERE t.id = $1
           `, [task.id]);
-          await this.autoAssignTask(taskData.rows[0]);
+          await this.notifyMatchingUsers(taskData.rows[0]);
         }
       }
     }
   }
 
-  async autoAssignTask(task) {
-    // E - Query active users, skills and interests
+  async notifyMatchingUsers(task) {
     const activeUsersQuery = `
       SELECT u.id, u.skills, u.interests, count(t.id) as current_assignments
       FROM users u
@@ -292,7 +283,6 @@ class TaskRoutingService {
 
     if (candidates.length === 0) return;
 
-    // F - Filter and match
     const communityTags = [];
     if (task.community_id) {
       const commResult = await pool.query('SELECT interest_tags FROM communities WHERE id = $1', [task.community_id]);
@@ -303,44 +293,63 @@ class TaskRoutingService {
     }
     const combinedTags = [...new Set([...(task.project_tags || []), ...communityTags])];
 
-    const scoredUsers = candidates.filter(user => {
-      // Skill match
-      const userSkills = (user.skills || []).map(s => typeof s === 'string' ? JSON.parse(s).id : s.id);
-      return task.skill_id ? userSkills.includes(task.skill_id) : true;
-    }).map(user => {
-      // Interest match
-      const userInterests = (user.interests || []).map(i => typeof i === 'string' ? JSON.parse(i).name : i.name);
+    const scoredCandidates = [];
+
+    for (const user of candidates) {
+      const userSkills = (user.skills || []).map(s => {
+          if (typeof s === 'string') {
+              try { return JSON.parse(s).id; } catch(e) { return null; }
+          }
+          return s.id;
+      }).filter(id => id != null);
+
+      const skillMatch = task.skill_id ? userSkills.includes(task.skill_id) : true;
+      if (!skillMatch) continue;
+
+      const userInterests = (user.interests || []).map(i => {
+          if (typeof i === 'string') {
+              try { return JSON.parse(i).name; } catch(e) { return null; }
+          }
+          return i.name;
+      }).filter(n => n != null);
+
       const matches = combinedTags.filter(tag => userInterests.includes(tag)).length;
-      return { ...user, matches };
-    });
 
-    if (scoredUsers.length === 0) return;
+      const dailyLimitQuery = `
+        SELECT count(*) FROM notifications
+        WHERE user_id = $1 AND type = 'task'
+        AND created_at > NOW() - INTERVAL '24 hours'
+      `;
+      const { rows: [{ count: dailyCount }] } = await pool.query(dailyLimitQuery, [user.id]);
 
-    // G - Prioritize users with fewer tasks, then most matches
-    scoredUsers.sort((a, b) => {
-      if (a.current_assignments !== b.current_assignments) {
-        return a.current_assignments - b.current_assignments;
+      if (parseInt(dailyCount) < 3) {
+        scoredCandidates.push({
+          ...user,
+          interestMatches: matches
+        });
       }
-      return b.matches - a.matches;
+    }
+
+    if (scoredCandidates.length === 0) return;
+
+    scoredCandidates.sort((a, b) => {
+      if (b.interestMatches !== a.interestMatches) {
+        return b.interestMatches - a.interestMatches;
+      }
+      return a.current_assignments - b.current_assignments;
     });
 
-    const bestUser = scoredUsers[0];
+    const topCandidates = scoredCandidates.slice(0, 5);
 
-    // Assign user to task
-    const newStatus = task.status ? task.status.replace('unassigned', 'assigned') : 'active-assigned';
-    await pool.query(
-      'UPDATE tasks SET assigned_user_ids = array_append(assigned_user_ids, $1), status = $2, accepted_at = NOW() WHERE id = $3',
-      [bestUser.id, newStatus, task.id]
-    );
+    for (const user of topCandidates) {
+        await sendNotification(user.id, {
+          taskId: task.id,
+          message: `A new task matching your skills has become active: ${task.name || task.id}. Matches ${user.interestMatches} of your interests!`,
+          type: 'task'
+        });
 
-    // Notify user
-    await sendNotification(bestUser.id, {
-      taskId: task.id,
-      message: `You have been automatically assigned to a new task: ${task.id}. It matches your skills and interests!`,
-      type: 'task'
-    });
-
-    console.log(`Task ${task.id} auto-assigned to user ${bestUser.id}`);
+        console.log(`Task ${task.id} notification sent to user ${user.id} (Matches: ${user.interestMatches})`);
+    }
   }
 }
 

@@ -1013,7 +1013,7 @@ const ProjectVisualizer = () => {
                 {isEditMode && (
                   <>
                     <Box sx={{ bgcolor: 'rgba(0,0,0,0.9)', p: 1, borderRadius: '12px', border: '1px solid rgba(0,243,255,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.6rem', color: '#fff', mb: 0.5 }}>AUTO-ASSIGN</Typography>
+                    <Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.6rem', color: '#fff', mb: 0.5 }}>AUTO-NOTIFY</Typography>
                       <Switch checked={project?.auto_assign || false} onChange={handleToggleAutoAssign} size="small" color="secondary" />
                     </Box>
                     <IconButton
@@ -1054,7 +1054,7 @@ const ProjectVisualizer = () => {
                 {isEditMode && (
                   <FormControlLabel
                     control={<Switch checked={project?.auto_assign || false} onChange={handleToggleAutoAssign} color="secondary" />}
-                    label={<Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.8rem', color: '#fff' }}>AUTO-ASSIGN</Typography>}
+                    label={<Typography sx={{ fontFamily: 'Orbitron', fontSize: '0.8rem', color: '#fff' }}>AUTO-NOTIFY</Typography>}
                     sx={{ ml: 1, mr: 1, bgcolor: 'rgba(0,0,0,0.6)', pl: 1, pr: 1, borderRadius: '4px', border: '1px solid rgba(0,243,255,0.2)' }}
                   />
                 )}
