@@ -39,6 +39,7 @@ const ProjectCreation = () => {
   const [locationOptions, setLocationOptions] = useState([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [autoGeneratePlan, setAutoGeneratePlan] = useState(true);
+  const [autoAssign, setAutoAssign] = useState(false);
   const [loadingPopupOpen, setLoadingPopupOpen] = useState(false);
   const [loadingPopupMessages, setLoadingPopupMessages] = useState([]);
 
@@ -112,6 +113,7 @@ const ProjectCreation = () => {
           outcomeStatement: outcome,
           due_date: dueDate ? dueDate.toISOString() : null,
           location: location.text ? location : null,
+          auto_assign: autoAssign,
         },
         {
           headers: {
@@ -307,17 +309,28 @@ const ProjectCreation = () => {
           })
         }
       />
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={autoGeneratePlan}
-            onChange={(e) => setAutoGeneratePlan(e.target.checked)}
-            color="primary"
-          />
-        }
-        label="Auto-generate project tasks using AI"
-        sx={{ marginTop: 2, marginBottom: 1 }}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={autoGeneratePlan}
+              onChange={(e) => setAutoGeneratePlan(e.target.checked)}
+              color="primary"
+            />
+          }
+          label="Auto-generate project tasks using AI"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={autoAssign}
+              onChange={(e) => setAutoAssign(e.target.checked)}
+              color="secondary"
+            />
+          }
+          label="Auto-assign users to tasks as they activate"
+        />
+      </Box>
       <Button
         variant="contained"
         color="primary"

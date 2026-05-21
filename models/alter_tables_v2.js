@@ -43,7 +43,9 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS location JSONB,
     ${hasPostGIS ? 'ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),' : ''}
-    ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS project_plan TEXT,
+    ADD COLUMN IF NOT EXISTS auto_assign BOOLEAN DEFAULT FALSE;
   `;
 
   const alterCommunitiesQuery = `

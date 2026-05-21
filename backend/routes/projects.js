@@ -139,7 +139,7 @@ router.patch('/:projectId', async (req, res) => {
 // Create a new project
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, auth0_id, outcomeStatement, due_date, location } = req.body;
+    const { name, description, auth0_id, outcomeStatement, due_date, location, auto_assign } = req.body;
     const tags = (req.body.tags || []).map(tag => tag.name);
 
     if (!name || !description || !auth0_id || !outcomeStatement) {
@@ -166,16 +166,33 @@ router.post('/create', async (req, res) => {
 
     // Step 2: Insert the new project with the derived creator_id
     const insertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id, due_date, location, location_point)
-      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'})
+      INSERT INTO projects (name, description, tags, creator_id, due_date, location, location_point, auto_assign, project_plan)
+      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'}, $8, $9)
       RETURNING *;
     `;
 
-    const queryParams = [name, description, tags, creator_id, due_date, location];
-    if (locationPoint) queryParams.push(locationPoint);
+    const queryParams = [
+      name,
+      description,
+      tags,
+      creator_id,
+      due_date,
+      location,
+      locationPoint,
+      auto_assign || false,
+      null // Initial project_plan is null, usually generated later via auto-generate
+    ];
 
     const result = await pool.query(insertQuery, queryParams);
     const project = result.rows[0];
+
+    // Trigger next task activation if applicable (though usually no tasks yet)
+    try {
+      const TaskRoutingService = (await import('../services/TaskRoutingService.js')).default;
+      await TaskRoutingService.activateProjectTasks(project.id);
+    } catch (actErr) {
+      console.error("Failed to activate project tasks after creation:", actErr);
+    }
 
     // Step 3: Enforce Outcome authorship (Phase 0)
     await ImpactGraphService.createOutcome(project.id, outcomeStatement);
@@ -190,7 +207,7 @@ router.post('/create', async (req, res) => {
 // Update an existing project
 router.put('/:projectId', async (req, res) => {
   const { projectId } = req.params;
-  const { name, description, tags, is_service, service_price, service_visibility, due_date } = req.body;
+  const { name, description, tags, is_service, service_price, service_visibility, due_date, auto_assign, project_plan } = req.body;
 
   if (!name || !description) {
       return res.status(400).json({ error: 'Name and description are required' });
@@ -204,9 +221,11 @@ router.put('/:projectId', async (req, res) => {
               is_service = COALESCE($5, is_service),
               service_price = COALESCE($6, service_price),
               service_visibility = COALESCE($7, service_visibility),
-              due_date = COALESCE($8, due_date)
+              due_date = COALESCE($8, due_date),
+              auto_assign = COALESCE($9, auto_assign),
+              project_plan = COALESCE($10, project_plan)
           WHERE id = $4`,
-          [name, description, tags, projectId, is_service, service_price, service_visibility, due_date]
+          [name, description, tags, projectId, is_service, service_price, service_visibility, due_date, auto_assign, project_plan]
       );
       res.status(200).json({ message: 'Project updated successfully' });
   } catch (error) {
@@ -362,7 +381,7 @@ router.post('/import', async (req, res) => {
 });
 
 router.post('/auto-generate', async (req, res) => {
-  const { projectId } = req.body;
+  const { projectId, usePlan = true } = req.body;
 
   if (!projectId) {
     return res.status(400).json({ success: false, error: 'Missing projectId' });
@@ -384,10 +403,22 @@ router.post('/auto-generate', async (req, res) => {
     const outcomeStatement = outcomeResult.rows[0]?.statement || '';
 
     // 2. Generate tasks using LLM
-    const generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date, outcomeStatement);
+    let generatedData;
+    if (usePlan) {
+      const { autogeneratePlan } = await import('../services/taskGenerator.js');
+      generatedData = await autogeneratePlan(project.name, project.description, project.tags, project.creator_id, project.due_date, outcomeStatement);
+    } else {
+      generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date, outcomeStatement);
+    }
+
     console.log('Generated data:', generatedData);
     const tasks = generatedData.tasks
     console.log('Generated tasks:', tasks);
+
+    // Save project plan if it exists
+    if (generatedData.projectPlan) {
+      await pool.query('UPDATE projects SET project_plan = $1 WHERE id = $2', [generatedData.projectPlan, projectId]);
+    }
 
     // 3. First pass: Insert tasks WITHOUT dependencies, and build LLM ID → DB ID map
     const llmToDbIdMap = {};
@@ -423,6 +454,14 @@ router.post('/auto-generate', async (req, res) => {
     await Promise.all(updatePromises);
 
     await ImpactGraphService.createTaskImpactNodesForProject(projectId, tasks);
+
+    // Trigger activation for the newly generated tasks
+    try {
+      const TaskRoutingService = (await import('../services/TaskRoutingService.js')).default;
+      await TaskRoutingService.activateProjectTasks(projectId);
+    } catch (actErr) {
+      console.error("Failed to activate project tasks after auto-generation:", actErr);
+    }
 
     // 5. Respond with success and DB task IDs
     const insertedTasks = tasks.map(task => ({
