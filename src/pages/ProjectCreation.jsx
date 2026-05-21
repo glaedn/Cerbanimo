@@ -328,7 +328,7 @@ const ProjectCreation = () => {
               color="secondary"
             />
           }
-          label="Auto-assign users to tasks as they activate"
+          label="Auto-notify users when tasks activate"
         />
       </Box>
       <Button

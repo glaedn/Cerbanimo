@@ -79,7 +79,7 @@ export async function startWorkers() {
         case 'intelligence-scoring':
           return await runIntelligenceScoring();
         case 'daily-task-activation':
-          return await TaskRoutingService.runDailyTaskActivationAndAssignment();
+          return await TaskRoutingService.runDailyTaskActivationAndNotification();
         default:
           console.warn(`Unknown scheduled task type: ${type}`);
       }
