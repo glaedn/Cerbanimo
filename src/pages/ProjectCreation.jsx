@@ -315,7 +315,7 @@ const ProjectCreation = () => {
             color="primary"
           />
         }
-        label="Auto-generate project tasks using AI"
+        label="Auto-generate project tasks using a light AI model"
         sx={{ marginTop: 2, marginBottom: 1 }}
       />
       <Button
