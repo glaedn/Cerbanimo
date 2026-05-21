@@ -4,6 +4,7 @@ import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import useAssignedTasks from '../../hooks/useAssignedTasks';
+import { useIntelligence } from '../../hooks/useIntelligence';
 import {
   OpportunityPanel,
   QuickActions,
@@ -20,28 +21,30 @@ const OrbitPage = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useUserProfile();
   const { assignedTasks, loading: tasksLoading } = useAssignedTasks(profile?.id);
+  const { pulse, loading: intelligenceLoading } = useIntelligence({ pollInterval: 45000 });
 
   // Resilient index detection that ignores trailing slashes and search params
   const isIndex = location.pathname.replace(/\/$/, '') === '/orbit';
 
   const renderRoleSpecificView = () => {
-    if (profileLoading || tasksLoading) {
+    if (profileLoading || tasksLoading || intelligenceLoading) {
       return <p className="placeholder-text">LOADING_EXPERIENCE...</p>;
     }
 
     const { roleProfile } = profile;
     const primaryRole = roleProfile?.primaryRole || 'Explorer';
+    const signals = pulse?.signals || [];
 
     switch (primaryRole) {
       case 'Contributor':
-        return <ContributorOrbitView profile={profile} tasks={assignedTasks} navigate={navigate} />;
+        return <ContributorOrbitView profile={profile} tasks={assignedTasks} navigate={navigate} signals={signals} />;
       case 'Coordinator':
-        return <CoordinatorOrbitView profile={profile} navigate={navigate} />;
+        return <CoordinatorOrbitView profile={profile} navigate={navigate} signals={signals} />;
       case 'Steward':
       case 'Governance Participant':
-        return <StewardOrbitView profile={profile} navigate={navigate} />;
+        return <StewardOrbitView profile={profile} navigate={navigate} signals={signals} />;
       default:
-        return <ExplorerOrbitView profile={profile} navigate={navigate} />;
+        return <ExplorerOrbitView profile={profile} navigate={navigate} signals={signals} />;
     }
   };
 

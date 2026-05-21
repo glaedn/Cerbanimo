@@ -1,11 +1,23 @@
 import React from 'react';
 import FocusCard from '../../../components/shared/FocusCard';
 import SignalChip from '../../../components/shared/SignalChip';
+import CoordinationSignal from '../../../components/shared/CoordinationSignal';
 import { MomentumPanel, ConstellationActivity } from '../components';
 
-const CoordinatorOrbitView = ({ profile, navigate }) => {
+const CoordinatorOrbitView = ({ profile, navigate, signals = [] }) => {
   return (
     <div className="orbit-view coordinator-view">
+      {signals.length > 0 && (
+        <section className="orbit-section intelligence-signals">
+          {signals.map((signal, idx) => (
+            <CoordinationSignal
+              key={idx}
+              signal={signal}
+              onAction={(path) => navigate(path)}
+            />
+          ))}
+        </section>
+      )}
       <section className="orbit-section focus">
         <FocusCard
           title="Team Coordination"

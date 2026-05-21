@@ -1,0 +1,57 @@
+.coordination-signal {
+  background: rgba(20, 30, 45, 0.7) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(95, 240, 255, 0.2);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.coordination-signal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.signal-type-crisis::before { background: #ff4d4d; box-shadow: 0 0 10px #ff4d4d; }
+.signal-type-friction::before { background: #ffaa00; }
+.signal-type-opportunity::before { background: #5ff0ff; }
+.signal-type-narrative::before { background: #bc77ff; }
+.signal-type-guidance::before { background: rgba(95, 240, 255, 0.5); }
+
+.signal-icon.critical { color: #ff4d4d; }
+.signal-icon.friction { color: #ffaa00; }
+.signal-icon.opportunity { color: #5ff0ff; }
+.signal-icon.narrative { color: #bc77ff; }
+
+.signal-message {
+  color: #e0e0e0;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.4;
+}
+
+.signal-persona {
+  color: rgba(95, 240, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.65rem;
+}
+
+.signal-action-chip {
+  background: rgba(95, 240, 255, 0.1) !important;
+  border: 1px solid rgba(95, 240, 255, 0.3) !important;
+  color: #5ff0ff !important;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+}
+
+.signal-action-chip:hover {
+  background: rgba(95, 240, 255, 0.2) !important;
+  cursor: pointer;
+}

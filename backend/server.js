@@ -42,6 +42,7 @@ import civicKernelRoutes from './routes/civic_kernel.js';
 import governanceRoutes from './routes/governance.js';
 import federationRoutes from './routes/federation.js';
 import narrativeRoutes from './routes/narrative.js';
+import intelligenceRoutes from './routes/intelligence.js';
 import walletRoutes from './routes/wallets.js';
 import treasuryRoutes from './routes/treasury.js';
 import bountyRoutes from './routes/bounties.js';
@@ -278,6 +279,7 @@ app.use('/wallets', jwtCheck, resolveUser, walletRoutes);
 
 app.use('/treasury', jwtCheck, resolveUser, treasuryRoutes);
 app.use('/bounties', jwtCheck, resolveUser, bountyRoutes);
+app.use('/intelligence', jwtCheck, resolveUser, intelligenceRoutes);
 app.use('/solidarity', jwtCheck, resolveUser, solidarityRoutes);
 app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
 app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);

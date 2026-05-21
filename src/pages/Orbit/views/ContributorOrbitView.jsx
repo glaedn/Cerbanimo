@@ -1,13 +1,25 @@
 import React from 'react';
 import FocusCard from '../../../components/shared/FocusCard';
 import SignalChip from '../../../components/shared/SignalChip';
+import CoordinationSignal from '../../../components/shared/CoordinationSignal';
 import { MomentumPanel, ConstellationActivity } from '../components';
 
-const ContributorOrbitView = ({ profile, tasks, navigate }) => {
+const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
   const primaryTask = tasks?.length > 0 ? tasks[0] : null;
 
   return (
     <div className="orbit-view contributor-view">
+      {signals.length > 0 && (
+        <section className="orbit-section intelligence-signals">
+          {signals.map((signal, idx) => (
+            <CoordinationSignal
+              key={idx}
+              signal={signal}
+              onAction={(path) => navigate(path)}
+            />
+          ))}
+        </section>
+      )}
       <section className="orbit-section focus">
         {primaryTask ? (
           <FocusCard
