@@ -54,7 +54,7 @@ const CommonsPage = () => {
                     <span className="icon">🏛️</span>
                     <span className="label">Communities</span>
                   </button>
-                  <button onClick={() => navigate('/commons/marketplace')} className="nav-card">
+                  <button onClick={() => navigate('/commons/marketplace/discover')} className="nav-card">
                     <span className="icon">🏪</span>
                     <span className="label">Marketplace</span>
                   </button>

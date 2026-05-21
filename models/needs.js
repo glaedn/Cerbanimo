@@ -42,6 +42,9 @@ const createNeedsTable = async () => {
       ${hasPostGIS ? 'dropoff_point GEOGRAPHY(Point, 4326),' : ''}
       discord_message_id VARCHAR(50), -- Added for Discord integration
       discord_thread_id VARCHAR(50), -- Added for Discord integration
+      compensation_model VARCHAR(50) DEFAULT 'volunteer', -- Added for Phase 6
+      trust_requirements TEXT, -- Added for Phase 6
+      visibility VARCHAR(50) DEFAULT 'public', -- Added for Phase 6
       fulfilled_by_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
       complexity_score FLOAT DEFAULT 0,
       is_expanded BOOLEAN DEFAULT false,

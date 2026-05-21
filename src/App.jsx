@@ -91,6 +91,10 @@ const AdminProtectedRoute = ({ children }) => {
 const OrbitPage = React.lazy(() => import("./pages/Orbit/OrbitPage.jsx"));
 const MissionsPage = React.lazy(() => import("./pages/Missions/MissionsPage.jsx"));
 const CommonsPage = React.lazy(() => import("./pages/Commons/CommonsPage.jsx"));
+const MarketplacePage = React.lazy(() => import("./pages/Commons/Marketplace/MarketplaceCrisisWrapper.jsx"));
+const MarketplaceFeed = React.lazy(() => import("./pages/Commons/Marketplace/MarketplaceFeed.jsx"));
+const MarketplaceMap = React.lazy(() => import("./pages/Commons/Marketplace/MarketplaceMap.jsx"));
+const LogisticsCoordination = React.lazy(() => import("./pages/Commons/Marketplace/LogisticsCoordination.jsx"));
 const SignalsPage = React.lazy(() => import("./pages/Signals/SignalsPage.jsx"));
 
 const LegacyRedirect = ({ to }) => {
@@ -204,7 +208,16 @@ const AppContent = () => {
                 <Route path="communities" element={<Communities />} />
                 <Route path="community/:communityId" element={<CommunityHub />} />
                 <Route path="communitycreation" element={<CommunityCreation />} />
-                <Route path="marketplace" element={<CommunityMarketplace />} />
+                <Route path="marketplace/*" element={<MarketplacePage />}>
+                  <Route path="discover" element={<MarketplaceFeed />} />
+                  <Route path="nearby" element={<MarketplaceMap />} />
+                  <Route path="missions" element={<MarketplaceFeed />} />
+                  <Route path="needs" element={<MarketplaceFeed />} />
+                  <Route path="offers" element={<MarketplaceFeed />} />
+                  <Route path="logistics" element={<LogisticsCoordination />} />
+                  <Route path="activity" element={<MarketplaceFeed />} />
+                  <Route index element={<Navigate to="discover" replace />} />
+                </Route>
                 <Route path="needs/:needId?" element={<NeedsPage />} />
                 <Route path="guilds" element={<GuildsDashboard />} />
                 <Route path="guild/:id" element={<GuildHub />} />

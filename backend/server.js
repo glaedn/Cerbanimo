@@ -50,6 +50,7 @@ import solidarityRoutes from './routes/solidarity.js';
 import crisisRoutes from './routes/crisis.js';
 import impactReceiptRoutes from './routes/impact_receipts.js';
 import needFulfillmentRoutes from './routes/need_fulfillments.js';
+import marketplaceRoutes from './routes/marketplace.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -284,6 +285,7 @@ app.use('/solidarity', jwtCheck, resolveUser, solidarityRoutes);
 app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
 app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
 app.use('/need-fulfillments', jwtCheck, resolveUser, needFulfillmentRoutes);
+app.use('/marketplace', jwtCheck, resolveUser, marketplaceRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -341,6 +343,15 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS service_price INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'
     `);
+
+    // Ensure needs table has location_point
+    const hasPostGIS = await pool.query("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis')");
+    if (hasPostGIS.rows[0].exists) {
+      await pool.query(`
+        ALTER TABLE needs
+        ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326)
+      `);
+    }
 
     await createImpactTables();
     await createStoryTables();

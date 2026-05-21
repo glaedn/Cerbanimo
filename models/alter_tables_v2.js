@@ -144,7 +144,10 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS fulfilled_via VARCHAR(20),
     ADD COLUMN IF NOT EXISTS complexity_score FLOAT DEFAULT 0,
     ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT false,
-    ADD COLUMN IF NOT EXISTS linked_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS linked_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS compensation_model VARCHAR(50) DEFAULT 'volunteer',
+    ADD COLUMN IF NOT EXISTS trust_requirements TEXT,
+    ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';
   `;
 
   const alterResourcesQuery = `
@@ -162,7 +165,10 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web',
     ADD COLUMN IF NOT EXISTS discord_message_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS discord_channel_id VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50);
+    ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS compensation_model VARCHAR(50) DEFAULT 'shared',
+    ADD COLUMN IF NOT EXISTS trust_requirements TEXT,
+    ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';
   `;
 
   try {

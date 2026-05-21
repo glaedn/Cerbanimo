@@ -1,0 +1,72 @@
+.marketplace-shell {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.marketplace-header {
+  margin-bottom: 1.5rem;
+}
+
+.marketplace-header h2 {
+  font-family: 'Orbitron', sans-serif;
+  color: #ffae6d;
+  margin: 0;
+  text-shadow: 0 0 15px rgba(255, 174, 109, 0.3);
+}
+
+.marketplace-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.discovery-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid rgba(255, 174, 109, 0.2);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.discovery-section-header h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.activity-item {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-type {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  color: #ffae6d;
+  background: rgba(255, 174, 109, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+  .listing-grid {
+    grid-template-columns: 1fr;
+  }
+}

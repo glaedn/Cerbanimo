@@ -43,6 +43,9 @@ const createResourcesTable = async () => {
       ${hasPostGIS ? 'location_point GEOGRAPHY(Point, 4326),' : ''}
       availability_radius NUMERIC, -- in meters
       access_instructions TEXT,
+      compensation_model VARCHAR(50) DEFAULT 'shared', -- Added for Phase 6
+      trust_requirements TEXT, -- Added for Phase 6
+      visibility VARCHAR(50) DEFAULT 'public', -- Added for Phase 6
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
