@@ -8,7 +8,7 @@ import { useGovernanceStore } from '../../../store/useGovernanceStore';
 
 const StewardOrbitView = ({ profile, navigate, signals = [] }) => {
   const { proposals, fetchCommunityGovernance } = useGovernanceStore();
-  const [communityHealth, setCommunityHealth] = useState('94%');
+  const [communityHealth, setCommunityHealth] = useState('...');
 
   useEffect(() => {
     if (profile?.primary_community_id) {
@@ -17,11 +17,12 @@ const StewardOrbitView = ({ profile, navigate, signals = [] }) => {
       const fetchHealth = async () => {
         try {
           const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${profile.primary_community_id}`);
-          if (res.data.health_score) {
+          if (res.data.health_score !== undefined) {
             setCommunityHealth(Math.round(res.data.health_score * 100) + '%');
           }
         } catch (err) {
           console.error('Error fetching community health:', err);
+          setCommunityHealth('N/A');
         }
       };
       fetchHealth();

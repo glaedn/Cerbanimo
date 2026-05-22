@@ -45,17 +45,22 @@ router.get("/", async (req, res) => {
     }));
 
     const totalCountQuery = `
-      SELECT COUNT(*) FROM communities
+      SELECT
+        COUNT(*) as total_count,
+        COALESCE(SUM(cardinality(members)), 0) as total_members
+      FROM communities
       WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
     `;
     const totalCountResult = await pool.query(totalCountQuery, [
       search || null,
     ]);
-    const totalCount = parseInt(totalCountResult.rows[0].count, 10);
+    const totalCount = parseInt(totalCountResult.rows[0].total_count, 10);
+    const totalMembers = parseInt(totalCountResult.rows[0].total_members, 10);
 
     res.status(200).json({
       communities,
       totalCount,
+      totalMembers,
       totalPages: Math.ceil(totalCount / limit),
       currentPage: parseInt(page, 10),
     });
@@ -244,7 +249,19 @@ router.get("/:communityId", async (req, res) => {
                       AND cm_proj.entity_type = 'project'
                   ),
                   ARRAY[]::integer[]
-              ) as shared_project_ids
+              ) as shared_project_ids,
+              COALESCE(
+                  (
+                      SELECT
+                        CASE
+                          WHEN COUNT(*) = 0 THEN 0.94
+                          ELSE (COUNT(*) FILTER (WHERE status = 'active'))::float / COUNT(*)
+                        END
+                      FROM projects
+                      WHERE id = ANY(c.approved_projects)
+                  ),
+                  0.94
+              ) as health_score
           FROM community_data c
       `;
     const result = await pool.query(query, [communityId]);

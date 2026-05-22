@@ -30,7 +30,7 @@ const CommonsPage = () => {
         ]);
 
         setStats({
-          members: commRes.data.totalCount ? (commRes.data.totalCount * 5).toLocaleString() : '0',
+          members: commRes.data.totalMembers ? commRes.data.totalMembers.toLocaleString() : '0',
           guilds: guildRes.data.length
         });
         setFeaturedCommunities(commRes.data.communities || []);
