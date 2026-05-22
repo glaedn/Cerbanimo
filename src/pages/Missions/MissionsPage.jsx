@@ -45,6 +45,28 @@ const MissionsPage = () => {
         {isIndex ? (
           <div className="missions-index-layout">
             <div className="missions-main">
+              <section className="missions-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate('/missions/projects')} className="nav-card">
+                    <span className="icon">📂</span>
+                    <span className="label">Projects</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/tasks')} className="nav-card">
+                    <span className="icon">✅</span>
+                    <span className="label">Tasks</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/projectcreation')} className="nav-card">
+                    <span className="icon">➕</span>
+                    <span className="label">New Project</span>
+                  </button>
+                  <button onClick={() => navigate('/missions/review')} className="nav-card">
+                    <span className="icon">🔍</span>
+                    <span className="label">Review</span>
+                  </button>
+                </div>
+              </section>
+
               {activeGuidance ? (
                 <FocusCard
                   title={activeGuidance.title || "Strategic Guidance"}
@@ -77,27 +99,6 @@ const MissionsPage = () => {
                 <ActiveMissionsList />
               </div>
 
-              <section className="missions-mobile-nav mobile-only">
-                <h3>Navigation</h3>
-                <div className="mobile-nav-grid">
-                  <button onClick={() => navigate('/missions/projects')} className="nav-card">
-                    <span className="icon">📂</span>
-                    <span className="label">Projects</span>
-                  </button>
-                  <button onClick={() => navigate('/missions/tasks')} className="nav-card">
-                    <span className="icon">✅</span>
-                    <span className="label">Tasks</span>
-                  </button>
-                  <button onClick={() => navigate('/missions/projectcreation')} className="nav-card">
-                    <span className="icon">➕</span>
-                    <span className="label">New Project</span>
-                  </button>
-                  <button onClick={() => navigate('/missions/review')} className="nav-card">
-                    <span className="icon">🔍</span>
-                    <span className="label">Review</span>
-                  </button>
-                </div>
-              </section>
             </div>
             <div className="missions-sidebar">
               {isCoordinator && <ReviewQueue />}

@@ -90,6 +90,30 @@ const SignalsPage = () => {
         {isIndex ? (
           <div className="signals-index-layout">
             <div className="signals-main">
+              <section className="signals-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate(`/signals/governance/${profile?.primary_community_id || 1}`)} className="nav-card">
+                    <span className="icon">⚖️</span>
+                    <span className="label">Governance</span>
+                  </button>
+                  <button onClick={() => navigate('/signals/impact')} className="nav-card">
+                    <span className="icon">💎</span>
+                    <span className="label">Impact</span>
+                  </button>
+                  <button onClick={() => navigate('/signals/activity-map')} className="nav-card">
+                    <span className="icon">🗺️</span>
+                    <span className="label">Map</span>
+                  </button>
+                  {unlockedSystems.federation && (
+                    <button onClick={() => navigate('/signals/federation')} className="nav-card">
+                      <span className="icon">🌐</span>
+                      <span className="label">Federation</span>
+                    </button>
+                  )}
+                </div>
+              </section>
+
               {proposals.length > 0 ? (
                 <FocusCard
                   title={proposals[0].title}
@@ -149,29 +173,6 @@ const SignalsPage = () => {
                 )}
               </div>
 
-              <section className="signals-mobile-nav mobile-only">
-                <h3>Navigation</h3>
-                <div className="mobile-nav-grid">
-                  <button onClick={() => navigate(`/signals/governance/${profile?.primary_community_id || 1}`)} className="nav-card">
-                    <span className="icon">⚖️</span>
-                    <span className="label">Governance</span>
-                  </button>
-                  <button onClick={() => navigate('/signals/impact')} className="nav-card">
-                    <span className="icon">💎</span>
-                    <span className="label">Impact</span>
-                  </button>
-                  <button onClick={() => navigate('/signals/activity-map')} className="nav-card">
-                    <span className="icon">🗺️</span>
-                    <span className="label">Map</span>
-                  </button>
-                  {unlockedSystems.federation && (
-                    <button onClick={() => navigate('/signals/federation')} className="nav-card">
-                      <span className="icon">🌐</span>
-                      <span className="label">Federation</span>
-                    </button>
-                  )}
-                </div>
-              </section>
             </div>
 
             <div className="signals-sidebar">

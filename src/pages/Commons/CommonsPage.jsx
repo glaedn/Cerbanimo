@@ -66,6 +66,28 @@ const CommonsPage = () => {
         {isIndex ? (
           <div className="commons-index-layout">
             <div className="commons-main">
+              <section className="commons-mobile-nav mobile-only">
+                <h3>Navigation</h3>
+                <div className="mobile-nav-grid">
+                  <button onClick={() => navigate('/commons/communities')} className="nav-card">
+                    <span className="icon">🏛️</span>
+                    <span className="label">Communities</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/marketplace/discover')} className="nav-card">
+                    <span className="icon">🏪</span>
+                    <span className="label">Marketplace</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/needs')} className="nav-card">
+                    <span className="icon">🤝</span>
+                    <span className="label">Needs</span>
+                  </button>
+                  <button onClick={() => navigate('/commons/guilds')} className="nav-card">
+                    <span className="icon">⚒️</span>
+                    <span className="label">Guilds</span>
+                  </button>
+                </div>
+              </section>
+
               {activeNeeds.length > 0 ? (
                 <FocusCard
                   title={activeNeeds[0].name}
@@ -113,27 +135,6 @@ const CommonsPage = () => {
                 </div>
               </div>
 
-              <section className="commons-mobile-nav mobile-only">
-                <h3>Navigation</h3>
-                <div className="mobile-nav-grid">
-                  <button onClick={() => navigate('/commons/communities')} className="nav-card">
-                    <span className="icon">🏛️</span>
-                    <span className="label">Communities</span>
-                  </button>
-                  <button onClick={() => navigate('/commons/marketplace/discover')} className="nav-card">
-                    <span className="icon">🏪</span>
-                    <span className="label">Marketplace</span>
-                  </button>
-                  <button onClick={() => navigate('/commons/needs')} className="nav-card">
-                    <span className="icon">🤝</span>
-                    <span className="label">Needs</span>
-                  </button>
-                  <button onClick={() => navigate('/commons/guilds')} className="nav-card">
-                    <span className="icon">⚒️</span>
-                    <span className="label">Guilds</span>
-                  </button>
-                </div>
-              </section>
             </div>
 
             <div className="commons-sidebar">

@@ -1,7 +1,9 @@
 .signals-page-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px 60px 20px;
+  box-sizing: border-box;
 }
 
 .signals-index-layout {

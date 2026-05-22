@@ -58,8 +58,6 @@ const OrbitPage = () => {
         <div className="orbit-main-column">
           {isIndex ? (
             <>
-              {renderRoleSpecificView()}
-
               <section className="orbit-mobile-nav mobile-only">
                 <h3>Navigation</h3>
                 <div className="mobile-nav-grid">
@@ -81,6 +79,9 @@ const OrbitPage = () => {
                   </button>
                 </div>
               </section>
+
+              {renderRoleSpecificView()}
+
             </>
           ) : (
             <div className="orbit-sub-content">

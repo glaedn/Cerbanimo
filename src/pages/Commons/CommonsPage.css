@@ -1,7 +1,9 @@
 .commons-page-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px 60px 20px;
+  box-sizing: border-box;
   --commons-accent: #ffae6d; /* Warm amber/orange accent */
   --commons-glow: rgba(255, 174, 109, 0.3);
 }

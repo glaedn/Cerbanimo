@@ -273,7 +273,7 @@ const Project = () => {
   return (
     <div className={`project-page-container ${isMobile ? 'mobile-container' : ''}`} style={{ paddingBottom: isMobile ? '80px' : '20px' }}>
       {project && (
-      <div className="project-header">
+      <div className="project-header glass-panel">
         <h1 className="project-title">{project.name}</h1>
         <textarea
         className="project-description"
@@ -425,7 +425,7 @@ const Project = () => {
       ) : (
       <div className="tasks-list">
         {tasks.map((task) => (
-        <div key={task.id} className="task-card">
+        <div key={task.id} className="task-card glass-panel">
           <h3>{task.name || 'Untitled Task'}</h3>
           <span className={`status-indicator ${task.active_ind ? 'active' : 'inactive'}`}>
           {task.active_ind ? 'Active' : 'Inactive'}

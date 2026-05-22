@@ -37,7 +37,8 @@ const ProfilePage = () => {
 
   // Base style for panels
   const panelStyle = {
-    backgroundColor: 'rgba(28, 28, 30, 0.85)', // theme.colors.backgroundPaper with transparency
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backdropFilter: 'blur(20px)',
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borders.borderRadiusLg,
     padding: isMobile ? '16px' : '24px',

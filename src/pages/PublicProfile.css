@@ -3,11 +3,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 60px;
-    background-color: #121212;
+    padding: 60px 20px;
+    background: radial-gradient(circle at center, rgba(45, 26, 10, 0.2) 0%, #000000 100%);
     color: #ffffff;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* Profile Avatar */
@@ -30,11 +32,15 @@
 .skills-container {
     margin-top: 20px;
     text-align: center;
-    padding: 10px;
-    background: rgba(0, 255, 255, 0.637);
-    border-radius: 8px;
+    padding: 20px;
+    background: rgba(0, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 12px;
     width: 100%;
-    max-width: 400px;
+    max-width: 500px;
+    box-sizing: border-box;
 }
 
 .profile-skill-chip {
@@ -56,15 +62,19 @@
 .badges-container {
     margin-top: 20px;
     text-align: center;
-    padding: 10px;
-    background: rgba(255, 204, 0, 0.1);
-    border-radius: 8px;
+    padding: 20px;
+    background: rgba(255, 204, 0, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 204, 0, 0.2);
+    border-radius: 12px;
     width: 100%;
-    max-width: 400px;
+    max-width: 500px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
+    gap: 15px;
+    box-sizing: border-box;
 }
 
 .badge-item {
@@ -83,7 +93,11 @@
 }
 
 /* Responsive Design */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .public-profile-container {
+        padding: 40px 16px 100px;
+    }
+
     .public-profile-avatar {
         width: 100px !important;
         height: 100px !important;
@@ -95,6 +109,7 @@
 
     .skills-container,
     .badges-container {
-        width: 90%;
+        width: 100%;
+        max-width: 100%;
     }
 }
