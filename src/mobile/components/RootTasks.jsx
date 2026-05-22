@@ -1,14 +1,45 @@
-import React, { useState } from 'react';
-import { dummyData } from '../dummyData';
+import React, { useState, useMemo } from 'react';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import useAssignedTasks from '../../hooks/useAssignedTasks';
 import './RootTasks.css';
 
 const RootTasks = ({ spineHeight }) => {
-  const { branches, nodes } = dummyData.rootTasks;
-  const [selectedNode, setSelectedNode] = useState(null);
+  const { profile } = useUserProfile();
+  const { assignedTasks } = useAssignedTasks(profile?.id);
   const ROOT_ORIGIN = {
     x: 195,
     y: 10
   };
+
+  const { nodes, branches } = useMemo(() => {
+    if (!assignedTasks || assignedTasks.length === 0) {
+      return { nodes: [], branches: [] };
+    }
+
+    const newNodes = assignedTasks.map((task, i) => {
+      const angle = (Math.PI / (assignedTasks.length + 1)) * (i + 1);
+      const radius = 80 + (i % 3) * 20;
+      const cx = ROOT_ORIGIN.x + radius * Math.cos(angle + Math.PI / 2) * (i % 2 === 0 ? 1 : -1);
+      const cy = ROOT_ORIGIN.y + radius * Math.sin(angle);
+
+      return {
+        id: task.id,
+        cx,
+        cy,
+        r: 8,
+        color: task.status === 'completed' ? '#4ade80' : '#70D6FF',
+        title: task.name,
+        skillType: task.status
+      };
+    });
+
+    const newBranches = newNodes.map(node => ({
+      id: `b-${node.id}`,
+      to: { x: node.cx, y: node.cy }
+    }));
+
+    return { nodes: newNodes, branches: newBranches };
+  }, [assignedTasks]);
 
   const ROOT_HEIGHT = spineHeight * 0.28;
   const handleNodeClick = (node) => {

@@ -3,9 +3,11 @@ import FocusCard from '../../../components/shared/FocusCard';
 import SignalChip from '../../../components/shared/SignalChip';
 import CoordinationSignal from '../../../components/shared/CoordinationSignal';
 import { MomentumPanel, ConstellationActivity } from '../components';
+import useRelevantTasks from '../../../hooks/useRelevantTasks';
 
 const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
   const primaryTask = tasks?.length > 0 ? tasks[0] : null;
+  const { relevantTasks } = useRelevantTasks(profile?.id);
 
   return (
     <div className="orbit-view contributor-view">
@@ -53,7 +55,7 @@ const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
               <button className="orbit-btn primary" onClick={() => navigate('/missions')}>Find Work</button>
             }
           >
-            <p>You have no current assignments. The Commons has 5 needs matching your expertise.</p>
+            <p>You have no current assignments. The Commons has {relevantTasks?.length || 0} needs matching your expertise.</p>
           </FocusCard>
         )}
       </section>

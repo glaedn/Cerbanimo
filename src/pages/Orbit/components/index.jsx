@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { FocusCard, SignalChip, ExpandablePanel } from '../../../components/shared/Primitives';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import useRelevantTasks from '../../../hooks/useRelevantTasks';
+import useAssignedTasks from '../../../hooks/useAssignedTasks';
 import './OrbitComponents.css';
 
 export const FocusPanel = () => {
@@ -36,6 +38,28 @@ export const FocusPanel = () => {
 
 export const MomentumPanel = () => {
   const { profile } = useUserProfile();
+  const [impactTrend, setImpactTrend] = useState('STABLE');
+
+  useEffect(() => {
+    const fetchImpactTrend = async () => {
+      if (profile?.id) {
+        try {
+          const communityId = profile.primary_community_id || 1;
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact-receipts/community/${communityId}`);
+          const receipts = res.data;
+
+          if (receipts.length > 5) {
+            setImpactTrend('RISING');
+          } else {
+            setImpactTrend('STABLE');
+          }
+        } catch (err) {
+          console.error('Error fetching impact trend:', err);
+        }
+      }
+    };
+    fetchImpactTrend();
+  }, [profile?.id, profile?.primary_community_id]);
   const exp = profile?.experience || { total_xp: 0, current_level: 0, xp_for_next_level: 0 };
 
   // Calculate progress to next level
@@ -70,7 +94,7 @@ export const MomentumPanel = () => {
           </div>
           <div className="mini-stat">
             <span className="mini-label">IMPACT</span>
-            <span className="mini-value">STABLE</span>
+            <span className="mini-value">{impactTrend}</span>
           </div>
         </div>
       </div>
@@ -94,11 +118,28 @@ export const MomentumPanel = () => {
 };
 
 export const ConstellationActivity = () => {
-  const events = [
-    { id: 1, type: 'team', message: 'Nexus Bridge project reached 75% completion.', time: '2h ago' },
-    { id: 2, type: 'community', message: 'Greenwood Commons added 5 new resources.', time: '5h ago' },
-    { id: 3, type: 'story', message: 'New Regional Signal detected in Sector 9.', time: '1d ago' },
-  ];
+  const { profile } = useUserProfile();
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (profile?.id) {
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`);
+          const activities = res.data.slice(0, 5).map(item => ({
+            id: item.id,
+            type: 'story',
+            message: item.reflection || `Completed task in ${item.project_name}`,
+            time: new Date(item.created_at).toLocaleDateString()
+          }));
+          setEvents(activities);
+        } catch (err) {
+          console.error('Error fetching chronicle for activity feed:', err);
+        }
+      }
+    };
+    fetchActivity();
+  }, [profile?.id]);
 
   return (
     <div className="orbit-constellation-activity">
@@ -177,6 +218,14 @@ export const QuickActions = () => {
 
 export const OrbitHUD = () => {
   const { profile } = useUserProfile();
+  const { assignedTasks } = useAssignedTasks(profile?.id);
+
+  const sysStability = useMemo(() => {
+    if (!assignedTasks || assignedTasks.length === 0) return '100%';
+    const blockedCount = assignedTasks.filter(t => t.status?.toLowerCase() === 'blocked').length;
+    const stability = ((assignedTasks.length - blockedCount) / assignedTasks.length) * 100;
+    return stability.toFixed(1) + '%';
+  }, [assignedTasks]);
 
   return (
     <div className="orbit-hud-overlay">
@@ -186,7 +235,7 @@ export const OrbitHUD = () => {
       </div>
       <div className="hud-metric">
         <span className="metric-label">SYS_STABILITY</span>
-        <span className="metric-value">98.4%</span>
+        <span className="metric-value">{sysStability}</span>
       </div>
       <div className="hud-metric mobile-hide">
         <span className="metric-label">NET_CREDITS</span>

@@ -5,12 +5,16 @@ import SignalChip from '../../components/shared/SignalChip';
 import { useUserRoleProfile } from '../../hooks/useUserRoleProfile';
 import { MissionPulse, ActiveMissionsList, ReviewQueue } from './components';
 import { useIntelligence } from '../../hooks/useIntelligence';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import useAssignedTasks from '../../hooks/useAssignedTasks';
 import './MissionsPage.css';
 
 const MissionsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isCoordinator } = useUserRoleProfile();
+  const { profile } = useUserProfile();
+  const { assignedTasks = [] } = useAssignedTasks(profile?.id);
   const { pulse } = useIntelligence({ pollInterval: 45000 });
 
   const activeGuidance = React.useMemo(() =>
@@ -30,8 +34,8 @@ const MissionsPage = () => {
           <h2>{isIndex ? 'Tactical Overview' : 'Operation Details'}</h2>
           {isIndex && (
             <div className="signal-group" style={{ display: 'flex', gap: '1rem' }}>
-              <SignalChip label="Active" value="4" type="accent" />
-              <SignalChip label="Pending" value="2" />
+              <SignalChip label="Active" value={assignedTasks.filter(t => t.status === 'active' || t.status === 'in-progress').length.toString()} type="accent" />
+              <SignalChip label="Pending" value={assignedTasks.filter(t => t.status === 'pending' || t.status === 'awaiting-approval').length.toString()} />
             </div>
           )}
         </div>

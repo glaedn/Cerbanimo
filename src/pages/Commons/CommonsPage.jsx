@@ -1,5 +1,6 @@
-import React from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import FocusCard from '../../components/shared/FocusCard';
 import SignalChip from '../../components/shared/SignalChip';
 import './CommonsPage.css';
@@ -9,6 +10,43 @@ const CommonsPage = () => {
   const navigate = useNavigate();
   const isIndex = location.pathname.replace(/\/$/, '') === '/commons';
 
+  const [stats, setStats] = useState({ guilds: 0, members: 0 });
+  const [featuredCommunities, setFeaturedCommunities] = useState([]);
+  const [activeNeeds, setActiveNeeds] = useState([]);
+  const [marketplaceActivity, setMarketplaceActivity] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCommonsData = async () => {
+      setLoading(true);
+      try {
+        const [commRes, guildRes, needsRes, activityRes, resourceRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities?pageSize=5`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/guilds_v2`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs?status=open&limit=5`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/marketplace/activity`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/resources/catalog`)
+        ]);
+
+        setStats({
+          members: commRes.data.totalCount ? (commRes.data.totalCount * 5).toLocaleString() : '0',
+          guilds: guildRes.data.length
+        });
+        setFeaturedCommunities(commRes.data.communities || []);
+        setActiveNeeds(needsRes.data.slice(0, 5));
+        setMarketplaceActivity(activityRes.data.slice(0, 5));
+        setResources(resourceRes.data.slice(0, 5));
+
+      } catch (err) {
+        console.error('Error fetching commons data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (isIndex) fetchCommonsData();
+  }, [isIndex]);
+
   return (
     <div className="commons-page-container mode-page">
       <div className="mode-header">
@@ -17,8 +55,8 @@ const CommonsPage = () => {
           <h2>{isIndex ? 'Community Exchange' : 'Network Hub'}</h2>
           {isIndex && (
             <div className="signal-group" style={{ display: 'flex', gap: '1rem' }}>
-              <SignalChip label="Guilds" value="12" icon="⚒️" />
-              <SignalChip label="Members" value="1.2k" icon="👥" />
+              <SignalChip label="Guilds" value={stats.guilds.toString()} icon="⚒️" />
+              <SignalChip label="Members" value={stats.members.toString()} icon="👥" />
             </div>
           )}
         </div>
@@ -28,22 +66,50 @@ const CommonsPage = () => {
         {isIndex ? (
           <div className="commons-index-layout">
             <div className="commons-main">
-              <FocusCard
-                title="Support Local Skill Sharing"
-                kicker="Community Highlight"
-                status="NEEDS_PARTICIPATION"
-              >
-                <p>Join the upcoming "Circular Economics 101" workshop hosted by the Guild of Architects.</p>
-              </FocusCard>
+              {activeNeeds.length > 0 ? (
+                <FocusCard
+                  title={activeNeeds[0].name}
+                  kicker="Active Need"
+                  status={activeNeeds[0].urgency.toUpperCase()}
+                  actionLabel="Offer Help"
+                  onAction={() => navigate(`/commons/needs/${activeNeeds[0].id}`)}
+                >
+                  <p>{activeNeeds[0].description}</p>
+                </FocusCard>
+              ) : (
+                <FocusCard
+                  title="Support Local Skill Sharing"
+                  kicker="Community Highlight"
+                  status="NEEDS_PARTICIPATION"
+                >
+                  <p>Join the upcoming "Circular Economics 101" workshop hosted by the Guild of Architects.</p>
+                </FocusCard>
+              )}
 
               <div className="commons-grid">
                 <div className="commons-card glass-panel">
                   <h3>Featured Communities</h3>
-                  <div className="placeholder-content">COMMUNITIES_LIST_LOADING...</div>
+                  <div className="featured-communities-list">
+                    {featuredCommunities.map(c => (
+                      <div key={c.id} className="community-item">
+                        <Link to={`/commons/community/${c.id}`}>{c.name}</Link>
+                        <p>{c.members?.length || 0} members</p>
+                      </div>
+                    ))}
+                    {featuredCommunities.length === 0 && <p className="placeholder-content">No communities found.</p>}
+                  </div>
                 </div>
                 <div className="commons-card glass-panel">
-                  <h3>Marketplace Trends</h3>
-                  <div className="placeholder-content">TRENDS_LOADING...</div>
+                  <h3>Marketplace Activity</h3>
+                  <div className="marketplace-activity-list">
+                    {marketplaceActivity.map((a, i) => (
+                      <div key={i} className="activity-item">
+                        <span className="activity-type">{a.activity_type.replace('_', ' ')}</span>
+                        <p>{a.title}</p>
+                      </div>
+                    ))}
+                    {marketplaceActivity.length === 0 && <p className="placeholder-content">No recent activity.</p>}
+                  </div>
                 </div>
               </div>
 
@@ -73,11 +139,26 @@ const CommonsPage = () => {
             <div className="commons-sidebar">
                <div className="sidebar-section glass-panel">
                  <h4>Active Needs</h4>
-                 <div className="placeholder-content">NEEDS_FEED...</div>
+                 <div className="needs-feed">
+                   {activeNeeds.map(n => (
+                     <div key={n.id} className="need-feed-item">
+                       <Link to={`/commons/needs/${n.id}`}><strong>{n.name}</strong></Link>
+                       <p>{n.urgency}</p>
+                     </div>
+                   ))}
+                   {activeNeeds.length === 0 && <p className="placeholder-content">No active needs.</p>}
+                 </div>
                </div>
                <div className="sidebar-section glass-panel" style={{ marginTop: '1rem' }}>
-                 <h4>Nearby Resources</h4>
-                 <div className="placeholder-content">RESOURCES_MAP...</div>
+                 <h4>Recent Resources</h4>
+                 <div className="resources-list">
+                   {resources.map(r => (
+                     <div key={r.id} className="resource-item">
+                       <p><strong>{r.name}</strong> - {r.category}</p>
+                     </div>
+                   ))}
+                   {resources.length === 0 && <p className="placeholder-content">No resources listed.</p>}
+                 </div>
                </div>
             </div>
           </div>

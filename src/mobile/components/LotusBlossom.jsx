@@ -1,10 +1,7 @@
 import React, { useRef } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
-import { dummyData } from '../dummyData';
 import './LotusBlossom.css';
-
-const { petals } = dummyData.lotusBlossom;
 
 const PETAL_WIDTH = 90;
 const FAN_ANGLE = 70;
@@ -20,7 +17,7 @@ const wrap = (v, range) => {
   return ((v % r) + r) % r - range;
 };
 
-const LotusBlossom = ({ spineHeight }) => {
+const LotusBlossom = ({ spineHeight, petals = [] }) => {
   const dragging = useRef(false);
   const LIFT = spineHeight < 600 ? 70 : 95;
 
@@ -81,21 +78,23 @@ const LotusBlossom = ({ spineHeight }) => {
             <div className="petal-content">
               <animated.h3>
                 {pos.to(p => {
+                  if (petals.length === 0) return "";
                   const idx = getWrappedIndex(
                     Math.round(p) + slot - HALF,
                     petals.length
                   );
-                  return petals[idx].title;
+                  return petals[idx]?.title || "";
                 })}
               </animated.h3>
 
               <animated.p>
                 {pos.to(p => {
+                  if (petals.length === 0) return "";
                   const idx = getWrappedIndex(
                     Math.round(p) + slot - HALF,
                     petals.length
                   );
-                  return petals[idx].capability;
+                  return petals[idx]?.capability || "";
                 })}
               </animated.p>
             </div>

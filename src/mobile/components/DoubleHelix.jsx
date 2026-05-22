@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { dummyData } from '../dummyData';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import useUserProjects from '../../hooks/useUserProjects';
 import './DoubleHelix.css';
-
-const { orbs } = dummyData.doubleHelix;
 
 const WIDTH = 490;
 const HEIGHT = 120;
@@ -16,6 +15,19 @@ const HELIX_SPEED = 0.0006; // base helix drift
 const ORB_SPEED_MULTIPLIER = 1; // orbs move slightly faster
 
 const DoubleHelix = ({ spineHeight }) => {
+  const { profile } = useUserProfile();
+  const { projects } = useUserProjects(profile?.id);
+
+  const orbs = useMemo(() => {
+    if (!projects || projects.length === 0) return [];
+    return projects.map(proj => ({
+      id: proj.id,
+      title: proj.name,
+      description: proj.description,
+      status: proj.status === 'active' ? 'healthy' : (proj.status === 'blocked' ? 'stalled' : 'progressing')
+    }));
+  }, [projects]);
+
   const [time, setTime] = useState(0);
   const [paused, setPaused] = useState(false);
   const [activeOrb, setActiveOrb] = useState(null);
@@ -109,6 +121,7 @@ const DoubleHelix = ({ spineHeight }) => {
 
 
   const centerOrb = (index) => {
+    if (orbs.length === 0) return;
     const baseProgress = index / orbs.length;
     const targetTime = 0.5 - baseProgress;
 
@@ -198,7 +211,7 @@ const DoubleHelix = ({ spineHeight }) => {
 
         {/* orbs */}
         {orbs.map((orb, i) => {
-          const baseProgress = i / orbs.length;
+          const baseProgress = orbs.length > 0 ? i / orbs.length : 0;
           const orbTime =
             (time * ORB_SPEED_MULTIPLIER + baseProgress) % 1;
 
