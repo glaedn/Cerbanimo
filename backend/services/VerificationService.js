@@ -32,6 +32,14 @@ class VerificationService {
       }).catch(err => console.error('Failed to record validation history:', err));
     }
 
+    // Randomly enqueue for audit (~10%)
+    if (Math.random() < 0.1) {
+      await pool.query(
+        'INSERT INTO audit_queue (verification_id, triggered_at, status) VALUES ($1, NOW(), $2)',
+        [verificationEvent.id, 'pending']
+      ).catch(err => console.error('Failed to enqueue audit:', err));
+    }
+
     // Record Event
     await CivicEventService.recordEvent({
       eventType: 'impact.verified',

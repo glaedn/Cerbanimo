@@ -1,6 +1,7 @@
 // backend/services/tokenService.js
 import pool from '../db.js';
 import IdentityGateService from './IdentityGateService.js';
+import { applyBurn, MARKETPLACE_BURN_RATE } from '../utils/burnUtils.js';
 
 const awardTokensInternal = async (dbPool, receiverId, amount, reason, senderId = null) => {
   if (amount <= 0) {
@@ -28,9 +29,29 @@ const awardTokensInternal = async (dbPool, receiverId, amount, reason, senderId 
     const transactionResult = await client.query(transactionQuery, [senderId, receiverId, amount, reason]);
     const newTransactionId = transactionResult.rows[0].id;
 
+    // Apply burn if it's a marketplace-like event
+    let finalAmount = amount;
+    let burnAmount = 0;
+    const marketplaceReasons = ['marketplace_service_purchase', 'need_fulfillment', 'resource_exchange', 'bounty_payout'];
+
+    if (marketplaceReasons.some(r => reason?.toLowerCase().includes(r))) {
+      burnAmount = Math.floor(amount * MARKETPLACE_BURN_RATE);
+      finalAmount = amount - burnAmount;
+
+      if (burnAmount > 0) {
+        await client.query(
+          `INSERT INTO token_burns (transaction_type, transaction_id, burned_amount, burned_from, entity_id)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [reason, newTransactionId, burnAmount, senderId ? 'user' : 'system', senderId || receiverId]
+        );
+        // If we had a community context here, we'd update total_burned.
+        // For now, these generic awards might not have it easily available.
+      }
+    }
+
     // Update receiver's balance
     const updateUserQuery = 'UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 RETURNING cotokens;';
-    const receiverUpdateResult = await client.query(updateUserQuery, [amount, receiverId]);
+    const receiverUpdateResult = await client.query(updateUserQuery, [finalAmount, receiverId]);
 
     if (receiverUpdateResult.rowCount === 0) {
         await client.query('ROLLBACK');

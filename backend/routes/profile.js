@@ -272,7 +272,7 @@ router.get('/', async (req, res) => {
 
     const query = `
       SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location,
-             participation_modes, trust_level, onboarding_stage, role_weights, mentorship_status, adaptive_preferences
+             participation_modes, trust_level, onboarding_stage, role_weights, mentorship_status, adaptive_preferences, token_ledger, total_decayed
       FROM users
       WHERE auth0_id = $1;
     `;

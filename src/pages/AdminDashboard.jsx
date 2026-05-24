@@ -23,6 +23,7 @@ import './AdminDashboard.css';
 const AdminDashboard = () => {
   const { getAccessTokenSilently } = useAuth0();
   const [stats, setStats] = useState(null);
+  const [tokenEconomy, setTokenEconomy] = useState(null);
   const [userActivity, setUserActivity] = useState([]);
   const [taskDistribution, setTaskDistribution] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,13 +36,15 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      const [statsRes, activityRes, distributionRes] = await Promise.all([
+      const [statsRes, tokenRes, activityRes, distributionRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/stats`, config),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/token-economy`, config),
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/user-activity`, config),
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/admin/task-distribution`, config)
       ]);
 
       setStats(statsRes.data);
+      setTokenEconomy(tokenRes.data);
       setUserActivity(activityRes.data);
       setTaskDistribution(distributionRes.data);
     } catch (error) {
@@ -90,6 +93,39 @@ const AdminDashboard = () => {
         DBOWNER_DASHBOARD
       </Typography>
       <Divider sx={{ mb: 4, borderColor: '#00F3FF', opacity: 0.3 }} />
+
+      {/* Economy Panel */}
+      {tokenEconomy && (
+        <Paper className="admin-section-paper" sx={{ mb: 4, p: 3 }}>
+          <Typography variant="h5" className="section-title">TOKEN_ECONOMY_METRICS</Typography>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">CIRCULATION</Typography>
+              <Typography variant="h5" color="#00F3FF">{Number(tokenEconomy.totalCirculation).toLocaleString()} Ȼ</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">TOTAL_BURNED</Typography>
+              <Typography variant="h5" color="#FF5CA2">🔥 {Number(tokenEconomy.totalBurned).toLocaleString()} Ȼ</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">BURN_30D</Typography>
+              <Typography variant="h5" color="#FF5CA2">{Number(tokenEconomy.burn30d).toLocaleString()} Ȼ</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">TOTAL_DECAYED</Typography>
+              <Typography variant="h5" color="#00F3FF">🌀 {Number(tokenEconomy.totalDecayed).toLocaleString()} Ȼ</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">DECAY_30D</Typography>
+              <Typography variant="h5" color="#00F3FF">{Number(tokenEconomy.decay30d).toLocaleString()} Ȼ</Typography>
+            </Grid>
+            <Grid item xs={12} sm={4} md={2}>
+              <Typography variant="overline" color="rgba(255,255,255,0.6)">PENDING_VESTING</Typography>
+              <Typography variant="h5" color="#4DABF7">{Number(tokenEconomy.pendingVesting).toLocaleString()} Ȼ</Typography>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

@@ -76,6 +76,48 @@ router.get('/task-distribution', async (req, res) => {
   }
 });
 
+router.get('/token-economy', async (req, res) => {
+  try {
+    const userCirculation = await pool.query('SELECT SUM(cotokens) FROM users');
+    const treasuryCirculation = await pool.query('SELECT SUM(cotoken_balance) FROM community_treasury');
+    const totalCirculation = parseFloat(userCirculation.rows[0].sum || 0) + parseFloat(treasuryCirculation.rows[0].sum || 0);
+
+    const totalBurned = await pool.query('SELECT SUM(burned_amount) FROM token_burns');
+    const burn30d = await pool.query('SELECT SUM(burned_amount) FROM token_burns WHERE created_at > NOW() - INTERVAL \'30 days\'');
+
+    const totalDecayedUser = await pool.query('SELECT SUM(total_decayed) FROM users');
+    const totalDecayedComm = await pool.query('SELECT SUM(total_decayed) FROM community_treasury');
+    const totalDecayed = parseFloat(totalDecayedUser.rows[0].sum || 0) + parseFloat(totalDecayedComm.rows[0].sum || 0);
+
+    const decay30dUser = await pool.query(`
+      SELECT SUM(ABS((entry->>'tokens')::numeric)) as amount
+      FROM users, unnest(token_ledger) as entry
+      WHERE entry->>'type' = 'decay' AND (entry->>'creationDate')::timestamp > NOW() - INTERVAL '30 days'
+    `);
+    const decay30dComm = await pool.query(`
+      SELECT SUM(amount)
+      FROM treasury_transactions tt
+      JOIN community_treasury ct ON tt.treasury_id = ct.id
+      WHERE tt.purpose = 'Monthly 1% circulation incentive' AND tt.created_at > NOW() - INTERVAL '30 days'
+    `);
+    const decay30d = parseFloat(decay30dUser.rows[0].amount || 0) + parseFloat(decay30dComm.rows[0].sum || 0);
+
+    const pendingVesting = await pool.query("SELECT SUM(vested_tokens) FROM token_vesting WHERE released = FALSE AND vesting_revoked = FALSE");
+
+    res.json({
+      totalCirculation,
+      totalBurned: parseFloat(totalBurned.rows[0].sum || 0),
+      burn30d: parseFloat(burn30d.rows[0].sum || 0),
+      totalDecayed,
+      decay30d,
+      pendingVesting: parseFloat(pendingVesting.rows[0].sum || 0)
+    });
+  } catch (error) {
+    console.error('Error fetching token economy stats:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // --- Action Endpoints (Manual Cron Triggers) ---
 
 router.post('/run-task-reset', async (req, res) => {

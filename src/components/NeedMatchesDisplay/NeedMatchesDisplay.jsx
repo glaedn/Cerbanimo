@@ -13,6 +13,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
   const [requestedResourceIds, setRequestedResourceIds] = useState(new Set());
+  const [exchangeConfirm, setExchangeConfirm] = useState({ open: false, resource: null });
 
   const fetchMatches = useCallback(async () => {
     if (!needId || !getAccessTokenSilently) {
@@ -49,6 +50,13 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
   };
 
   const handleRequestExchange = async (resource) => {
+    setExchangeConfirm({ open: true, resource });
+  };
+
+  const confirmExchange = async () => {
+    const resource = exchangeConfirm.resource;
+    setExchangeConfirm({ open: false, resource: null });
+
     if (!getAccessTokenSilently) {
       setNotification({ open: true, message: 'Authentication service not available.', severity: 'error' });
       return;
@@ -56,7 +64,7 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
     const payload = {
       needId: needId,
       resourceId: resource.id,
-      notes: `Exchange request for resource '${resource.name}' to fulfill need ID '${needId}'.` // Example note
+      notes: `Exchange request for resource '${resource.name}' to fulfill need ID '${needId}'.`
     };
 
     try {
@@ -66,18 +74,12 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
       });
 
       if (response.status === 201) {
-        setNotification({ open: true, message: response.data.message || 'Exchange initiated successfully! A coordination task has been created.', severity: 'success' });
+        setNotification({ open: true, message: response.data.message || 'Exchange initiated successfully!', severity: 'success' });
         setRequestedResourceIds(prev => new Set(prev).add(resource.id));
-        // Optionally, refresh or update the specific resource's status in matchedResources if the backend doesn't change it immediately
-        // For now, just disabling the button is handled.
-      } else {
-        // This case might not be reached if server throws error for non-201
-        setNotification({ open: true, message: response.data.message || 'Failed to initiate exchange.', severity: 'error' });
       }
     } catch (err) {
-      console.error('Error initiating exchange:', err.response ? err.response.data : err.message);
-      const errorMsg = err.response?.data?.message || 'An error occurred while initiating the exchange.';
-      setNotification({ open: true, message: errorMsg, severity: 'error' });
+      console.error('Error initiating exchange:', err);
+      setNotification({ open: true, message: 'Failed to initiate exchange.', severity: 'error' });
     }
   };
 
@@ -109,6 +111,34 @@ const NeedMatchesDisplay = ({ needId, getAccessTokenSilently, loggedInUserId }) 
 
   return (
     <Paper elevation={1} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+      {/* Exchange Confirmation Modal */}
+      <Snackbar
+        open={exchangeConfirm.open}
+        anchorOrigin={{ vertical: 'center', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button size="small" color="inherit" onClick={() => setExchangeConfirm({ open: false, resource: null })}>CANCEL</Button>
+              <Button size="small" variant="contained" color="primary" onClick={confirmExchange}>CONFIRM</Button>
+            </Box>
+          }
+          sx={{
+            bgcolor: 'rgba(28, 28, 30, 0.95)',
+            border: '1px solid #00F3FF',
+            color: 'white',
+            '& .MuiAlert-icon': { color: '#00F3FF' }
+          }}
+        >
+          <Typography variant="body2" sx={{ fontFamily: 'Orbitron', mb: 1 }}>
+            Initiate exchange for {exchangeConfirm.resource?.name}?
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#ff5ca2', display: 'block', mb: 1 }}>
+            🔥 2% transaction burn applies to reward flows.
+          </Typography>
+        </Alert>
+      </Snackbar>
       {/* 1. Skilled Users Matches */}
       <Typography variant="h6" gutterBottom component="div" sx={{ mb: 2 }}>
         Matched Responders (by Skills)

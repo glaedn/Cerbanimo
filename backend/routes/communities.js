@@ -47,7 +47,7 @@ router.get("/", async (req, res) => {
     const totalCountQuery = `
       SELECT
         COUNT(*) as total_count,
-        COALESCE(SUM(cardinality(members)), 0) as total_members
+        COALESCE(SUM(array_length(members, 1)), 0) as total_members
       FROM communities
       WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
     `;
@@ -193,6 +193,16 @@ router.post("/", async (req, res) => {
     const result = await client.query(query, values);
     const communityId = result.rows[0].id;
 
+    // Set creator as founding member
+    await client.query(
+      `UPDATE users SET
+        is_founding_member = TRUE,
+        trust_bootstrap_expires_at = NOW() + INTERVAL '60 days',
+        trust_level = GREATEST(trust_level, 3.0)
+       WHERE id = $1`,
+      [id]
+    );
+
     // Emit community.joined event for the creator
     const CivicEventService = (await import('../services/CivicEventService.js')).default;
     await CivicEventService.recordEvent({
@@ -212,6 +222,55 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to create community" });
   } finally {
     client.release();
+  }
+});
+
+// Get token stats for a community
+router.get("/:communityId/token-stats", async (req, res) => {
+  const { communityId } = req.params;
+  try {
+    const treasuryQuery = `
+      SELECT cotoken_balance, total_burned, total_decayed
+      FROM community_treasury
+      WHERE community_id = $1
+    `;
+    const treasuryResult = await pool.query(treasuryQuery, [communityId]);
+
+    if (treasuryResult.rows.length === 0) {
+      return res.status(200).json({
+        cotoken_balance: 0,
+        total_burned: 0,
+        total_decayed: 0,
+        burn_last_30d: 0,
+        transaction_count_last_30d: 0
+      });
+    }
+
+    const burn30dQuery = `
+      SELECT SUM(burned_amount) as burn_30d
+      FROM token_burns
+      WHERE community_id = $1 AND created_at > NOW() - INTERVAL '30 days'
+    `;
+    const burn30dResult = await pool.query(burn30dQuery, [communityId]);
+
+    const tx30dQuery = `
+      SELECT COUNT(*) as tx_30d
+      FROM treasury_transactions tt
+      JOIN community_treasury ct ON tt.treasury_id = ct.id
+      WHERE ct.community_id = $1 AND tt.created_at > NOW() - INTERVAL '30 days'
+    `;
+    const tx30dResult = await pool.query(tx30dQuery, [communityId]);
+
+    res.status(200).json({
+      cotoken_balance: treasuryResult.rows[0].cotoken_balance,
+      total_burned: treasuryResult.rows[0].total_burned,
+      total_decayed: treasuryResult.rows[0].total_decayed,
+      burn_last_30d: burn30dResult.rows[0].burn_30d || 0,
+      transaction_count_last_30d: parseInt(tx30dResult.rows[0].tx_30d, 10)
+    });
+  } catch (err) {
+    console.error("Error fetching community token stats:", err);
+    res.status(500).json({ error: "Failed to fetch token stats" });
   }
 });
 
@@ -377,10 +436,28 @@ router.post("/:communityId/vote/member/:requestUserId", async (req, res) => {
     const majorityReached = yesWeight / totalPossibleWeight > 0.5;
 
     if (majorityReached) {
+      const memberCountRes = await client.query(
+        'SELECT array_length(members, 1) as count FROM communities WHERE id = $1',
+        [communityId]
+      );
+      const memberCount = memberCountRes.rows[0]?.count || 0;
+
       await client.query(
         `UPDATE communities SET members = array_append(members, $1) WHERE id = $2`,
         [requestUserId, communityId]
       );
+
+      // Founding member bootstrap logic (N=20)
+      if (memberCount < 20) {
+        await client.query(
+          `UPDATE users SET
+            is_founding_member = TRUE,
+            trust_bootstrap_expires_at = NOW() + INTERVAL '60 days',
+            trust_level = GREATEST(trust_level, 3.0)
+           WHERE id = $1`,
+          [requestUserId]
+        );
+      }
 
       // Emit community.joined event
       const CivicEventService = (await import('../services/CivicEventService.js')).default;
