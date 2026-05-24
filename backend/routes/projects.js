@@ -166,8 +166,20 @@ router.post('/create', async (req, res) => {
 
     // Step 2: Insert the new project with the derived creator_id
     const insertQuery = `
-      INSERT INTO projects (name, description, tags, creator_id, due_date, location, location_point, auto_assign, project_plan)
-      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'}, $8, $9)
+      INSERT INTO projects (
+        name,
+        description,
+        tags,
+        creator_id,
+        due_date,
+        location,
+        location_point,
+        auto_assign,
+        project_plan,
+        public_good_score,
+        public_good_source
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'}, $8, $9, $10, $11)
       RETURNING *;
     `;
 
@@ -180,7 +192,9 @@ router.post('/create', async (req, res) => {
       location,
       locationPoint,
       auto_assign || false,
-      null // Initial project_plan is null, usually generated later via auto-generate
+      null, // Initial project_plan is null, usually generated later via auto-generate
+      0.6,
+      'default'
     ];
 
     const result = await pool.query(insertQuery, queryParams);

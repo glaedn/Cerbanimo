@@ -33,7 +33,8 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS resource_requirements TEXT[] DEFAULT '{}',
     ADD COLUMN IF NOT EXISTS related_need_id INTEGER REFERENCES needs(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS is_local BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS is_local BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS verification_required BOOLEAN DEFAULT TRUE;
   `;
 
   const alterProjectsQuery = `
@@ -45,7 +46,12 @@ const alterExistingTables = async () => {
     ${hasPostGIS ? 'ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),' : ''}
     ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS project_plan TEXT,
-    ADD COLUMN IF NOT EXISTS auto_assign BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS auto_assign BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS public_good_score NUMERIC DEFAULT 1.0,
+    ADD COLUMN IF NOT EXISTS public_good_scored_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS public_good_source VARCHAR(20) DEFAULT 'default',
+    ADD COLUMN IF NOT EXISTS token_escrow NUMERIC DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS escrow_funded_by_creator BOOLEAN DEFAULT FALSE;
   `;
 
   const alterCommunitiesQuery = `
@@ -89,7 +95,11 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS onboarding_stage text DEFAULT 'orientation',
     ADD COLUMN IF NOT EXISTS role_weights jsonb DEFAULT '{}',
     ADD COLUMN IF NOT EXISTS mentorship_status jsonb DEFAULT '{"is_mentor": false, "mentees": []}',
-    ADD COLUMN IF NOT EXISTS adaptive_preferences jsonb DEFAULT '{"density": "standard", "theme_accent": "default"}';
+    ADD COLUMN IF NOT EXISTS adaptive_preferences jsonb DEFAULT '{"density": "standard", "theme_accent": "default"}',
+    ADD COLUMN IF NOT EXISTS totp_secret TEXT,
+    ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS trust_bootstrap_expires_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE;
   `;
 
   const alterSkillsQuery = `
@@ -196,6 +206,74 @@ const alterExistingTables = async () => {
     await pool.query(alterImpactNodesQuery);
     await pool.query(alterNeedsQuery);
     await pool.query(alterResourcesQuery);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS potential_users (
+        discord_user_id VARCHAR(50) PRIMARY KEY,
+        discord_username VARCHAR(100),
+        accumulated_tokens JSONB DEFAULT '[]'::jsonb,
+        action_history JSONB DEFAULT '[]'::jsonb,
+        community_id INTEGER REFERENCES communities(id) ON DELETE SET NULL,
+        first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_active_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS validation_history (
+        id SERIAL PRIMARY KEY,
+        validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        subject_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        event_type VARCHAR(100),
+        weight_applied NUMERIC DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_validation_history_validator_subject
+      ON validation_history(validator_id, subject_id);
+    `);
+
+    await pool.query(`
+      ALTER TABLE verification_events
+      ADD COLUMN IF NOT EXISTS challenge_window_expires_at TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS challenged_at TIMESTAMP WITH TIME ZONE,
+      ADD COLUMN IF NOT EXISTS challenger_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS challenge_stake NUMERIC DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS secondary_review_status VARCHAR(50)
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS token_vesting (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+        vested_tokens NUMERIC DEFAULT 0,
+        vesting_unlocks_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        vesting_revoked BOOLEAN DEFAULT FALSE,
+        released_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_token_vesting_unlocks
+      ON token_vesting(vesting_unlocks_at)
+      WHERE vesting_revoked = FALSE AND released_at IS NULL;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_queue (
+        id SERIAL PRIMARY KEY,
+        verification_id INTEGER REFERENCES verification_events(id) ON DELETE CASCADE,
+        triggered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'pending',
+        outcome VARCHAR(50),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_audit_queue_status
+      ON audit_queue(status, triggered_at);
+    `);
 
     // Ensure community_discord_config has necessary columns
     await pool.query(`

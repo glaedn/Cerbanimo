@@ -1,6 +1,7 @@
 import express from 'express';
 import taskController from '../controllers/taskController.js';  // Import the controller
 import pool from '../db.js';
+import IdentityGateService from '../services/IdentityGateService.js';
 
 const router = express.Router();
 
@@ -202,6 +203,7 @@ router.put('/:taskId/accept', async (req, res) => {
   }
 
   try {
+    await IdentityGateService.requireDiscordLinked(userId);
     const task = await taskController.acceptTask(taskId, userId);
 
     // Emit audio event
@@ -320,6 +322,10 @@ router.post('/:taskId/submit', async (req, res) => {
   // extraction of params and body, and also platformUserId from req.body.
   // The controller will also handle initial validations.
   try {
+    const platformUserId = req.body.platformUserId;
+    if (platformUserId) {
+      await IdentityGateService.requireDiscordLinked(platformUserId);
+    }
     // taskController.submitTask is expected to have the signature (req, res, io)
     // but per previous subtasks, it's modified to return error/success objects
     // and should not call res.json() itself for these paths.

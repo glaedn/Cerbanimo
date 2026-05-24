@@ -4,6 +4,8 @@ import { findMatchesForNeed, findMatchesForResource } from './matchingService.js
 import { PermissionFlagsBits } from 'discord.js';
 import NeedService from './NeedService.js';
 import ResourceService from './ResourceService.js';
+import PotentialUserService from './PotentialUserService.js';
+import taskController from '../controllers/taskController.js';
 
 class DiscordBotService {
   constructor() {
@@ -96,6 +98,46 @@ class DiscordBotService {
                 subcommand
                     .setName('link')
                     .setDescription('Link your Discord account to Cerbanimo')),
+        new SlashCommandBuilder()
+            .setName('tasks')
+            .setDescription('Show active and urgent project tasks for this community'),
+        new SlashCommandBuilder()
+            .setName('accept')
+            .setDescription('Task acceptance commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('task')
+                    .setDescription('Accept a task, or signal interest before linking')
+                    .addStringOption(option =>
+                        option.setName('task_id')
+                            .setDescription('The task ID')
+                            .setRequired(true))),
+        new SlashCommandBuilder()
+            .setName('submit')
+            .setDescription('Task submission commands')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('task')
+                    .setDescription('Submit proof of work for an accepted task')
+                    .addStringOption(option =>
+                        option.setName('task_id')
+                            .setDescription('The task ID')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('proof_link')
+                            .setDescription('Link showing proof of work')
+                            .setRequired(true))
+                    .addStringOption(option =>
+                        option.setName('reflection')
+                            .setDescription('Short reflection on the work completed')
+                            .setRequired(true))),
+        new SlashCommandBuilder()
+            .setName('my')
+            .setDescription('Show your Cerbanimo activity')
+            .addSubcommand(subcommand =>
+                subcommand
+                    .setName('tasks')
+                    .setDescription('View active tasks you accepted or signaled interest in')),
         new SlashCommandBuilder()
             .setName('help')
             .setDescription('Show information about Cerbanimo and available commands'),
@@ -225,8 +267,21 @@ class DiscordBotService {
     this.client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.isChatInputCommand()) {
         const linkedUser = await this.getLinkedUser(interaction.user.id);
+        if (!linkedUser) {
+          await PotentialUserService.recordInteraction({
+            discordUserId: interaction.user.id,
+            discordUsername: interaction.user.username,
+            communityId: null,
+            actionType: `discord_command:${interaction.commandName}`,
+            payload: {
+              guildId: interaction.guildId,
+              channelId: interaction.channelId
+            }
+          }).catch(err => console.error('Failed to record potential user command:', err));
+        }
 
-        if (!linkedUser && interaction.commandName !== 'account' && interaction.commandName !== 'help') {
+        const tier0Commands = new Set(['account', 'help', 'help-offer', 'need', 'resource', 'tasks', 'accept', 'my']);
+        if (!linkedUser && !tier0Commands.has(interaction.commandName)) {
           return interaction.reply({
             content: "❌ You need to link your Cerbanimo account to use this command. Use `/account link` to get started.",
             ephemeral: true
@@ -242,6 +297,176 @@ class DiscordBotService {
               .setDescription(`To link your Discord account, please visit your Cerbanimo profile. Your Discord ID (\`${interaction.user.id}\`) will be automatically filled in.\n\n[Go to Cerbanimo Profile](${frontendUrl}/profile?discord_id=${interaction.user.id})`)
               .setColor(0x0099FF);
             return interaction.reply({ embeds: [embed], ephemeral: true });
+          }
+        }
+
+        if (interaction.commandName === 'tasks') {
+          try {
+            await interaction.deferReply({ ephemeral: true });
+            const configResult = await pool.query(
+              'SELECT community_id FROM community_discord_config WHERE guild_id = $1',
+              [interaction.guildId]
+            );
+            const communityId = configResult.rows[0]?.community_id;
+
+            if (!communityId) {
+              return interaction.editReply({ content: 'This Discord server is not linked to a Cerbanimo community yet.' });
+            }
+
+            const tasksResult = await pool.query(
+              `SELECT t.id, t.name, t.status, t.reward_tokens, p.name AS project_name
+               FROM tasks t
+               JOIN projects p ON p.id = t.project_id
+               WHERE p.community_id = $1
+                 AND t.status IN ('active-unassigned', 'urgent-unassigned', 'active-assigned', 'urgent-assigned')
+               ORDER BY CASE WHEN t.status LIKE 'urgent%' THEN 0 ELSE 1 END, t.created_at DESC
+               LIMIT 15`,
+              [communityId]
+            );
+
+            if (tasksResult.rows.length === 0) {
+              return interaction.editReply({ content: 'No active or urgent tasks are open for this community right now.' });
+            }
+
+            const lines = tasksResult.rows.map((task) =>
+              `#${task.id} ${task.name} (${task.status}, ${task.reward_tokens || 0} tokens) - ${task.project_name || 'Project'}`
+            );
+            return interaction.editReply({ content: `Active community tasks:\n${lines.join('\n')}` });
+          } catch (err) {
+            console.error('Error listing Discord tasks:', err);
+            return interaction.editReply({ content: 'Failed to load community tasks.' });
+          }
+        }
+
+        if (interaction.commandName === 'accept') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'task') {
+            try {
+              await interaction.deferReply({ ephemeral: true });
+              const taskId = interaction.options.getString('task_id');
+              const taskResult = await pool.query(
+                `SELECT t.id, t.name, t.project_id, p.community_id
+                 FROM tasks t
+                 JOIN projects p ON p.id = t.project_id
+                 WHERE t.id = $1`,
+                [taskId]
+              );
+
+              if (taskResult.rows.length === 0) {
+                return interaction.editReply({ content: 'Task not found.' });
+              }
+
+              const task = taskResult.rows[0];
+              const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+              if (!linkedUser) {
+                await PotentialUserService.recordTaskInterest({
+                  discordUserId: interaction.user.id,
+                  discordUsername: interaction.user.username,
+                  taskId: task.id,
+                  communityId: task.community_id,
+                  projectId: task.project_id
+                });
+                return interaction.editReply({
+                  content: `Interest signaled for "${task.name}". Link Discord on your profile to reserve it and unlock Tier 1 earning: ${frontendUrl}/profile?discord_id=${interaction.user.id}&highlight=tier1`
+                });
+              }
+
+              const acceptedTask = await taskController.acceptTask(task.id, linkedUser.id);
+              return interaction.editReply({ content: `Task reserved: "${acceptedTask.name}". Use /submit task when your proof is ready.` });
+            } catch (err) {
+              console.error('Error accepting Discord task:', err);
+              return interaction.editReply({ content: `Failed to accept task: ${err.message}` });
+            }
+          }
+        }
+
+        if (interaction.commandName === 'submit') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'task') {
+            if (!linkedUser) {
+              const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+              return interaction.reply({
+                content: `Link Discord on your profile before submitting task work: ${frontendUrl}/profile?discord_id=${interaction.user.id}&highlight=tier1`,
+                ephemeral: true
+              });
+            }
+
+            try {
+              await interaction.deferReply({ ephemeral: true });
+              const taskId = interaction.options.getString('task_id');
+              const proofLink = interaction.options.getString('proof_link');
+              const reflection = interaction.options.getString('reflection');
+
+              const assignedResult = await pool.query(
+                'SELECT id FROM tasks WHERE id = $1 AND $2 = ANY(assigned_user_ids)',
+                [taskId, linkedUser.id]
+              );
+              if (assignedResult.rows.length === 0) {
+                return interaction.editReply({ content: 'You can only submit tasks you have accepted.' });
+              }
+
+              const result = await taskController.submitTask({
+                params: { taskId },
+                body: {
+                  proofOfWorkLinks: [proofLink],
+                  reflection,
+                  platformUserId: linkedUser.id
+                }
+              }, null, null);
+
+              if (result?.error) {
+                return interaction.editReply({ content: result.error });
+              }
+              return interaction.editReply({ content: 'Task submitted for verification.' });
+            } catch (err) {
+              console.error('Error submitting Discord task:', err);
+              return interaction.editReply({ content: `Failed to submit task: ${err.message}` });
+            }
+          }
+        }
+
+        if (interaction.commandName === 'my') {
+          const subcommand = interaction.options.getSubcommand();
+          if (subcommand === 'tasks') {
+            try {
+              await interaction.deferReply({ ephemeral: true });
+              if (linkedUser) {
+                const result = await pool.query(
+                  `SELECT t.id, t.name, t.status, p.name AS project_name
+                   FROM tasks t
+                   LEFT JOIN projects p ON p.id = t.project_id
+                   WHERE $1 = ANY(t.assigned_user_ids)
+                     AND t.status NOT IN ('completed', 'cancelled')
+                   ORDER BY t.accepted_at DESC NULLS LAST, t.created_at DESC
+                   LIMIT 15`,
+                  [linkedUser.id]
+                );
+                if (result.rows.length === 0) {
+                  return interaction.editReply({ content: 'You do not have active accepted tasks yet.' });
+                }
+                return interaction.editReply({
+                  content: `Your active tasks:\n${result.rows.map(task => `#${task.id} ${task.name} (${task.status}) - ${task.project_name || 'Project'}`).join('\n')}`
+                });
+              }
+
+              const potentialResult = await pool.query(
+                'SELECT action_history FROM potential_users WHERE discord_user_id = $1',
+                [interaction.user.id]
+              );
+              const actions = (potentialResult.rows[0]?.action_history || [])
+                .filter(action => action.type === 'task_interest')
+                .slice(-15);
+              if (actions.length === 0) {
+                return interaction.editReply({ content: 'You have not signaled interest in any tasks yet.' });
+              }
+              return interaction.editReply({
+                content: `Tasks you signaled interest in:\n${actions.map(action => `#${action.payload.taskId}`).join('\n')}`
+              });
+            } catch (err) {
+              console.error('Error loading Discord user tasks:', err);
+              return interaction.editReply({ content: 'Failed to load your tasks.' });
+            }
           }
         }
 
@@ -298,6 +523,22 @@ class DiscordBotService {
             await interaction.deferReply({ ephemeral: true });
             const needId = interaction.options.getString('need_id');
             const message = interaction.options.getString('message') || "I'd like to help!";
+
+            if (!linkedUser) {
+              const needResult = await pool.query(
+                'SELECT requestor_community_id FROM needs WHERE id = $1',
+                [needId]
+              );
+              await PotentialUserService.recordInteraction({
+                discordUserId: interaction.user.id,
+                discordUsername: interaction.user.username,
+                communityId: needResult.rows[0]?.requestor_community_id,
+                actionType: 'need_help_offer',
+                payload: { needId, message }
+              });
+              const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+              return interaction.editReply({ content: `Help offer recorded as a Discord signal. Link your account to publish and claim it: ${frontendUrl}/profile?discord_id=${interaction.user.id}&highlight=tier1` });
+            }
 
             await pool.query(
               'INSERT INTO need_comments (need_id, user_id, content) VALUES ($1, $2, $3)',
@@ -482,6 +723,18 @@ class DiscordBotService {
                   const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
                   const communityId = configResult.rows[0]?.community_id;
 
+                  if (!linkedUser) {
+                    await PotentialUserService.recordInteraction({
+                      discordUserId: interaction.user.id,
+                      discordUsername: interaction.user.username,
+                      communityId,
+                      actionType: 'need_declared',
+                      payload: { name, description, urgency, category, source: 'discord' }
+                    });
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+                    return interaction.editReply({ content: `Need saved as a Discord signal. Link your account to publish and claim your accumulated history: ${frontendUrl}/profile?discord_id=${interaction.user.id}&highlight=tier1` });
+                  }
+
                   const newNeed = await NeedService.createNeed({
                     name,
                     description,
@@ -511,6 +764,18 @@ class DiscordBotService {
               try {
                   const configResult = await pool.query('SELECT community_id FROM community_discord_config WHERE guild_id = $1', [guildId]);
                   const communityId = configResult.rows[0]?.community_id;
+
+                  if (!linkedUser) {
+                    await PotentialUserService.recordInteraction({
+                      discordUserId: interaction.user.id,
+                      discordUsername: interaction.user.username,
+                      communityId,
+                      actionType: 'resource_offered',
+                      payload: { name, description, category, source: 'discord' }
+                    });
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+                    return interaction.editReply({ content: `Resource offer saved as a Discord signal. Link your account to publish and claim your accumulated history: ${frontendUrl}/profile?discord_id=${interaction.user.id}&highlight=tier1` });
+                  }
 
                   const newResource = await ResourceService.addResource(
                     linkedUser.id,

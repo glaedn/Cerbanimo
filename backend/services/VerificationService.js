@@ -1,16 +1,36 @@
 import pool from '../db.js';
 import { calculateVoteWeight } from '../utils/voteWeight.js';
 import CivicEventService from './CivicEventService.js';
+import WorldGraphService from './WorldGraphService.js';
+
+const CHALLENGE_STAKE = 1;
 
 class VerificationService {
   async recordVerificationEvent(taskId, verifierId, status, proofOfWorkLink = null, verificationType = null, needId = null) {
     const query = `
-      INSERT INTO verification_events (task_id, verifier_id, status, proof_of_work_link, verification_type, need_id)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO verification_events (
+        task_id,
+        verifier_id,
+        status,
+        proof_of_work_link,
+        verification_type,
+        need_id,
+        challenge_window_expires_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '72 hours')
       RETURNING *;
     `;
     const result = await pool.query(query, [taskId, verifierId, status, proofOfWorkLink, verificationType, needId]);
     const verificationEvent = result.rows[0];
+
+    if (taskId && verifierId) {
+      await this.recordValidationHistory({
+        validatorId: verifierId,
+        taskId,
+        eventType: verificationType || `verification:${status}`,
+        weightApplied: 1
+      }).catch(err => console.error('Failed to record validation history:', err));
+    }
 
     // Record Event
     await CivicEventService.recordEvent({
@@ -27,6 +47,239 @@ class VerificationService {
     }).catch(err => console.error('Failed to record impact.verified event:', err));
 
     return verificationEvent;
+  }
+
+  async recordValidationHistory({ validatorId, subjectId = null, taskId = null, eventType = 'verification', weightApplied = 1, client = pool }) {
+    let resolvedSubjectId = subjectId;
+    if (!resolvedSubjectId && taskId) {
+      const taskResult = await client.query('SELECT submitted_by FROM tasks WHERE id = $1', [taskId]);
+      resolvedSubjectId = taskResult.rows[0]?.submitted_by;
+    }
+
+    if (!validatorId || !resolvedSubjectId) return null;
+
+    const result = await client.query(
+      `INSERT INTO validation_history (validator_id, subject_id, event_type, weight_applied, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING *`,
+      [validatorId, resolvedSubjectId, eventType, weightApplied]
+    );
+    return result.rows[0];
+  }
+
+  async getValidationFrequency(validatorId, subjectId, client = pool) {
+    if (!validatorId || !subjectId) return 0;
+    const result = await client.query(
+      `SELECT COUNT(*)::int AS count
+       FROM validation_history
+       WHERE validator_id = $1 AND subject_id = $2`,
+      [validatorId, subjectId]
+    );
+    return result.rows[0]?.count || 0;
+  }
+
+  async getWorldGraphDistance(validatorId, subjectId) {
+    try {
+      const neighborhood = await WorldGraphService.getEntityNeighborhood('person', subjectId, 3);
+      const serializedValidatorId = String(validatorId);
+      const matched = neighborhood.find((row) => JSON.stringify(row).includes(serializedValidatorId));
+      return matched ? 2 : 3;
+    } catch (err) {
+      console.warn('WorldGraph distance fallback used:', err.message);
+      return 3;
+    }
+  }
+
+  distanceMultiplier(distance) {
+    if (distance >= 3) return 1.25;
+    if (distance === 2) return 1;
+    if (distance === 1) return 0.65;
+    return 0.5;
+  }
+
+  async scoreValidator({ validatorId, subjectId, base = 1, client = pool }) {
+    const [frequency, distance] = await Promise.all([
+      this.getValidationFrequency(validatorId, subjectId, client),
+      this.getWorldGraphDistance(validatorId, subjectId)
+    ]);
+
+    const weight = base * this.distanceMultiplier(distance) / (1 + Math.log(1 + frequency));
+    return {
+      validatorId,
+      subjectId,
+      distance,
+      frequency,
+      weight
+    };
+  }
+
+  async selectValidators({ taskId, excludeUserIds = [], limit = 3, minTrustLevel = 1, client = pool }) {
+    const taskResult = await client.query(
+      'SELECT submitted_by, assigned_user_ids, skill_id FROM tasks WHERE id = $1',
+      [taskId]
+    );
+    if (taskResult.rows.length === 0) {
+      throw new Error('Task not found for validator selection');
+    }
+
+    const task = taskResult.rows[0];
+    const excluded = [
+      ...(excludeUserIds || []),
+      ...(task.assigned_user_ids || []),
+      task.submitted_by
+    ].filter(Boolean).map(Number);
+
+    const candidatesResult = await client.query(
+      `SELECT DISTINCT u.id, u.trust_level
+       FROM users u
+       LEFT JOIN guild_memberships gm ON gm.user_id = u.id
+       LEFT JOIN guilds g ON g.id = gm.guild_id
+       WHERE u.discord_user_id IS NOT NULL
+         AND u.trust_level >= $1
+         AND NOT (u.id = ANY($2::int[]))
+         AND ($3::int IS NULL OR g.skill_id = $3 OR gm.user_id IS NULL)
+       LIMIT 100`,
+      [minTrustLevel, excluded.length ? excluded : [-1], task.skill_id || null]
+    );
+
+    const scored = await Promise.all(
+      candidatesResult.rows.map((candidate) =>
+        this.scoreValidator({
+          validatorId: candidate.id,
+          subjectId: task.submitted_by,
+          base: Math.max(candidate.trust_level || 1, 1),
+          client
+        })
+      )
+    );
+
+    return scored
+      .sort((a, b) => {
+        const distancePreference = Number(b.distance >= 2) - Number(a.distance >= 2);
+        if (distancePreference !== 0) return distancePreference;
+        return b.weight - a.weight;
+      })
+      .slice(0, limit);
+  }
+
+  async openChallenge(verificationId, challengerId, reason = '') {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const verificationResult = await client.query(
+        `SELECT ve.*, t.assigned_user_ids, t.submitted_by
+         FROM verification_events ve
+         LEFT JOIN tasks t ON t.id = ve.task_id
+         WHERE ve.id = $1 FOR UPDATE`,
+        [verificationId]
+      );
+
+      if (verificationResult.rows.length === 0) {
+        const error = new Error('Verification not found');
+        error.status = 404;
+        throw error;
+      }
+
+      const verification = verificationResult.rows[0];
+      if (!verification.challenge_window_expires_at || new Date(verification.challenge_window_expires_at) < new Date()) {
+        const error = new Error('Challenge window has closed');
+        error.status = 400;
+        throw error;
+      }
+
+      const balanceResult = await client.query(
+        'SELECT cotokens FROM users WHERE id = $1 AND discord_user_id IS NOT NULL FOR UPDATE',
+        [challengerId]
+      );
+      if (balanceResult.rows.length === 0 || Number(balanceResult.rows[0].cotokens || 0) < CHALLENGE_STAKE) {
+        const error = new Error('Discord-linked challenger with sufficient trust stake required');
+        error.status = 403;
+        throw error;
+      }
+
+      await client.query(
+        'UPDATE users SET cotokens = cotokens - $1 WHERE id = $2',
+        [CHALLENGE_STAKE, challengerId]
+      );
+
+      const originalVerifierIds = verification.task_id
+        ? (await client.query('SELECT verifier_id FROM verification_events WHERE task_id = $1', [verification.task_id])).rows.map(row => row.verifier_id).filter(Boolean)
+        : [verification.verifier_id].filter(Boolean);
+
+      const secondaryValidators = verification.task_id
+        ? await this.selectValidators({
+            taskId: verification.task_id,
+            excludeUserIds: [...originalVerifierIds, challengerId],
+            limit: 3,
+            minTrustLevel: 2,
+            client
+          })
+        : [];
+
+      const updateResult = await client.query(
+        `UPDATE verification_events
+         SET challenged_at = NOW(),
+             challenger_id = $2,
+             challenge_stake = $3,
+             secondary_review_status = 'pending'
+         WHERE id = $1
+         RETURNING *`,
+        [verificationId, challengerId, CHALLENGE_STAKE]
+      );
+
+      if (verification.task_id && secondaryValidators.length > 0) {
+        await client.query(
+          'UPDATE tasks SET reviewer_ids = $1, status = $2 WHERE id = $3',
+          [secondaryValidators.map(v => v.validatorId), 'under-challenge', verification.task_id]
+        );
+      }
+
+      await CivicEventService.recordEvent({
+        eventType: 'verification.challenged',
+        actorId: challengerId,
+        entityType: verification.task_id ? 'task' : 'verification',
+        entityId: verification.task_id || verificationId,
+        payload: {
+          verificationId,
+          reason,
+          stake: CHALLENGE_STAKE,
+          secondaryValidators
+        },
+        correlationId: verification.task_id ? `task:${verification.task_id}` : `verification:${verificationId}`
+      }, client).catch(err => console.error('Failed to record verification.challenged event:', err));
+
+      await client.query('COMMIT');
+      return { verification: updateResult.rows[0], secondaryValidators };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async applyDisputeResolution({ taskId, overturned, client = pool }) {
+    if (!taskId || !overturned) return { adjustedValidators: [] };
+
+    const verifierResult = await client.query(
+      `SELECT verifier_id, COALESCE(accuracy_score, 1) AS weight
+       FROM verification_events
+       WHERE task_id = $1 AND status = 'approved' AND verifier_id IS NOT NULL`,
+      [taskId]
+    );
+
+    const adjustedValidators = [];
+    for (const verifier of verifierResult.rows) {
+      const penalty = Math.max(Number(verifier.weight || 1), 0.25);
+      await client.query(
+        'UPDATE users SET trust_level = GREATEST(1, trust_level - CEIL($1)::int) WHERE id = $2',
+        [penalty, verifier.verifier_id]
+      );
+      adjustedValidators.push({ validatorId: verifier.verifier_id, penalty });
+    }
+
+    return { adjustedValidators };
   }
 
   async validateOracleLink(url) {
@@ -304,6 +557,14 @@ class DisputeService {
         'UPDATE tasks SET status = $1 WHERE id = $2',
         [finalTaskStatus, dispute.task_id]
       );
+
+      if (outcome === 'overturn') {
+        await verificationService.applyDisputeResolution({
+          taskId: dispute.task_id,
+          overturned: true,
+          client
+        });
+      }
 
       await client.query('COMMIT');
       return dispute;

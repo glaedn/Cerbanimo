@@ -10,14 +10,19 @@ import NeedExpansionService from "../services/NeedExpansionService.js";
 import GuildService from "../services/GuildService.js";
 import ResourceService from "../services/ResourceService.js";
 import CivicEventService from "../services/CivicEventService.js";
+import IdentityGateService from "../services/IdentityGateService.js";
+import { verificationService } from "../services/VerificationService.js";
 
 const getAllTasks = async () => {
   const query = `
     SELECT 
       tasks.*,
-      skills.name as skill_name
+      skills.name as skill_name,
+      COALESCE(projects.public_good_score, 1.0) as public_good_score,
+      projects.public_good_source
     FROM tasks
-    LEFT JOIN skills ON tasks.skill_id = skills.id;
+    LEFT JOIN skills ON tasks.skill_id = skills.id
+    LEFT JOIN projects ON tasks.project_id = projects.id;
   `;
   const result = await pool.query(query);
   return result.rows;
@@ -631,7 +636,7 @@ const approveTask = async (taskId, io, client) => {
     // Fetch task details first (remove FOR UPDATE to avoid deadlock)
     const initialTaskDetails = await localClient.query(
       `
-      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens, submitted_by
+      SELECT id, assigned_user_ids, reflection, proof_of_work_links, skill_id, status, reward_tokens, submitted_by, verification_required
       FROM tasks WHERE id = $1
     `,
       [taskId]
@@ -672,6 +677,18 @@ const approveTask = async (taskId, io, client) => {
     if (initialTaskDetails.rows[0].status !== "submitted") {
       await localClient.query("ROLLBACK");
       return { error: "Cannot complete an unsubmitted task", status: 400 };
+    }
+
+    if (initialTask.verification_required !== false) {
+      await localClient.query(
+        `UPDATE tasks
+         SET status = 'pending_verification',
+             pm_approval_deadline = COALESCE(pm_approval_deadline, NOW() + INTERVAL '18 hours')
+         WHERE id = $1`,
+        [taskId]
+      );
+      await localClient.query("COMMIT");
+      return { message: "Task moved to pending verification. Rewards will release after final approval.", status: 202 };
     }
 
     let updateTask;
@@ -756,7 +773,8 @@ const approveTask = async (taskId, io, client) => {
              t.status,
              t.project_id,
              p.community_id,
-             p.creator_id
+             p.creator_id,
+             COALESCE(p.public_good_score, 1.0) AS public_good_score
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
       WHERE t.id = $1;
@@ -777,6 +795,7 @@ const approveTask = async (taskId, io, client) => {
       project_id,
       community_id,
       creator_id,
+      public_good_score,
     } = taskResult.rows[0];
 
     // Fetch skill name
@@ -814,7 +833,9 @@ const approveTask = async (taskId, io, client) => {
     }
 
     // 🎓 Calculate rewardPerUser — currently not divided
-    const rewardPerUser = reward_tokens;
+    const rewardMultiplier = Number(public_good_score || 1);
+    const rewardPerUser = Math.round(Number(reward_tokens || 0) * rewardMultiplier);
+    const linkedAwardUserIds = await IdentityGateService.filterDiscordLinkedUserIds(assigned_user_ids || [], localClient);
 
     // 🎯 XP system and level calculations
     const skillsQuery = `
@@ -869,7 +890,7 @@ const approveTask = async (taskId, io, client) => {
     const skillEntryMap = new Map(parsedSkillEntries.map(entry => [entry.user_id, entry]));
     console.log("Created skillEntryMap:", JSON.stringify(Array.from(skillEntryMap.entries())));
 
-    for (const userId of assigned_user_ids) {
+    for (const userId of linkedAwardUserIds) {
       let previousXP = 0, previousLevel = 1, newXP = 0, newLevel = 1; // Default for new users
 
       const existingEntry = skillEntryMap.get(userId);
@@ -915,7 +936,7 @@ const approveTask = async (taskId, io, client) => {
     );
 
     // Record Trust Updated Events
-    for (const userId of assigned_user_ids) {
+    for (const userId of linkedAwardUserIds) {
       await CivicEventService.recordEvent({
         eventType: 'trust.updated',
         actorId: userId,
@@ -935,7 +956,7 @@ const approveTask = async (taskId, io, client) => {
         const guildResult = await localClient.query('SELECT id FROM guilds WHERE skill_id = $1', [skill_id]);
         if (guildResult.rows.length > 0) {
             const guildId = guildResult.rows[0].id;
-            for (const userId of assigned_user_ids) {
+            for (const userId of linkedAwardUserIds) {
                 // Join guild automatically if not already a member
                 await localClient.query(
                     'INSERT INTO guild_memberships (guild_id, user_id, role, xp) VALUES ($1, $2, $3, $4) ON CONFLICT (guild_id, user_id) DO UPDATE SET xp = guild_memberships.xp + $4',
@@ -950,22 +971,22 @@ const approveTask = async (taskId, io, client) => {
     }
 
     // Step 5: Update user experience
-    if (assigned_user_ids && assigned_user_ids.length > 0) {
+    if (linkedAwardUserIds.length > 0) {
       await localClient.query(
         `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
          WHERE id = ANY($2)`,
-        [taskId.toString(), assigned_user_ids]
+        [taskId.toString(), linkedAwardUserIds]
       );
     }
 
     // Step 6: Differential cotoken and token_ledger updates
-    const main_reward = reward_tokens;
-    const bonus_reward = Math.ceil(reward_tokens / 10);
+    const main_reward = rewardPerUser;
+    const bonus_reward = Math.ceil(rewardPerUser / 10);
 
     // Update cotokens and token_ledger for submitted_by user
     if (submitted_by) {
       await localClient.query(
-        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [main_reward, submitted_by]
       );
       const submitterLedgerEntries = [
@@ -975,18 +996,18 @@ const approveTask = async (taskId, io, client) => {
         submitterLedgerEntries.push({ mode: "earn", type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
       }
       await localClient.query(
-        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [submitterLedgerEntries.map(JSON.stringify), submitted_by]
       );
     }
 
     // Update cotokens and token_ledger for other assigned users
-    if (assigned_user_ids && assigned_user_ids.length > 0) {
-      for (const userId of assigned_user_ids) {
+    if (linkedAwardUserIds.length > 0) {
+      for (const userId of linkedAwardUserIds) {
         if (userId === submitted_by) continue; // Skip the main submitter, already handled
 
         await localClient.query(
-          `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+          `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
           [bonus_reward, userId]
         );
         const bonusLedgerEntries = [
@@ -996,7 +1017,7 @@ const approveTask = async (taskId, io, client) => {
           bonusLedgerEntries.push({ mode: "earn", type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
         }
         await localClient.query(
-          `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+          `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2 AND discord_user_id IS NOT NULL`,
           [bonusLedgerEntries.map(JSON.stringify), userId]
         );
       }
@@ -1005,9 +1026,10 @@ const approveTask = async (taskId, io, client) => {
     // Step 6b: Reward project creator
     console.log("creator_id:", creator_id ? creator_id : "No creator_id found");
     if (creator_id) {
+      const creatorReward = Math.round(10 * rewardMultiplier);
       await localClient.query(
-        `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
-        [creator_id]
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
+        [creatorReward, creator_id]
       );
 
       const creatorLedgerUpdates = [
@@ -1015,7 +1037,8 @@ const approveTask = async (taskId, io, client) => {
           mode: "earn",
           type: "project",
           id: project_id,
-          tokens: 10,
+          tokens: creatorReward,
+          public_good_score: rewardMultiplier,
           creationDate: new Date(),
         },
       ];
@@ -1025,7 +1048,8 @@ const approveTask = async (taskId, io, client) => {
           mode: "earn",
           type: "community",
           id: community_id,
-          tokens: 10,
+          tokens: creatorReward,
+          public_good_score: rewardMultiplier,
           creationDate: new Date(),
         });
       }
@@ -1033,7 +1057,7 @@ const approveTask = async (taskId, io, client) => {
       await localClient.query(
         `UPDATE users 
           SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) 
-          WHERE id = $2`,
+          WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [creatorLedgerUpdates.map(JSON.stringify), creator_id]
       );
     }
@@ -1045,7 +1069,7 @@ const approveTask = async (taskId, io, client) => {
         reserved_tokens = GREATEST(0, reserved_tokens - $1)
       WHERE id = $2
     `,
-      [reward_tokens, project_id]
+      [main_reward, project_id]
     );
 
     // Step 8: Record Event
@@ -1055,7 +1079,8 @@ const approveTask = async (taskId, io, client) => {
       entityType: 'task',
       entityId: taskId,
       payload: {
-        reward_tokens,
+        reward_tokens: main_reward,
+        public_good_score: rewardMultiplier,
         project_id,
         community_id
       },
@@ -1744,7 +1769,8 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
            t.skill_id,
            t.status,
            t.project_id,
-           p.community_id
+           p.community_id,
+           COALESCE(p.public_good_score, 1.0) AS public_good_score
     FROM tasks t
     JOIN projects p ON t.project_id = p.id
     WHERE t.id = $1;
@@ -1762,6 +1788,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
     skill_id,
     project_id,
     community_id,
+    public_good_score,
   } = taskResult.rows[0];
 
   // Fetch skill name
@@ -1772,7 +1799,9 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
   const skillName = skillNameQuery.rows[0]?.name || "Unknown Skill";
 
   // 🎓 Calculate rewardPerUser — currently not divided
-  const rewardPerUser = reward_tokens;
+  const rewardMultiplier = Number(public_good_score || 1);
+  const rewardPerUser = Math.round(Number(reward_tokens || 0) * rewardMultiplier);
+  const linkedAwardUserIds = await IdentityGateService.filterDiscordLinkedUserIds(assigned_user_ids || [], client);
 
   // 🎯 XP system and level calculations
   const skillsQuery = `
@@ -1817,7 +1846,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
 
   const skillEntryMap = new Map(parsedSkillEntries.map(entry => [entry.user_id, entry]));
 
-  for (const userId of assigned_user_ids) {
+  for (const userId of linkedAwardUserIds) {
     let previousXP = 0, previousLevel = 1, newXP = 0, newLevel = 1;
 
     const existingEntry = skillEntryMap.get(userId);
@@ -1849,22 +1878,22 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
   );
 
   // Step 5: Update user experience
-  if (assigned_user_ids && assigned_user_ids.length > 0) {
+  if (linkedAwardUserIds.length > 0) {
     await client.query(
       `UPDATE users SET experience = array_append(COALESCE(experience, '{}'), $1)
        WHERE id = ANY($2)`,
-      [taskId.toString(), assigned_user_ids]
+      [taskId.toString(), linkedAwardUserIds]
     );
   }
 
   // Step 6: Differential cotoken and token_ledger updates
-  const main_reward = reward_tokens;
-  const bonus_reward = Math.ceil(reward_tokens / 10);
+  const main_reward = rewardPerUser;
+  const bonus_reward = Math.ceil(rewardPerUser / 10);
 
   // Update cotokens and token_ledger for submitted_by user
   if (submitted_by) {
     await client.query(
-      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
       [main_reward, submitted_by]
     );
     const submitterLedgerEntries = [
@@ -1874,18 +1903,18 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
       submitterLedgerEntries.push({ mode: "earn", type: "community_task_reward", communityId: community_id, taskId: taskId, tokens: main_reward, creationDate: new Date() });
     }
     await client.query(
-      `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+      `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2 AND discord_user_id IS NOT NULL`,
       [submitterLedgerEntries.map(JSON.stringify), submitted_by]
     );
   }
 
   // Update cotokens and token_ledger for other assigned users
-  if (assigned_user_ids && assigned_user_ids.length > 0) {
-    for (const userId of assigned_user_ids) {
+  if (linkedAwardUserIds.length > 0) {
+    for (const userId of linkedAwardUserIds) {
       if (userId === submitted_by) continue;
 
       await client.query(
-        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [bonus_reward, userId]
       );
       const bonusLedgerEntries = [
@@ -1895,7 +1924,7 @@ const payoutPeerReviewRewards = async (taskId, client, io) => {
         bonusLedgerEntries.push({ mode: "earn", type: "community_task_bonus", communityId: community_id, taskId: taskId, tokens: bonus_reward, creationDate: new Date() });
       }
       await client.query(
-        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [bonusLedgerEntries.map(JSON.stringify), userId]
       );
     }
@@ -1962,10 +1991,32 @@ const processReview = async (taskId, userId, action, io) => {
     console.log("New approvals:", newApprovals);
     console.log("New rejections:", newRejections);
 
+    const verificationStatus = action === "approve" ? "approved" : "rejected";
+    await client.query(
+      `INSERT INTO verification_events (
+         task_id,
+         verifier_id,
+         status,
+         verification_type,
+         challenge_window_expires_at,
+         created_at
+       )
+       VALUES ($1, $2, $3, 'peer_review', NOW() + INTERVAL '72 hours', NOW())`,
+      [taskId, userId, verificationStatus]
+    );
+
+    await verificationService.recordValidationHistory({
+      validatorId: userId,
+      taskId,
+      eventType: `peer_review:${verificationStatus}`,
+      weightApplied: 1,
+      client
+    });
+
     // Award reviewer 10 cotokens
     const reviewerReward = 10;
     await client.query(
-      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2`,
+      `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
       [reviewerReward, userId] // userId is the reviewer's ID passed to processReview
     );
 
@@ -1979,7 +2030,7 @@ const processReview = async (taskId, userId, action, io) => {
       projectId: project_id // project_id is available from taskResult
     };
     await client.query(
-      `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2`,
+      `UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, '{}'), $1::jsonb) WHERE id = $2 AND discord_user_id IS NOT NULL`,
       [JSON.stringify(reviewLedgerUpdate), userId]
     );
 
@@ -1988,17 +2039,11 @@ const processReview = async (taskId, userId, action, io) => {
       const finalAction = newApprovals?.length >= 2 ? "approve" : "reject";
 
       if (finalAction === "approve") {
-        // Payout peer review rewards
-        const payoutResult = await payoutPeerReviewRewards(taskId, client, io);
-        if (payoutResult.error) {
-          await client.query("ROLLBACK");
-          return payoutResult;
-        }
-
-        // Set PM approval deadline
+        // Hold completion rewards behind final verification/PM approval.
         await client.query(
           `UPDATE tasks
-           SET pm_approval_deadline = NOW() + INTERVAL '18 hours'
+           SET status = 'pending_verification',
+               pm_approval_deadline = NOW() + INTERVAL '18 hours'
            WHERE id = $1`,
           [taskId]
         );
@@ -2116,7 +2161,8 @@ const finalizeTask = async (taskId, client, io) => {
              t.reflection,
              t.proof_of_work_links,
              t.skill_id,
-             t.submitted_by
+             t.submitted_by,
+             COALESCE(p.public_good_score, 1.0) AS public_good_score
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
       WHERE t.id = $1;
@@ -2129,18 +2175,19 @@ const finalizeTask = async (taskId, client, io) => {
 
     // Step 1: Reward project creator
     if (task.creator_id) {
+      const creatorReward = Math.round(10 * Number(task.public_good_score || 1));
       await client.query(
-        `UPDATE users SET cotokens = cotokens + 10 WHERE id = $1`,
-        [task.creator_id]
+        `UPDATE users SET cotokens = cotokens + $1 WHERE id = $2 AND discord_user_id IS NOT NULL`,
+        [creatorReward, task.creator_id]
       );
       const creatorLedgerUpdates = [
-        { mode: "earn", type: "project", id: task.project_id, tokens: 10, creationDate: new Date() },
+        { mode: "earn", type: "project", id: task.project_id, tokens: creatorReward, public_good_score: Number(task.public_good_score || 1), creationDate: new Date() },
       ];
       if (task.community_id) {
-        creatorLedgerUpdates.push({ mode: "earn", type: "community", id: task.community_id, tokens: 10, creationDate: new Date() });
+        creatorLedgerUpdates.push({ mode: "earn", type: "community", id: task.community_id, tokens: creatorReward, public_good_score: Number(task.public_good_score || 1), creationDate: new Date() });
       }
       await client.query(
-        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2`,
+        `UPDATE users SET token_ledger = array_cat(COALESCE(token_ledger, '{}'), $1::jsonb[]) WHERE id = $2 AND discord_user_id IS NOT NULL`,
         [creatorLedgerUpdates.map(JSON.stringify), task.creator_id]
       );
     }
@@ -2152,7 +2199,7 @@ const finalizeTask = async (taskId, client, io) => {
         reserved_tokens = GREATEST(0, reserved_tokens - $1)
       WHERE id = $2
     `,
-      [task.reward_tokens, task.project_id]
+      [Math.round(Number(task.reward_tokens || 0) * Number(task.public_good_score || 1)), task.project_id]
     );
 
     // Step 3: Notify users
@@ -2210,7 +2257,7 @@ const approveByPM = async (req, res, io) => {
       return res.status(404).json({ error: 'Task not found' });
     }
     const task = taskResult.rows[0];
-    if (task.status !== 'submitted') {
+    if (!['submitted', 'pending_verification'].includes(task.status)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Task is not awaiting Project Manager approval' });
     }
@@ -2219,6 +2266,12 @@ const approveByPM = async (req, res, io) => {
       `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = $1`,
       [taskId]
     );
+
+    const payoutResult = await payoutPeerReviewRewards(taskId, client, io);
+    if (payoutResult.error) {
+      await client.query('ROLLBACK');
+      return res.status(payoutResult.status || 500).json({ error: payoutResult.error });
+    }
 
     const finalizeResult = await finalizeTask(taskId, client, io);
 

@@ -196,6 +196,14 @@ const TaskBrowser = ({ initialTab = 0 }) => {
                           ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
                         </Typography>
                       )}
+                      {task.public_good_score && (
+                        <>
+                          <br />
+                          <Typography component="span" variant="body2" sx={{ color: '#7CFFB2', fontWeight: 'bold' }}>
+                            Public Good x{Number(task.public_good_score || 1).toFixed(1)}
+                          </Typography>
+                        </>
+                      )}
                       {task.project_id && (
                         <><br /><Link href={`/visualizer/${task.project_id}`} className="task-link">🚀 View Project</Link></>
                       )}

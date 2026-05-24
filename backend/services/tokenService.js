@@ -1,5 +1,6 @@
 // backend/services/tokenService.js
 import pool from '../db.js';
+import IdentityGateService from './IdentityGateService.js';
 
 const awardTokensInternal = async (dbPool, receiverId, amount, reason, senderId = null) => {
   if (amount <= 0) {
@@ -16,6 +17,7 @@ const awardTokensInternal = async (dbPool, receiverId, amount, reason, senderId 
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
+    await IdentityGateService.requireDiscordLinked(receiverId, client);
 
     // Record the transaction
     const transactionQuery = `

@@ -8,6 +8,8 @@ import { processSkills } from '../services/skillService.js';
 import GeocodingService from '../services/GeocodingService.js';
 import RoleProfileEngine from '../services/RoleProfileEngine.js';
 import ProgressionEngine from '../services/ProgressionEngine.js';
+import IdentityGateService from '../services/IdentityGateService.js';
+import PotentialUserService from '../services/PotentialUserService.js';
 
 
 // Create a router instance
@@ -303,12 +305,14 @@ router.get('/', async (req, res) => {
 
     // Enrich with RoleProfileEngine
     const roleProfile = await RoleProfileEngine.calculateRoleProfile(profile.id);
-    const unlockedSystems = ProgressionEngine.getUnlockedSystems(roleProfile);
+    const unlockedSystems = ProgressionEngine.getUnlockedSystems(roleProfile, profile);
+    const identityTier = IdentityGateService.calculateTier(profile);
 
     res.status(200).json({
       ...profile,
       roleProfile,
-      unlockedSystems
+      unlockedSystems,
+      identityTier
     });
   } catch (err) {
     console.error('Error fetching profile:', err);
@@ -434,6 +438,20 @@ router.post('/', upload.single('profilePicture'), async (req, res) => {
     ];
     const result = await pool.query(query, values);
     const updatedProfile = result.rows[0];
+
+    if (discord_user_id) {
+      const migrationClient = await pool.connect();
+      try {
+        await migrationClient.query('BEGIN');
+        await PotentialUserService.migrateToUser(discord_user_id, userId, migrationClient);
+        await migrationClient.query('COMMIT');
+      } catch (migrationError) {
+        await migrationClient.query('ROLLBACK');
+        console.error('Potential user migration failed:', migrationError);
+      } finally {
+        migrationClient.release();
+      }
+    }
 
     // Step 3: Update skills table for each added skill
     const parsedSkills = JSON.parse(skills);

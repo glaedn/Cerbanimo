@@ -14,6 +14,22 @@ router.post('/events', async (req, res) => {
   }
 });
 
+router.post('/:id/challenge', async (req, res) => {
+  const challengerId = req.user?.id || req.body.challengerId;
+  const { reason } = req.body;
+
+  if (!challengerId) {
+    return res.status(400).json({ error: 'Challenger user ID is required' });
+  }
+
+  try {
+    const challenge = await verificationService.openChallenge(req.params.id, challengerId, reason || '');
+    res.status(201).json(challenge);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
 router.post('/feedback', async (req, res) => {
   const { needId, taskId, isSafe, isFulfilled, comment } = req.body;
   const userId = req.user.id;

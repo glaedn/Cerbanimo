@@ -181,6 +181,7 @@ if (!fs.existsSync('uploads')) {
 app.use('/uploads', express.static('uploads'));
 
 // Register routes
+app.use('/auth/2fa', jwtCheck);
 app.use('/auth', authRoutes);
 app.use('/notifications', jwtCheck, notificationRoutes);
 

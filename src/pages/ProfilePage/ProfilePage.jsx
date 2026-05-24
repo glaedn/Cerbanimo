@@ -636,6 +636,31 @@ const ProfilePage = () => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
+
+  const tier = dynamicProfile?.identityTier?.tier ?? 0;
+  const tierRequirements = dynamicProfile?.identityTier?.requirements || {};
+  const hasLocation = Boolean(profileData.latitude || profileData.city || profileData.state || profileData.country);
+  const localTierChecks = [
+    {
+      key: 'tier1',
+      label: 'Tier 1',
+      met: tierRequirements.tier1?.met ?? Boolean(profileData.discord_user_id),
+      prompt: 'Link Discord to earn tokens, build trust, and reserve tasks.'
+    },
+    {
+      key: 'tier2',
+      label: 'Tier 2',
+      met: tierRequirements.tier2?.met ?? (Boolean(profileData.discord_user_id) && hasLocation && (profileData.skills || []).length > 0),
+      prompt: 'Add your location and skills to get matched to work near you.'
+    },
+    {
+      key: 'tier3',
+      label: 'Tier 3',
+      met: tierRequirements.tier3?.met ?? (Boolean(profileData.discord_user_id) && hasLocation && (profileData.skills || []).length > 0 && (profileData.interests || []).length > 0),
+      prompt: 'Add interests to discover communities and projects aligned with what you care about.'
+    }
+  ];
+
   return (
     <Box className={`profile-container ${isMobile ? 'mobile-container' : ''}`} sx={{ pb: isMobile ? 12 : 2 }}>
       <Typography 
@@ -656,6 +681,43 @@ const ProfilePage = () => {
         <UserSearch />
       </Box>
       {error && <Typography color="error" sx={{ fontFamily: theme.typography.fontFamilyBase, color: theme.colors.error }}>{error}</Typography>}
+      <Box sx={{
+        ...panelStyle,
+        alignItems: 'stretch',
+        borderColor: theme.colors.accentGreen,
+        boxShadow: theme.effects.glowSubtle(theme.colors.accentGreen)
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+          <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}>
+            Access Tier {tier}
+          </Typography>
+          <Chip
+            label={tier >= 1 ? 'Earning Enabled' : 'Discord Required For Earning'}
+            sx={{
+              color: tier >= 1 ? theme.colors.backgroundDefault : theme.colors.textPrimary,
+              backgroundColor: tier >= 1 ? theme.colors.accentGreen : 'rgba(255,255,255,0.08)',
+              fontFamily: theme.typography.fontFamilyAccent
+            }}
+          />
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 1.5, width: '100%' }}>
+          {localTierChecks.map((check) => (
+            <Box key={check.key} sx={{
+              border: `1px solid ${check.met ? theme.colors.accentGreen : theme.colors.border}`,
+              borderRadius: theme.borders.borderRadiusMd,
+              p: 1.5,
+              backgroundColor: check.met ? 'rgba(0, 255, 170, 0.08)' : 'rgba(255,255,255,0.04)'
+            }}>
+              <Typography variant="subtitle2" sx={{ color: check.met ? theme.colors.accentGreen : theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}>
+                {check.met ? 'Unlocked' : 'Next'}: {check.label}
+              </Typography>
+              <Typography variant="body2" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
+                {check.prompt}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
         <Box sx={{
           ...panelStyle,
           borderColor: theme.colors.primary,
