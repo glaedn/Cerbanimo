@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
-import DiscordBotService from '../services/DiscordBotService.js';
+import IntegrationManager from '../services/integrations/core/IntegrationManager.js';
 
 const router = express.Router();
 
@@ -56,17 +56,20 @@ router.post('/', async (req, res) => {
   }
 
   // Resolve invites if provided
-  if (guild_id.includes('discord.gg/')) {
-    const resolved = await DiscordBotService.resolveInvite(guild_id);
-    if (resolved) guild_id = resolved.guildId;
-  }
-  if (need_channel_id && need_channel_id.includes('discord.gg/')) {
-    const resolved = await DiscordBotService.resolveInvite(need_channel_id);
-    if (resolved) need_channel_id = resolved.channelId;
-  }
-  if (alert_channel_id && alert_channel_id.includes('discord.gg/')) {
-    const resolved = await DiscordBotService.resolveInvite(alert_channel_id);
-    if (resolved) alert_channel_id = resolved.channelId;
+  const discordAdapter = IntegrationManager.getAdapter('discord');
+  if (discordAdapter) {
+    if (guild_id.includes('discord.gg/')) {
+      const resolved = await discordAdapter.resolveInvite(guild_id);
+      if (resolved) guild_id = resolved.guildId;
+    }
+    if (need_channel_id && need_channel_id.includes('discord.gg/')) {
+      const resolved = await discordAdapter.resolveInvite(need_channel_id);
+      if (resolved) need_channel_id = resolved.channelId;
+    }
+    if (alert_channel_id && alert_channel_id.includes('discord.gg/')) {
+      const resolved = await discordAdapter.resolveInvite(alert_channel_id);
+      if (resolved) alert_channel_id = resolved.channelId;
+    }
   }
 
   try {

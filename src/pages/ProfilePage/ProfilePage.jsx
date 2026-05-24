@@ -26,6 +26,7 @@ import NeedDeclarationForm from '../../components/NeedDeclarationForm/NeedDeclar
 import UserPortfolio from '../UserPortfolio.jsx';
 import UserSearch from '../../components/UserSearch.jsx';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import ConnectedAccountsPanel from '../../components/Integrations/ConnectedAccountsPanel.jsx';
 
 const ProfilePage = () => {
   const { logout, user, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
@@ -998,63 +999,8 @@ const ProfilePage = () => {
         }
         sx={{ width: '100%', maxWidth: '400px', mb: 2 }}
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '400px', gap: 1, mb: 1 }}>
-        <TextField
-          label="Discord User ID"
-          value={profileData.discord_user_id || ''}
-          onChange={(e) => handleInputChange('discord_user_id', e.target.value)}
-          margin="none"
-          fullWidth
-          sx={{
-            flexGrow: 1,
-            '& .MuiInputLabel-root': {
-              color: theme.colors.textSecondary,
-              fontFamily: theme.typography.fontFamilyAccent,
-            },
-            '& .MuiInputLabel-root.Mui-focused': {
-              color: theme.colors.primary,
-            },
-            '& .MuiOutlinedInput-root': {
-              fontFamily: theme.typography.fontFamilyAccent,
-              color: theme.colors.textPrimary,
-              backgroundColor: 'rgba(10, 10, 46, 0.6)',
-              '& fieldset': {
-                borderColor: theme.colors.border,
-                borderRadius: theme.borders.borderRadiusMd,
-              },
-              '&:hover fieldset': {
-                borderColor: theme.colors.primary,
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: theme.colors.primary,
-                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
-              },
-            },
-            '& .MuiInputBase-input': {
-              color: theme.colors.textPrimary,
-              fontFamily: theme.typography.fontFamilyAccent,
-            },
-          }}
-        />
-        <Button
-          variant="contained"
-          onClick={handleSaveProfile}
-          sx={{
-            minWidth: '120px',
-            height: '56px',
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.backgroundDefault,
-            fontFamily: theme.typography.fontFamilyAccent,
-            boxShadow: theme.effects.glowSubtle(theme.colors.primary),
-            borderRadius: theme.borders.borderRadiusMd,
-            '&:hover': {
-              backgroundColor: theme.colors.accentBlue,
-              boxShadow: theme.effects.glowStrong(theme.colors.primary),
-            }
-          }}
-        >
-          Link Accounts
-        </Button>
+      <Box sx={{ width: '100%', maxWidth: '400px', mb: 2 }}>
+        <ConnectedAccountsPanel initialDiscordId={profileData.discord_user_id} />
       </Box>
       {[0, 1].map((index) => (
         <TextField

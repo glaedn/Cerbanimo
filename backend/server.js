@@ -29,6 +29,7 @@ import spatialOpsRoutes from './routes/spatial_ops.js';
 import onboardingRoutes from './routes/onboarding.js';
 import adminRoutes from './routes/admin.js';
 import discordConfigRoutes from './routes/discord_config.js';
+import integrationRoutes from './routes/integrations.js';
 import needCommentRoutes from './routes/need_comments.js';
 import { validatePendingInterests } from './services/interestValidationService.js';
 
@@ -66,6 +67,9 @@ import EventBusService from './services/EventBusService.js';
 import { startEventWorker } from './workers/eventWorker.js';
 import boss from './jobs/boss.js';
 import { startWorkers } from './jobs/startWorkers.js';
+import IntegrationManager from './services/integrations/core/IntegrationManager.js';
+import DiscordAdapter from './services/integrations/adapters/DiscordAdapter.js';
+import GoogleChatAdapter from './services/integrations/adapters/GoogleChatAdapter.js';
 
 // Import database table creation functions
 import { createImpactTables } from '../models/impact_v2.js';
@@ -79,6 +83,7 @@ import { createStorySummariesTable } from '../models/story_summaries.js';
 import { createResourcesTable } from '../models/resources.js';
 import { createResourceLayerTables } from '../models/resource_layer_v2.js';
 import { createDiscordConfigTable } from '../models/discord_config.js';
+import { createIntegrationTables } from '../models/integrations.js';
 import { createNeedCommentsTable } from '../models/need_comments.js';
 import { createNeedsTable } from '../models/needs.js';
 import { createCivicKernelTables } from '../models/civic_kernel.js';
@@ -257,6 +262,7 @@ app.use('/onboarding', jwtCheck, resolveUser, onboardingRoutes);
 app.use('/spatial-ops', jwtCheck, resolveUser, spatialOpsRoutes);
 app.use('/admin', jwtCheck, resolveUser, adminRoutes);
 app.use('/discord-config', jwtCheck, resolveUser, discordConfigRoutes);
+app.use('/integrations', jwtCheck, resolveUser, integrationRoutes);
 app.use('/need-comments', jwtCheck, resolveUser, needCommentRoutes);
 
 app.use('/impact_v2', jwtCheck, resolveUser, impactRoutesV2);
@@ -380,8 +386,9 @@ async function initializeDatabase() {
 
     try {
       await createDiscordConfigTable();
+      await createIntegrationTables();
     } catch (err) {
-      console.warn('Optional Subsystem Skip: Discord Config initialization failed:', err.message);
+      console.warn('Optional Subsystem Skip: Integration Config initialization failed:', err.message);
     }
 
     await createNeedCommentsTable();
@@ -421,6 +428,11 @@ async function initializeDatabase() {
 }
 
 initializeDatabase().then(async () => {
+  // Initialize Integration Fabric
+  IntegrationManager.registerAdapter(DiscordAdapter);
+  IntegrationManager.registerAdapter(GoogleChatAdapter);
+  await IntegrationManager.initializeAll();
+
   // Initialize Event System
   await EventBusService.initialize();
 

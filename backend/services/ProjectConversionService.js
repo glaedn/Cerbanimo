@@ -3,7 +3,7 @@ import { autoGenerateTasks } from './taskGenerator.js';
 import ImpactGraphService from './ImpactGraphService.js';
 import TaskRoutingService from './TaskRoutingService.js';
 import { findMatchesForNeed } from './matchingService.js';
-import DiscordBotService from './DiscordBotService.js';
+import IntegrationManager from './integrations/core/IntegrationManager.js';
 import IntentEngineService from './IntentEngineService.js';
 
 class ProjectConversionService {
@@ -78,9 +78,12 @@ class ProjectConversionService {
       // 5a. Notify Discord if thread exists
       if (need.discord_thread_id) {
         try {
-          const thread = await DiscordBotService.client.channels.fetch(need.discord_thread_id);
-          if (thread && thread.isThread()) {
-            await thread.send(`🚀 **Project Formed!** This need has been escalated to a structured project: [Cerbanimo Project Link](${process.env.FRONTEND_URL}/visualizer/${project.id})`);
+          const discordAdapter = IntegrationManager.getAdapter('discord');
+          if (discordAdapter && discordAdapter.isReady) {
+            const thread = await discordAdapter.client.channels.fetch(need.discord_thread_id);
+            if (thread && thread.isThread()) {
+              await thread.send(`🚀 **Project Formed!** This need has been escalated to a structured project: [Cerbanimo Project Link](${process.env.FRONTEND_URL}/visualizer/${project.id})`);
+            }
           }
         } catch (discordErr) {
           console.warn('Failed to notify Discord of project conversion:', discordErr);

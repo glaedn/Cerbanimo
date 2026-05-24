@@ -46,6 +46,7 @@ import InsightsIcon from '@mui/icons-material/Insights';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
+import CommunityIntegrationsPanel from '../components/Integrations/CommunityIntegrationsPanel.jsx';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { toast } from 'react-hot-toast';
 
@@ -1331,7 +1332,7 @@ const CommunityHub = () => {
             </Modal>
             <CommunityChronicle communityId={communityId} />
 
-            {/* Discord Configuration Modal */}
+            {/* Community Integrations Modal */}
             <Modal
                 open={isDiscordConfigOpen}
                 onClose={() => setIsDiscordConfigOpen(false)}
@@ -1341,81 +1342,44 @@ const CommunityHub = () => {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: { xs: '90%', sm: '400px' },
+                    width: { xs: '90%', sm: '500px' },
                     p: 4,
                     bgcolor: 'rgba(28, 28, 30, 0.95)',
                     border: '1px solid #00F3FF',
-                    color: 'white'
+                    color: 'white',
+                    maxHeight: '90vh',
+                    overflowY: 'auto'
                 }}>
-                    <Typography variant="h5" sx={{ mb: 1, fontFamily: 'Orbitron', color: '#00F3FF' }}>
-                        Connect Discord
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#CCC', mb: 3 }}>
-                        Paste Discord Invite Links or raw IDs.
-                    </Typography>
-                    <Box display="flex" flexDirection="column" gap={3}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <Box>
+                            <Typography variant="h5" sx={{ mb: 1, fontFamily: 'Orbitron', color: '#00F3FF' }}>
+                                Community Integrations
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#CCC', mb: 2 }}>
+                                Connect your community to external platforms to automate coordination.
+                            </Typography>
+                        </Box>
+
                         <Button
                             variant="outlined"
                             fullWidth
                             href={`https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
                             target="_blank"
-                            sx={{ color: '#5865F2', borderColor: '#5865F2', mb: 1 }}
+                            sx={{ color: '#5865F2', borderColor: '#5865F2' }}
                         >
-                            INVITE BOT TO SERVER
+                            INVITE DISCORD BOT
                         </Button>
-                        <TextField
-                            label="GUILD ID / INVITE LINK"
-                            variant="outlined"
-                            fullWidth
-                            value={discordConfig.guild_id}
-                            onChange={(e) => setDiscordConfig({...discordConfig, guild_id: e.target.value})}
-                            helperText="Paste server invite or ID"
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    color: 'white',
-                                    '& fieldset': { borderColor: '#00F3FF' },
-                                    '&:hover fieldset': { borderColor: '#00F3FF' },
-                                },
-                                '& .MuiInputLabel-root': { color: '#00F3FF' }
-                            }}
-                        />
-                        <TextField
-                            label="NEEDS CHANNEL ID / INVITE LINK"
-                            variant="outlined"
-                            fullWidth
-                            value={discordConfig.need_channel_id}
-                            onChange={(e) => setDiscordConfig({...discordConfig, need_channel_id: e.target.value})}
-                            helperText="Channel invite or ID"
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    color: 'white',
-                                    '& fieldset': { borderColor: '#00F3FF' },
-                                    '&:hover fieldset': { borderColor: '#00F3FF' },
-                                },
-                                '& .MuiInputLabel-root': { color: '#00F3FF' }
-                            }}
-                        />
-                        <TextField
-                            label="ALERTS CHANNEL ID"
-                            variant="outlined"
-                            fullWidth
-                            value={discordConfig.alert_channel_id}
-                            onChange={(e) => setDiscordConfig({...discordConfig, alert_channel_id: e.target.value})}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    color: 'white',
-                                    '& fieldset': { borderColor: '#00F3FF' },
-                                    '&:hover fieldset': { borderColor: '#00F3FF' },
-                                },
-                                '& .MuiInputLabel-root': { color: '#00F3FF' }
-                            }}
-                        />
+
+                        <Divider sx={{ bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
+
+                        <CommunityIntegrationsPanel communityId={communityId} />
+
                         <Button
                             variant="contained"
-                            onClick={handleSaveDiscordConfig}
+                            onClick={() => setIsDiscordConfigOpen(false)}
                             sx={{ mt: 2, bgcolor: '#00F3FF', color: 'black', fontWeight: 'bold' }}
                         >
-                            SAVE CONFIGURATION
+                            DONE
                         </Button>
                     </Box>
                 </Paper>

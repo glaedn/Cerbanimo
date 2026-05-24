@@ -1,6 +1,6 @@
 import express from 'express';
 import ResourceService from '../services/ResourceService.js';
-import DiscordBotService from '../services/DiscordBotService.js';
+import IntegrationManager from '../services/integrations/core/IntegrationManager.js';
 
 const router = express.Router();
 
@@ -27,11 +27,10 @@ router.post('/add', async (req, res) => {
   try {
     const resource = await ResourceService.addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, 'available', skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude);
 
-    // Broadcast to Discord if it's a community resource
+    // Broadcast to connected platforms if it's a community resource
     if (resource.owner_community_id) {
-        DiscordBotService.broadcastResource(resource)
-          .then(() => DiscordBotService.matchAndPing(resource, 'resource'))
-          .catch(err => console.error('Discord resource broadcast/ping failed:', err));
+        IntegrationManager.broadcast(resource.owner_community_id, 'resource', resource)
+          .catch(err => console.error('Community resource broadcast failed:', err));
     }
 
     res.status(201).json(resource);

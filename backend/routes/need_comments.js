@@ -1,7 +1,7 @@
 import express from 'express';
 import pool from '../db.js';
 import { sendNotification } from '../services/NotificationService.js';
-import DiscordBotService from '../services/DiscordBotService.js';
+import IntegrationManager from '../services/integrations/core/IntegrationManager.js';
 
 const router = express.Router();
 
@@ -61,7 +61,10 @@ router.post('/', async (req, res) => {
     }
 
     // Sync to Discord
-    DiscordBotService.syncCommentToDiscord(need_id, comment).catch(err => console.error('Discord comment sync failed:', err));
+    const discordAdapter = IntegrationManager.getAdapter('discord');
+    if (discordAdapter) {
+      discordAdapter.syncCommentToDiscord(need_id, comment).catch(err => console.error('Discord comment sync failed:', err));
+    }
 
     res.status(201).json(comment);
   } catch (err) {

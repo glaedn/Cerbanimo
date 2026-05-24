@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../db.js'; // Assuming db.js is in the backend directory
-import DiscordBotService from '../services/DiscordBotService.js';
+import IntegrationManager from '../services/integrations/core/IntegrationManager.js';
 import ProjectConversionService from '../services/ProjectConversionService.js';
 import NeedService from '../services/NeedService.js';
 import { sendNotification } from '../services/NotificationService.js';
@@ -12,11 +12,10 @@ router.post('/', async (req, res) => {
   try {
     const newNeed = await NeedService.createNeed(req.body, req.user);
 
-    // Broadcast to Discord if it's a community need
+    // Broadcast to connected platforms if it's a community need
     if (newNeed.requestor_community_id) {
-      DiscordBotService.broadcastNeed(newNeed)
-        .then(() => DiscordBotService.matchAndPing(newNeed, 'need'))
-        .catch(err => console.error('Discord broadcast/ping failed:', err));
+      IntegrationManager.broadcast(newNeed.requestor_community_id, 'need', newNeed)
+        .catch(err => console.error('Community broadcast failed:', err));
     }
 
     res.status(201).json(newNeed);
@@ -201,7 +200,10 @@ router.put('/:needId', async (req, res) => {
 
     // Sync update to Discord
     if (updatedNeed.discord_thread_id) {
-      DiscordBotService.syncNeedUpdate(updatedNeed).catch(err => console.error('Discord sync failed:', err));
+      const discordAdapter = IntegrationManager.getAdapter('discord');
+      if (discordAdapter) {
+        discordAdapter.syncNeedUpdate(updatedNeed).catch(err => console.error('Discord sync failed:', err));
+      }
     }
 
     // Notify users who offered help about fulfillment
