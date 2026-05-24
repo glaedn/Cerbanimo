@@ -2,7 +2,7 @@ import React from 'react';
 import FocusCard from '../../../components/shared/FocusCard';
 import SignalChip from '../../../components/shared/SignalChip';
 import CoordinationSignal from '../../../components/shared/CoordinationSignal';
-import { MomentumPanel, ConstellationActivity } from '../components';
+import { MomentumPanel, ConstellationActivity, OpportunityPanel } from '../components';
 import useRelevantTasks from '../../../hooks/useRelevantTasks';
 
 const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
@@ -32,7 +32,7 @@ const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
               <>
                 <button
                   className="orbit-btn primary"
-                  onClick={() => navigate(`/missions/visualizer/${primaryTask.projectId}/${primaryTask.id}`)}
+                  onClick={() => navigate(`/missions/visualizer/${primaryTask.project_id}/${primaryTask.id}`)}
                 >
                   Execute Mission
                 </button>
@@ -40,9 +40,9 @@ const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
               </>
             }
           >
-            <p>Current assignment within <strong>{primaryTask.projectName}</strong>. Your skills are a perfect match.</p>
+            <p>Current assignment within <strong>{primaryTask.project_name}</strong>. Your skills are a perfect match.</p>
             <div className="focus-stats-row" style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
-              <SignalChip label="Project" value={primaryTask.projectName} icon="🚀" />
+              <SignalChip label="Project" value={primaryTask.project_name} icon="🚀" />
               <SignalChip label="Status" value={primaryTask.status} icon="📡" type="accent" />
             </div>
           </FocusCard>
@@ -58,6 +58,10 @@ const ContributorOrbitView = ({ profile, tasks, navigate, signals = [] }) => {
             <p>You have no current assignments. The Commons has {relevantTasks?.length || 0} needs matching your expertise.</p>
           </FocusCard>
         )}
+      </section>
+
+      <section className="orbit-section opportunities">
+        <OpportunityPanel title="Nearby Opportunities" />
       </section>
 
       <section className="orbit-section momentum">

@@ -96,7 +96,10 @@ const OrbitPage = () => {
           </section>
 
           <section className="orbit-section">
-            <OpportunityPanel />
+            {/* The OpportunityPanel is already shown in the role-specific views on the main column */}
+            {/* We could use this space for something else or keep it for global opportunities if needed,
+                but per requirements we should avoid double-featuring.
+                I'll remove it from here and ensure role-specific views handle their needs. */}
           </section>
         </div>
       </div>

@@ -117,7 +117,7 @@ export const MomentumPanel = () => {
   );
 };
 
-export const ConstellationActivity = () => {
+export const ConstellationActivity = ({ title = "Constellation Activity" }) => {
   const { profile } = useUserProfile();
   const [events, setEvents] = useState([]);
 
@@ -125,52 +125,100 @@ export const ConstellationActivity = () => {
     const fetchActivity = async () => {
       if (profile?.id) {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`);
-          const activities = res.data.slice(0, 5).map(item => ({
-            id: item.id,
+          const [chronicleRes, communityRes] = await Promise.all([
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/user/${profile.id}/chronicle`),
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/storyChronicles/community/${profile.primary_community_id || 1}/activity`)
+              .catch(() => ({ data: [] }))
+          ]);
+
+          const personal = chronicleRes.data.map(item => ({
+            id: `p-${item.id}`,
             type: 'story',
             message: item.reflection || `Completed task in ${item.project_name}`,
-            time: new Date(item.created_at).toLocaleDateString()
+            time: new Date(item.created_at)
           }));
-          setEvents(activities);
+
+          const community = communityRes.data.map(item => ({
+            id: `c-${item.id}`,
+            type: 'community',
+            message: item.message || item.description,
+            time: new Date(item.created_at)
+          }));
+
+          const combined = [...personal, ...community]
+            .sort((a, b) => b.time - a.time)
+            .slice(0, 8);
+
+          setEvents(combined.map(e => ({ ...e, timeLabel: e.time.toLocaleDateString() })));
         } catch (err) {
-          console.error('Error fetching chronicle for activity feed:', err);
+          console.error('Error fetching activity feed:', err);
         }
       }
     };
     fetchActivity();
-  }, [profile?.id]);
+  }, [profile?.id, profile?.primary_community_id]);
 
   return (
     <div className="orbit-constellation-activity">
       <div className="orbit-section-header">
         <span className="orbit-kicker">NETWORK_SIGNALS</span>
-        <h3>Constellation Activity</h3>
+        <h3>{title}</h3>
       </div>
       <div className="chronicle-items">
-        {events.map((event) => (
+        {events.length > 0 ? events.map((event) => (
           <div key={event.id} className="chronicle-item">
             <div className={`event-dot ${event.type}`}></div>
             <div className="event-content">
               <p>{event.message}</p>
-              <small>{event.time}</small>
+              <small>{event.timeLabel}</small>
             </div>
           </div>
-        ))}
+        )) : (
+          <p className="empty-state">No recent activity detected in your sector.</p>
+        )}
       </div>
     </div>
   );
 };
 
-export const OpportunityPanel = () => {
+export const OpportunityPanel = ({ title = "Nearby Opportunities" }) => {
   const { profile } = useUserProfile();
+  const { assignedTasks } = useAssignedTasks(profile?.id);
   const { relevantTasks, loading } = useRelevantTasks(profile?.id);
+
+  const activeTasks = assignedTasks?.filter(t =>
+    t.status?.toLowerCase().includes('active') || t.status?.toLowerCase().includes('urgent')
+  ).slice(0, 3);
 
   return (
     <div className="orbit-opportunity-panel">
+      {activeTasks?.length > 0 && (
+        <div className="active-missions-section" style={{ marginBottom: '24px' }}>
+          <div className="orbit-section-header">
+            <span className="orbit-kicker">ACTIVE_OPERATIONS</span>
+            <h3>Your Active Missions</h3>
+          </div>
+          <div className="opportunity-list">
+            {activeTasks.map(task => (
+              <ExpandablePanel
+                key={task.id}
+                title={task.name}
+                summary={`${task.project_name} • ${task.status}`}
+              >
+                <div className="opp-details">
+                  <p><strong>Project:</strong> {task.project_name}</p>
+                  <p><strong>Status:</strong> {task.status}</p>
+                  <Link to={`/missions/visualizer/${task.project_id}/${task.id}`} className="orbit-btn ghost x-small">Execute</Link>
+                </div>
+              </ExpandablePanel>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="orbit-section-header">
         <span className="orbit-kicker">LOCAL_NEED_MATCHES</span>
-        <h3>Nearby Opportunities</h3>
+        <h3>{title}</h3>
       </div>
       <div className="opportunity-list">
         {loading ? (
@@ -199,6 +247,14 @@ export const OpportunityPanel = () => {
 };
 
 export const QuickActions = () => {
+  const { profile } = useUserProfile();
+  const { assignedTasks } = useAssignedTasks(profile?.id);
+  const [showContributions, setShowContributions] = useState(false);
+
+  const activeTasks = assignedTasks?.filter(t =>
+    t.status?.toLowerCase().includes('active') || t.status?.toLowerCase().includes('urgent')
+  );
+
   return (
     <div className="orbit-quick-actions">
       <div className="orbit-section-header">
@@ -207,11 +263,45 @@ export const QuickActions = () => {
       </div>
       <div className="action-buttons">
         <Link to="/missions/projects" className="action-btn">Open Mission</Link>
-        <Link to="/commons/marketplace" className="action-btn">Offer Resource</Link>
-        <Link to="/commons/needs" className="action-btn">Ask for Help</Link>
-        <Link to="/missions/tasks" className="action-btn">Create Task</Link>
-        <Link to="/orbit/focus" className="action-btn">Log Contribution</Link>
+        <Link to="/commons/marketplace?action=list-resource" className="action-btn">Offer Resource</Link>
+        <Link to="/commons/needs?action=declare-need" className="action-btn">Ask for Help</Link>
+        <button onClick={() => setShowContributions(!showContributions)} className="action-btn">
+          Log Contribution
+        </button>
       </div>
+
+      {showContributions && (
+        <div className="contributions-popup glass-panel" style={{
+          marginTop: '12px',
+          padding: '16px',
+          border: '1px solid rgba(95, 240, 255, 0.3)',
+          background: 'rgba(8, 20, 41, 0.9)'
+        }}>
+          <h4 style={{ fontSize: '0.7rem', color: '#5ff0ff', marginBottom: '12px', fontFamily: 'Orbitron' }}>ACTIVE_ASSIGNMENTS</h4>
+          {activeTasks?.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {activeTasks.map(task => (
+                <Link
+                  key={task.id}
+                  to={`/missions/visualizer/${task.project_id}/${task.id}`}
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {task.name}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>No active tasks found.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

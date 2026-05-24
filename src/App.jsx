@@ -79,6 +79,7 @@ const AdminProtectedRoute = ({ children }) => {
 } ;
 
 const OrbitPage = React.lazy(() => import("./pages/Orbit/OrbitPage.jsx"));
+const ChroniclePage = React.lazy(() => import("./pages/Orbit/ChroniclePage.jsx"));
 const MissionsPage = React.lazy(() => import("./pages/Missions/MissionsPage.jsx"));
 const CommonsPage = React.lazy(() => import("./pages/Commons/CommonsPage.jsx"));
 const MarketplacePage = React.lazy(() => import("./pages/Commons/Marketplace/MarketplaceCrisisWrapper.jsx"));
@@ -205,7 +206,7 @@ const AppContent = () => {
                 <Route path="narrative-hub/:userId?" element={<NarrativeIdentityHub />} />
                 <Route path="notifications" element={<MobileNotifications />} />
                 <Route path="coordinator-hud" element={<CoordinatorHUD />} />
-                <Route path="chronicle" element={<div className="stub-page">Chronicle: Coming Soon</div>} />
+                <Route path="chronicle" element={<ChroniclePage />} />
                 <Route path="activity" element={<div className="stub-page">Activity: Coming Soon</div>} />
                   <Route index element={<div className="orbit-index-placeholder" style={{ display: 'none' }}>Index is handled by OrbitPage layout</div>} />
               </Route>

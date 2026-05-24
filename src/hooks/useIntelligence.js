@@ -16,7 +16,7 @@ export function useIntelligence(options = {}) {
 
   const fetchPulse = useCallback(async () => {
     try {
-      const token = localStorage.getItem('id_token');
+      const token = localStorage.getItem('token');
       if (!token) return;
 
       const response = await axios.get(`${BACKEND_URL}/intelligence/pulse`, {

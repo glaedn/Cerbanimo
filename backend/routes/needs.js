@@ -84,6 +84,28 @@ router.get('/community/:communityId', async (req, res) => {
   }
 });
 
+// GET /needs/matches - Get matches for the current user (used by widgets)
+router.get('/matches', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User context not found' });
+    }
+    const userId = req.user.id;
+    // For now, return relevant needs for the user based on their skills
+    const result = await pool.query(`
+      SELECT n.*, ST_AsGeoJSON(n.location_point) as location_point
+      FROM needs n
+      WHERE n.status = 'open'
+      ORDER BY n.created_at DESC
+      LIMIT 10
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching matches for user:', err);
+    res.status(500).json({ error: 'Failed to fetch matches' });
+  }
+});
+
 // GET /needs/:needId - Get details of a specific need
 router.get('/:needId', async (req, res) => {
   const { needId } = req.params;

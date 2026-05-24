@@ -11,18 +11,17 @@ const SkillConstellation = () => {
 
   return (
     <Box
+      className="glass-panel"
       sx={{
-        width: '100vw',
-        height: '100vh',
-        bgcolor: '#0A0A2E',
+        width: '100%',
+        height: '100%',
+        minHeight: '80vh',
         color: '#FFFFFF',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 1200
+        p: 0,
+        position: 'relative'
       }}
     >
       <Box
@@ -30,12 +29,12 @@ const SkillConstellation = () => {
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(0, 243, 255, 0.3)',
-          bgcolor: 'rgba(10, 10, 46, 0.9)'
+          borderBottom: '1px solid rgba(0, 243, 255, 0.1)',
+          background: 'rgba(10, 10, 46, 0.2)'
         }}
       >
         <IconButton
-          onClick={() => navigate('/profile')}
+          onClick={() => navigate('/orbit')}
           sx={{ color: '#00F3FF', mr: 2 }}
         >
           <ArrowBackIcon />
@@ -48,11 +47,29 @@ const SkillConstellation = () => {
             textShadow: '0 0 10px #00F3FF'
           }}
         >
-          SKILL CONSTELLATION
+          SKILL_CONSTELLATION
         </Typography>
       </Box>
-      <Box sx={{ flex: 1, position: 'relative' }}>
+      <Box sx={{ flex: 1, position: 'relative', minHeight: '500px' }}>
         <SkillGalaxyPanel isFullPage={true} userId={userId} />
+      </Box>
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', borderTop: '1px solid rgba(0, 243, 255, 0.1)' }}>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/orbit/skill-library')}
+          sx={{
+            borderColor: '#ff5ca2',
+            color: '#ff5ca2',
+            fontFamily: 'Orbitron',
+            '&:hover': {
+              borderColor: '#00f3ff',
+              color: '#00f3ff',
+              background: 'rgba(0, 243, 255, 0.05)'
+            }
+          }}
+        >
+          OPEN_SKILL_LIBRARY
+        </Button>
       </Box>
     </Box>
   );
