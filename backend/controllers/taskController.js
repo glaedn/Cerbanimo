@@ -15,9 +15,11 @@ const getAllTasks = async () => {
   const query = `
     SELECT 
       tasks.*,
-      skills.name as skill_name
+      skills.name as skill_name,
+      p.name as project_name
     FROM tasks
-    LEFT JOIN skills ON tasks.skill_id = skills.id;
+    LEFT JOIN skills ON tasks.skill_id = skills.id
+    LEFT JOIN projects p ON tasks.project_id = p.id;
   `;
   const result = await pool.query(query);
   return result.rows;
@@ -41,10 +43,11 @@ const getRelevantTasks = async (userSkills) => {
   }
 
   const relevantTasksQuery = `
-    SELECT * FROM tasks
-    WHERE skill_id = ANY($1)
-    AND (status::text LIKE '%unassigned')
-    ORDER BY id DESC
+    SELECT t.*, p.name as project_name FROM tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    WHERE t.skill_id = ANY($1)
+    AND (t.status::text LIKE '%unassigned')
+    ORDER BY t.id DESC
   `;
   const relevantTasks = await pool.query(relevantTasksQuery, [skillIds]);
 

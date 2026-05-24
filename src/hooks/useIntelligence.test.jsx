@@ -8,7 +8,7 @@ vi.mock('axios');
 describe('useIntelligence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem('id_token', 'fake-token');
+    localStorage.setItem('token', 'fake-token');
   });
 
   it('fetches pulse and applies no filtering by default', async () => {

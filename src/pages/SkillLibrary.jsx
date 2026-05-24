@@ -244,13 +244,13 @@ const SkillLibrary = () => {
   }
 
   return (
-    <Box className="skill-library-container">
+    <Box className="skill-library-container glass-panel">
       <Box className="skill-library-header">
         <IconButton onClick={() => navigate(-1)} sx={{ color: theme.colors.secondary }}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: theme.colors.secondary, textShadow: `0 0 10px ${theme.colors.secondary}` }}>
-          SKILL LIBRARY
+          SKILL_LIBRARY
         </Typography>
       </Box>
 

@@ -1,0 +1,36 @@
+.chronicle-page-content {
+  padding: 32px;
+  background: rgba(10, 10, 46, 0.4);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.chronicle-header {
+  margin-bottom: 32px;
+}
+
+.section-subtitle {
+  font-family: 'Orbitron', sans-serif !important;
+  color: #00f3ff;
+  margin-bottom: 24px !important;
+  font-size: 1rem !important;
+  letter-spacing: 2px !important;
+}
+
+.orbitron-text {
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  color: #fff;
+}
+
+.chronicle-timeline-container {
+  margin-top: 40px;
+}
+
+@media (max-width: 600px) {
+  .chronicle-page-content {
+    padding: 16px;
+  }
+}

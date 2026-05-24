@@ -82,6 +82,11 @@ const NeedsPage = () => {
   useEffect(() => {
     if (isAuthenticated && profile?.id) {
       fetchNeeds();
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'declare-need') {
+        setIsDeclareModalOpen(true);
+      }
     }
   }, [isAuthenticated, profile?.id, fetchNeeds]);
 
