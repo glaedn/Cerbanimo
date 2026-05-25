@@ -5,6 +5,7 @@ import { Box, Typography, List, ListItem, ListItemText, Link, Paper, Tabs, Tab }
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import MobileTaskCard from '../components/MobileTaskCard';
+import { ExpandablePanel } from '../components/shared/Primitives';
 import { motion, AnimatePresence } from 'framer-motion';
 import './TaskBrowser.css';
 
@@ -135,17 +136,21 @@ const TaskBrowser = ({ initialTab = 0 }) => {
 
   const renderTaskList = (taskList, type) => {
     if (isMobile) {
+      // For mobile 'accepted' list, we filter out completed tasks
+      const filteredList = type === 'accepted'
+        ? taskList.filter(t => t.status !== 'completed' && t.status !== 'approved')
+        : taskList;
+
       return (
         <Box
           component={motion.div}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="mobile-container"
-          sx={{ mt: 2 }}
         >
           <AnimatePresence mode="popLayout">
-            {taskList.length > 0 ? (
-              taskList.map(task => (
+            {filteredList.length > 0 ? (
+              filteredList.map(task => (
                 <MobileTaskCard
                   key={task.id}
                   task={{...task, status: type === 'available' ? 'available' : task.status}}
@@ -154,7 +159,7 @@ const TaskBrowser = ({ initialTab = 0 }) => {
               ))
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <Typography className="no-tasks">No tasks found.</Typography>
+                <Typography className="no-tasks" sx={{ py: 2, textAlign: 'center', opacity: 0.6, fontSize: '0.8rem' }}>No tasks found.</Typography>
               </motion.div>
             )}
           </AnimatePresence>
@@ -225,36 +230,26 @@ const TaskBrowser = ({ initialTab = 0 }) => {
   if (isMobile) {
     return (
       <Box className="task-browser mobile-task-browser" sx={{ pb: 10 }}>
-        <Typography variant="h5" sx={{ p: 2, pt: 3, color: '#00F3FF', fontWeight: 'bold', textAlign: 'center', fontFamily: 'Orbitron' }}>
-          MISSION_COMMAND
-        </Typography>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{
-            borderBottom: 1,
-            borderColor: 'rgba(0, 243, 255, 0.2)',
-            '& .MuiTabs-indicator': { backgroundColor: '#00F3FF' },
-            '& .MuiTab-root': {
-              color: 'rgba(255,255,255,0.5)',
-              minHeight: '48px',
-              fontFamily: 'Orbitron',
-              fontSize: '0.75rem',
-              '&.Mui-selected': { color: '#00F3FF' }
-            }
-          }}
+        <ExpandablePanel
+            title="SCAN_RELEVANT"
+            summary={`${tasks.length} missions available for your skillset`}
         >
-          <Tab label="SCAN" />
-          <Tab label="ACTIVE" />
-          <Tab label="REVIEW" />
-        </Tabs>
+            {renderTaskList(tasks, 'available')}
+        </ExpandablePanel>
 
-        <Box sx={{ p: 2 }}>
-          {tabValue === 0 && renderTaskList(tasks, 'available')}
-          {tabValue === 1 && renderTaskList(acceptedTasks, 'accepted')}
-          {tabValue === 2 && renderTaskList(approvalTasks, 'review')}
-        </Box>
+        <ExpandablePanel
+            title="ACTIVE_ENGAGEMENTS"
+            summary={`${acceptedTasks.filter(t => t.status !== 'completed' && t.status !== 'approved').length} operations in progress`}
+        >
+            {renderTaskList(acceptedTasks, 'accepted')}
+        </ExpandablePanel>
+
+        <ExpandablePanel
+            title="QUALITY_ASSURANCE"
+            summary={`${approvalTasks.length} items awaiting peer review`}
+        >
+            {renderTaskList(approvalTasks, 'review')}
+        </ExpandablePanel>
       </Box>
     );
   }

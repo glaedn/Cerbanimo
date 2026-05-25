@@ -2,19 +2,27 @@
 
 .expandable-panel {
   background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .panel-header {
-  padding: 12px 16px;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s ease;
+}
+
+.panel-header:hover {
+  background: rgba(95, 240, 255, 0.05);
 }
 
 .panel-header h4 {

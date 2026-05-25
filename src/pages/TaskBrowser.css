@@ -7,7 +7,7 @@
 }
 
 .mobile-task-browser {
-    background: #000;
+    background: transparent;
     min-height: 100vh;
 }
 
@@ -61,9 +61,9 @@
 .task-list {
     max-height: 70vh;
     overflow-y: auto;
-    background: rgba(8, 20, 41, 0.4) !important;
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(95, 240, 255, 0.15);
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
