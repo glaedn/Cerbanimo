@@ -51,7 +51,10 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS public_good_scored_at TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS public_good_source VARCHAR(20) DEFAULT 'default',
     ADD COLUMN IF NOT EXISTS token_escrow NUMERIC DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS escrow_funded_by_creator BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS escrow_funded_by_creator BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS service_price INTEGER,
+    ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}';
   `;
 
   const alterCommunitiesQuery = `

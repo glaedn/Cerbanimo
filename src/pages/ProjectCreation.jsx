@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useLocation as useRouteLocation } from "react-router-dom";
 import {
   TextField,
   Button,
@@ -28,9 +29,17 @@ const ProjectCreation = () => {
   const isMobile = useIsMobile();
   const { user, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
+  const routeLocation = useRouteLocation();
+
+  const isServiceRequest = useMemo(() => {
+    const params = new URLSearchParams(routeLocation.search);
+    return params.get('isService') === 'true';
+  }, [routeLocation.search]);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [servicePrice, setServicePrice] = useState(0);
   const [availableTags, setAvailableTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [dueDate, setDueDate] = useState(null);
@@ -114,6 +123,9 @@ const ProjectCreation = () => {
           due_date: dueDate ? dueDate.toISOString() : null,
           location: location.text ? location : null,
           auto_assign: autoAssign,
+          is_service: isServiceRequest,
+          service_visibility: isServiceRequest ? ['profile', 'marketplace'] : ['private'],
+          service_price: servicePrice
         },
         {
           headers: {
@@ -201,6 +213,18 @@ const ProjectCreation = () => {
         placeholder="e.g. Reduce food waste in the local neighborhood by 20%"
         margin="normal"
       />
+      {isServiceRequest && (
+        <TextField
+          label="Service Price (Galactic Credits)"
+          variant="outlined"
+          fullWidth
+          type="number"
+          value={servicePrice}
+          onChange={(e) => setServicePrice(e.target.value)}
+          margin="normal"
+          helperText="Enter the price for this service listing."
+        />
+      )}
       <Grid container spacing={2} sx={{ mt: 1 }}>
         <Grid item xs={12}>
           <Autocomplete

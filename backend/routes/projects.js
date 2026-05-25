@@ -139,7 +139,7 @@ router.patch('/:projectId', async (req, res) => {
 // Create a new project
 router.post('/create', async (req, res) => {
   try {
-    const { name, description, auth0_id, outcomeStatement, due_date, location, auto_assign } = req.body;
+    const { name, description, auth0_id, outcomeStatement, due_date, location, auto_assign, is_service, service_visibility } = req.body;
     const tags = (req.body.tags || []).map(tag => tag.name);
 
     if (!name || !description || !auth0_id || !outcomeStatement) {
@@ -177,9 +177,16 @@ router.post('/create', async (req, res) => {
         auto_assign,
         project_plan,
         public_good_score,
-        public_good_source
+        public_good_source,
+        is_service,
+        service_visibility,
+        service_price
       )
-      VALUES ($1, $2, $3, $4, $5, $6, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($7), 4326)' : 'NULL'}, $8, $9, $10, $11)
+      VALUES (
+        $1, $2, $3, $4, $5, $6,
+        CASE WHEN $7::text IS NOT NULL THEN ST_SetSRID(ST_GeogFromText($7), 4326) ELSE NULL END,
+        $8, $9, $10, $11, $12, $13, $14
+      )
       RETURNING *;
     `;
 
@@ -190,11 +197,14 @@ router.post('/create', async (req, res) => {
       creator_id,
       due_date,
       location,
-      locationPoint,
-      auto_assign || false,
-      null, // Initial project_plan is null, usually generated later via auto-generate
-      0.6,
-      'default'
+      locationPoint, // $7
+      auto_assign || false, // $8
+      null, // $9
+      0.6, // $10
+      'default', // $11
+      is_service || false, // $12
+      service_visibility || ['private'], // $13
+      req.body.service_price || 0 // $14
     ];
 
     const result = await pool.query(insertQuery, queryParams);
@@ -267,6 +277,162 @@ router.post('/:projectId/revive', async (req, res) => {
     res.json({ message: 'Project revived', project });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Purchase a service project
+router.post('/:projectId/purchase', async (req, res) => {
+  const { projectId } = req.params;
+  const buyerId = req.user.id;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Get the buyer's internal user ID and username
+    const userQuery = 'SELECT id, username, cotokens FROM users WHERE id = $1';
+    const userResult = await client.query(userQuery, [buyerId]);
+    const buyer = userResult.rows[0];
+
+    if (!buyer) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Buyer not found' });
+    }
+
+    // 2. Get the service project details
+    const projectQuery = 'SELECT * FROM projects WHERE id = $1 AND is_service = TRUE';
+    const projectResult = await client.query(projectQuery, [projectId]);
+    const serviceProject = projectResult.rows[0];
+
+    if (!serviceProject) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Service project not found or not marked as a service' });
+    }
+
+    const price = serviceProject.service_price || 0;
+
+    if (buyer.cotokens < price) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Insufficient Galactic Credits' });
+    }
+
+    // Record Burn
+    const { applyBurn } = await import('../utils/burnUtils.js');
+    const burnAmount = await applyBurn(
+      client,
+      price,
+      'marketplace_service_purchase',
+      serviceProject.id,
+      'user',
+      buyer.id,
+      serviceProject.community_id
+    );
+    const sellerAmount = price - burnAmount;
+
+    // Deduct from buyer
+    await client.query('UPDATE users SET cotokens = cotokens - $1 WHERE id = $2', [price, buyer.id]);
+
+    // Add to seller (with burn applied)
+    await client.query('UPDATE users SET cotokens = cotokens + $1 WHERE id = $2', [sellerAmount, serviceProject.creator_id]);
+
+    // 3. Create a new project instance for the buyer
+    const newProjectQuery = `
+      INSERT INTO projects (name, description, tags, creator_id, token_pool, used_tokens, reserved_tokens)
+      VALUES ($1, $2, $3, $4, $5, 0, 0)
+      RETURNING id;
+    `;
+    const newProjectResult = await client.query(newProjectQuery, [
+      `${buyer.username}'s ${serviceProject.name}`,
+      serviceProject.description,
+      serviceProject.tags,
+      buyer.id,
+      price
+    ]);
+    const newProjectId = newProjectResult.rows[0].id;
+
+    // 4. Clone all tasks
+    const tasksQuery = 'SELECT * FROM tasks WHERE project_id = $1';
+    const tasksResult = await client.query(tasksQuery, [projectId]);
+    const templateTasks = tasksResult.rows;
+
+    const taskIdMap = {};
+
+    for (const task of templateTasks) {
+      const insertTaskQuery = `
+        INSERT INTO tasks (name, description, project_id, skill_id, status, reward_tokens, skill_level)
+        VALUES ($1, $2, $3, $4, 'inactive-unassigned', $5, $6)
+        RETURNING id;
+      `;
+      const taskResult = await client.query(insertTaskQuery, [
+        task.name,
+        task.description,
+        newProjectId,
+        task.skill_id,
+        task.reward_tokens,
+        task.skill_level
+      ]);
+      taskIdMap[task.id] = taskResult.rows[0].id;
+    }
+
+    for (const task of templateTasks) {
+      if (task.dependencies && task.dependencies.length > 0) {
+        const newTaskId = taskIdMap[task.id];
+        const newDeps = task.dependencies
+          .map(oldDepId => taskIdMap[oldDepId])
+          .filter(Boolean);
+
+        if (newDeps.length > 0) {
+          await client.query('UPDATE tasks SET dependencies = $1 WHERE id = $2', [newDeps, newTaskId]);
+        }
+      }
+    }
+
+    // 5. Record transaction in token_ledger
+    const buyerTransaction = JSON.stringify({
+      type: 'service_purchase',
+      projectId: newProjectId,
+      templateProjectId: projectId,
+      tokens: -price,
+      creationDate: new Date()
+    });
+    const sellerTransaction = JSON.stringify({
+      type: 'service_sale',
+      projectId: projectId,
+      buyerId: buyer.id,
+      tokens: price,
+      creationDate: new Date()
+    });
+
+    await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [buyerTransaction, buyer.id]);
+    await client.query('UPDATE users SET token_ledger = array_append(COALESCE(token_ledger, \'{}\'), $1::jsonb) WHERE id = $2', [sellerTransaction, serviceProject.creator_id]);
+
+    // 6. Send notification to seller
+    const io = req.app.get('io');
+    const notificationMessage = JSON.stringify({
+      text: `${buyer.username} has purchased your service: ${serviceProject.name}!`,
+      projectId: newProjectId,
+      buyerId: buyer.id,
+      buyerUsername: buyer.username,
+      serviceName: serviceProject.name
+    });
+
+    const notificationResult = await client.query(
+      'INSERT INTO notifications (user_id, message, type, created_at, read) VALUES ($1, $2, $3, NOW(), false) RETURNING *',
+      [serviceProject.creator_id, notificationMessage, 'service_purchase']
+    );
+
+    if (io) {
+      io.to(`user_${serviceProject.creator_id}`).emit('notification', notificationResult.rows[0]);
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Service purchased successfully', projectId: newProjectId });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error purchasing service:', error);
+    res.status(500).json({ message: 'Failed to purchase service' });
+  } finally {
+    client.release();
   }
 });
 

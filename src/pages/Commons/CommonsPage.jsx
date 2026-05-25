@@ -66,9 +66,9 @@ const CommonsPage = () => {
         {isIndex ? (
           <div className="commons-index-layout">
             <div className="commons-main">
-              <section className="commons-mobile-nav mobile-only">
+              <section className="commons-nav-section">
                 <h3>Navigation</h3>
-                <div className="mobile-nav-grid">
+                <div className="nav-grid">
                   <button onClick={() => navigate('/commons/communities')} className="nav-card">
                     <span className="icon">🏛️</span>
                     <span className="label">Communities</span>

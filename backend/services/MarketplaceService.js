@@ -49,13 +49,23 @@ class MarketplaceService {
   }
 
   async getServices(filters) {
-    let query = 'SELECT * FROM projects WHERE is_service = TRUE AND status = \'active\'';
+    // Services are projects where is_service is true.
+    // We filter by visibility 'public' or if it belongs to a community marketplace.
+    let query = `
+      SELECT * FROM projects
+      WHERE is_service = TRUE
+      AND (
+        service_visibility IS NULL
+        OR 'public' = ANY(service_visibility)
+        OR 'marketplace' = ANY(service_visibility)
+        OR 'profile' = ANY(service_visibility)
+      )
+    `;
     const params = [];
 
     if (filters.communityId) {
-      // Projects don't have a direct community_id in the provided schema,
-      // but let's assume they might be linked or we filter by creator's community if needed.
-      // For now, let's just return active services.
+      params.push(`community:${filters.communityId}`);
+      query += ` AND $${params.length} = ANY(service_visibility)`;
     }
 
     const result = await pool.query(query, params);
@@ -83,13 +93,15 @@ class MarketplaceService {
   }
 
   async getActivityStream() {
-    // Aggregated activity from needs fulfilled, resources shared, etc.
+    // Aggregated activity from needs fulfilled, resources shared, services listed, etc.
     // For now, return recent creations and status changes.
     const query = `
       (SELECT 'need_created' as activity_type, name as title, created_at FROM needs ORDER BY created_at DESC LIMIT 5)
       UNION ALL
       (SELECT 'resource_created' as activity_type, name as title, created_at FROM resources ORDER BY created_at DESC LIMIT 5)
-      ORDER BY created_at DESC LIMIT 10
+      UNION ALL
+      (SELECT 'service_listed' as activity_type, name as title, created_at FROM projects WHERE is_service = TRUE ORDER BY created_at DESC LIMIT 5)
+      ORDER BY created_at DESC LIMIT 15
     `;
     const result = await pool.query(query);
     return result.rows;
