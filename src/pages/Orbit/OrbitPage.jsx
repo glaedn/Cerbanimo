@@ -35,6 +35,15 @@ const OrbitPage = () => {
     const primaryRole = roleProfile?.primaryRole || 'Explorer';
     const signals = pulse?.signals || [];
 
+    /*
+    Deactivated role-based view limitations.
+    If a user has assigned tasks, prioritize the Contributor view regardless of role.
+    Otherwise fall back to standard role-based logic but ensure all modes remain accessible.
+    */
+    if (assignedTasks && assignedTasks.length > 0 && primaryRole === 'Explorer') {
+      return <ContributorOrbitView profile={profile} tasks={assignedTasks} navigate={navigate} signals={signals} />;
+    }
+
     switch (primaryRole) {
       case 'Contributor':
         return <ContributorOrbitView profile={profile} tasks={assignedTasks} navigate={navigate} signals={signals} />;

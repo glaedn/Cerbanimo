@@ -103,8 +103,6 @@ const ContextPanel = () => {
   const modeKey = getModeFromPath(location.pathname);
   const config = MODE_CONFIGS[modeKey];
 
-  const unlockedSystems = profile?.unlockedSystems || {};
-
   if (!config) return null;
 
   return (
@@ -118,14 +116,14 @@ const ContextPanel = () => {
       </div>
 
       <nav className="context-secondary-nav">
-        {config.secondaryNav.filter(item => {
-          if (item.label === 'Federation' && !unlockedSystems.federation) return false;
-          if (item.label === 'Crisis' && !unlockedSystems.crisisManagement) return false;
-          if (item.label === 'Review' && profile?.roleProfile?.primaryRole !== 'Coordinator') return false;
-          return true;
-        }).map((item) => {
+        {config.secondaryNav.map((item) => {
           const isActive = location.pathname === item.path ||
                           (item.path !== '/' && location.pathname.startsWith(item.path));
+
+          /*
+          Deactivated role-based secondary nav filtering.
+          All users should have access to all secondary systems.
+          */
           return (
             <Link
               key={item.path}

@@ -6,6 +6,12 @@ import './ProgressionGuard.css';
  * Guard component to hide/lock content based on progression.
  */
 export const ProgressionGuard = ({ system, children, fallback = null, lockOverlay = false }) => {
+  /*
+  Deactivated progression-based limitations.
+  Always return children to ensure all users see all interface sections.
+  */
+  return <>{children}</>;
+
   const { isUnlocked, loading } = useProgression();
 
   if (loading) return null;

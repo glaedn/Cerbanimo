@@ -33,7 +33,7 @@ export const MODE_CONFIGS = {
     label: "Commons",
     icon: "🌱",
     secondaryNav: [
-      { label: "Communities", path: "/commons" },
+      { label: "Communities", path: "/commons/communities" },
       { label: "Marketplace", path: "/commons/marketplace" },
       { label: "Guilds", path: "/commons/guilds" },
       { label: "Activity", path: "/commons/activity" }
