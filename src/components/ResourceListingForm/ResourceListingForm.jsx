@@ -73,6 +73,10 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
     if (initialResourceData) {
       // Convert nulls to empty strings for controlled inputs if necessary
       const processedData = { ...getInitialFormData(), ...initialResourceData };
+      // Ensure price is hydrated correctly
+      if (initialResourceData.price !== undefined && initialResourceData.price !== null) {
+        processedData.price = initialResourceData.price.toString();
+      }
       for (const key in processedData) {
         if (processedData[key] === null && key !== 'latitude' && key !== 'longitude' && key !== 'owner_user_id' && key !== 'owner_community_id') {
           processedData[key] = '';

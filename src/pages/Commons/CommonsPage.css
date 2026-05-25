@@ -20,6 +20,59 @@
   gap: 32px;
 }
 
+.commons-nav-section {
+  margin-bottom: 1rem;
+}
+
+.commons-nav-section h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  color: var(--commons-accent);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.nav-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 174, 109, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #fff;
+}
+
+.nav-card:hover {
+  background: rgba(255, 174, 109, 0.1);
+  border-color: var(--commons-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px var(--commons-glow);
+}
+
+.nav-card .icon {
+  font-size: 1.5rem;
+}
+
+.nav-card .label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .commons-sidebar {
   display: flex;
   flex-direction: column;
@@ -104,6 +157,10 @@
 
   .commons-grid {
     grid-template-columns: 1fr;
+  }
+
+  .nav-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .mode-header > div {

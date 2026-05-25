@@ -61,9 +61,11 @@ class MarketplaceEngine {
     const query = `
       SELECT *, ST_Distance(location_point, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) as distance
       FROM (
-        SELECT id, name, description, 'need' as entry_type, location_point, urgency, category, created_at FROM needs WHERE status = 'open'
+        SELECT id, name, description, 'need' as entry_type, location_point, urgency, category, created_at, NULL as price, NULL as service_price FROM needs WHERE status = 'open'
         UNION ALL
-        SELECT id, name, description, 'resource' as entry_type, location_point, 'medium' as urgency, category, created_at FROM resources WHERE status = 'available'
+        SELECT id, name, description, 'resource' as entry_type, location_point, 'medium' as urgency, category, created_at, price, NULL as service_price FROM resources WHERE status = 'available'
+        UNION ALL
+        SELECT id, name, description, 'service' as entry_type, location_point, 'medium' as urgency, category, created_at, NULL as price, service_price FROM projects WHERE is_service = TRUE
       ) as combined
       WHERE ST_DWithin(location_point, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
       ORDER BY distance ASC

@@ -48,7 +48,7 @@ const UnifiedListingCard = ({ entry }) => {
     try {
       const token = await getAccessTokenSilently();
       const endpoint = isService
-        ? `${import.meta.env.VITE_BACKEND_URL}/services/${entry.id}/purchase`
+        ? `${import.meta.env.VITE_BACKEND_URL}/projects/${entry.id}/purchase`
         : `${import.meta.env.VITE_BACKEND_URL}/resources/${entry.id}/purchase`;
 
       const response = await axios.post(endpoint, {}, {
@@ -143,7 +143,11 @@ const UnifiedListingCard = ({ entry }) => {
         <Button
           fullWidth
           variant="contained"
-          onClick={() => isNeed ? navigate(`/needs/${entry.id}`) : null}
+          onClick={() => {
+            if (isNeed) navigate(`/needs/${entry.id}`);
+            else if (isService) navigate(`/missions/project/${entry.id}`);
+            else if (isResource) navigate(`/commons/resources`); // Or a resource detail page if it existed
+          }}
           startIcon={isNeed ? <Wrench size={16} /> : <Rocket size={16} />}
           sx={{
             bgcolor: '#ffae6d',
