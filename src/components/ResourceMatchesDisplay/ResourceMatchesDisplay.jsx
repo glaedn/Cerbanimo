@@ -20,6 +20,7 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
   const [offeredHelpForNeedIds, setOfferedHelpForNeedIds] = useState(new Set());
+  const [exchangeConfirm, setExchangeConfirm] = useState({ open: false, need: null });
 
   const fetchMatches = useCallback(async () => {
     if (!resourceId || !getAccessTokenSilently) {
@@ -56,6 +57,13 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
   };
 
   const handleOfferHelp = async (need) => {
+    setExchangeConfirm({ open: true, need });
+  };
+
+  const confirmExchange = async () => {
+    const need = exchangeConfirm.need;
+    setExchangeConfirm({ open: false, need: null });
+
     if (!getAccessTokenSilently) {
       setNotification({ open: true, message: 'Authentication service not available.', severity: 'error' });
       return;
@@ -63,7 +71,7 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
     const payload = {
       needId: need.id,
       resourceId: resourceId,
-      notes: `Offer to fulfill need '${need.name}' with resource ID '${resourceId}'.` // Example note
+      notes: `Offer to fulfill need '${need.name}' with resource ID '${resourceId}'.`
     };
 
     try {
@@ -73,15 +81,12 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
       });
 
       if (response.status === 201) {
-        setNotification({ open: true, message: response.data.message || 'Exchange initiated successfully! A coordination task has been created.', severity: 'success' });
+        setNotification({ open: true, message: response.data.message || 'Exchange initiated successfully!', severity: 'success' });
         setOfferedHelpForNeedIds(prev => new Set(prev).add(need.id));
-      } else {
-        setNotification({ open: true, message: response.data.message || 'Failed to initiate exchange.', severity: 'error' });
       }
     } catch (err) {
-      console.error('Error initiating exchange (offering help):', err.response ? err.response.data : err.message);
-      const errorMsg = err.response?.data?.message || 'An error occurred while offering help.';
-      setNotification({ open: true, message: errorMsg, severity: 'error' });
+      console.error('Error initiating exchange:', err);
+      setNotification({ open: true, message: 'Failed to initiate exchange.', severity: 'error' });
     }
   };
 
@@ -116,6 +121,34 @@ const ResourceMatchesDisplay = ({ resourceId, getAccessTokenSilently, loggedInUs
 
   return (
     <Paper elevation={1} sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+      {/* Exchange Confirmation Modal */}
+      <Snackbar
+        open={exchangeConfirm.open}
+        anchorOrigin={{ vertical: 'center', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button size="small" color="inherit" onClick={() => setExchangeConfirm({ open: false, need: null })}>CANCEL</Button>
+              <Button size="small" variant="contained" color="primary" onClick={confirmExchange}>CONFIRM</Button>
+            </Box>
+          }
+          sx={{
+            bgcolor: 'rgba(28, 28, 30, 0.95)',
+            border: '1px solid #00F3FF',
+            color: 'white',
+            '& .MuiAlert-icon': { color: '#00F3FF' }
+          }}
+        >
+          <Typography variant="body2" sx={{ fontFamily: 'Orbitron', mb: 1 }}>
+            Offer resource to fulfill need: {exchangeConfirm.need?.name}?
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#ff5ca2', display: 'block', mb: 1 }}>
+            🔥 2% transaction burn applies to reward flows.
+          </Typography>
+        </Alert>
+      </Snackbar>
       <Typography variant="h6" gutterBottom component="div" sx={{ mb: 2 }}>
         Potential Need Matches for Your Resource
       </Typography>

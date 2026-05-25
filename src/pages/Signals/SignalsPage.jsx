@@ -27,35 +27,9 @@ const SignalsPage = () => {
 
       const fetchImpact = async () => {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact-receipts/community/${profile.primary_community_id || 1}`);
-          const now = new Date();
-          const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-          const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
-
-          let currentPeriod = 0;
-          let priorPeriod = 0;
-
-          res.data.forEach(curr => {
-            const issuedAt = new Date(curr.issued_at);
-            const quantity = parseFloat(curr.quantity) || 0;
-            if (issuedAt >= thirtyDaysAgo) {
-              currentPeriod += quantity;
-            } else if (issuedAt >= sixtyDaysAgo) {
-              priorPeriod += quantity;
-            }
-          });
-
-          const total = res.data.reduce((acc, curr) => acc + (parseFloat(curr.quantity) || 0), 0);
-          setImpactScore(Math.round(total));
-
-          if (priorPeriod > 0) {
-            const trend = ((currentPeriod - priorPeriod) / priorPeriod) * 100;
-            setImpactTrend(Math.round(trend));
-          } else if (currentPeriod > 0) {
-            setImpactTrend(100);
-          } else {
-            setImpactTrend(0);
-          }
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/impact-receipts/community/${profile.primary_community_id || 1}/trend`);
+          setImpactScore(res.data.score);
+          setImpactTrend(res.data.trend);
         } catch (err) {
           console.error('Error fetching impact score:', err);
         }

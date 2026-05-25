@@ -76,6 +76,7 @@ const CommunityHub = () => {
     const [isDelegating, setIsDelegating] = useState(false);
     const [delegatedTo, setDelegatedTo] = useState(null);
     const [memberScores, setMemberScores] = useState([]);
+    const [tokenStats, setTokenStats] = useState(null);
     const [discordConfig, setDiscordConfig] = useState({ guild_id: '', need_channel_id: '', alert_channel_id: '' });
     const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false);
 
@@ -268,6 +269,15 @@ const CommunityHub = () => {
                     headers: headers
                 });
                 setCommunityServices(servicesResponse.data || []);
+                // Fetch Token Stats
+                try {
+                    const statsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/token-stats`, {
+                        headers: headers
+                    });
+                    setTokenStats(statsResponse.data);
+                } catch (sErr) {
+                    console.warn("Failed to fetch token stats:", sErr);
+                }
 
                 // Fetch Discord config
                 try {
@@ -582,6 +592,9 @@ const CommunityHub = () => {
             <Box sx={{ p: 1 }}>
                 <Typography variant="body1" sx={{ mb: 2, fontFamily: 'Orbitron', color: 'white' }}>
                     Purchase community service "{service.name}" for {service.service_price} tokens?
+                    <Typography variant="caption" sx={{ color: '#ff5ca2', mb: 2, display: 'block', fontFamily: 'Orbitron' }}>
+                        🔥 {Math.floor(service.service_price * 0.02)} cotokens will be burned.
+                    </Typography>
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                     <Button
@@ -686,6 +699,33 @@ const CommunityHub = () => {
                         <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
                             STATIONED AT: {community.location.coordinates[1].toFixed(4)}, {community.location.coordinates[0].toFixed(4)}
                         </Typography>
+                    </Box>
+                )}
+                {tokenStats && (
+                    <Box sx={{
+                        mt: 2, mb: 2, p: 2,
+                        bgcolor: 'rgba(0, 243, 255, 0.05)',
+                        border: '1px solid rgba(0, 243, 255, 0.2)',
+                        borderRadius: 1,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: isMobile ? 2 : 4
+                    }}>
+                        <Box textAlign="center">
+                            <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>TREASURY BALANCE</Typography>
+                            <Typography variant="h6" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>{Number(tokenStats.cotoken_balance).toLocaleString()} Ȼ</Typography>
+                        </Box>
+                        <Box textAlign="center">
+                            <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>TOTAL BURNED</Typography>
+                            <Typography variant="h6" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron' }}>🔥 {Number(tokenStats.total_burned).toLocaleString()} Ȼ</Typography>
+                        </Box>
+                        <Box textAlign="center">
+                            <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>CIRCULATION INCENTIVE</Typography>
+                            <Tooltip title="Total contributions to the community circulation incentive ecosystem.">
+                                <Typography variant="h6" sx={{ color: '#00F3FF', fontFamily: 'Orbitron', cursor: 'help' }}>🌀 {Number(tokenStats.total_decayed).toLocaleString()} Ȼ</Typography>
+                            </Tooltip>
+                        </Box>
                     </Box>
                 )}
                 <Box className="tag-container" sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
@@ -1273,7 +1313,12 @@ const CommunityHub = () => {
                                             <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
                                             <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)', mt: 'auto' }} />
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="h6" sx={{ color: '#FF5CA2', fontSize: '1rem' }}>{service.service_price} Tokens</Typography>
+                                                <Box>
+                                                    <Typography variant="h6" sx={{ color: '#FF5CA2', fontSize: '1rem' }}>{service.service_price} Tokens</Typography>
+                                                    <Tooltip title="2% burn applies to support deflation">
+                                                        <Typography variant="caption" sx={{ color: 'rgba(255, 92, 162, 0.6)', cursor: 'help' }}>2% burn applies</Typography>
+                                                    </Tooltip>
+                                                </Box>
                                                 <Button
                                                     variant="contained"
                                                     size={isMobile ? "small" : "medium"}

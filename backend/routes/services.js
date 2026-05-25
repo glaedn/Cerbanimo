@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../db.js';
+import { applyBurn } from '../utils/burnUtils.js';
 
 const router = express.Router();
 
@@ -81,11 +82,23 @@ router.post('/:projectId/purchase', async (req, res) => {
       return res.status(400).json({ message: 'Insufficient Galactic Credits' });
     }
 
+    // Record Burn
+    const burnAmount = await applyBurn(
+      client,
+      price,
+      'marketplace_service_purchase',
+      serviceProject.id,
+      'user',
+      buyer.id,
+      serviceProject.community_id
+    );
+    const sellerAmount = price - burnAmount;
+
     // Deduct from buyer
     await client.query('UPDATE users SET cotokens = cotokens - $1 WHERE id = $2', [price, buyer.id]);
 
-    // Add to seller (optional, but good practice)
-    await client.query('UPDATE users SET cotokens = cotokens + $1 WHERE id = $2', [price, serviceProject.creator_id]);
+    // Add to seller (with burn applied)
+    await client.query('UPDATE users SET cotokens = cotokens + $1 WHERE id = $2', [sellerAmount, serviceProject.creator_id]);
 
     // 4. Create a new project instance for the buyer
     const newProjectQuery = `

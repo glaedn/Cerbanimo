@@ -39,6 +39,7 @@ const NeedsPage = () => {
   const [singleNeed, setSingleNeed] = useState(null);
   const [singleNeedComments, setSingleNeedComments] = useState([]);
   const [selectedNeed, setSelectedNeed] = useState(null);
+  const [verifyConfirm, setVerifyConfirm] = useState({ open: false, need: null });
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,19 +152,26 @@ const NeedsPage = () => {
     }
   };
 
-  const handleVerifyCompletion = async (need) => {
+  const handleVerifyCompletion = (need) => {
+    setVerifyConfirm({ open: true, need });
+  };
+
+  const confirmVerification = async () => {
+    const need = verifyConfirm.need;
+    setVerifyConfirm({ open: false, need: null });
+
     try {
       const token = await getAccessTokenSilently();
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/verification_v2/events`, {
-        taskId: null, // This is a need verification, might need backend support for null taskId if it's strict
+        taskId: null,
         verifierId: profile.id,
         status: 'approved',
-        verificationType: 'recipient_confirmed', // Using this type as the meeter confirms it's done
-        needId: need.id // Adding needId to the payload
+        verificationType: 'need_fulfillment_verified',
+        needId: need.id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Completion verified! Trust metrics updated.');
+      toast.success('Fulfillment verified! Tokens will be awarded after processing. 🎉');
     } catch (err) {
       console.error('Error verifying completion:', err);
       toast.error('Failed to record verification.');
@@ -546,6 +554,55 @@ const NeedsPage = () => {
             </>
           )}
         </Box>
+      </Modal>
+
+      {/* Verify Fulfillment Confirmation */}
+      <Modal
+        open={verifyConfirm.open}
+        onClose={() => setVerifyConfirm({ open: false, need: null })}
+      >
+        <Paper sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '400px' },
+          p: 4,
+          bgcolor: 'rgba(28, 28, 30, 0.95)',
+          border: '1px solid #00F3FF',
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          <Typography variant="h6" sx={{ fontFamily: 'Orbitron', mb: 2 }}>
+            VERIFY FULFILLMENT?
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255,255,255,0.7)' }}>
+            Confirming that "{verifyConfirm.need?.name}" has been completed to your satisfaction.
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#ff5ca2', display: 'block', mb: 3, fontFamily: 'Orbitron' }}>
+            🔥 2% BURN APPLIES TO ALL TRANSFERRED CREDITS.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button
+              onClick={() => setVerifyConfirm({ open: false, need: null })}
+              sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+            >
+              ABORT
+            </Button>
+            <Button
+              variant="contained"
+              onClick={confirmVerification}
+              sx={{
+                bgcolor: '#00F3FF',
+                color: 'black',
+                fontWeight: 'bold',
+                fontFamily: 'Orbitron'
+              }}
+            >
+              CONFIRM
+            </Button>
+          </Box>
+        </Paper>
       </Modal>
 
       <Modal

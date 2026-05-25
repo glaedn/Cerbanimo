@@ -1,5 +1,6 @@
 import pool from '../db.js';
 import ImpactReceiptService from './ImpactReceiptService.js';
+import { applyBurn } from '../utils/burnUtils.js';
 
 class TreasuryService {
   async getTreasury(communityId, client = null, lock = false) {
@@ -67,12 +68,24 @@ class TreasuryService {
         [amount, fromCommunityId]
       );
 
+      const burnAmount = await applyBurn(
+        client,
+        amount,
+        'community_treasury_outflow',
+        treasury.id,
+        'community',
+        fromCommunityId,
+        fromCommunityId
+      );
+      const netAmount = amount - burnAmount;
+
       // 2. Record outgoing transaction
       await this.recordTransaction(client, treasury.id, amount, 'out', purpose, {
         ...metadata,
         relatedEntityType: toType === 'community' ? 'community' : 'user',
         relatedEntityId: toId,
-        counterpartyCommunityId: toType === 'community' ? toId : null
+        counterpartyCommunityId: toType === 'community' ? toId : null,
+        burnAmount
       });
 
       // 3. Deposit to destination
@@ -80,7 +93,7 @@ class TreasuryService {
         const destTreasury = await this.getTreasury(toId, client, true);
         await client.query(
           'UPDATE community_treasury SET cotoken_balance = cotoken_balance + $1 WHERE community_id = $2',
-          [amount, toId]
+          [netAmount, toId]
         );
         await this.recordTransaction(client, destTreasury.id, amount, 'in', purpose, {
           ...metadata,
@@ -114,10 +127,10 @@ class TreasuryService {
         await TokenBridgeService.routeTransaction({
           senderId: fromCommunityId,
           receiverId: toId,
-          amount: amount,
+          amount: netAmount,
           type: 'community_to_user_internal',
-          reason: `Treasury payout: ${purpose}`,
-          metadata: { ...metadata, createdBy: metadata.createdBy }
+          reason: `Treasury payout (burn applied): ${purpose}`,
+          metadata: { ...metadata, createdBy: metadata.createdBy, originalAmount: amount, burnAmount }
         }, client);
       }
 

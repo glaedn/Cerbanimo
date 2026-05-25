@@ -91,7 +91,7 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS emergency_response_capable BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS share_location_publicly BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS participation_modes jsonb DEFAULT '[]',
-    ADD COLUMN IF NOT EXISTS trust_level int DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS trust_level NUMERIC(12, 4) DEFAULT 1.0,
     ADD COLUMN IF NOT EXISTS onboarding_stage text DEFAULT 'orientation',
     ADD COLUMN IF NOT EXISTS role_weights jsonb DEFAULT '{}',
     ADD COLUMN IF NOT EXISTS mentorship_status jsonb DEFAULT '{"is_mentor": false, "mentees": []}',
@@ -99,7 +99,8 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS totp_secret TEXT,
     ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS trust_bootstrap_expires_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS total_decayed NUMERIC(36, 18) DEFAULT 0;
   `;
 
   const alterSkillsQuery = `
@@ -159,7 +160,8 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS linked_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     ADD COLUMN IF NOT EXISTS compensation_model VARCHAR(50) DEFAULT 'volunteer',
     ADD COLUMN IF NOT EXISTS trust_requirements TEXT,
-    ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';
+    ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public',
+    ADD COLUMN IF NOT EXISTS health_score NUMERIC DEFAULT 0.94;
   `;
 
   const alterResourcesQuery = `
@@ -193,13 +195,32 @@ const alterExistingTables = async () => {
     // Update token precision and add blockchain fields
     await pool.query(`
       ALTER TABLE users
-      ALTER COLUMN cotokens TYPE NUMERIC(36,18);
+      ALTER COLUMN cotokens TYPE NUMERIC(36,18),
+      ALTER COLUMN trust_level TYPE NUMERIC(12, 4);
 
       ALTER TABLE token_transactions
       ALTER COLUMN amount TYPE NUMERIC(36,18),
       ADD COLUMN IF NOT EXISTS tx_hash TEXT,
       ADD COLUMN IF NOT EXISTS chain TEXT,
       ADD COLUMN IF NOT EXISTS on_chain_status VARCHAR(50);
+
+      ALTER TABLE community_treasury
+      ADD COLUMN IF NOT EXISTS total_burned NUMERIC(36,18) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS total_decayed NUMERIC(36,18) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_decay_run_at TIMESTAMP;
+
+      CREATE TABLE IF NOT EXISTS token_burns (
+        id SERIAL PRIMARY KEY,
+        transaction_type VARCHAR(64), -- 'marketplace_service_purchase', 'need_fulfillment', 'resource_exchange'
+        transaction_id INTEGER,
+        burned_amount NUMERIC(36,18),
+        burned_from VARCHAR(20), -- 'user', 'community'
+        entity_id INTEGER, -- user_id or community_id
+        community_id INTEGER REFERENCES communities(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_token_burns_community_date ON token_burns(community_id, created_at);
     `);
 
     await pool.query(alterStorySummariesQuery);
@@ -251,6 +272,7 @@ const alterExistingTables = async () => {
         vested_tokens NUMERIC DEFAULT 0,
         vesting_unlocks_at TIMESTAMP WITH TIME ZONE NOT NULL,
         vesting_revoked BOOLEAN DEFAULT FALSE,
+        released BOOLEAN DEFAULT FALSE,
         released_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );

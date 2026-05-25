@@ -1,6 +1,9 @@
 import { startAgentWorker } from './workers/agentWorker.js';
 import { startDomainWorkers } from './workers/domain/domainWorkers.js';
 import boss from './boss.js';
+import VestingService from '../services/VestingService.js';
+import AuditService from '../services/AuditService.js';
+import TokenDecayService from '../services/TokenDecayService.js';
 import TaskRoutingService from '../services/TaskRoutingService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
 import GuildService from '../services/GuildService.js';
@@ -33,7 +36,12 @@ export async function startWorkers() {
       'crisis-evaluation-job',
       'reward-adjustment-job',
       'intelligence-scoring-job',
-      'daily-task-activation-job'
+      'daily-task-activation-job',
+      'vesting-release-job',
+      'audit-process-job',
+      'founding-member-decay-job',
+      'token-decay-job',
+      'community-health-update-job'
     ];
 
     for (const queue of queues) {
@@ -80,6 +88,16 @@ export async function startWorkers() {
           return await runIntelligenceScoring();
         case 'daily-task-activation':
           return await TaskRoutingService.runDailyTaskActivationAndNotification();
+        case 'vesting-release':
+          return await VestingService.processVestingReleases();
+        case 'audit-process':
+          return await AuditService.processPendingAudits();
+        case 'founding-member-decay':
+          return await runFoundingMemberDecay();
+        case 'token-decay':
+          return await runTokenDecay();
+        case 'community-health-update':
+          return await runCommunityHealthUpdate();
         default:
           console.warn(`Unknown scheduled task type: ${type}`);
       }
@@ -87,6 +105,11 @@ export async function startWorkers() {
 
     // Schedule tasks with UNIQUE names to prevent overwriting
     await boss.schedule('daily-task-activation-job', '0 6 * * *', { type: 'daily-task-activation' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('vesting-release-job', '0 6 * * *', { type: 'vesting-release' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('audit-process-job', '0 7 * * *', { type: 'audit-process' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('founding-member-decay-job', '0 0 * * *', { type: 'founding-member-decay' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('token-decay-job', '0 3 1 * *', { type: 'token-decay' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('community-health-update-job', '0 */4 * * *', { type: 'community-health-update' }, { queue: 'scheduled-tasks' });
     await boss.schedule('nightly-reset-job', '0 0 * * *', { type: 'nightly-reset' }, { queue: 'scheduled-tasks' });
     await boss.schedule('interest-validation-job', '0 1 * * *', { type: 'interest-validation' }, { queue: 'scheduled-tasks' });
     await boss.schedule('guild-membership-sync-job', '*/15 * * * *', { type: 'guild-membership-sync' }, { queue: 'scheduled-tasks' });
@@ -101,6 +124,101 @@ export async function startWorkers() {
     console.log('All pg-boss workers and schedules started.');
   } catch (err) {
     console.error('Failed to start pg-boss workers:', err);
+  }
+}
+
+async function runFoundingMemberDecay() {
+  console.log('Running founding member trust decay...');
+  try {
+    // linearly decay the trust bonus for users inside their bootstrap window
+    // Bonus is level 3 -> level 1 (2 levels) over 60 days.
+    // 2 / 60 = 0.033333 per day.
+
+    await pool.query(`
+      UPDATE users
+      SET trust_level = GREATEST(1.0, trust_level - 0.0333)
+      WHERE is_founding_member = TRUE
+        AND trust_bootstrap_expires_at > NOW()
+        AND trust_level > 1.0
+    `);
+
+    await pool.query(`
+      UPDATE users
+      SET is_founding_member = FALSE
+      WHERE is_founding_member = TRUE
+        AND trust_bootstrap_expires_at <= NOW()
+    `);
+
+  } catch (err) {
+    console.error('Founding member decay failed:', err);
+  }
+}
+
+async function runTokenDecay() {
+  console.log('Running monthly token decay job...');
+  try {
+    // Process users in chunks
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+
+    while (hasMore) {
+      const usersRes = await pool.query(
+        "SELECT id FROM users WHERE cotokens > 0 LIMIT $1 OFFSET $2",
+        [limit, offset]
+      );
+
+      if (usersRes.rows.length === 0) {
+        hasMore = false;
+      } else {
+        for (const user of usersRes.rows) {
+          await TokenDecayService.decayUserTokens(user.id).catch(err =>
+            console.error(`Decay failed for user ${user.id}:`, err)
+          );
+        }
+        offset += limit;
+      }
+    }
+
+    // Process communities
+    const communitiesRes = await pool.query(
+      "SELECT community_id FROM community_treasury WHERE cotoken_balance > 0"
+    );
+    for (const comm of communitiesRes.rows) {
+      await TokenDecayService.decayCommunityTokens(comm.community_id).catch(err =>
+        console.error(`Decay failed for community ${comm.community_id}:`, err)
+      );
+    }
+
+  } catch (err) {
+    console.error('Token decay job failed:', err);
+  }
+}
+
+async function runCommunityHealthUpdate() {
+  console.log('Updating community health scores...');
+  try {
+    await pool.query(`
+      UPDATE communities c
+      SET health_score = sub.calc_score
+      FROM (
+        SELECT
+          c2.id,
+          CASE
+            WHEN cardinality(c2.approved_projects) = 0 THEN 0.94
+            ELSE (
+              SELECT COUNT(*)::float / cardinality(c2.approved_projects)
+              FROM projects p
+              WHERE p.id = ANY(c2.approved_projects)
+                AND p.status = 'active'
+            )
+          END as calc_score
+        FROM communities c2
+      ) sub
+      WHERE c.id = sub.id
+    `);
+  } catch (err) {
+    console.error('Community health update failed:', err);
   }
 }
 
