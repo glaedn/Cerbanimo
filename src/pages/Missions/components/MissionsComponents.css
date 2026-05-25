@@ -95,17 +95,37 @@
   font-weight: 600;
   border-radius: 4px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.mission-card-actions .orbit-btn.primary {
+  background: rgba(95, 240, 255, 0.15);
+  border: 1px solid rgba(95, 240, 255, 0.4);
+  color: #5ff0ff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .mission-card-actions .orbit-btn.primary:hover {
-  background: #fff;
-  border-color: #fff;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  background: rgba(95, 240, 255, 0.25);
+  border-color: #5ff0ff;
+  box-shadow: 0 0 20px rgba(95, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.mission-card-actions .orbit-btn.ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 0; /* Reset global margin */
 }
 
 .mission-card-actions .orbit-btn.ghost:hover {
-  background: rgba(95, 240, 255, 0.1);
-  box-shadow: 0 0 15px rgba(95, 240, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .orbit-btn.small {
