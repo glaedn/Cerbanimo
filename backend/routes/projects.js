@@ -4,6 +4,7 @@ import { autoGenerateTasks } from '../services/taskGenerator.js';
 import ImpactGraphService from '../services/ImpactGraphService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
 import GuildService from '../services/GuildService.js';
+import { applyBurn } from '../utils/burnUtils.js';
 
 
 const router = express.Router();
@@ -283,15 +284,19 @@ router.post('/:projectId/revive', async (req, res) => {
 // Purchase a service project
 router.post('/:projectId/purchase', async (req, res) => {
   const { projectId } = req.params;
-  const buyerId = req.user.id;
+  const auth0Id = req.auth?.payload?.sub;
+
+  if (!auth0Id) {
+    return res.status(401).json({ message: 'Unauthorized: No Auth0 ID found' });
+  }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     // 1. Get the buyer's internal user ID and username
-    const userQuery = 'SELECT id, username, cotokens FROM users WHERE id = $1';
-    const userResult = await client.query(userQuery, [buyerId]);
+    const userQuery = 'SELECT id, username, cotokens FROM users WHERE auth0_id = $1';
+    const userResult = await client.query(userQuery, [auth0Id]);
     const buyer = userResult.rows[0];
 
     if (!buyer) {
@@ -317,7 +322,6 @@ router.post('/:projectId/purchase', async (req, res) => {
     }
 
     // Record Burn
-    const { applyBurn } = await import('../utils/burnUtils.js');
     const burnAmount = await applyBurn(
       client,
       price,
@@ -325,7 +329,7 @@ router.post('/:projectId/purchase', async (req, res) => {
       serviceProject.id,
       'user',
       buyer.id,
-      serviceProject.community_id
+      null // projects table doesn't have community_id, passing null
     );
     const sellerAmount = price - burnAmount;
 

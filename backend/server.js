@@ -147,6 +147,7 @@ const jwtCheck = auth({
   audience: process.env.BACKEND_URL,
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
   tokenSigningAlg: 'RS256',
+  tokenSigningClockTolerance: 60, // Tolerance for clock skew
 });
 
 // Middleware
