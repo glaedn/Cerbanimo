@@ -54,3 +54,40 @@
   grid-template-columns: 1fr;
   gap: 16px;
 }
+
+.urgency-container {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.urgency-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.urgency-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.urgency-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
+}
+
+.mission-card-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.mission-card-actions button {
+  flex: 1;
+}

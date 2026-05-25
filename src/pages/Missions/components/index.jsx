@@ -51,10 +51,67 @@ export const MissionPulse = () => {
   );
 };
 
+const UrgencyBar = ({ percentage }) => {
+  // Color interpolation: Blue (low urgency) to Red (high urgency)
+  // Blue: rgb(95, 240, 255) -> Cyan/Blue
+  // Red: rgb(255, 92, 162) -> Pinkish Red
+
+  const r = Math.round(95 + (255 - 95) * percentage);
+  const g = Math.round(240 + (92 - 240) * percentage);
+  const b = Math.round(255 + (162 - 255) * percentage);
+
+  const color = `rgb(${r}, ${g}, ${b})`;
+
+  return (
+    <div className="urgency-container">
+      <div className="urgency-label">URGENCY_LEVEL</div>
+      <div className="urgency-bar">
+        <div
+          className="urgency-fill"
+          style={{
+            width: `${percentage * 100}%`,
+            background: `linear-gradient(90deg, rgba(95, 240, 255, 0.3) 0%, ${color} 100%)`,
+            boxShadow: `0 0 10px ${color}`
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
 export const ActiveMissionsList = () => {
   const { profile } = useUserProfile();
   const { assignedTasks, loading } = useAssignedTasks(profile?.id);
   const navigate = useNavigate();
+
+  const processedTasks = React.useMemo(() => {
+    if (!assignedTasks) return [];
+
+    return assignedTasks
+      .filter(task => task.status !== 'completed')
+      .map(task => {
+        const estimatedHours = (task.reward_tokens || 0) / 10;
+        const now = new Date();
+        const deadlineDate = task.due_date ? new Date(task.due_date) : null;
+
+        let urgencyPercentage = 0;
+        if (deadlineDate) {
+          const remainingHours = (deadlineDate - now) / 3600000;
+          // Urgency = Time Required / (Time Required + Time Available)
+          // If time available is 0 or less, urgency is 100%
+          urgencyPercentage = estimatedHours / (estimatedHours + Math.max(0, remainingHours));
+        } else {
+          // Default low urgency if no deadline
+          urgencyPercentage = 0.1;
+        }
+
+        return {
+          ...task,
+          urgencyPercentage: Math.min(1, Math.max(0, urgencyPercentage))
+        };
+      })
+      .sort((a, b) => b.urgencyPercentage - a.urgencyPercentage);
+  }, [assignedTasks]);
 
   return (
     <div className="active-missions-list">
@@ -65,16 +122,32 @@ export const ActiveMissionsList = () => {
       <div className="missions-grid">
         {loading ? (
           <p className="placeholder-text">LOADING_TASKS...</p>
-        ) : assignedTasks?.length > 0 ? (
-          assignedTasks.map(task => (
+        ) : processedTasks.length > 0 ? (
+          processedTasks.map(task => (
             <FocusCard
               key={task.id}
               title={task.name}
-              kicker={task.projectName}
+              kicker={task.project_name}
               status={task.status.toUpperCase()}
-              actionLabel="Execute Task"
-              onAction={() => navigate(`/missions/visualizer/${task.projectId}/${task.id}`)}
-            />
+              actions={
+                <div className="mission-card-actions">
+                  <button
+                    className="orbit-btn primary small"
+                    onClick={() => navigate(`/missions/visualizer/${task.project_id}/${task.id}`)}
+                  >
+                    View Mission
+                  </button>
+                  <button
+                    className="orbit-btn ghost small"
+                    onClick={() => navigate(`/missions/visualizer/${task.project_id}`)}
+                  >
+                    View Project
+                  </button>
+                </div>
+              }
+            >
+              <UrgencyBar percentage={task.urgencyPercentage} />
+            </FocusCard>
           ))
         ) : (
           <p className="empty-state">No tasks currently assigned. Browse projects to contribute.</p>

@@ -33,6 +33,9 @@ const useAssignedTasks = (userId) => {
         status: task.status || 'Unknown',
         project_name: task.project_name || 'N/A',
         project_id: task.project_id || null,
+        reward_tokens: task.reward_tokens || 0,
+        due_date: task.due_date || null,
+        deadline: task.due_date || null,
         timeRemaining: 'N/A', // Placeholder
       }));
       
