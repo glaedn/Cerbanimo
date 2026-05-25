@@ -8,24 +8,14 @@ import { CORE_MODES } from '../utils/platformNavigation';
  */
 export const useAdaptiveNavigation = (profile) => {
   return useMemo(() => {
-    if (!profile || !profile.roleProfile) {
-      return {
-        visibleModes: CORE_MODES.filter(m => m.label !== 'Signals'),
-        priorityActions: [],
-        contextualPanels: []
-      };
-    }
+    /*
+    Deactivated role-based interface limitations.
+    All users should see all four main interface section buttons.
+    */
+    const visibleModes = CORE_MODES;
 
-    const { roleProfile, unlockedSystems } = profile;
-    const { primaryRole, onboardingStage } = roleProfile;
-
-    // Filter modes based on progression
-    const visibleModes = CORE_MODES.filter(mode => {
-      if (mode.label === 'Signals' && !unlockedSystems.advancedGovernance && onboardingStage === 'orientation') {
-        return false;
-      }
-      return true;
-    });
+    const primaryRole = profile?.roleProfile?.primaryRole || 'Explorer';
+    const unlockedSystems = profile?.unlockedSystems || {};
 
     // Determine priority actions based on role
     const priorityActions = [];
