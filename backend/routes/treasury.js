@@ -58,9 +58,17 @@ router.get('/community/:communityId/transactions', resolveUser, async (req, res)
   }
 });
 
-router.get('/community/:communityId/reciprocity', async (req, res) => {
+router.get('/community/:communityId/reciprocity', resolveUser, async (req, res) => {
   try {
     const { communityId } = req.params;
+
+    // Authorization: Member check
+    const memberCheck = await pool.query(
+      'SELECT 1 FROM communities WHERE id = $1 AND $2 = ANY(members)',
+      [communityId, req.user.id]
+    );
+    if (memberCheck.rows.length === 0) return res.status(403).json({ error: 'Community membership required' });
+
     const result = await pool.query(
       'SELECT * FROM community_balance_of_aid WHERE from_community_id = $1 OR to_community_id = $1',
       [communityId]

@@ -64,7 +64,7 @@ const createIntegrationTables = async () => {
         INSERT INTO community_integrations (community_id, platform, external_workspace_id, external_channel_id, created_at)
         SELECT community_id, 'discord', guild_id, need_channel_id, created_at
         FROM community_discord_config
-        ON CONFLICT (community_id, platform) DO NOTHING;
+        ON CONFLICT (community_id, platform, external_workspace_id, external_channel_id) DO NOTHING;
       `);
     }
 
