@@ -65,8 +65,9 @@ const TaskBrowser = ({ initialTab = 0 }) => {
             return;
           }
       
-          const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant`, {
-            params: { skills: userSkills },
+          const params = new URLSearchParams();
+          userSkills.forEach(skill => params.append('skills', skill));
+          const tasksResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/relevant?${params.toString()}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
       
@@ -193,7 +194,7 @@ const TaskBrowser = ({ initialTab = 0 }) => {
                       <br />
                       {type === 'available' && (
                         <Typography component="span" variant="body2" sx={{ color: '#00f3ff', fontWeight: 'bold' }}>
-                          ⚡ Priority Score: {(task.priority_score || 0).toFixed(1)}
+                          ⚡ Priority Score: {Number(task.priority_score || 0).toFixed(1)}
                         </Typography>
                       )}
                       {task.public_good_score && (
