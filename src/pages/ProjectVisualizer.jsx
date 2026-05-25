@@ -660,13 +660,14 @@ const ProjectVisualizer = () => {
       .attr("preserveAspectRatio", "xMidYMid meet")
       .call(zoomRef.current)
       .style("touch-action", "none");
-    const timelineHeight = 1500;
     const earliestTaskStart = d3.min(tasks, t => t.start_date ? new Date(t.start_date).getTime() : null);
     const projectStart = earliestTaskStart || new Date(project?.created_at || Date.now()).getTime();
     const hasTimeline = !!project?.due_date;
     const projectEnd = hasTimeline
         ? new Date(project.due_date).getTime()
         : (projectStart + 30 * 24 * 60 * 60 * 1000);
+    const totalProjectDays = Math.max(1, Math.ceil((projectEnd - projectStart) / (24 * 60 * 60 * 1000)));
+    const timelineHeight = Math.max(1500, totalProjectDays * 60);
 
     const timeToY = (time) => {
         const t = typeof time === 'string' ? new Date(time).getTime() : time;
@@ -789,34 +790,22 @@ const ProjectVisualizer = () => {
         });
       });
     }
-    if (hasTimeline) {
-      // Timeline Grid and Day Labels
-      const totalDays = Math.ceil((projectEnd - projectStart) / (24 * 60 * 60 * 1000));
-      for (let i = 0; i <= totalDays; i++) {
-          const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
-          const y = timeToY(dayTime);
+    // Timeline Grid and Day Labels
+    for (let i = 0; i <= totalProjectDays; i++) {
+        const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
+        const y = timeToY(dayTime);
 
           gridGroup.append("line")
             .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
             .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
 
-          gridGroup.append("text")
-            .attr("class", "day-label")
-            .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
-            .attr("y", y + 15)
-            .attr("fill", "rgba(128, 128, 128, 0.4)")
-            .attr("font-size", "12px").attr("font-family", "Space Mono")
-            .text(`DAY ${i + 1}`);
-      }
-
-      // Current Time Marker
-      mainGroup.append("line")
-        .attr("x1", -1000).attr("y1", nowY).attr("x2", 2000).attr("y2", nowY)
-        .attr("stroke", "rgba(0, 243, 255, 0.4)").attr("stroke-width", 1).attr("stroke-dasharray", "8,4");
-
-      mainGroup.append("text")
-        .attr("x", 10).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 255, 0.6)")
-        .attr("font-size", "12px").attr("font-family", "Orbitron").text("PRESENT_SIGNAL");
+        gridGroup.append("text")
+          .attr("class", "day-label")
+          .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
+          .attr("y", y + 15)
+          .attr("fill", "rgba(128, 128, 128, 0.4)")
+          .attr("font-size", "12px").attr("font-family", "Space Mono")
+          .text(new Date(dayTime).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }));
     }
 
     // Render Rails
@@ -1054,7 +1043,7 @@ const ProjectVisualizer = () => {
             {isEditMode && <button className="tab new-skill-tab" onClick={() => { setTaskForm({ ...initialForm, project_id: projectId, skill_id: "" }); setShowTaskPopup(true); }}>+ New Skill</button>}
           </div>
           <div className="scroll-shadow right-shadow" />
-          <div className="visualization-container" style={{ width: "100%", overflow: "hidden" }}>
+          <div className="visualization-container glass-panel" style={{ width: "100%", overflow: "hidden" }}>
             <svg ref={svgRef} width={svgDimensions.width} height={svgDimensions.height}></svg>
             {isProjectCreator && (
               <div className="edit-buttons">
@@ -1079,7 +1068,7 @@ const ProjectVisualizer = () => {
       <ServiceSettingsModal open={showServiceModal} onClose={() => setShowServiceModal(false)} project={project} onUpdate={u => updateProject(u)} userId={userId} />
       {hoveredNode && (
         <div ref={tooltipRef} className="tooltip-container" style={{ position: 'fixed', left: tooltipPosition.x, top: tooltipPosition.y, opacity: 1, zIndex: 9999, pointerEvents: 'none' }}>
-          <div className="node-tooltip">
+          <div className="node-tooltip glass-panel">
             <h4>{hoveredNode.name}</h4>
             {hoveredNode.category && <p>Category: {hoveredNode.category}</p>}
             <p>Status: {hoveredNode.status}</p>
@@ -1087,7 +1076,7 @@ const ProjectVisualizer = () => {
           </div>
         </div>
       )}
-      <div className="project-info">
+      <div className="project-info glass-panel">
         <h3>{project?.name}</h3><p className="project-description">{project?.description}</p>
         {outcomes.length > 0 && <Box sx={{ mt: 2, mb: 2, p: 1, borderLeft: '3px solid #ff5ca2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}><Typography variant="caption" sx={{ color: '#ff5ca2', fontFamily: 'Orbitron', display: 'block', mb: 0.5 }}>INTENDED REAL-WORLD EFFECT</Typography>{outcomes.map(o => <Typography key={o.id} variant="body2" sx={{ color: '#eee', fontStyle: 'italic' }}>&quot;{o.statement}&quot;</Typography>)}</Box>}
         {/* <div className="token-pool">
@@ -1165,11 +1154,11 @@ const ProjectVisualizer = () => {
         <div><span style={{ border: "1px dashed #666", borderRadius: "50%", display: "inline-block", width: "10px", height: "10px" }}></span> External</div>
       </div>
       <Modal open={showCommunityProposalPopup} onClose={() => setShowCommunityProposalPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="cyber-modal"><div className="cyber-border"><h3 className="cyber-title">Submit to Community</h3><div className="cyber-content"><Autocomplete options={userCommunities} getOptionLabel={o => o.name} onChange={(e, v) => setSelectedCommunity(v)} renderInput={p => <TextField {...p} label="Select Community" variant="outlined" fullWidth />} /><div className="cyber-button-group"><button onClick={() => setShowCommunityProposalPopup(false)} className="cyber-button cancel">Cancel</button><button onClick={handleSubmitCommunityProposal} className="community-proposal-button" disabled={!selectedCommunity}>Submit Proposal</button></div></div></div></div>
+        <div className="cyber-modal glass-panel"><div className="cyber-border"><h3 className="cyber-title">Submit to Community</h3><div className="cyber-content"><Autocomplete options={userCommunities} getOptionLabel={o => o.name} onChange={(e, v) => setSelectedCommunity(v)} renderInput={p => <TextField {...p} label="Select Community" variant="outlined" fullWidth />} /><div className="cyber-button-group"><button onClick={() => setShowCommunityProposalPopup(false)} className="cyber-button cancel">Cancel</button><button onClick={handleSubmitCommunityProposal} className="community-proposal-button" disabled={!selectedCommunity}>Submit Proposal</button></div></div></div></div>
       </Modal>
 
       <Modal open={showPlanPopup} onClose={() => setShowPlanPopup(false)} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="cyber-modal" style={{ maxWidth: '800px', width: '90%' }}>
+        <div className="cyber-modal glass-panel" style={{ maxWidth: '800px', width: '90%' }}>
           <div className="cyber-border">
             <h3 className="cyber-title">Textual Project Plan</h3>
             <div className="cyber-content" style={{ maxHeight: '60vh', overflowY: 'auto', textAlign: 'left', background: 'rgba(0,0,0,0.8)', padding: '20px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
