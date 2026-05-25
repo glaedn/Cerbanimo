@@ -181,6 +181,7 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS discord_channel_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS discord_thread_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS compensation_model VARCHAR(50) DEFAULT 'shared',
+    ADD COLUMN IF NOT EXISTS price NUMERIC,
     ADD COLUMN IF NOT EXISTS trust_requirements TEXT,
     ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';
   `;

@@ -1,5 +1,9 @@
 import React from 'react';
 import { Box, Typography, Button, Chip } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import {
   AlertTriangle,
   Package,
@@ -7,17 +11,24 @@ import {
   Clock,
   MapPin,
   ShieldCheck,
-  Rocket
+  Rocket,
+  ShoppingCart
 } from 'lucide-react';
 import theme from '../../../styles/theme';
 
 const UnifiedListingCard = ({ entry }) => {
+  const navigate = useNavigate();
+  const { getAccessTokenSilently } = useAuth0();
   const isNeed = entry.entry_type === 'need';
   const isResource = entry.entry_type === 'resource';
+  const isService = entry.entry_type === 'service';
+
+  const price = isService ? entry.service_price : entry.price;
 
   const getIcon = () => {
     if (isNeed) return <AlertTriangle size={18} />;
     if (isResource) return <Package size={18} />;
+    if (isService) return <Wrench size={18} />;
     return <Wrench size={18} />;
   };
 
@@ -29,6 +40,26 @@ const UnifiedListingCard = ({ entry }) => {
     if (entry.urgency === 'critical') return '#ff3232';
     if (entry.urgency === 'high') return '#ffae6d';
     return '#5ff0ff';
+  };
+
+  const handlePurchase = async () => {
+    if (!price) return;
+
+    try {
+      const token = await getAccessTokenSilently();
+      const endpoint = isService
+        ? `${import.meta.env.VITE_BACKEND_URL}/services/${entry.id}/purchase`
+        : `${import.meta.env.VITE_BACKEND_URL}/resources/${entry.id}/purchase`;
+
+      const response = await axios.post(endpoint, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success(response.data.message || 'Purchase successful!');
+    } catch (err) {
+      console.error('Purchase error:', err);
+      toast.error(err.response?.data?.message || 'Failed to complete purchase.');
+    }
   };
 
   return (
@@ -73,13 +104,25 @@ const UnifiedListingCard = ({ entry }) => {
 
       <Typography variant="body2" sx={{
         color: 'rgba(255,255,255,0.7)',
-        mb: 3,
+        mb: 1.5,
         flexGrow: 1,
         lineHeight: 1.5,
         fontSize: '0.85rem'
       }}>
         {entry.description}
       </Typography>
+
+      {price && (
+        <Typography variant="caption" sx={{
+          display: 'block',
+          color: '#ffae6d',
+          fontFamily: 'Orbitron',
+          mb: 2,
+          fontSize: '0.75rem'
+        }}>
+          PRICE: {price} GALACTIC CREDITS
+        </Typography>
+      )}
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
         <Box display="flex" alignItems="center" gap={0.5} sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
@@ -100,6 +143,7 @@ const UnifiedListingCard = ({ entry }) => {
         <Button
           fullWidth
           variant="contained"
+          onClick={() => isNeed ? navigate(`/needs/${entry.id}`) : null}
           startIcon={isNeed ? <Wrench size={16} /> : <Rocket size={16} />}
           sx={{
             bgcolor: '#ffae6d',
@@ -112,20 +156,22 @@ const UnifiedListingCard = ({ entry }) => {
         >
           {isNeed ? 'OFFER_AID' : 'REQUEST_ACCESS'}
         </Button>
-        <Button
-          variant="outlined"
-          onClick={() => alert(`Starting mission for ${entry.name}`)}
-          sx={{
-            borderColor: 'rgba(255,174,109,0.3)',
-            color: '#ffae6d',
-            minWidth: '44px',
-            p: 0,
-            '&:hover': { borderColor: '#ffae6d' }
-          }}
-          title="Start Mission"
-        >
-          <Rocket size={18} />
-        </Button>
+        {(isNeed || price) && (
+          <Button
+            variant="outlined"
+            onClick={() => isNeed ? navigate(`/needs/${entry.id}`) : handlePurchase()}
+            sx={{
+              borderColor: 'rgba(255,174,109,0.3)',
+              color: '#ffae6d',
+              minWidth: '44px',
+              p: 0,
+              '&:hover': { borderColor: '#ffae6d' }
+            }}
+            title={isNeed ? "Start Mission" : "Purchase"}
+          >
+            {isNeed ? <Rocket size={18} /> : <ShoppingCart size={18} />}
+          </Button>
+        )}
       </Box>
     </Box>
   );

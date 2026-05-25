@@ -32,6 +32,7 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
     location_text: '',
     is_recurring: false,
     recurring_details: '',
+    price: '',
     status: 'available', // Default status
     // Ensure all fields from initialResourceData are considered or have defaults
     latitude: null,
@@ -153,6 +154,18 @@ const ResourceListingForm = ({ initialResourceData, onSubmit, onCancel }) => {
             fullWidth
             required
             variant="outlined"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Price (Galactic Credits)"
+            name="price"
+            type="number"
+            value={formData.price}
+            onChange={handleChange}
+            fullWidth
+            variant="outlined"
+            helperText="Optional: Leave blank for free/shared use"
           />
         </Grid>
         <Grid item xs={12}>

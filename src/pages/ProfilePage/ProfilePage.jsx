@@ -1521,6 +1521,7 @@ const ProfilePage = () => {
                       <br />
                       <Typography component="span" variant="body2" sx={{ color: theme.colors.textSecondary, fontFamily: theme.typography.fontFamilyBase }}>
                         Quantity: {resource.quantity || 'N/A'} - Status: {resource.status || 'N/A'}
+                        {resource.price && ` - Price: ${resource.price} Galactic Credits`}
                       </Typography>
                     </>
                   } 
@@ -1533,6 +1534,75 @@ const ProfilePage = () => {
                   }}
                   secondaryTypographyProps={{ 
                      sx: { fontFamily: theme.typography.fontFamilyBase }
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+
+      {/* Services Panel */}
+      <Box
+        className="profile-services-container"
+        sx={{
+          ...panelStyle,
+          borderColor: theme.colors.accentBlue,
+          boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue),
+        }}
+      >
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            color: theme.colors.primary,
+            fontFamily: theme.typography.fontFamilyAccent,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          My Services
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/missions/new?isService=true')}
+          sx={{
+            backgroundColor: theme.colors.accentGreen,
+            color: theme.colors.backgroundDefault,
+            fontFamily: theme.typography.fontFamilyAccent,
+            '&:hover': { backgroundColor: '#00b870' }
+          }}
+        >
+          Offer a Service
+        </Button>
+        {!services.length && (
+          <Typography sx={{fontFamily: theme.typography.fontFamilyBase, color: theme.colors.textSecondary, mt: 2}}>
+            You haven't listed any services yet.
+          </Typography>
+        )}
+        {services.length > 0 && (
+          <List sx={{width: '100%'}}>
+            {services.map((service) => (
+              <ListItem
+                key={service.id}
+                sx={{
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  mb: 1,
+                  backgroundColor: 'rgba(28, 28, 30, 0.5)',
+                  borderRadius: theme.borders.borderRadiusSm,
+                }}
+              >
+                <ListItemText
+                  primary={service.name}
+                  secondary={
+                    <>
+                      <Typography component="span" variant="body2" sx={{ color: theme.colors.textSecondary }}>
+                        Price: {service.service_price || 0} Galactic Credits
+                      </Typography>
+                    </>
+                  }
+                  primaryTypographyProps={{
+                    sx: { color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }
                   }}
                 />
               </ListItem>

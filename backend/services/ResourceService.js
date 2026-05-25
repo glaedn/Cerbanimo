@@ -1,14 +1,14 @@
 import pool from '../db.js';
 
 class ResourceService {
-  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '', resourceType = null, availabilitySchedule = null, conditions = null, latitude = null, longitude = null) {
+  async addResource(ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status = 'available', skillIds = [], locationText = '', resourceType = null, availabilitySchedule = null, conditions = null, latitude = null, longitude = null, price = null) {
     const locationPoint = (latitude && longitude) ? `POINT(${longitude} ${latitude})` : null;
     const query = `
-      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text, resource_type, availability_schedule, conditions, location_point)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($15), 4326)' : 'NULL'})
+      INSERT INTO resources (owner_user_id, owner_community_id, name, description, category, condition, quantity, unit, status, skill_ids, location_text, resource_type, availability_schedule, conditions, price, location_point)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, ${locationPoint ? 'ST_SetSRID(ST_GeomFromText($16), 4326)' : 'NULL'})
       RETURNING *;
     `;
-    const params = [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions];
+    const params = [ownerUserId, ownerCommunityId, name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, price];
     if (locationPoint) params.push(locationPoint);
 
     const result = await pool.query(query, params);
@@ -224,7 +224,7 @@ class ResourceService {
   }
 
   async updateResource(id, data) {
-    const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude } = data;
+    const { name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, latitude, longitude, price } = data;
     const locationPoint = (latitude && longitude) ? `POINT(${longitude} ${latitude})` : null;
     const query = `
       UPDATE resources
@@ -240,12 +240,13 @@ class ResourceService {
           resource_type = COALESCE($10, resource_type),
           availability_schedule = COALESCE($11, availability_schedule),
           conditions = COALESCE($12, conditions),
-          location_point = COALESCE(${locationPoint ? 'ST_SetSRID(ST_GeomFromText($14), 4326)' : 'NULL'}, location_point),
+          price = COALESCE($13, price),
+          location_point = COALESCE(${locationPoint ? 'ST_SetSRID(ST_GeomFromText($15), 4326)' : 'NULL'}, location_point),
           updated_at = NOW()
-      WHERE id = $13
+      WHERE id = $14
       RETURNING *;
     `;
-    const params = [name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, id];
+    const params = [name, description, category, condition, quantity, unit, status, skillIds, locationText, resourceType, availabilitySchedule, conditions, price, id];
     if (locationPoint) params.push(locationPoint);
 
     const result = await pool.query(query, params);
