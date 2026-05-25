@@ -663,7 +663,8 @@ const ProjectVisualizer = () => {
     const timelineHeight = 1500;
     const earliestTaskStart = d3.min(tasks, t => t.start_date ? new Date(t.start_date).getTime() : null);
     const projectStart = earliestTaskStart || new Date(project?.created_at || Date.now()).getTime();
-    const projectEnd = project?.due_date
+    const hasTimeline = !!project?.due_date;
+    const projectEnd = hasTimeline
         ? new Date(project.due_date).getTime()
         : (projectStart + 30 * 24 * 60 * 60 * 1000);
 
@@ -679,7 +680,7 @@ const ProjectVisualizer = () => {
     if (!zoomTransformRef.current.initialized) {
         const initialK = 0.8;
         const initialX = 400 - (400 * initialK);
-        const initialY = 150 - (nowY * initialK);
+        const initialY = hasTimeline ? 150 - (nowY * initialK) : 150;
         zoomTransformRef.current = d3.zoomIdentity.translate(initialX, initialY).scale(initialK);
         zoomTransformRef.current.initialized = true;
         d3.select(svgRef.current).call(zoomRef.current.transform, zoomTransformRef.current);
@@ -730,7 +731,7 @@ const ProjectVisualizer = () => {
       lns.forEach((n, i) => {
         n.x = sx + i * hsp;
 
-        if (n.due_date && n.start_date) {
+        if (hasTimeline && n.due_date && n.start_date) {
           const taskStart = new Date(n.start_date).getTime();
           const taskEnd = new Date(n.due_date).getTime();
 
@@ -747,8 +748,13 @@ const ProjectVisualizer = () => {
           }
         } else {
           n.y = 150 + li * 200;
-          n.railTop = n.y - 30;
-          n.railBottom = n.y + 30;
+          if (hasTimeline) {
+            n.railTop = n.y - 30;
+            n.railBottom = n.y + 30;
+          } else {
+            n.railTop = undefined;
+            n.railBottom = undefined;
+          }
         }
       });
     });
@@ -783,33 +789,35 @@ const ProjectVisualizer = () => {
         });
       });
     }
-    // Timeline Grid and Day Labels
-    const totalDays = Math.ceil((projectEnd - projectStart) / (24 * 60 * 60 * 1000));
-    for (let i = 0; i <= totalDays; i++) {
-        const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
-        const y = timeToY(dayTime);
+    if (hasTimeline) {
+      // Timeline Grid and Day Labels
+      const totalDays = Math.ceil((projectEnd - projectStart) / (24 * 60 * 60 * 1000));
+      for (let i = 0; i <= totalDays; i++) {
+          const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
+          const y = timeToY(dayTime);
 
-        gridGroup.append("line")
-          .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
-          .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
+          gridGroup.append("line")
+            .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
+            .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
 
-        gridGroup.append("text")
-          .attr("class", "day-label")
-          .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
-          .attr("y", y + 15)
-          .attr("fill", "rgba(128, 128, 128, 0.4)")
-          .attr("font-size", "12px").attr("font-family", "Space Mono")
-          .text(`DAY ${i + 1}`);
+          gridGroup.append("text")
+            .attr("class", "day-label")
+            .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
+            .attr("y", y + 15)
+            .attr("fill", "rgba(128, 128, 128, 0.4)")
+            .attr("font-size", "12px").attr("font-family", "Space Mono")
+            .text(`DAY ${i + 1}`);
+      }
+
+      // Current Time Marker
+      mainGroup.append("line")
+        .attr("x1", -1000).attr("y1", nowY).attr("x2", 2000).attr("y2", nowY)
+        .attr("stroke", "rgba(0, 243, 255, 0.4)").attr("stroke-width", 1).attr("stroke-dasharray", "8,4");
+
+      mainGroup.append("text")
+        .attr("x", 10).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 255, 0.6)")
+        .attr("font-size", "12px").attr("font-family", "Orbitron").text("PRESENT_SIGNAL");
     }
-
-    // Current Time Marker
-    mainGroup.append("line")
-      .attr("x1", -1000).attr("y1", nowY).attr("x2", 2000).attr("y2", nowY)
-      .attr("stroke", "rgba(0, 243, 255, 0.4)").attr("stroke-width", 1).attr("stroke-dasharray", "8,4");
-
-    mainGroup.append("text")
-      .attr("x", 10).attr("y", nowY - 8).attr("fill", "rgba(0, 243, 255, 0.6)")
-      .attr("font-size", "12px").attr("font-family", "Orbitron").text("PRESENT_SIGNAL");
 
     // Render Rails
     nodesGroup.selectAll(".rail")
