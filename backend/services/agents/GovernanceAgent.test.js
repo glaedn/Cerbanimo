@@ -24,11 +24,15 @@ describe('GovernanceAgent', () => {
 
     // Mock loadContext queries
     pool.query
-      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Community A', governance_config: { quorum: 0.2 } }] }) // communities
-      .mockResolvedValueOnce({ rows: [{ id: 101 }] }) // proposals
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] }) // votes
-      .mockResolvedValueOnce({ rows: [{ array_length: 100 }] }) // members
-      .mockResolvedValueOnce({ rows: [] }); // members for authority concentration unnest
+      .mockResolvedValueOnce({
+        rows: [{
+          proposal_id: 101,
+          community_id: 1,
+          community_name: 'Community A',
+          participation_rate: 0.05
+        }]
+      }) // participation query
+      .mockResolvedValueOnce({ rows: [] }); // concentration query
 
     const context = await agent.loadContext();
     expect(context.risks).toContainEqual(expect.objectContaining({

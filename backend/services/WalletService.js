@@ -54,6 +54,11 @@ class WalletService {
     return res.rows;
   }
 
+  async getWalletByAddress(address) {
+    const res = await pool.query('SELECT * FROM wallets WHERE address = $1', [address]);
+    return res.rows[0];
+  }
+
   async getPrimaryWallet(id, type = 'user', chain = 'ethereum') {
     const column = type === 'user' ? 'user_id' : 'community_id';
     const res = await pool.query(

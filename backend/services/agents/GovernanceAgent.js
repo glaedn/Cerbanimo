@@ -7,68 +7,122 @@ class GovernanceAgent extends BaseAgent {
   }
 
   async loadContext() {
-    const communities = await pool.query('SELECT id, name, governance_config FROM communities');
-
     const risks = [];
-    for (const community of communities.rows) {
-      // Analyze Participation
-      const proposals = await pool.query(
-        "SELECT id FROM proposals WHERE community_id = $1 AND status IN ('deliberation', 'voting')",
-        [community.id]
-      );
 
-      for (const prop of proposals.rows) {
-        const votes = await pool.query('SELECT count(*) FROM votes WHERE proposal_id = $1', [prop.id]);
-        const participationCount = parseInt(votes.rows[0].count);
+    // 1. Batched Participation Risk Analysis
+    const participationQuery = `
+      SELECT
+          p.id as proposal_id,
+          p.community_id,
+          c.name as community_name,
+          COUNT(v.id) as participation_count,
+          COALESCE(array_length(c.members, 1), 1) as member_count,
+          CAST(COUNT(v.id) AS FLOAT) / NULLIF(COALESCE(array_length(c.members, 1), 1), 0) as participation_rate,
+          COALESCE((c.governance_config->>'quorum')::float, 0.1) as quorum
+      FROM proposals p
+      JOIN communities c ON c.id = p.community_id
+      LEFT JOIN votes v ON v.proposal_id = p.id
+      WHERE p.status IN ('deliberation', 'voting')
+      GROUP BY p.id, c.id, c.name, c.members, c.governance_config
+      HAVING CAST(COUNT(v.id) AS FLOAT) / NULLIF(COALESCE(array_length(c.members, 1), 1), 0) < COALESCE((c.governance_config->>'quorum')::float, 0.1)
+    `;
+    const participationRes = await pool.query(participationQuery);
+    for (const row of participationRes.rows) {
+      risks.push({
+        type: 'participation_risk',
+        communityId: row.community_id,
+        communityName: row.community_name,
+        proposalId: row.proposal_id,
+        rate: row.participation_rate
+      });
+    }
 
-        const memberCountRes = await pool.query('SELECT array_length(members, 1) FROM communities WHERE id = $1', [community.id]);
-        const memberCount = memberCountRes.rows[0]?.array_length || 1;
-
-        const participationRate = participationCount / memberCount;
-
-        if (participationRate < (community.governance_config.quorum || 0.1)) {
-          risks.push({
-            type: 'participation_risk',
-            communityId: community.id,
-            communityName: community.name,
-            proposalId: prop.id,
-            rate: participationRate
-          });
-        }
-      }
-
-      // Detect Authority Concentration
-      const { calculateVoteWeight } = await import('../../utils/voteWeight.js');
-      const { totalPossibleWeight } = await calculateVoteWeight(pool, community.id);
-
-      const membersRes = await pool.query('SELECT unnest(members) as user_id FROM communities WHERE id = $1', [community.id]);
-      for (const member of membersRes.rows) {
-        const { weight } = await calculateVoteWeight(pool, community.id, member.user_id);
-        if (totalPossibleWeight > 0 && weight / totalPossibleWeight > 0.3) {
-          risks.push({
-            type: 'centralization_risk',
-            communityId: community.id,
-            communityName: community.name,
-            userId: member.user_id,
-            ratio: weight / totalPossibleWeight
-          });
-        }
-      }
+    // 2. Batched Authority Concentration (Centralization Risk)
+    const concentrationQuery = `
+      WITH user_community_tokens AS (
+          SELECT
+              u.id as user_id,
+              (token_entry->>'id')::int as community_id,
+              SUM((token_entry->>'tokens')::numeric) as tokens
+          FROM users u,
+          LATERAL unnest(u.token_ledger) as token_entry
+          WHERE (token_entry->>'type' IN ('community', 'community_task_reward', 'community_task_bonus'))
+            AND COALESCE(token_entry->>'mode', 'earn') IN ('earn', 'receive')
+          GROUP BY u.id, community_id
+      ),
+      community_totals AS (
+          SELECT
+              community_id,
+              SUM(tokens) as total_tokens
+          FROM user_community_tokens
+          GROUP BY community_id
+      ),
+      active_delegations AS (
+          SELECT delegator_id, delegate_id
+          FROM delegations
+          WHERE (expires_at IS NULL OR expires_at > NOW())
+      ),
+      member_weights AS (
+          SELECT
+              c.id as community_id,
+              u.id as user_id,
+              COALESCE(
+                  (SELECT uct.tokens FROM user_community_tokens uct WHERE uct.user_id = u.id AND uct.community_id = c.id),
+                  0
+              ) + COALESCE((
+                  SELECT SUM(uct2.tokens)
+                  FROM active_delegations d
+                  JOIN user_community_tokens uct2 ON uct2.user_id = d.delegator_id AND uct2.community_id = c.id
+                  WHERE d.delegate_id = u.id
+              ), 0) as weight
+          FROM communities c
+          CROSS JOIN LATERAL unnest(c.members) as m_id
+          JOIN users u ON u.id = m_id
+      )
+      SELECT
+          mw.community_id,
+          c.name as community_name,
+          mw.user_id,
+          CASE
+            WHEN mw.weight = 0 THEN 1.0 / NULLIF(COALESCE(NULLIF(ct.total_tokens, 0), array_length(c.members, 1), 1), 0)
+            ELSE mw.weight / NULLIF(COALESCE(NULLIF(ct.total_tokens, 0), array_length(c.members, 1), 1), 0)
+          END as ratio
+      FROM member_weights mw
+      JOIN communities c ON c.id = mw.community_id
+      LEFT JOIN community_totals ct ON ct.community_id = mw.community_id
+      WHERE (CASE
+            WHEN mw.weight = 0 THEN 1.0 / NULLIF(COALESCE(NULLIF(ct.total_tokens, 0), array_length(c.members, 1), 1), 0)
+            ELSE mw.weight / NULLIF(COALESCE(NULLIF(ct.total_tokens, 0), array_length(c.members, 1), 1), 0)
+          END) > 0.3
+    `;
+    const concentrationRes = await pool.query(concentrationQuery);
+    for (const row of concentrationRes.rows) {
+      risks.push({
+        type: 'centralization_risk',
+        communityId: row.community_id,
+        communityName: row.community_name,
+        userId: row.user_id,
+        ratio: row.ratio
+      });
     }
 
     return {
       risks,
       memory: {
         ...this.instance?.memory,
-        reportedRiskKeys: this.instance?.memory?.reportedRiskKeys || []
+        lastActedAt: this.instance?.memory?.lastActedAt || {}
       }
     };
   }
 
   async runReasoning(context) {
+    const RECHECK_DAYS = 3;
     const freshRisks = context.risks.filter(r => {
       const key = `${r.type}:${r.communityId}:${r.proposalId || r.userId}`;
-      return !context.memory.reportedRiskKeys.includes(key);
+      const lastActed = context.memory.lastActedAt?.[key];
+      if (!lastActed) return true;
+      const daysSince = (Date.now() - new Date(lastActed).getTime()) / 86400000;
+      return daysSince > RECHECK_DAYS;
     });
 
     if (freshRisks.length === 0) return null;
@@ -82,7 +136,7 @@ class GovernanceAgent extends BaseAgent {
   }
 
   async executeActions(actions, context) {
-    const newKeys = [];
+    const now = new Date().toISOString();
 
     for (const action of actions) {
       if (action.type === 'record_risk') {
@@ -107,15 +161,18 @@ class GovernanceAgent extends BaseAgent {
         });
 
         const key = `${risk.type}:${risk.communityId}:${risk.proposalId || risk.userId}`;
-        newKeys.push(key);
+        context.memory.lastActedAt[key] = now;
       }
     }
 
-    // Update memory
-    context.memory.reportedRiskKeys = [
-      ...context.memory.reportedRiskKeys,
-      ...newKeys
-    ].slice(-200);
+    // Prune old entries
+    const PRUNE_THRESHOLD_DAYS = 30;
+    for (const key in context.memory.lastActedAt) {
+      const daysSince = (Date.now() - new Date(context.memory.lastActedAt[key]).getTime()) / 86400000;
+      if (daysSince > PRUNE_THRESHOLD_DAYS) {
+        delete context.memory.lastActedAt[key];
+      }
+    }
   }
 }
 

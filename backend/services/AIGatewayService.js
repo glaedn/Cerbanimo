@@ -5,12 +5,25 @@ class AIGatewayService {
   constructor() {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.modelName = 'gemini-1.5-flash';
-    this.tokenBudget = 1000000; // Monthly token budget placeholder
-    this.usedTokens = 0;
+    this.monthlyTokenBudget = 1000000;
+  }
+
+  async checkTokenBudget() {
+    const result = await pool.query(
+      `SELECT SUM(tokens_used) as total FROM ai_token_usage
+       WHERE created_at > date_trunc('month', now())`
+    );
+    const used = parseInt(result.rows[0]?.total || 0);
+    if (used >= this.monthlyTokenBudget) {
+      throw new Error('Monthly AI token budget exceeded');
+    }
+    return used;
   }
 
   async analyze(prompt, context = {}, options = {}) {
     try {
+      await this.checkTokenBudget();
+
       const model = this.genAI.getGenerativeModel({ model: options.model || this.modelName });
 
       const systemInstruction = options.systemInstruction || 'You are an AI coordination agent for Cerbanimo, a civic metabolism platform.';
@@ -20,13 +33,16 @@ class AIGatewayService {
       const response = await result.response;
       const text = response.text();
 
-      // In a real system, we would parse token usage from the response
-      // For now, we estimate based on characters
-      this.usedTokens += Math.ceil((fullPrompt.length + text.length) / 4);
+      const tokensEstimated = Math.ceil((fullPrompt.length + text.length) / 4);
+
+      await pool.query(
+        'INSERT INTO ai_token_usage (model, tokens_used, usage_type) VALUES ($1, $2, $3)',
+        [options.model || this.modelName, tokensEstimated, options.usageType || 'analysis']
+      );
 
       return {
         text,
-        tokensEstimated: Math.ceil((fullPrompt.length + text.length) / 4),
+        tokensEstimated,
         model: options.model || this.modelName
       };
     } catch (err) {

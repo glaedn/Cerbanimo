@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../db.js', () => ({
+  default: {
+    query: vi.fn().mockResolvedValue({ rows: [{ total: 0 }] }),
+  },
+}));
+
 import AIGatewayService from './AIGatewayService.js';
 
 vi.mock('@google/generative-ai', () => {

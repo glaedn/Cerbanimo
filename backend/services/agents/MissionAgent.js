@@ -28,13 +28,20 @@ class MissionAgent extends BaseAgent {
       missions: stalledMissions.rows,
       memory: {
         ...this.instance?.memory,
-        processedMissionIds: this.instance?.memory?.processedMissionIds || []
+        lastActedAt: this.instance?.memory?.lastActedAt || {}
       }
     };
   }
 
   async runReasoning(context) {
-    const freshMissions = context.missions.filter(m => !context.memory.processedMissionIds.includes(m.id));
+    const RECHECK_DAYS = 7;
+    const freshMissions = context.missions.filter(m => {
+      const lastActed = context.memory.lastActedAt?.[`mission:${m.id}`];
+      if (!lastActed) return true;
+      const daysSince = (Date.now() - new Date(lastActed).getTime()) / 86400000;
+      return daysSince > RECHECK_DAYS;
+    });
+
     if (freshMissions.length === 0) return null;
 
     const signals = freshMissions.map(m => ({
@@ -45,11 +52,17 @@ class MissionAgent extends BaseAgent {
       lastActivity: m.last_activity
     }));
 
-    const recommendation = await AIGatewayService.synthesizeRecommendation(
-      this.type,
-      { signals },
-      []
-    );
+    let recommendation;
+    try {
+      recommendation = await AIGatewayService.synthesizeRecommendation(
+        this.type,
+        { signals },
+        []
+      );
+    } catch (err) {
+      console.warn('MissionAgent: AI synthesis failed, using rule-based fallback', err.message);
+      recommendation = this.ruleBasedRecommendation(freshMissions[0]);
+    }
 
     return {
       actions: [
@@ -61,8 +74,18 @@ class MissionAgent extends BaseAgent {
     };
   }
 
+  ruleBasedRecommendation(mission) {
+    return {
+      recommendationType: mission.unassigned_tasks > 0 ? 'recruit_contributors' : 'review_stalled_mission',
+      targetId: mission.id,
+      targetType: 'project',
+      reasoning: { summary: 'Rule-based: mission stalled >48h', evidence: [] },
+      confidence: 0.6
+    };
+  }
+
   async executeActions(actions, context) {
-    const actedMissionIds = [];
+    const now = new Date().toISOString();
 
     for (const action of actions) {
       if (action.type === 'recommendation') {
@@ -81,16 +104,19 @@ class MissionAgent extends BaseAgent {
         }, rec.confidence);
 
         if (rec.targetId) {
-          actedMissionIds.push(rec.targetId);
+          context.memory.lastActedAt[`mission:${rec.targetId}`] = now;
         }
       }
     }
 
-    // Update memory
-    context.memory.processedMissionIds = [
-      ...context.memory.processedMissionIds,
-      ...actedMissionIds
-    ].slice(-100);
+    // Optional: Prune old entries from memory to keep it lean
+    const PRUNE_THRESHOLD_DAYS = 30;
+    for (const key in context.memory.lastActedAt) {
+      const daysSince = (Date.now() - new Date(context.memory.lastActedAt[key]).getTime()) / 86400000;
+      if (daysSince > PRUNE_THRESHOLD_DAYS) {
+        delete context.memory.lastActedAt[key];
+      }
+    }
   }
 }
 

@@ -320,6 +320,16 @@ const alterExistingTables = async () => {
 
     // Create mapping table for multiple Discord threads (Cross-Guild Support)
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS ai_token_usage (
+        id SERIAL PRIMARY KEY,
+        model VARCHAR(80) NOT NULL,
+        tokens_used INTEGER DEFAULT 0,
+        usage_type VARCHAR(40), -- 'analysis', 'recommendation'
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_token_usage_created_at ON ai_token_usage(created_at);
+
       CREATE TABLE IF NOT EXISTS need_discord_threads (
         id SERIAL PRIMARY KEY,
         need_id INTEGER REFERENCES needs(id) ON DELETE CASCADE,
