@@ -229,7 +229,7 @@ const TaskBrowser = ({ initialTab = 0 }) => {
 
   if (isMobile) {
     return (
-      <Box className="task-browser mobile-task-browser" sx={{ pb: 10 }}>
+      <Box className="mobile-task-browser" sx={{ pb: 10 }}>
         <ExpandablePanel
             title="SCAN_RELEVANT"
             summary={`${tasks.length} missions available for your skillset`}

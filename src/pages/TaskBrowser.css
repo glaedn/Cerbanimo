@@ -9,6 +9,10 @@
 .mobile-task-browser {
     background: transparent;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 /* Custom Scrollbar - keeping as is per your request */
@@ -142,4 +146,11 @@
     font-size: 0.85rem;
     color: #29b6f6; /* Updated to match hover color */
     text-shadow: 0 0 5px rgba(109, 213, 237, 0.6);
+}
+
+.mobile-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }

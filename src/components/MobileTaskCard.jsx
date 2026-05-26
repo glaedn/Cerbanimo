@@ -33,6 +33,7 @@ const MobileTaskCard = ({ task, onAccept }) => {
     >
       <Card className="glass-panel" sx={{
         mb: 2,
+        width: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.03)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         borderRadius: '12px',
