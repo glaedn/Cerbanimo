@@ -28,7 +28,6 @@
     align-items: center;
     padding: 40px 20px;
     padding-top: 50px;
-    background: radial-gradient(circle at center, rgba(10, 20, 50, 0.4) 0%, #030612 100%);
     color: var(--hud-text-color);
     margin-top: 0;
     font-family: var(--hud-font-family);
