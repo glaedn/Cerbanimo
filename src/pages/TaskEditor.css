@@ -1,21 +1,19 @@
 /* General Modal Styling */
 .cyber-modal {
-    position: absolute;
+    position: absolute !important;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(28, 28, 30, 0.9); /* Match MobileTaskCard */
     padding: 0;
     width: 90%;
     max-width: 700px;
     max-height: 90vh;
-    border-radius: 4px;
     font-family: 'Inter', sans-serif;
     color: #00F3FF;
-    border: 1px solid rgba(0, 243, 255, 0.3); /* Match MobileTaskCard */
-    box-shadow: 0 0 30px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 243, 255, 0.2);
+    border: 1px solid rgba(0, 243, 255, 0.3) !important;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .cyber-modal.full-screen-modal {
@@ -36,7 +34,8 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
+    background: rgba(0, 10, 20, 0.4);
 }
 
 .cyber-border::before {
@@ -57,8 +56,6 @@
 
 .cyber-content {
     flex: 1;
-    overflow-y: auto;
-    padding-right: 15px;
     font-family: 'Inter', sans-serif;
 }
 
@@ -85,16 +82,14 @@
 
 /* Title Styling */
 .cyber-title {
-    text-align: center;
-    margin-bottom: 1.5rem; /* Adjusted margin */
-    font-family: 'Orbitron', sans-serif; /* Specified font */
-    font-size: 1.6rem; /* Adjusted font size */
-    color: #00F3FF; /* Specified color */
-    text-shadow: 0 0 10px #00F3FF; /* Specified shadow */
+    text-align: left;
+    margin-bottom: 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    color: #00F3FF;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 2px;
-    border-bottom: 1px solid #FF5CA2; /* Pink accent border */
-    padding-bottom: 10px; /* Padding for the border */
 }
 
 .cyber-form {
@@ -273,10 +268,10 @@
 .cyber-section-container { /* New generic class for these sections */
     margin: 1.5rem 0;
     padding: 1rem;
-    border: 1px solid #00F3FF;
-    border-radius: 4px;
-    background-color: rgba(0, 10, 20, 0.7); /* HUD panel like background */
-    box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(5px);
 }
 
 .cyber-section-label { /* New generic class for labels of these sections */
@@ -291,18 +286,21 @@
 
 /* Chips Styling (Dependencies, Assigned Users) */
 .cyber-chip { /* New generic class for chips */
-    background-color: rgba(0, 50, 100, 0.7) !important;
-    border: 1px solid #00F3FF !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #00F3FF !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Orbitron', sans-serif !important;
     margin: 0.25rem !important;
     transition: all 0.3s ease;
-    font-size: 0.85rem !important;
+    font-size: 0.7rem !important;
 }
 
 .cyber-chip:hover {
-    background-color: rgba(0, 70, 130, 0.8) !important;
-    box-shadow: 0 0 6px #00F3FF !important;
+    background: rgba(0, 243, 255, 0.1) !important;
+    border-color: #00F3FF !important;
+    box-shadow: 0 0 6px rgba(0, 243, 255, 0.4) !important;
 }
 
 .cyber-chip .MuiChip-deleteIcon {

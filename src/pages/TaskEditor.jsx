@@ -453,7 +453,7 @@ const TaskEditor = ({
             justifyContent: 'center'
         }}
     >
-      <div className={`cyber-modal ${isMobile ? 'full-screen-modal' : ''}`}>
+      <div className={`glass-panel cyber-modal ${isMobile ? 'full-screen-modal' : ''}`}>
         <div className="cyber-border">
           <div className="cyber-content">
             {isMobile && (
@@ -488,7 +488,7 @@ const TaskEditor = ({
 
             <div className="cyber-form">
               {(taskForm.impact_label || taskForm.outcome_statement) && (
-                <Box sx={{ mb: 2, p: 1.5, borderLeft: '3px solid #FF5CA2', bgcolor: 'rgba(255, 92, 162, 0.1)' }}>
+                <Box className="glass-panel" sx={{ mb: 2, p: 1.5, borderLeft: '3px solid #FF5CA2', background: 'rgba(255, 92, 162, 0.05)' }}>
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(90px, 1fr)', alignItems: 'center', gap: 1.5, mb: 1 }}>
                     <Typography variant="caption" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron', display: 'block', letterSpacing: 1 }}>
                       IMPACT

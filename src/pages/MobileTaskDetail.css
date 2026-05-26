@@ -1,5 +1,5 @@
 .mobile-task-detail-container {
-    background-color: #000;
+    background: radial-gradient(circle at 50% 50%, #0a0a2e 0%, #030612 100%);
     min-height: 100vh;
     color: #00F3FF;
     font-family: 'Inter', sans-serif;
@@ -11,7 +11,9 @@
     justify-content: space-between;
     padding: 1rem;
     border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-    background: rgba(0, 10, 20, 0.95);
+    background: rgba(0, 10, 20, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -36,36 +38,37 @@
     font-family: 'Orbitron', sans-serif;
     font-size: 0.7rem;
     border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .cyber-chip.skill {
-    background: rgba(0, 243, 255, 0.1);
     color: #00F3FF;
-    border: 1px solid #00F3FF;
+    border: 1px solid #00F3FF !important;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
 }
 
 .cyber-chip.level {
-    background: rgba(255, 92, 162, 0.1);
     color: #FF5CA2;
-    border: 1px solid #FF5CA2;
+    border: 1px solid #FF5CA2 !important;
+    box-shadow: 0 0 5px rgba(255, 92, 162, 0.2);
 }
 
 .cyber-chip.status {
-    background: rgba(0, 243, 255, 0.2);
     color: #fff;
-    border: 1px solid #00F3FF;
+    border: 1px solid #00F3FF !important;
 }
 
 .cyber-chip.status.completed {
-    background: rgba(255, 92, 162, 0.3);
-    border-color: #FF5CA2;
+    border-color: #FF5CA2 !important;
     color: #FF5CA2;
 }
 
 .cyber-chip.dependency {
-    background: rgba(0, 243, 255, 0.05);
     color: #00F3FF;
-    border: 1px solid rgba(0, 243, 255, 0.5);
+    border: 1px solid rgba(0, 243, 255, 0.5) !important;
     font-size: 0.65rem;
 }
 
@@ -115,15 +118,13 @@
 }
 
 .content-paper {
-    background: rgba(10, 10, 46, 0.6) !important;
-    border: 1px solid rgba(0, 243, 255, 0.2) !important;
     padding: 1rem;
     color: #fff !important;
+    margin-bottom: 1.5rem;
 }
 
 .content-paper.submission {
-    border-color: #FF5CA2 !important;
-    background: rgba(255, 92, 162, 0.05) !important;
+    border-color: rgba(255, 92, 162, 0.3) !important;
 }
 
 .section-title {
@@ -176,10 +177,8 @@
 
 /* Edit Mode Styles */
 .cyber-edit-paper {
-    background: #000 !important;
-    border: 1px solid #00F3FF !important;
     padding: 1.5rem;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+    border-color: rgba(0, 243, 255, 0.3) !important;
 }
 
 .section-label {
@@ -227,9 +226,10 @@
     left: 0;
     right: 0;
     padding: 1rem;
-    background: rgba(0, 5, 15, 0.95);
-    border-top: 1px solid #00F3FF;
-    backdrop-filter: blur(10px);
+    background: rgba(0, 5, 15, 0.8);
+    border-top: 1px solid rgba(0, 243, 255, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     z-index: 1000;
 }
 
@@ -237,27 +237,33 @@
     font-family: 'Orbitron', sans-serif !important;
     font-weight: bold !important;
     height: 48px;
-    border-radius: 4px !important;
+    border-radius: 8px !important;
+    text-transform: uppercase !important;
+    transition: all 0.3s ease !important;
 }
 
 .cyber-btn.primary {
     background: #00F3FF !important;
     color: #000 !important;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
 }
 
 .cyber-btn.secondary {
-    border: 1px solid #FF5CA2 !important;
+    border: 1px solid rgba(255, 92, 162, 0.5) !important;
     color: #FF5CA2 !important;
+    background: rgba(255, 92, 162, 0.05) !important;
 }
 
 .cyber-btn.approve {
     border: 1px solid #00F3FF !important;
     color: #00F3FF !important;
+    background: rgba(0, 243, 255, 0.05) !important;
 }
 
 .cyber-btn.reject {
     border: 1px solid #FF5CA2 !important;
     color: #FF5CA2 !important;
+    background: rgba(255, 92, 162, 0.05) !important;
 }
 
 .cyber-btn.dispute {
