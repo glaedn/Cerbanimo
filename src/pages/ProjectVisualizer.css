@@ -7,7 +7,7 @@
   margin: 0;
   padding: 20px;
   position: relative;
-  background: radial-gradient(circle at center, #001219 0%, #000000 100%);
+  background: transparent;
   min-height: 100vh;
   color: #00f3ff;
   padding-top: 50px;

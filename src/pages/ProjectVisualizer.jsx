@@ -307,6 +307,7 @@ ArcCarousel.propTypes = {
 
 const ProjectVisualizer = () => {
   const navigate = useNavigate();
+  const prevCategoryRef = useRef("All Tasks");
   const isMobile = useIsMobile();
   const svgRef = useRef(null);
   const containerRef = useRef(null);
@@ -678,15 +679,6 @@ const ProjectVisualizer = () => {
     const now = Date.now();
     const nowY = timeToY(now);
 
-    if (!zoomTransformRef.current.initialized) {
-        const initialK = 0.8;
-        const initialX = 400 - (400 * initialK);
-        const initialY = hasTimeline ? 150 - (nowY * initialK) : 150;
-        zoomTransformRef.current = d3.zoomIdentity.translate(initialX, initialY).scale(initialK);
-        zoomTransformRef.current.initialized = true;
-        d3.select(svgRef.current).call(zoomRef.current.transform, zoomTransformRef.current);
-    }
-
     const mainGroup = svg.append("g").attr("transform", zoomTransformRef.current);
     const gridGroup = mainGroup.append("g").attr("class", "grid-group");
     const linksGroup = mainGroup.append("g"); linksGroupRef.current = linksGroup;
@@ -759,6 +751,28 @@ const ProjectVisualizer = () => {
         }
       });
     });
+
+    const incompleteTasks = Object.values(graph).filter(t => t.status !== "completed");
+    const isOverdue = hasTimeline && now > projectEnd;
+    const isSkillFiltered = activeCategory !== "All Tasks";
+
+    let focalY = hasTimeline ? nowY : 150;
+    if ((isOverdue || isSkillFiltered) && incompleteTasks.length > 0) {
+      focalY = Math.min(...incompleteTasks.map(t => t.y));
+    }
+
+    if (!zoomTransformRef.current.initialized) {
+        const initialK = 0.8;
+        const initialX = 400 - (400 * initialK);
+        const initialY = 300 - (focalY * initialK);
+        zoomTransformRef.current = d3.zoomIdentity.translate(initialX, initialY).scale(initialK);
+        zoomTransformRef.current.initialized = true;
+        d3.select(svgRef.current).call(zoomRef.current.transform, zoomTransformRef.current);
+    } else if (activeCategory !== prevCategoryRef.current) {
+        const targetTransform = d3.zoomIdentity.translate(zoomTransformRef.current.x, 300 - (focalY * zoomTransformRef.current.k)).scale(zoomTransformRef.current.k);
+        d3.select(svgRef.current).transition().duration(750).call(zoomRef.current.transform, targetTransform);
+        prevCategoryRef.current = activeCategory;
+    }
     const lnks = []; let lid = 0;
     data.forEach(s => {
       s.dependencies.forEach(did => {
@@ -791,21 +805,23 @@ const ProjectVisualizer = () => {
       });
     }
     // Timeline Grid and Day Labels
-    for (let i = 0; i <= totalProjectDays; i++) {
-        const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
-        const y = timeToY(dayTime);
+    if (hasTimeline) {
+      for (let i = 0; i <= totalProjectDays; i++) {
+          const dayTime = projectStart + i * 24 * 60 * 60 * 1000;
+          const y = timeToY(dayTime);
 
-          gridGroup.append("line")
-            .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
-            .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
+            gridGroup.append("line")
+              .attr("x1", -1000).attr("y1", y).attr("x2", 2000).attr("y2", y)
+              .attr("stroke", "rgba(128, 128, 128, 0.2)").attr("stroke-width", 1);
 
-        gridGroup.append("text")
-          .attr("class", "day-label")
-          .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
-          .attr("y", y + 15)
-          .attr("fill", "rgba(128, 128, 128, 0.4)")
-          .attr("font-size", "12px").attr("font-family", "Space Mono")
-          .text(new Date(dayTime).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }));
+          gridGroup.append("text")
+            .attr("class", "day-label")
+            .attr("x", (20 - zoomTransformRef.current.x) / zoomTransformRef.current.k)
+            .attr("y", y + 15)
+            .attr("fill", "rgba(128, 128, 128, 0.4)")
+            .attr("font-size", "12px").attr("font-family", "Space Mono")
+            .text(new Date(dayTime).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }));
+      }
     }
 
     // Render Rails
