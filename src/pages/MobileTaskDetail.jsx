@@ -291,7 +291,7 @@ const MobileTaskDetail = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Paper className="cyber-edit-paper">
+              <Box className="glass-panel cyber-edit-paper">
                 <Typography variant="subtitle2" className="section-label">IDENTIFIER</Typography>
                 <TextField
                   fullWidth
@@ -480,7 +480,7 @@ const MobileTaskDetail = () => {
                 >
                   {actionLoading ? <CircularProgress size={24} /> : 'UPLOAD_CHANGES'}
                 </Button>
-              </Paper>
+              </Box>
             </motion.div>
           ) : (
             <motion.div
@@ -516,12 +516,12 @@ const MobileTaskDetail = () => {
                 </Box>
               )}
 
-              <Paper className="content-paper">
+              <Box className="glass-panel content-paper">
                 <Typography variant="subtitle2" className="section-title">MISSION DESCRIPTION</Typography>
                 <Typography variant="body2" className="description-text">
                   {task.description}
                 </Typography>
-              </Paper>
+              </Box>
 
               <Divider sx={{ my: 2, bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
 
@@ -548,11 +548,11 @@ const MobileTaskDetail = () => {
               <Typography variant="subtitle2" className="section-title">TIMELINE</Typography>
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                   <Box sx={{ flex: 1, p: 1.5, bgcolor: 'rgba(0, 243, 255, 0.05)', borderRadius: '4px', border: '1px solid rgba(0, 243, 255, 0.1)' }}>
-                    <Typography variant="caption" sx={{ color: 'rgba(0, 243, 255, 0.7)', display: 'block', mb: 0.5 }}>START</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(0, 243, 255, 0.7)', display: 'block', mb: 0.5, fontFamily: 'Orbitron' }}>START</Typography>
                     <Typography variant="body2">{task.start_date ? dayjs(task.start_date).format('MMM D, YYYY') : 'NOT_SET'}</Typography>
                   </Box>
                   <Box sx={{ flex: 1, p: 1.5, bgcolor: 'rgba(255, 92, 162, 0.05)', borderRadius: '4px', border: '1px solid rgba(255, 92, 162, 0.1)' }}>
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 92, 162, 0.7)', display: 'block', mb: 0.5 }}>DUE</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 92, 162, 0.7)', display: 'block', mb: 0.5, fontFamily: 'Orbitron' }}>DUE</Typography>
                     <Typography variant="body2">{task.due_date ? dayjs(task.due_date).format('MMM D, YYYY') : 'NOT_SET'}</Typography>
                   </Box>
               </Box>
@@ -581,7 +581,7 @@ const MobileTaskDetail = () => {
               {(isReviewer || isCreator) && isSubmitted && (
                 <Box sx={{ mt: 3 }}>
                   <Typography variant="subtitle2" className="section-title pink">SUBMISSION DATA</Typography>
-                  <Paper className="content-paper submission">
+                  <Box className="glass-panel content-paper submission">
                     <Typography variant="caption" className="sub-label">REFLECTION</Typography>
                     <Typography variant="body2" sx={{ mb: 2 }}>{task.reflection || 'No reflection provided.'}</Typography>
 
@@ -591,7 +591,7 @@ const MobileTaskDetail = () => {
                         <a href={link} target="_blank" rel="noopener noreferrer" className="proof-link">{link}</a>
                       </Box>
                     )) || <Typography variant="body2">No links provided.</Typography>}
-                  </Paper>
+                  </Box>
                 </Box>
               )}
             </motion.div>
