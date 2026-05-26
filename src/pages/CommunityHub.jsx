@@ -16,7 +16,6 @@ import {
   Box,
   Paper,
   Link,
-  TextField,
   Modal
 } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
@@ -25,9 +24,9 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import LoyaltyIcon from '@mui/icons-material/Loyalty';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import ChatIcon from '@mui/icons-material/Chat';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -35,8 +34,8 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import CommunityChronicle from '../components/CommunityChronicle/index.jsx';
 import CommunityResourceManagement from '../components/CommunityResourceManagement/CommunityResourceManagement.jsx';
-import './CommunityHub.css';
 import CommunityMarketplace from '../components/CommunityMarketplace/CommunityMarketplace.jsx';
+import './CommunityHub.css';
 import ImpactGraph from '../components/HUD/ImpactGraph/ImpactGraph';
 import NeedDeclarationForm from '../components/NeedDeclarationForm/NeedDeclarationForm.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -45,7 +44,6 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import InsightsIcon from '@mui/icons-material/Insights';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import DiscordIcon from '@mui/icons-material/Chat'; // Fallback icon for Discord
 import CommunityIntegrationsPanel from '../components/Integrations/CommunityIntegrationsPanel.jsx';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { toast } from 'react-hot-toast';
@@ -185,117 +183,122 @@ const CommunityHub = () => {
                 const validMembers = memberResults.filter(result => result !== null).map(result => result.data);
                 setMembers(validMembers);
 
-    // Fetch member scores
-    if (communityResponse.data.members && communityResponse.data.members.length > 0) {
-        try {
-            const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
-                headers: headers,
-            });
-            console.log('Fetched member scores:', scoresResponse.data);
-            setMemberScores(scoresResponse.data);
-        } catch (scoresError) {
-            console.error('Failed to fetch member scores:', scoresError);
-            // Gracefully handle missing scores, perhaps set to empty or show a specific UI indicator
-            setMemberScores([]); 
-        }
-    } else {
-        setMemberScores([]); // No members, so no scores
-    }
-
-} else {
-    console.log('No members in this community');
-    setMembers([]);
-    setMemberScores([]); // No members, so no scores
-}
+                // Fetch member scores
+                try {
+                    const scoresResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/scores`, {
+                        headers: headers,
+                    });
+                    setMemberScores(scoresResponse.data);
+                } catch (scoresError) {
+                    console.error('Failed to fetch member scores:', scoresError);
+                    setMemberScores([]);
+                }
+            } else {
+                setMembers([]);
+                setMemberScores([]);
+            }
                 
-                // Fetch membership requests
+            // Fetch membership requests
+            try {
                 const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
                     headers: headers,
                 });
-                console.log('Membership Requests:', requestsResponse.data);
-                console.log('User ID:', userId);
-                // Check if current user has already requested to join
                 if (userId) {
                     setHasRequestedJoin(requestsResponse.data.some(request => 
                         String(request.user_id) === String(userId)
                     ));
                 }
                 
-                // Fetch user data for each request
                 const requestUserPromises = requestsResponse.data.map(request => 
                     axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
                         headers: headers,
                     }).then(userResponse => ({
                         ...request,
                         userData: userResponse.data
-                    }))
+                    })).catch(() => null)
                 );
                 
                 const requestUsers = await Promise.all(requestUserPromises);
-                setMembershipRequests(requestUsers);
+                setMembershipRequests(requestUsers.filter(r => r !== null));
+            } catch (reqErr) {
+                console.warn("Failed to fetch membership requests:", reqErr);
+            }
                 
-                // Fetch proposal details
-                if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
-                    const proposalPromises = communityResponse.data.proposals.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: headers,
-                        })
-                    );
-                    
-                    const proposalResults = await Promise.all(proposalPromises);
-                    setProposals(proposalResults.map(result => result.data));
-                }
+            // Fetch proposal details
+            if (communityResponse.data.proposals && communityResponse.data.proposals.length > 0) {
+                const proposalPromises = communityResponse.data.proposals.map(projectId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                        headers: headers,
+                    }).catch(() => null)
+                );
                 
-                // Fetch approved projects
-                if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
-                    const projectPromises = communityResponse.data.approved_projects.map(projectId => 
-                        axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
-                            headers: headers,
-                        })
-                    );
-                    
-                    const projectResults = await Promise.all(projectPromises);
-                    setApprovedProjects(projectResults.map(result => result.data));
-                }
+                const proposalResults = await Promise.all(proposalPromises);
+                setProposals(proposalResults.filter(r => r !== null).map(result => result.data));
+            } else {
+                setProposals([]);
+            }
 
-                // Fetch community needs
+            // Fetch approved projects
+            if (communityResponse.data.approved_projects && communityResponse.data.approved_projects.length > 0) {
+                const projectPromises = communityResponse.data.approved_projects.map(projectId =>
+                    axios.get(`${import.meta.env.VITE_BACKEND_URL}/projects/${projectId}`, {
+                        headers: headers,
+                    }).catch(() => null)
+                );
+
+                const projectResults = await Promise.all(projectPromises);
+                setApprovedProjects(projectResults.filter(r => r !== null).map(result => result.data));
+            } else {
+                setApprovedProjects([]);
+            }
+
+            // Fetch community needs
+            try {
                 const needsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/needs/community/${communityId}`, {
                     headers: headers
                 });
                 setCommunityNeeds(needsResponse.data || []);
+            } catch (nErr) {
+                console.warn("Failed to fetch community needs:", nErr);
+            }
 
-                // Fetch community services
+            // Fetch community services
+            try {
                 const servicesResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services/community/${communityId}`, {
                     headers: headers
                 });
                 setCommunityServices(servicesResponse.data || []);
-                // Fetch Token Stats
-                try {
-                    const statsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/token-stats`, {
-                        headers: headers
-                    });
-                    setTokenStats(statsResponse.data);
-                } catch (sErr) {
-                    console.warn("Failed to fetch token stats:", sErr);
-                }
-
-                // Fetch Discord config
-                try {
-                    const discordRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/discord-config/${communityId}`, {
-                        headers: headers
-                    });
-                    setDiscordConfig(discordRes.data);
-                } catch (dErr) {
-                    console.warn("Discord config not found or error:", dErr);
-                }
-                
-            } catch (error) {
-                console.error('Failed to fetch community data:', error);
-                setError('Failed to load community data. Please try again later.');
-            } finally {
-                setIsLoading(false);
+            } catch (sErr) {
+                console.warn("Failed to fetch community services:", sErr);
             }
-        };
+
+            // Fetch Token Stats
+            try {
+                const statsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/token-stats`, {
+                    headers: headers
+                });
+                setTokenStats(statsResponse.data);
+            } catch (tsErr) {
+                console.warn("Failed to fetch token stats:", tsErr);
+            }
+
+            // Fetch Discord config
+            try {
+                const discordRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/discord-config/${communityId}`, {
+                    headers: headers
+                });
+                setDiscordConfig(discordRes.data);
+            } catch (dErr) {
+                console.warn("Discord config not found or error:", dErr);
+            }
+
+        } catch (error) {
+            console.error('Failed to fetch community data:', error);
+            setError('Failed to load community data. Please try again later.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchCommunityData();
@@ -393,13 +396,6 @@ const CommunityHub = () => {
             
     
             // Refresh the entire community data after voting
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            setCommunity(communityResponse.data);
-    
-            // Refresh the entire community data after voting
             await fetchCommunityData(false);
             
         } catch (error) {
@@ -423,30 +419,8 @@ const CommunityHub = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Refresh membership requests after voting
-            const requestsResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}/membership-requests`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            // Fetch user data for each request
-            const requestUserPromises = requestsResponse.data.map(request => 
-                axios.get(`${import.meta.env.VITE_BACKEND_URL}/profile/public/${request.user_id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                }).then(userResponse => ({
-                    ...request,
-                    userData: userResponse.data
-                }))
-            );
-            
-            const requestUsers = await Promise.all(requestUserPromises);
-            setMembershipRequests(requestUsers);
-            
-            // Refresh community to get updated member list
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            setCommunity(communityResponse.data);
+            // Refresh the entire community data after voting
+            await fetchCommunityData(false);
             
         } catch (error) {
             console.error('Failed to vote on membership:', error);
@@ -475,11 +449,7 @@ const CommunityHub = () => {
             });
             
             // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            setCommunity(communityResponse.data);
+            await fetchCommunityData(false);
             
             showNotification('Vote delegation successful!');
             
@@ -501,11 +471,8 @@ const CommunityHub = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             showNotification('Alliance vote recorded.');
-            // Refresh invites
-            const constellationInvitesRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/constellations_v2/invites/community/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setConstellationInvites(constellationInvitesRes.data);
+            // Refresh community data
+            await fetchCommunityData(false);
         } catch (error) {
             console.error('Failed to vote on constellation invite:', error);
             toast.error('Failed to submit your vote.');
@@ -550,11 +517,7 @@ const CommunityHub = () => {
             setVoteDelegations(newDelegations);
             
             // Refresh community data to get updated vote delegations
-            const communityResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/communities/${communityId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            setCommunity(communityResponse.data);
+            await fetchCommunityData(false);
             
             showNotification('Vote delegation revoked!');
             
@@ -590,9 +553,9 @@ const CommunityHub = () => {
 
         toast((t) => (
             <Box sx={{ p: 1 }}>
-                <Typography variant="body1" sx={{ mb: 2, fontFamily: 'Orbitron', color: 'white' }}>
+                <Typography variant="body1" sx={{ mb: 2, fontFamily: 'var(--hud-header-font)', color: 'white' }}>
                     Purchase community service "{service.name}" for {service.service_price} tokens?
-                    <Typography variant="caption" sx={{ color: '#ff5ca2', mb: 2, display: 'block', fontFamily: 'Orbitron' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--hud-secondary-color)', mb: 2, display: 'block', fontFamily: 'var(--hud-header-font)' }}>
                         🔥 {Math.floor(service.service_price * 0.02)} cotokens will be burned.
                     </Typography>
                 </Typography>
@@ -600,7 +563,7 @@ const CommunityHub = () => {
                     <Button
                         size="small"
                         onClick={() => toast.dismiss(t.id)}
-                        sx={{ color: '#ff5ca2', fontFamily: 'Orbitron' }}
+                        sx={{ color: 'var(--hud-secondary-color)', fontFamily: 'var(--hud-header-font)' }}
                     >
                         ABORT
                     </Button>
@@ -610,7 +573,7 @@ const CommunityHub = () => {
                         onClick={async () => {
                             toast.dismiss(t.id);
                             const loadingToast = toast.loading("Processing transaction...", {
-                                style: { border: '1px solid #00F3FF' }
+                                style: { border: '1px solid var(--hud-primary-color)' }
                             });
                             try {
                                 const token = await getAccessTokenSilently();
@@ -628,10 +591,10 @@ const CommunityHub = () => {
                             }
                         }}
                         sx={{
-                            background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
+                            background: 'linear-gradient(45deg, var(--hud-primary-color), #4DABF7)',
                             color: 'black',
                             fontWeight: 'bold',
-                            fontFamily: 'Orbitron'
+                            fontFamily: 'var(--hud-header-font)'
                         }}
                     >
                         CONFIRM
@@ -645,29 +608,29 @@ const CommunityHub = () => {
     };
 
     if (isLoading) {
-        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3 }}>Loading community data...</Typography>;
+        return <Typography className="loading-container" sx={{ textAlign: 'center', padding: 3, fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)' }}>Loading community data...</Typography>;
     }
 
     if (error) {
-        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>{error}</Typography>;
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3, fontFamily: 'var(--hud-header-font)', color: 'var(--hud-error-color)' }}>{error}</Typography>;
     }
 
     if (!community) {
-        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3 }}>Community not found</Typography>;
+        return <Typography className="error-container" sx={{ textAlign: 'center', padding: 3, fontFamily: 'var(--hud-header-font)', color: 'var(--hud-error-color)' }}>Community not found</Typography>;
     }
 
     return (
         <Box className={`community-hub community-hub-container ${isMobile ? 'mobile-hub' : ''}`} sx={{ pb: isMobile ? 12 : 5 }}>
             <Box display="flex" justifyContent="center" alignItems="center" gap={2} sx={{ position: 'relative' }}>
-                <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit' }}>
+                <Typography variant={isMobile ? "h4" : "h2"} className="hub-title" sx={{ fontSize: isMobile ? '1.8rem !important' : 'inherit', fontFamily: 'var(--hud-header-font)' }}>
                     {community.name}
                 </Typography>
                 {isMember && (
                     <IconButton
                         onClick={() => setIsDiscordConfigOpen(true)}
                         sx={{
-                            color: '#00F3FF',
-                            border: '1px solid #00F3FF',
+                            color: 'var(--hud-primary-color)',
+                            border: '1px solid var(--hud-primary-color)',
                             position: isMobile ? 'absolute' : 'static',
                             right: isMobile ? 10 : 'auto'
                         }}
@@ -687,14 +650,14 @@ const CommunityHub = () => {
                 </Typography>
 
                 {(community.city || community.state || community.country) ? (
-                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: '#00F3FF', fontFamily: 'Orbitron' }}>
+                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}>
                         <LocationOnIcon fontSize="small" />
                         <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
                             STATIONED IN: {[community.city, community.state, community.country].filter(Boolean).join(', ')}
                         </Typography>
                     </Box>
                 ) : community.location && (
-                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: '#00F3FF', fontFamily: 'Orbitron' }}>
+                    <Box display="flex" justifyContent="center" alignItems="center" gap={1} sx={{ mt: 1, color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}>
                         <LocationOnIcon fontSize="small" />
                         <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
                             STATIONED AT: {community.location.coordinates[1].toFixed(4)}, {community.location.coordinates[0].toFixed(4)}
@@ -704,8 +667,8 @@ const CommunityHub = () => {
                 {tokenStats && (
                     <Box sx={{
                         mt: 2, mb: 2, p: 2,
-                        bgcolor: 'rgba(0, 243, 255, 0.05)',
-                        border: '1px solid rgba(0, 243, 255, 0.2)',
+                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(95, 240, 255, 0.2)',
                         borderRadius: 1,
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -714,16 +677,16 @@ const CommunityHub = () => {
                     }}>
                         <Box textAlign="center">
                             <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>TREASURY BALANCE</Typography>
-                            <Typography variant="h6" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>{Number(tokenStats.cotoken_balance).toLocaleString()} Ȼ</Typography>
+                            <Typography variant="h6" sx={{ color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}>{Number(tokenStats.cotoken_balance).toLocaleString()} Ȼ</Typography>
                         </Box>
                         <Box textAlign="center">
                             <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>TOTAL BURNED</Typography>
-                            <Typography variant="h6" sx={{ color: '#FF5CA2', fontFamily: 'Orbitron' }}>🔥 {Number(tokenStats.total_burned).toLocaleString()} Ȼ</Typography>
+                            <Typography variant="h6" sx={{ color: 'var(--hud-secondary-color)', fontFamily: 'var(--hud-header-font)' }}>🔥 {Number(tokenStats.total_burned).toLocaleString()} Ȼ</Typography>
                         </Box>
                         <Box textAlign="center">
                             <Typography variant="caption" sx={{ color: '#CCC', display: 'block', mb: 0.5 }}>CIRCULATION INCENTIVE</Typography>
                             <Tooltip title="Total contributions to the community circulation incentive ecosystem.">
-                                <Typography variant="h6" sx={{ color: '#00F3FF', fontFamily: 'Orbitron', cursor: 'help' }}>🌀 {Number(tokenStats.total_decayed).toLocaleString()} Ȼ</Typography>
+                                <Typography variant="h6" sx={{ color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)', cursor: 'help' }}>🌀 {Number(tokenStats.total_decayed).toLocaleString()} Ȼ</Typography>
                             </Tooltip>
                         </Box>
                     </Box>
@@ -741,7 +704,7 @@ const CommunityHub = () => {
                             variant="outlined"
                             startIcon={<GavelIcon />}
                             onClick={() => navigate(`/signals/governance/${communityId}`)}
-                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                            sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                         >
                             GOVERNANCE CHAMBER
                         </Button>
@@ -749,7 +712,7 @@ const CommunityHub = () => {
                             variant="outlined"
                             startIcon={<MenuBookIcon />}
                             onClick={() => navigate(`/signals/governance/${communityId}/constitution`)}
-                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                            sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                         >
                             CONSTITUTION
                         </Button>
@@ -757,7 +720,7 @@ const CommunityHub = () => {
                             variant="outlined"
                             startIcon={<GroupIcon />}
                             onClick={() => navigate(`/signals/governance/${communityId}/delegation`)}
-                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                            sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                         >
                             DELEGATION MAP
                         </Button>
@@ -765,7 +728,7 @@ const CommunityHub = () => {
                             variant="outlined"
                             startIcon={<InsightsIcon />}
                             onClick={() => navigate(`/signals/governance/${communityId}/simulator`)}
-                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                            sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                         >
                             SIMULATOR
                         </Button>
@@ -773,7 +736,7 @@ const CommunityHub = () => {
                             variant="outlined"
                             startIcon={<HealthAndSafetyIcon />}
                             onClick={() => navigate(`/signals/governance/${communityId}/mediation`)}
-                            sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                            sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                         >
                             MEDIATION
                         </Button>
@@ -825,7 +788,7 @@ const CommunityHub = () => {
                     <Card className="hub-card members-card">
                         <CardContent>
                             <GroupIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Members</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', textShadow: '0 0 5px var(--commons-glow)', fontFamily: 'var(--hud-header-font)' }}>Members</Typography>
                             
                             {isMember && isDelegating && (
                                 <div className="delegation-info">
@@ -923,7 +886,7 @@ const CommunityHub = () => {
                         <Card className="hub-card voting-card">
                             <CardContent>
                                 <HowToVoteIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Project Proposals</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', textShadow: '0 0 5px var(--commons-glow)', fontFamily: 'var(--hud-header-font)' }}>Project Proposals</Typography>
                                 {proposals.length === 0 ? (
                                     <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active proposals</Typography>
                                 ) : (
@@ -940,12 +903,11 @@ const CommunityHub = () => {
                                                             sx={{
                                                                 textAlign: 'center',
                                                                 display: 'block', // Ensure it takes full width for centering
-                                                                // sx for Link component might need different approach for color if not inheriting
                                                             }}
                                                         >
                                                             {proposal.name}
                                                         </Link>
-                                                        {proposal.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.2)', color: '#ff5ca2', fontSize: '0.6rem', height: '20px' }} />}
+                                                        {proposal.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(var(--hud-secondary-color-rgb), 0.2)', color: 'var(--hud-secondary-color)', fontSize: '0.6rem', height: '20px' }} />}
                                                     </Box>
                                                     <Typography variant="body2" className="proposal-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                         {proposal.description}
@@ -956,7 +918,6 @@ const CommunityHub = () => {
                                                                 key={idx} 
                                                                 label={tag} 
                                                                 size="small" 
-                                                                // sx from CSS: .tag-container .MuiChip-root
                                                             />
                                                         ))}
                                                     </div>
@@ -985,8 +946,8 @@ const CommunityHub = () => {
                                                             startIcon={<RocketLaunchIcon />}
                                                             onClick={() => navigate('/constellations', { state: { prefill: { communityId, project: proposal } } })}
                                                             sx={{
-                                                                color: '#ff5ca2',
-                                                                borderColor: '#ff5ca2',
+                                                                color: 'var(--hud-secondary-color)',
+                                                                borderColor: 'var(--hud-secondary-color)',
                                                                 height: isMobile ? '48px' : 'auto',
                                                                 flexGrow: 1
                                                             }}
@@ -1044,14 +1005,14 @@ const CommunityHub = () => {
                         <Card className="hub-card constellation-invites-card">
                             <CardContent>
                                 <RocketLaunchIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: '#ff5ca2', textShadow: '0 0 5px #ff5ca2' }}>Alliance Requests</Typography>
+                                <Typography variant="h5" sx={{ color: 'var(--hud-secondary-color)', textShadow: '0 0 5px var(--hud-secondary-color)', fontFamily: 'var(--hud-header-font)' }}>Alliance Requests</Typography>
                                 <List>
                                     {constellationInvites.map(invite => (
-                                        <ListItem key={invite.id} sx={{ borderBottom: '1px solid rgba(255, 92, 162, 0.2)' }}>
+                                        <ListItem key={invite.id} sx={{ borderBottom: '1px solid rgba(var(--hud-secondary-color-rgb), 0.2)' }}>
                                             <ListItemText
                                                 primary={`Invite from ${invite.inviter_name}`}
                                                 secondary={`Alliance: ${invite.constellation_name}`}
-                                                primaryTypographyProps={{ color: '#ff5ca2' }}
+                                                primaryTypographyProps={{ color: 'var(--hud-secondary-color)', fontFamily: 'var(--hud-header-font)' }}
                                                 secondaryTypographyProps={{ color: 'gray' }}
                                             />
                                             <Box className="vote-actions" sx={{ display: 'flex', gap: 1 }}>
@@ -1076,7 +1037,7 @@ const CommunityHub = () => {
                         <Card className="hub-card membership-card">
                             <CardContent>
                                 <PersonAddIcon className="hub-icon" />
-                                <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)' }}>Membership Requests</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', textShadow: '0 0 5px var(--commons-glow)', fontFamily: 'var(--hud-header-font)' }}>Membership Requests</Typography>
                                 {membershipRequests.length === 0 ? (
                                     <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No pending requests</Typography>
                                 ) : (
@@ -1159,32 +1120,32 @@ const CommunityHub = () => {
                     <Card className="hub-card projects-card">
                         <CardContent sx={{ p: isMobile ? 1.5 : 3 }}>
                             <RocketLaunchIcon className="hub-icon" />
-                            <Typography variant="h5" sx={{ color: 'var(--hud-text-primary)', textShadow: '0 0 5px var(--hud-glow-color)', mb: 2 }}>Active Projects</Typography>
+                            <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', textShadow: '0 0 5px var(--commons-glow)', mb: 2, fontFamily: 'var(--hud-header-font)' }}>Active Projects</Typography>
                             {approvedProjects.length === 0 ? (
                                 <Typography variant="body2" className="no-items" sx={{color: 'var(--hud-text-secondary)'}}>No active projects</Typography>
                             ) : (
                                 <div className="projects-grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                                     {approvedProjects.map((project) => (
-                                        <Card key={project.id} className="project-card"> {/* CSS handles this card's theme */}
+                                        <Card key={project.id} className="project-card">
                                             <CardContent>
                                                 <Box display="flex" justifyContent="center" alignItems="center" gap={1} mb={1}>
                                                     <Link
                                                         component="button"
                                                         variant="h6"
                                                         onClick={() => navigate(`/visualizer/${project.id}`)}
-                                                        className="clickable-title" // CSS handles base style
+                                                        className="clickable-title"
                                                         sx={{ textAlign: 'center', display: 'block' }}
                                                     >
                                                         {project.name}
                                                     </Link>
-                                                    {project.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(255, 92, 162, 0.2)', color: '#ff5ca2', fontSize: '0.6rem', height: '20px' }} />}
+                                                    {project.isShared && <Chip label="SHARED" size="small" sx={{ bgcolor: 'rgba(var(--hud-secondary-color-rgb), 0.2)', color: 'var(--hud-secondary-color)', fontSize: '0.6rem', height: '20px' }} />}
                                                 </Box>
                                                 <Typography variant="body2" className="project-description" sx={{color: 'var(--hud-text-secondary)'}}>
                                                     {project.description}
                                                 </Typography>
                                                 <div className="tag-container small-tags" style={{marginTop: '10px', marginBottom: '10px'}}>
                                                     {project.tags && project.tags.map((tag, idx) => (
-                                                        <Chip key={idx} label={tag} size="small" /* sx from CSS */ />
+                                                        <Chip key={idx} label={tag} size="small" />
                                                     ))}
                                                 </div>
                                                 <Box display="flex" flexDirection="column" gap={1} mt="auto">
@@ -1209,7 +1170,7 @@ const CommunityHub = () => {
                                                         variant="outlined"
                                                         startIcon={<RocketLaunchIcon />}
                                                         onClick={() => navigate('/constellations', { state: { prefill: { communityId, project } } })}
-                                                        sx={{ color: '#ff5ca2', borderColor: '#ff5ca2', height: isMobile ? '48px' : 'auto' }}
+                                                        sx={{ color: 'var(--hud-secondary-color)', borderColor: 'var(--hud-secondary-color)', height: isMobile ? '48px' : 'auto' }}
                                                     >
                                                         REQUEST CONSTELLATION
                                                     </Button>
@@ -1225,14 +1186,14 @@ const CommunityHub = () => {
 
                 {/* Community Needs Card - Visible to all */}
                 <div className="hub-grid-item full-width-item">
-                    <Card className="hub-card needs-card" sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.2)' }}>
+                    <Card className="hub-card needs-card" sx={{ bgcolor: 'var(--hud-panel-bg-color)', border: '1px solid var(--hud-primary-color)', boxShadow: '0 0 10px var(--commons-glow)' }}>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                <RocketLaunchIcon className="hub-icon" sx={{ color: '#00F3FF' }} />
-                                <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron' }}>Community Needs</Typography>
+                                <RocketLaunchIcon className="hub-icon" sx={{ color: 'var(--hud-primary-color)' }} />
+                                <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}>Community Needs</Typography>
                             </Box>
                             {communityNeeds.length === 0 ? (
-                                <Typography variant="body2" sx={{ color: '#CCC', py: 2 }}>No open needs in this community.</Typography>
+                                <Typography variant="body2" sx={{ color: 'var(--hud-text-color)', opacity: 0.7, py: 2 }}>No open needs in this community.</Typography>
                             ) : (
                                 <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
                                     {communityNeeds.filter(n => n.status !== 'fulfilled').slice(0, 6).map(need => (
@@ -1240,19 +1201,19 @@ const CommunityHub = () => {
                                             key={need.id}
                                             onClick={() => navigate(`/needs/${need.id}`)}
                                             sx={{
-                                                bgcolor: 'rgba(10, 10, 46, 0.6)',
-                                                border: '1px solid rgba(0, 243, 255, 0.3)',
+                                                bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                                border: '1px solid rgba(var(--hud-primary-color-rgb), 0.3)',
                                                 cursor: 'pointer',
-                                                '&:hover': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.4)' }
+                                                '&:hover': { borderColor: 'var(--hud-primary-color)', boxShadow: '0 0 10px var(--commons-glow)' }
                                             }}
                                         >
                                             <CardContent>
-                                                <Typography variant="h6" sx={{ color: '#00F3FF', fontSize: '1.1rem', mb: 1 }}>{need.name}</Typography>
-                                                <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{need.description}</Typography>
+                                                <Typography variant="h6" sx={{ color: 'var(--hud-primary-color)', fontSize: '1.1rem', mb: 1 }}>{need.name}</Typography>
+                                                <Typography variant="body2" sx={{ color: 'var(--hud-text-secondary)', mb: 2, height: '3em', overflow: 'hidden' }}>{need.description}</Typography>
                                                 <Chip
                                                     label={need.urgency?.toUpperCase() || 'MEDIUM'}
                                                     size="small"
-                                                    sx={{ bgcolor: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF', border: '1px solid #00F3FF' }}
+                                                    sx={{ bgcolor: 'rgba(var(--hud-primary-color-rgb), 0.1)', color: 'var(--hud-primary-color)', border: '1px solid var(--hud-primary-color)' }}
                                                 />
                                             </CardContent>
                                         </Card>
@@ -1264,7 +1225,7 @@ const CommunityHub = () => {
                                     <Button
                                         variant="contained"
                                         onClick={() => setIsNeedDeclareModalOpen(true)}
-                                        sx={{ bgcolor: '#00F3FF', color: 'black', fontFamily: 'Orbitron', fontWeight: 'bold' }}
+                                        sx={{ bgcolor: 'var(--hud-primary-color)', color: 'black', fontFamily: 'var(--hud-header-font)', fontWeight: 'bold' }}
                                     >
                                         DECLARE NEED
                                     </Button>
@@ -1272,7 +1233,7 @@ const CommunityHub = () => {
                                 <Button
                                     variant="outlined"
                                     onClick={() => navigate('/needs')}
-                                    sx={{ color: '#00F3FF', borderColor: '#00F3FF', fontFamily: 'Orbitron' }}
+                                    sx={{ color: 'var(--hud-primary-color)', borderColor: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)' }}
                                 >
                                     EXPLORER
                                 </Button>
@@ -1282,15 +1243,15 @@ const CommunityHub = () => {
                 </div>
             </Box>
             {/* Community Services Marketplace */}
-            <Box sx={{ mt: 4, mb: 4, px: isMobile ? 0 : 2 }}>
-                <Card sx={{ bgcolor: 'rgba(28, 28, 30, 0.85)', border: '1px solid #00F3FF', boxShadow: '0 0 15px rgba(0, 243, 255, 0.3)', borderRadius: isMobile ? 0 : 2 }}>
+            <Box sx={{ mt: 4, mb: 4, px: isMobile ? 0 : 2, width: '100%', maxWidth: '1200px' }}>
+                <Card sx={{ bgcolor: 'var(--hud-panel-bg-color)', border: '1px solid var(--hud-primary-color)', boxShadow: '0 0 15px var(--commons-glow)', borderRadius: isMobile ? 0 : 2 }}>
                     <CardContent sx={{ p: isMobile ? 2 : 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                            <StorefrontIcon sx={{ color: '#00F3FF' }} />
-                            <Typography variant="h5" sx={{ color: '#00F3FF', fontFamily: 'Orbitron', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>Community Services</Typography>
+                            <StorefrontIcon sx={{ color: 'var(--hud-primary-color)' }} />
+                            <Typography variant="h5" sx={{ color: 'var(--hud-primary-color)', fontFamily: 'var(--hud-header-font)', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>Community Services</Typography>
                         </Box>
                         {communityServices.length === 0 ? (
-                            <Typography variant="body2" sx={{ color: '#CCC', textAlign: 'center', py: 4 }}>No services advertised in this community yet.</Typography>
+                            <Typography variant="body2" sx={{ color: 'var(--hud-text-secondary)', textAlign: 'center', py: 4 }}>No services advertised in this community yet.</Typography>
                         ) : (
                             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
                                 {communityServices.map(service => (
@@ -1298,25 +1259,25 @@ const CommunityHub = () => {
                                         key={service.id}
                                         onClick={(e) => handlePurchaseService(service, e)}
                                         sx={{
-                                            bgcolor: 'rgba(10, 10, 46, 0.6)',
-                                            border: '1px solid rgba(0, 243, 255, 0.5)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            border: '1px solid rgba(var(--hud-primary-color-rgb), 0.5)',
                                             color: 'white',
                                             cursor: 'pointer',
                                             '&:hover': {
-                                                borderColor: '#00F3FF',
-                                                boxShadow: '0 0 10px rgba(0, 243, 255, 0.4)'
+                                                borderColor: 'var(--hud-primary-color)',
+                                                boxShadow: '0 0 10px var(--commons-glow)'
                                             }
                                         }}
                                     >
                                         <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                                            <Typography variant="h6" sx={{ color: '#00F3FF', fontSize: '1.1rem', mb: 1 }}>{service.name}</Typography>
-                                            <Typography variant="body2" sx={{ color: '#CCC', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
-                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(0, 243, 255, 0.2)', mt: 'auto' }} />
+                                            <Typography variant="h6" sx={{ color: 'var(--hud-primary-color)', fontSize: '1.1rem', mb: 1 }}>{service.name}</Typography>
+                                            <Typography variant="body2" sx={{ color: 'var(--hud-text-secondary)', mb: 2, height: '3em', overflow: 'hidden' }}>{service.description}</Typography>
+                                            <Divider sx={{ mb: 2, bgcolor: 'rgba(var(--hud-primary-color-rgb), 0.2)', mt: 'auto' }} />
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
                                                 <Box>
-                                                    <Typography variant="h6" sx={{ color: '#FF5CA2', fontSize: '1rem' }}>{service.service_price} Tokens</Typography>
+                                                    <Typography variant="h6" sx={{ color: 'var(--hud-secondary-color)', fontSize: '1rem' }}>{service.service_price} Tokens</Typography>
                                                     <Tooltip title="2% burn applies to support deflation">
-                                                        <Typography variant="caption" sx={{ color: 'rgba(255, 92, 162, 0.6)', cursor: 'help' }}>2% burn applies</Typography>
+                                                        <Typography variant="caption" sx={{ color: 'var(--hud-text-secondary)', cursor: 'help' }}>2% burn applies</Typography>
                                                     </Tooltip>
                                                 </Box>
                                                 <Button
@@ -1325,11 +1286,11 @@ const CommunityHub = () => {
                                                     startIcon={<ShoppingCartIcon />}
                                                     onClick={(e) => handlePurchaseService(service, e)}
                                                     sx={{
-                                                        background: 'linear-gradient(45deg, #00F3FF, #4DABF7)',
+                                                        background: 'linear-gradient(45deg, var(--hud-primary-color), #4DABF7)',
                                                         color: 'black',
                                                         fontWeight: 'bold',
                                                         minHeight: '40px',
-                                                        '&:hover': { background: 'linear-gradient(45deg, #4DABF7, #00F3FF)' }
+                                                        '&:hover': { background: 'linear-gradient(45deg, #4DABF7, var(--hud-primary-color))' }
                                                     }}
                                                 >
                                                     Purchase
@@ -1344,7 +1305,13 @@ const CommunityHub = () => {
                 </Card>
             </Box>
 
-            <CommunityResourceManagement communityId={communityId} />
+            <Box sx={{ width: '100%', maxWidth: '1200px' }}>
+                <CommunityResourceManagement communityId={communityId} />
+            </Box>
+
+            <Box sx={{ width: '100%', maxWidth: '1200px' }}>
+                <CommunityMarketplace communityId={communityId} />
+            </Box>
 
             {/* Community Need Form Modal */}
             <Modal
@@ -1358,13 +1325,14 @@ const CommunityHub = () => {
                     transform: 'translate(-50%, -50%)',
                     width: { xs: '90%', sm: '600px' },
                     p: 4,
-                    bgcolor: 'rgba(28, 28, 30, 0.95)',
-                    border: '1px solid #00F3FF',
+                    bgcolor: 'rgba(3, 6, 18, 0.95)',
+                    border: '1px solid var(--hud-primary-color)',
                     color: 'white',
                     maxHeight: '90vh',
-                    overflowY: 'auto'
+                    overflowY: 'auto',
+                    backdropFilter: 'blur(20px)'
                 }}>
-                    <Typography variant="h5" sx={{ mb: 3, fontFamily: 'Orbitron', color: '#00F3FF', textAlign: 'center' }}>
+                    <Typography variant="h5" sx={{ mb: 3, fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)', textAlign: 'center' }}>
                         DECLARE COMMUNITY NEED
                     </Typography>
                     <NeedDeclarationForm
@@ -1375,7 +1343,10 @@ const CommunityHub = () => {
                     />
                 </Paper>
             </Modal>
-            <CommunityChronicle communityId={communityId} />
+
+            <Box sx={{ width: '100%', maxWidth: '1200px' }}>
+                <CommunityChronicle communityId={communityId} />
+            </Box>
 
             {/* Community Integrations Modal */}
             <Modal
@@ -1389,18 +1360,19 @@ const CommunityHub = () => {
                     transform: 'translate(-50%, -50%)',
                     width: { xs: '90%', sm: '500px' },
                     p: 4,
-                    bgcolor: 'rgba(28, 28, 30, 0.95)',
-                    border: '1px solid #00F3FF',
+                    bgcolor: 'rgba(3, 6, 18, 0.95)',
+                    border: '1px solid var(--hud-primary-color)',
                     color: 'white',
                     maxHeight: '90vh',
-                    overflowY: 'auto'
+                    overflowY: 'auto',
+                    backdropFilter: 'blur(20px)'
                 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <Box>
-                            <Typography variant="h5" sx={{ mb: 1, fontFamily: 'Orbitron', color: '#00F3FF' }}>
+                            <Typography variant="h5" sx={{ mb: 1, fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)' }}>
                                 Community Integrations
                             </Typography>
-                            <Typography variant="body2" sx={{ color: '#CCC', mb: 2 }}>
+                            <Typography variant="body2" sx={{ color: 'var(--hud-text-secondary)', mb: 2 }}>
                                 Connect your community to external platforms to automate coordination.
                             </Typography>
                         </Box>
@@ -1408,21 +1380,22 @@ const CommunityHub = () => {
                         <Button
                             variant="outlined"
                             fullWidth
+                            startIcon={<ChatIcon />}
                             href={`https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
                             target="_blank"
-                            sx={{ color: '#5865F2', borderColor: '#5865F2' }}
+                            sx={{ color: '#5865F2', borderColor: '#5865F2', fontFamily: 'var(--hud-header-font)' }}
                         >
                             INVITE DISCORD BOT
                         </Button>
 
-                        <Divider sx={{ bgcolor: 'rgba(0, 243, 255, 0.2)' }} />
+                        <Divider sx={{ bgcolor: 'rgba(var(--hud-primary-color-rgb), 0.2)' }} />
 
                         <CommunityIntegrationsPanel communityId={communityId} />
 
                         <Button
                             variant="contained"
                             onClick={() => setIsDiscordConfigOpen(false)}
-                            sx={{ mt: 2, bgcolor: '#00F3FF', color: 'black', fontWeight: 'bold' }}
+                            sx={{ mt: 2, bgcolor: 'var(--hud-primary-color)', color: 'black', fontWeight: 'bold' }}
                         >
                             DONE
                         </Button>
@@ -1430,11 +1403,11 @@ const CommunityHub = () => {
                 </Paper>
             </Modal>
             <Snackbar 
-  open={snackbarOpen} 
-  autoHideDuration={6000} 
-  onClose={handleCloseSnackbar}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
                 <MuiAlert 
                     elevation={6} 
                     variant="filled" 
@@ -1442,13 +1415,13 @@ const CommunityHub = () => {
                     severity={snackbarSeverity}
                     sx={{
                         backgroundColor: snackbarSeverity === 'success' ? 'var(--hud-success-color)' : 'var(--hud-error-color)',
-                        color: '#fff', // Ensuring text is white on colored background
-                        '.MuiAlert-icon': { color: '#fff' } // Ensuring icon is white
+                        color: '#fff',
+                        '.MuiAlert-icon': { color: '#fff' }
                     }}
                 >
                     {snackbarMessage}
                 </MuiAlert>
-</Snackbar>
+            </Snackbar>
         </Box>
     );
 };

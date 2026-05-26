@@ -1,10 +1,15 @@
 /* Base container */
 .chronicle-container {
-    background-color: #0A0A2E;
+    background: var(--hud-panel-bg-color);
     padding: 2rem;
     border-radius: 1rem;
-    color: #FFFFFF;
-    font-family: 'Orbitron', sans-serif;
+    border: 1px solid var(--hud-border-color);
+    color: var(--hud-text-color);
+    font-family: var(--hud-header-font);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 20px var(--hud-glow-color);
+    margin-top: 2rem;
+    margin-bottom: 2rem;
   }
   
   /* Controls section */
@@ -20,7 +25,22 @@
   .chronicle-controls .MuiTextField-root {
     flex: 1;
     min-width: 240px;
-    /* background-color and border-radius removed as MUI TextField will be styled by ThemeProvider */
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+
+  .chronicle-controls .MuiInputBase-root {
+    color: white;
+    font-family: var(--hud-header-font);
+  }
+
+  .chronicle-controls .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(95, 240, 255, 0.3);
+  }
+
+  .chronicle-controls .MuiInputLabel-root {
+    color: rgba(95, 240, 255, 0.7);
+    font-family: var(--hud-header-font);
   }
   
   .tag-filters {
@@ -32,23 +52,30 @@
   /* Tag hover effects */
   .tag-filters .MuiChip-root {
     transition: all 0.3s ease;
-    /* border, color, and background-color removed as MUI Chip will be styled by ThemeProvider for base look */
+    border-color: var(--hud-primary-color);
+    color: var(--hud-primary-color);
+    font-family: var(--hud-header-font);
   }
   
   .tag-filters .MuiChip-root:hover {
-    background-color: #9C27B0;
-    color: #00F3FF;
-    border-color: #00F3FF; /* Note: Chip variant="outlined" would be needed for this to show */
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.47);
-    transition: all 0.3s ease; /* Ensuring transition */
+    background-color: var(--hud-primary-color);
+    color: black;
+    box-shadow: 0 0 10px var(--hud-glow-color);
+  }
+
+  .tag-filters .MuiChip-root.MuiChip-colorPrimary {
+    background-color: var(--hud-primary-color);
+    color: black;
+    border-color: var(--hud-primary-color);
   }
   
   /* Carousel card */
   .MuiCard-root.carousel-card {
-    background: linear-gradient(135deg, #1C1C1E, #000000);
-    border: 1px solid rgba(156, 39, 176, 0.6);
-    box-shadow: 0 0 15px rgba(156, 39, 176, 0.6);
-    transition: transform 0.5s ease, opacity 0.5s ease; /* Existing transitions kept */
+    background: rgba(10, 10, 46, 0.6);
+    border: 1px solid var(--hud-secondary-color);
+    box-shadow: 0 0 15px var(--hud-glow-secondary-color);
+    backdrop-filter: blur(10px);
+    transition: transform 0.5s ease, opacity 0.5s ease;
     opacity: 0;
     transform: translateY(20px);
   }
@@ -60,14 +87,16 @@
   
   /* Chronicle card grid */
   .MuiCard-root.chronicle-card {
-    background-color: #1C1C1E;
-    color: #FFFFFF;
-    border-radius: 12px; /* Existing border-radius kept */
-    border: 1px solid #444444;
-    box-shadow: 0 0 10px rgba(156, 39, 176, 0.47);
-    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Ensuring transition */
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hud-text-color);
+    border-radius: 12px;
+    border: 1px solid rgba(var(--hud-primary-color-rgb), 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
     opacity: 0;
     transform: translateY(20px);
+    height: 100%;
   }
   
   .MuiCard-root.chronicle-card.show {
@@ -76,17 +105,30 @@
   }
   
   .MuiCard-root.chronicle-card:hover {
-    transform: scale(1.02); /* Existing transform kept */
-    box-shadow: 0 0 15px #00F3FF;
+    transform: translateY(-5px);
+    border-color: var(--hud-primary-color);
+    box-shadow: 0 0 15px var(--hud-glow-color);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .chronicle-reflection {
     max-height: 100px;
     overflow-y: auto;
+    color: var(--hud-text-secondary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--hud-primary-color) transparent;
   }
   
   /* Media query for smaller screens */
   @media (max-width: 600px) {
+    .chronicle-container {
+        padding: 1rem;
+        margin-top: 1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
     .chronicle-controls {
       flex-direction: column;
       align-items: stretch;
