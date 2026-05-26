@@ -20,7 +20,7 @@
 }
 
 .project-creation-background {
-    background: radial-gradient(circle at center, rgba(10, 46, 70, 0.2) 0%, #000000 100%);
+    background: radial-gradient(circle at center, rgba(10, 46, 70, 0.2) 0%, #0000002d 100%);
     min-height: 100vh;
     width: 100%;
 }

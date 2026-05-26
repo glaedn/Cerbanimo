@@ -921,7 +921,7 @@ const ProjectVisualizer = () => {
     <div className={isMobile ? "mobile-visualizer" : "skill-hierarchy-container"} ref={containerRef} onMouseLeave={handleMouseLeave}>
       {isMobile ? (
         <>
-          <Box sx={{ zIndex: 40, position: 'relative' }}>
+          <Box sx={{ zIndex: 40, position: 'relative', }}>
             <ArcCarousel items={displayCommunities} activeIndex={communityIndex} setActiveIndex={i => { setCommunityIndex(i); setProjectIndex(0); }} />
           </Box>
           <Box sx={{ zIndex: 35, position: 'relative' }}>
@@ -948,7 +948,7 @@ const ProjectVisualizer = () => {
             position: 'relative',
             width: '100%',
             height: '500px',
-            bgcolor: '#000',
+            bgcolor: '#00000033',
             borderRadius: '12px',
             overflow: 'hidden',
             mb: 2,
