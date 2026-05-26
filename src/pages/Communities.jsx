@@ -76,22 +76,20 @@ const Communities = () => {
             '& .MuiOutlinedInput-root': {
               color: '#fff',
               borderRadius: '30px',
-              '& fieldset': { borderColor: 'rgba(0,243,255,0.3)' },
-              '&:hover fieldset': { borderColor: '#00f3ff' }
+              '& fieldset': { borderColor: 'rgba(255, 153, 0, 0.3)' },
+              '&:hover fieldset': { borderColor: '#ff8800ff' }
             }
           }}
         />
 
-        <Button
+        <Button classname="create-community-button"
           onClick={() => navigate('/communitycreation')}
           sx={{
-            width: 48,
-            height: 48,
-            minWidth: 48,
             borderRadius: '50%',
             ml: 2,
-            bgcolor: '#00f3ff',
-            color: '#000',
+            bgcolor: '#ffae0010',
+            color: '#ff9b04ff',
+            outline: '1px solid rgba(255, 115, 0, 1)',
             fontSize: '1.5rem',
             display: 'flex',
             alignItems: 'center',

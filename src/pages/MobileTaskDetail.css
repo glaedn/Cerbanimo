@@ -1,6 +1,7 @@
 .mobile-task-detail-container {
-    background: radial-gradient(circle at 50% 50%, #0a0a2e 0%, #030612 100%);
+    background: linear-gradient(#118bbb38 0%, #b302ca25 100%);
     min-height: 100vh;
+    border-radius: 20px;
     color: #00F3FF;
     font-family: 'Inter', sans-serif;
 }
@@ -10,8 +11,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem;
+    border-radius: 20px 20px 0 0;
     border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-    background: rgba(0, 10, 20, 0.8);
+    background: rgba(0, 13, 20, 0.432);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     position: sticky;
@@ -225,7 +227,7 @@
     margin-top: 1rem !important;
     background: transparent !important;
     border: 1px solid #00F3FF !important;
-    color: #00F3FF !important;
+    color: #003538 !important;
     font-family: 'Orbitron', sans-serif !important;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
 }
@@ -233,15 +235,18 @@
 /* Sticky Actions */
 .sticky-actions {
     position: fixed;
-    bottom: 65px;
+    bottom: 25px;
+    margin: 0 0 0 5px;
     left: 0;
     right: 0;
-    padding: 1rem;
-    background: rgba(0, 5, 15, 0.8);
-    border-top: 1px solid rgba(0, 243, 255, 0.3);
+    padding: .5rem;
+    background: rgba(0, 10, 12, 0.616);
+    border: 1px solid rgba(0, 242, 255, 0.219);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    border-radius: 10px;
     z-index: 1000;
+    box-shadow: 0 0 5px rgba(0, 242, 255, 0.3);
 }
 
 .cyber-btn {
@@ -254,9 +259,10 @@
 }
 
 .cyber-btn.primary {
-    background: #00F3FF !important;
-    color: #000 !important;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+    background: #00323562 !important;
+    color: #00f7ff !important;
+    border: 1px solid #00f2ff77 !important;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.4);
 }
 
 .cyber-btn.secondary {
@@ -283,13 +289,17 @@
 }
 
 .cyber-btn.pm-approve {
-    background: #00F3FF !important;
-    color: #000 !important;
+    background: #00f2ff38 !important;
+    color: #00ffff !important;
+    border: 1px solid #00f2ff77 !important;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.4);
 }
 
 .cyber-btn.pm-reject {
-    background: #FF5CA2 !important;
-    color: #000 !important;
+    background: #ff5ca348 !important;
+    color: #FF5CA2 !important;
+    border: 1px solid #ff5ca377 !important;
+    box-shadow: 0 0 5px rgba(255, 92, 162, 0.4);
 }
 
 .cyber-btn.pending {
