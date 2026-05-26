@@ -5,16 +5,19 @@ import { ShieldAlert, Zap, MapPin, Truck, Activity, Navigation, Crosshair } from
 import theme from '../../styles/theme';
 
 const Container = styled.div`
-  width: 360px;
-  background: rgba(40, 0, 0, 0.4);
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid ${theme.tokens.colors.status.crisis};
-  border-radius: 8px;
-  backdrop-filter: blur(16px);
+  border-radius: 12px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-sizing: border-box;
 `;
 
 const Header = styled.div`

@@ -18,8 +18,9 @@ const AvatarCircle = styled(motion.div)`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid ${theme.tokens.colors.brand.primary};
-  background: ${theme.tokens.colors.surface.paper};
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,7 +28,7 @@ const AvatarCircle = styled(motion.div)`
   font-weight: bold;
   color: #fff;
   cursor: help;
-  box-shadow: ${theme.tokens.glow.primary};
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   position: relative;
 
   &:hover .presence-tooltip {

@@ -12,6 +12,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
+    overflow-x: hidden;
+}
+
+@media (max-width: 600px) {
+    .profile-container {
+        padding: 16px;
+        padding-bottom: 100px;
+    }
 }
 
 .profile-container::-webkit-scrollbar {
@@ -73,20 +81,19 @@
 
 /* Experience Section - Styling now primarily handled by `panelStyle` in sx prop */
 .profile-experience-container {
-    /* background-color: #1C1C1E; */ /* Handled by sx */
-    /* border-radius: 10px; */ /* Handled by sx */
-    /* padding: 15px; */ /* Handled by sx */
-    /* margin-top: 20px; */ /* Handled by sx (panelStyle.marginBottom) */
-    /* margin-left: 20px; */ /* Handled by sx (panel alignment) */
-    /* margin-right: 20px; */ /* Handled by sx (panel alignment) */
-    /* margin-bottom: 60px; */ /* Handled by sx (panelStyle.marginBottom) */
-    /* width: 95%; */ /* Handled by sx (panelStyle.width & maxWidth) */
-    /* max-width: 600px; */ /* Handled by sx (panelStyle.maxWidth) */
-    min-height: 300px; /* Retain if specific scrolling height is needed */
-    max-height: 500px; /* Retain if specific scrolling height is needed */
-    overflow-y: auto;   /* Retain if specific scrolling behavior is needed */
-    text-align: center; /* Panel content alignment is center via sx, this is fine */
-    /* box-shadow: 0 0 15px rgba(0, 243, 255, 0.6); */ /* Handled by sx */
+    min-height: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .profile-experience-container {
+        max-height: none;
+        overflow-y: visible;
+    }
 }
 
 .profile-experience-title { /* This rule might be duplicated or conflict if UserPortfolio also has titles */

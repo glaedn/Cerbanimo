@@ -20,20 +20,23 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 const InspectorContainer = styled.div`
-  background: ${theme.tokens.colors.surface.overlay};
-  backdrop-filter: blur(12px);
-  border: 1px solid ${theme.tokens.colors.brand.primary};
-  border-radius: ${theme.borders.borderRadiusMd};
-  padding: ${theme.tokens.spacing.md};
-  color: ${theme.tokens.colors.text.primary};
-  width: 320px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  color: #fff;
+  width: 100%;
+  max-width: 320px;
   max-height: 60vh;
   overflow-y: auto;
-  box-shadow: ${theme.tokens.glow.primary};
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   display: flex;
   flex-direction: column;
-  gap: ${theme.tokens.spacing.md};
+  gap: 16px;
   position: relative;
+  box-sizing: border-box;
 `;
 
 const CloseButton = styled.button`

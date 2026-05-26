@@ -13,7 +13,16 @@
     padding: 2rem;
     min-height: 100vh;
     font-family: 'Orbitron', sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
+
+@media (max-width: 600px) {
+    .user-portfolio {
+        padding: 1rem;
+    }
+}
   
   /* Section headers */
   .user-portfolio h2 {

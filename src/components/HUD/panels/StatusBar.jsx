@@ -53,7 +53,7 @@ const StatusBar = () => {
 
   if (profileLoading || skillsLoading) {
     return (
-      <div className="hud-panel status-bar">
+      <div className="hud-panel status-bar" style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,243,255,0.2)' }}>
         <div className="status-item">Loading Status...</div>
         {renderLoFiToggle()}
       </div>
@@ -62,7 +62,7 @@ const StatusBar = () => {
 
   if (profileError || skillsError) {
     return (
-      <div className="hud-panel status-bar">
+      <div className="hud-panel status-bar" style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,243,255,0.2)' }}>
         <div className="status-item">Error: {profileError?.message || skillsError?.message}</div>
         {renderLoFiToggle()}
       </div>
@@ -71,7 +71,7 @@ const StatusBar = () => {
 
   if (!profile || !allSkills || !isAuthenticated || !user) {
     return (
-      <div className="hud-panel status-bar">
+      <div className="hud-panel status-bar" style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,243,255,0.2)' }}>
         {renderLoFiToggle()}
       </div>
     );
@@ -116,7 +116,7 @@ const StatusBar = () => {
   xpPercentage = Math.min(Math.max(xpPercentage, 0), 100);
 
   return (
-    <div className="hud-panel status-bar">
+    <div className="hud-panel status-bar" style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,243,255,0.2)' }}>
       <div className="status-item user-info">
         <span className="username" style={{ fontFamily: accentFont }}>{profile.username}</span>
         <span className="level">Lvl: {currentLevel}</span>

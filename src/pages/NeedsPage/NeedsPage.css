@@ -2,6 +2,9 @@
   padding: 2rem;
   --commons-accent: #ffae6d;
   --commons-glow: rgba(255, 174, 109, 0.3);
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .needs-title {
@@ -11,11 +14,12 @@
 }
 
 .need-card {
-  background: rgba(25, 15, 8, 0.4) !important;
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 174, 109, 0.15) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .need-card:hover {
@@ -24,8 +28,9 @@
 }
 
 .declaration-form-container {
-  background: rgba(45, 26, 10, 0.4);
-  border: 1px solid var(--commons-accent);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
 }

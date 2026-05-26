@@ -1,6 +1,6 @@
 .interest-library-container {
-  min-height: 100vh;
-  background-color: #0A0A2E;
+  min-height: 100%;
+  background-color: transparent;
   color: #FFFFFF;
   display: flex;
   flex-direction: column;
@@ -12,10 +12,11 @@
   display: flex;
   align-items: center;
   border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-  background-color: rgba(10, 10, 46, 0.9);
+  background: rgba(8, 20, 41, 0.6);
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(15px);
 }
 
 .interest-library-content {
@@ -29,13 +30,13 @@
 }
 
 .category-header {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(5px);
 }
 
 .category-header:hover {
   background-color: rgba(0, 243, 255, 0.15) !important;
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.22);
 }
 
 .save-changes-container {

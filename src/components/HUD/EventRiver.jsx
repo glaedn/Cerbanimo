@@ -17,21 +17,28 @@ const RiverContainer = styled.div`
 
 const SignalCard = styled(motion.div)`
   pointer-events: auto;
-  background: ${props => props.tier === 'critical' ? 'rgba(255, 65, 54, 0.15)' : 'rgba(28, 28, 30, 0.85)'};
+  background: ${props => props.tier === 'critical' ? 'rgba(255, 65, 54, 0.1)' : 'rgba(255, 255, 255, 0.03)'};
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid ${props => {
     if (props.tier === 'critical') return theme.tokens.colors.status.urgency.critical;
     if (props.tier === 'active') return theme.tokens.colors.brand.primary;
-    return 'rgba(255, 255, 255, 0.1)';
+    return 'rgba(255, 255, 255, 0.15)';
   }};
   border-left: 4px solid ${props => {
     if (props.tier === 'critical') return theme.tokens.colors.status.urgency.critical;
     if (props.tier === 'active') return theme.tokens.colors.brand.primary;
     return theme.tokens.colors.text.muted;
   }};
-  padding: 10px;
-  border-radius: 4px;
-  backdrop-filter: blur(10px);
-  box-shadow: ${props => props.tier === 'critical' ? theme.tokens.glow.critical : 'none'};
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: ${props => props.tier === 'critical' ? theme.tokens.glow.critical : '0 4px 15px rgba(0,0,0,0.2)'};
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 `;
 
 const SignalHeader = styled.div`

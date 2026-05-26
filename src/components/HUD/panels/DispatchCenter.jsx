@@ -6,16 +6,18 @@ import { Truck, MapPin, Navigation, Clock, AlertTriangle, CheckCircle } from 'lu
 import styled from '@emotion/styled';
 
 const DispatchContainer = styled.div`
-  background: rgba(10, 10, 20, 0.9);
-  border: 1px solid rgba(0, 243, 255, 0.3);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 12px;
   padding: 16px;
   color: #fff;
   font-family: 'Orbitron', sans-serif;
   max-height: 500px;
   overflow-y: auto;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-sizing: border-box;
 `;
 
 const RouteCard = styled.div`

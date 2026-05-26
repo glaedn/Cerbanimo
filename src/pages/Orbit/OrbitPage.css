@@ -5,6 +5,7 @@
   padding: 24px;
   padding-bottom: 60px;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .orbit-hud-layer {
@@ -45,21 +46,30 @@
 
 @media (max-width: 600px) {
   .orbit-page-container {
-    padding: 16px;
-    padding-bottom: 92px; /* Extra padding for mobile bottom nav */
+    padding: 12px;
+    padding-bottom: 100px; /* Extra padding for mobile bottom nav */
+    width: 100vw;
   }
 
   .orbit-layout-grid {
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .orbit-main-column, .orbit-side-column {
+    width: 100%;
   }
 
   .orbit-section {
     padding: 16px;
+    border-radius: 8px;
   }
 
   .orbit-hud-layer {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     justify-content: center;
-    padding-right: 60px; /* Avoid overlap with mobile top actions */
+    padding-right: 0;
   }
 }

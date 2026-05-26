@@ -6,18 +6,19 @@ import { Layers, Shield, Truck, Link, EyeOff } from 'lucide-react';
 
 const OverlayToggleBar = styled.div`
   position: fixed;
-  bottom: 20px;
+  bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   gap: 10px;
-  background: rgba(28, 28, 30, 0.8);
+  background: rgba(255, 255, 255, 0.03);
   padding: 8px 16px;
   border-radius: 30px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 1000;
   pointer-events: auto;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 `;
 
 const ToggleButton = styled.button`

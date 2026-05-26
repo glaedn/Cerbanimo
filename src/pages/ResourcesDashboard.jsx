@@ -158,7 +158,7 @@ const ResourcesDashboard = () => {
   if (loading) return <Box p={4}><CircularProgress /></Box>;
 
   return (
-    <Box p={isMobile ? 2 : 4} sx={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#e0e0e0', pb: isMobile ? 12 : 4 }}>
+    <Box p={isMobile ? 2 : 4} className="glass-panel" sx={{ background: 'transparent', border: 'none', backdropFilter: 'none', minHeight: '100vh', color: '#e0e0e0', pb: isMobile ? 12 : 4 }}>
       <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'} mb={4} gap={2}>
         <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontFamily: 'Orbitron', color: '#00d787', textAlign: isMobile ? 'center' : 'left' }}>RESOURCE INVENTORY</Typography>
         <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2}>
@@ -215,7 +215,7 @@ const ResourcesDashboard = () => {
               <Grid container spacing={2}>
                 {catalog.filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())).map(r => (
                   <Grid item xs={12} sm={6} key={r.id}>
-                    <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: '#fff', '&:hover': { borderColor: '#00d787' } }}>
+                    <Card className="glass-panel" sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff', '&:hover': { borderColor: '#00d787', backgroundColor: 'rgba(255, 255, 255, 0.05)' } }}>
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" mb={1}>
                           <Typography variant="h6" sx={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>{r.name}</Typography>
@@ -259,7 +259,7 @@ const ResourcesDashboard = () => {
                     <Grid item xs={12}><Typography color="gray">No resources listed in your inventory.</Typography></Grid>
                 ) : resources.map(r => (
                   <Grid item xs={12} sm={6} key={r.id}>
-                    <Card sx={{ bgcolor: '#1a1a1a', border: '1px solid #333', color: '#fff' }}>
+                    <Card className="glass-panel" sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#fff' }}>
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" mb={1}>
                           <Typography variant="h6" sx={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>{r.name}</Typography>
@@ -278,7 +278,7 @@ const ResourcesDashboard = () => {
         {(!isMobile || tabValue === 2) && (
           <Grid item xs={12} md={4}>
             <Typography variant="h5" sx={{ fontFamily: 'Orbitron', mb: 2, color: '#00d787' }}>BOOKING SCHEDULE</Typography>
-            <Paper sx={{ bgcolor: '#111', p: 2, border: '1px solid #333' }}>
+            <Paper className="glass-panel" sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', p: 2, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <List>
                 {allocations.length === 0 ? (
                     <ListItem><ListItemText primary="No bookings found." sx={{ color: 'gray' }} /></ListItem>

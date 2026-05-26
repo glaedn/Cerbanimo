@@ -118,14 +118,14 @@ const InterestLibrary = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#0A0A2E' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', bgcolor: 'transparent' }}>
         <CircularProgress sx={{ color: theme.colors.primary }} />
       </Box>
     );
   }
 
   return (
-    <Box className="interest-library-container">
+    <Box className="interest-library-container glass-panel">
       <Box className="interest-library-header">
         <IconButton onClick={() => navigate(-1)} sx={{ color: theme.colors.primary }}>
           <ArrowBackIcon />
@@ -137,7 +137,7 @@ const InterestLibrary = () => {
 
       <Box className="interest-library-content">
         {categories.map((cat) => (
-          <Box key={cat.category} sx={{ mb: 2 }}>
+          <Box key={cat.category} sx={{ mb: 3 }}>
             <Box
               className="category-header"
               onClick={() => toggleCategory(cat.category)}
@@ -149,7 +149,12 @@ const InterestLibrary = () => {
                 backgroundColor: 'rgba(0, 243, 255, 0.1)',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                border: `1px solid ${theme.colors.primary}33`
+                border: `1px solid ${theme.colors.primary}33`,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 243, 255, 0.15)',
+                  boxShadow: `0 0 15px ${theme.colors.primary}22`
+                }
               }}
             >
               <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: theme.colors.primary }}>
@@ -170,9 +175,10 @@ const InterestLibrary = () => {
                       sx={{
                         p: 2,
                         borderRadius: '12px',
-                        border: `1px solid ${isSelected ? theme.colors.primary : 'rgba(0, 243, 255, 0.1)'}`,
+                        border: `1px solid ${isSelected ? theme.colors.primary : 'rgba(0, 243, 255, 0.15)'}`,
                         cursor: 'pointer',
-                        backgroundColor: isSelected ? 'rgba(0, 243, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                        background: isSelected ? 'rgba(0, 243, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                        backdropFilter: 'blur(10px)',
                         color: isSelected ? theme.colors.primary : '#FFF',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         boxShadow: isSelected ? `0 0 20px ${theme.colors.primary}33` : 'none',

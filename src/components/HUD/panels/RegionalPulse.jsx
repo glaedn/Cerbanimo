@@ -6,14 +6,18 @@ import { Activity, Shield, Users, Zap, Heart, TrendingUp } from 'lucide-react';
 import styled from '@emotion/styled';
 
 const PulseContainer = styled.div`
-  background: rgba(10, 10, 20, 0.95);
-  border: 1px solid rgba(0, 243, 255, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 243, 255, 0.2);
   border-radius: 12px;
   padding: 16px;
   color: #fff;
   font-family: 'Orbitron', sans-serif;
-  width: 280px;
-  backdrop-filter: blur(20px);
+  width: 100%;
+  max-width: 280px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-sizing: border-box;
 `;
 
 const MetricRow = styled.div`

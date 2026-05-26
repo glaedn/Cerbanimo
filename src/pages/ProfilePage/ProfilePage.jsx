@@ -42,7 +42,7 @@ const ProfilePage = () => {
     backdropFilter: 'blur(20px)',
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borders.borderRadiusLg,
-    padding: isMobile ? '16px' : '24px',
+    padding: isMobile ? '12px' : '24px',
     marginBottom: theme.spacing.lg,
     boxShadow: theme.effects.glowSubtle(theme.colors.primary),
     width: '100%', 
@@ -50,7 +50,8 @@ const ProfilePage = () => {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center', 
-    gap: theme.spacing.md, 
+    gap: theme.spacing.md,
+    boxSizing: 'border-box'
   };
 
   const [profileData, setProfileData] = useState({

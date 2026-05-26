@@ -185,21 +185,18 @@ const AdaptiveHUD = ({ children }) => {
         {renderContextualUI()}
       </div>
 
-      {/* Persistent Telemetry Layer (Container for pinned/global indicators) */}
-      <div className="hud-telemetry-layer">
-        {/* Status bar is global, other telemetry items are now toggleable panels */}
-      </div>
-
-      {/* Contextual Entity Inspector */}
-      {selectedEntity && (
-        <div className="panel-wrapper entity-inspector-panel">
-          <EntityInspector />
-        </div>
-      )}
-
       {/* Background/Central Content */}
       <div className="hud-map-viewport">
         {children}
+      </div>
+
+      <div className="hud-side-column" style={{ gridArea: 'right-panels' }}>
+          {/* Contextual Entity Inspector */}
+          {selectedEntity && (
+            <div className="panel-wrapper">
+              <EntityInspector />
+            </div>
+          )}
       </div>
 
       <StatusBar />

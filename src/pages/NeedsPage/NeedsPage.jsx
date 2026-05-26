@@ -196,10 +196,11 @@ const NeedsPage = () => {
   const renderNeedCard = (need) => (
     <Card
       key={need.id}
-      className="need-card"
+      className="need-card glass-panel"
       sx={{
-        backgroundColor: 'rgba(28, 28, 30, 0.8)',
-        border: `1px solid ${theme.colors.border}`,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(20px)',
+        border: `1px solid rgba(255, 255, 255, 0.1)`,
         borderRadius: theme.borders.borderRadiusMd,
         mb: 2,
         cursor: 'pointer',
@@ -207,7 +208,8 @@ const NeedsPage = () => {
         '&:hover': {
           borderColor: theme.colors.primary,
           boxShadow: theme.effects.glowSubtle(theme.colors.primary),
-          transform: 'translateY(-2px)'
+          transform: 'translateY(-2px)',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
         }
       }}
       onClick={() => navigate(`/needs/${need.id}`)}
@@ -313,10 +315,11 @@ const NeedsPage = () => {
           BACK_TO_EXPLORER
         </Button>
 
-        <Paper sx={{
+        <Paper className="glass-panel" sx={{
           p: 4,
-          backgroundColor: 'rgba(28, 28, 30, 0.9)',
-          border: `1px solid ${theme.colors.primary}`,
+          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+          backdropFilter: 'blur(20px)',
+          border: `1px solid rgba(255, 255, 255, 0.1)`,
           boxShadow: theme.effects.glowSubtle(theme.colors.primary),
           borderRadius: theme.borders.borderRadiusLg
         }}>
@@ -440,7 +443,7 @@ const NeedsPage = () => {
   }
 
   return (
-    <Box className="needs-page-container" sx={{ p: isMobile ? 2 : 4, pb: isMobile ? 12 : 4 }}>
+    <Box className="needs-page-container glass-panel" sx={{ p: isMobile ? 2 : 4, pb: isMobile ? 12 : 4, background: 'transparent', border: 'none', backdropFilter: 'none' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" sx={{
           color: theme.colors.primary,

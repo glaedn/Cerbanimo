@@ -5,16 +5,19 @@ import { Target, Users, Clock, AlertTriangle, ChevronRight } from 'lucide-react'
 import theme from '../../styles/theme';
 
 const Container = styled.div`
-  width: 340px;
-  background: rgba(10, 10, 46, 0.85);
-  border: 1px solid ${theme.tokens.colors.brand.primary};
-  border-radius: 8px;
-  backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 340px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 12px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: ${theme.tokens.glow.primary};
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-sizing: border-box;
 `;
 
 const Header = styled.div`

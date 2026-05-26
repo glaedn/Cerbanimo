@@ -2,22 +2,40 @@
   position: relative;
   top: 0;
   width: 100%;
-  height: calc(100vh - 50px);
+  height: 100vh;
   box-sizing: border-box;
   overflow: hidden;
-  background: transparent;
-  /* display: flex; Removed to allow absolute positioning of panels */
-  /* flex-direction: column; */
-  /* justify-content: center; */
-  /* align-items: center; */
+  background: #000;
+  display: grid;
+  grid-template-columns: 350px 1fr 350px;
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "left-panels map-area right-panels"
+    "bottom-bar bottom-bar bottom-bar";
+}
+
+.hud-operational-layer {
+  grid-area: left-panels;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  z-index: 20;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.hud-operational-layer > * {
+  pointer-events: auto;
 }
 
 .panel-wrapper {
-  position: absolute; /* Panels are positioned absolutely */
+  position: relative;
   z-index: 10;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
   opacity: 1;
   transform: scale(1);
+  width: 100%;
 }
 
 .panel-wrapper.hidden {
@@ -26,13 +44,20 @@
   pointer-events: none;
 }
 
-/* Generic Slot Positioning for Modular HUD */
-.hud-slot-0 { top: 10px; left: 10px; }
-.hud-slot-1 { top: 10px; left: 50%; transform: translateX(-50%); }
-.hud-slot-2 { top: 10px; right: 10px; }
-.hud-slot-3 { bottom: 60px; right: 10px; }
-.hud-slot-4 { bottom: 60px; left: 50%; transform: translateX(-50%); }
-.hud-slot-5 { bottom: 110px; left: 10px; } /* Elevated for button clearance */
+/* Re-purposing slots for a dynamic grid if needed, but flex column is safer for sequential */
+.hud-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  height: 100%;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.hud-side-column > * {
+  pointer-events: auto;
+}
 
 .command-deck {
   max-height: 40vh!important;
@@ -71,91 +96,59 @@
 }
 
 .hud-map-viewport {
+  grid-area: map-area;
   box-sizing: border-box;
-  border: 1px solid rgba(95, 240, 255, 0.48);
-  box-shadow: 0 0 22px rgba(95, 240, 255, 0.24), inset 0 0 22px rgba(95, 240, 255, 0.12);
-  max-width: 1600px; 
-  max-height: 1000px;
-  position: absolute; 
-  top: 70px;
-  bottom: 115px;
-  left: 220px;
-  right: 220px;
-  background: rgba(5, 16, 34, 0.18);
-  /* width, height, and transform removed for new top/bottom/left/right positioning */
+  border: 1px solid rgba(95, 240, 255, 0.2);
+  box-shadow: inset 0 0 40px rgba(0, 243, 255, 0.05);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 5;
 }
 
 /* Styling for StatusBar */
 .hud-container > .status-bar {
-  width: calc(100% - 20px);
-  position: absolute;
-  bottom: 0px; /* Closer to the edge */
-  left: 10px;
-  z-index: 10; /* Ensure it's above map but can be below panels if needed */
+  grid-area: bottom-bar;
+  width: 100%;
+  position: relative;
+  z-index: 30;
   box-sizing: border-box;
 }
 
 /* Enhanced Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .hud-container {
-    position: relative;
     display: flex;
     flex-direction: column;
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
-    padding: 10px;
-    padding-bottom: 90px; /* Space for fixed status bar */
+    background: #000;
   }
-  
-  .panel-wrapper {
-    position: relative !important;
-    width: 100% !important;
-    margin: 10px 0 !important;
-    left: auto !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: auto !important;
-    transform: none !important;
+
+  .hud-operational-layer {
+    order: 2;
+    pointer-events: auto;
+    overflow-y: visible;
   }
 
   .hud-map-viewport {
-    position: relative !important;
-    width: 100% !important;
-    height: 60vh !important;
-    min-height: 400px;
-    margin: 10px 0 !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    order: -1; /* Put map at top on mobile */
-    overflow: hidden; /* Ensure D3 simulation stays within bounds */
+    height: 50vh;
+    min-height: 300px;
+    order: 1;
   }
 
-  .event-river-panel,
-  .mission-control-panel,
-  .crisis-ops-panel,
-  .pulse-hud-panel,
-  .dispatch-panel,
-  .regional-pulse-panel {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    width: 100% !important;
-    margin-bottom: 15px;
+  .status-bar {
+    order: 3;
+    position: sticky;
+    bottom: 0;
   }
 
-  /* Stack panels in logical order */
-  .command-deck-panel { order: 1; }
-  .targeting-scanner-panel { order: 2; }
-  .mission-console-panel { order: 3; }
-  .comms-log-panel { order: 4; }
-  .skill-galaxy-panel { order: 5; }
+  .panel-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* Additional mobile optimizations */

@@ -5,13 +5,19 @@ import theme from '../../styles/theme';
 import { motion } from 'framer-motion';
 
 const Container = styled.div`
-  width: 320px;
-  height: 50px;
+  width: 100%;
+  max-width: 320px;
+  height: 60px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 15px;
   pointer-events: none;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border-radius: 30px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const PulseIndicator = styled.div`
