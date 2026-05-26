@@ -1,23 +1,24 @@
-/* CommunityHub Styling - Warm Commons Theme */
+/* CommunityHub Styling - Cerbanimo Glassmorphic Theme */
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 :root {
-    --commons-accent: #ffae6d;
-    --commons-glow: rgba(255, 174, 109, 0.3);
-    --hud-bg-color: #000000;
-    --hud-panel-bg-color: rgba(25, 15, 8, 0.6);
-    --hud-panel-bg-opaque: #1a0f08;
-    --hud-primary-color: var(--commons-accent);
-    --hud-primary-color-rgb: 255, 174, 109;
-    --hud-secondary-color: #f97316;
-    --hud-secondary-color-rgb: 249, 115, 22;
+    --commons-accent: #5FF0FF;
+    --commons-glow: rgba(95, 240, 255, 0.3);
+    --hud-bg-color: #030612;
+    --hud-panel-bg-color: rgba(255, 255, 255, 0.03);
+    --hud-panel-bg-opaque: #030612;
+    --hud-primary-color: #5FF0FF;
+    --hud-primary-color-rgb: 95, 240, 255;
+    --hud-secondary-color: #FF5CA2;
+    --hud-secondary-color-rgb: 255, 92, 162;
     --hud-text-color: #E0E0E0;
-    --hud-text-primary: var(--commons-accent);
-    --hud-text-secondary: rgba(255, 174, 109, 0.6);
-    --hud-border-color: rgba(255, 174, 109, 0.2);
-    --hud-glow-color: var(--commons-accent);
+    --hud-text-primary: #5FF0FF;
+    --hud-text-secondary: rgba(95, 240, 255, 0.6);
+    --hud-border-color: rgba(95, 240, 255, 0.2);
+    --hud-glow-color: #5FF0FF;
     --hud-font-family: 'Space Mono', monospace;
+    --hud-header-font: 'Orbitron', sans-serif;
 }
 
 .community-hub {
@@ -27,10 +28,13 @@
     align-items: center;
     padding: 40px 20px;
     padding-top: 50px;
-    background: radial-gradient(circle at center, rgba(45, 26, 10, 0.4) 0%, #000000 100%);
+    background: radial-gradient(circle at center, rgba(10, 20, 50, 0.4) 0%, #030612 100%);
     color: var(--hud-text-color);
     margin-top: 0;
     font-family: var(--hud-font-family);
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .hub-title {
@@ -41,19 +45,19 @@
     letter-spacing: 4px;
     text-shadow: 0 0 20px var(--hud-glow-color);
     font-size: 2.8rem;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--hud-header-font) !important;
 }
 
 .community-info {
     max-width: 900px;
     text-align: center;
     margin-bottom: 40px;
-    background: rgba(25, 15, 8, 0.4);
+    background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     padding: 30px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 174, 109, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-top: 4px solid var(--hud-primary-color);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     width: 100%;
@@ -65,6 +69,7 @@
     color: rgba(255, 255, 255, 0.8);
     line-height: 1.8;
     font-size: 1.1rem;
+    word-break: break-word;
 }
 
 .proposal-description, .project-description {
@@ -86,16 +91,17 @@
     gap: 30px;
     width: 100%;
     max-width: 1200px;
+    box-sizing: border-box;
 }
 
 .hub-card {
-    background: rgba(25, 15, 8, 0.3);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 174, 109, 0.15);
-    border-radius: 12px;
-    padding: 24px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -116,8 +122,8 @@
 
 .hub-card:hover {
     transform: translateY(-5px);
-    border-color: var(--hud-primary-color);
-    box-shadow: 0 0 20px var(--commons-glow);
+    border-color: var(--hud-primary-color) !important;
+    box-shadow: 0 0 20px var(--commons-glow) !important;
 }
 
 .hub-icon {
@@ -127,28 +133,31 @@
     filter: drop-shadow(0 0 8px var(--hud-primary-color));
 }
 
-.hub-card h2 {
+.hub-card .MuiTypography-h5 {
     font-size: 1.2rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-bottom: 20px;
-    color: #fff;
-    font-family: 'Orbitron', sans-serif;
+    color: #fff !important;
+    font-family: var(--hud-header-font) !important;
 }
 
 /* List Items */
 .member-entry, .proposal-entry, .request-entry {
-    background: rgba(255, 174, 109, 0.03);
+    background: rgba(255, 255, 255, 0.03);
     margin-bottom: 12px;
-    border: 1px solid rgba(255, 174, 109, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     padding: 16px;
     border-radius: 8px;
     transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
 }
 
 .member-entry:hover, .proposal-entry:hover, .request-entry:hover {
-    background: rgba(255, 174, 109, 0.08);
-    border-color: rgba(255, 174, 109, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(95, 240, 255, 0.3);
 }
 
 /* Projects Grid */
@@ -157,47 +166,64 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 24px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .project-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 174, 109, 0.15);
-    padding: 20px;
-    border-radius: 8px;
-    border-left: 3px solid var(--hud-primary-color);
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    border-left: 3px solid var(--hud-primary-color) !important;
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.project-card h3 {
+.project-card h3, .project-card .MuiLink-root {
     font-size: 1.1rem;
     text-transform: uppercase;
     margin-bottom: 12px;
-    color: #fff;
-    font-family: 'Orbitron', sans-serif;
+    color: #fff !important;
+    font-family: var(--hud-header-font) !important;
 }
 
 /* Buttons */
 .MuiButton-root {
-    font-family: var(--hud-font-family) !important;
+    font-family: var(--hud-header-font) !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
+    border-radius: 8px !important;
+}
+
+.MuiChip-root {
+    font-family: var(--hud-header-font) !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    background: rgba(95, 240, 255, 0.1) !important;
+    color: #5FF0FF !important;
+    border: 1px solid rgba(95, 240, 255, 0.3) !important;
 }
 
 .join-request-container {
-    background: rgba(249, 115, 22, 0.05);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 92, 162, 0.3);
     padding: 24px;
     margin-bottom: 30px;
     border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.join-request-container h2 {
-    color: var(--hud-secondary-color);
+.join-request-container .MuiTypography-h6 {
+    color: var(--hud-secondary-color) !important;
     text-shadow: 0 0 10px var(--hud-secondary-color);
+    font-family: var(--hud-header-font) !important;
 }
 
 /* Responsive */
@@ -207,5 +233,13 @@
     }
     .hub-grid {
         grid-template-columns: 1fr;
+        padding: 0 10px;
+    }
+    .community-info {
+        padding: 20px;
+        width: 95%;
+    }
+    .hub-card {
+        padding: 16px !important;
     }
 }

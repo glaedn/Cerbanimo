@@ -5,7 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import {
   Box, Typography, Card, CardContent, Grid, Button,
   TextField, CircularProgress, Chip, Divider, Modal,
-  IconButton
+  IconButton, Tooltip
 } from '@mui/material';
 import { ShoppingCart, Plus, Info, User, Tag } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -33,8 +33,13 @@ const CommunityMarketplace = ({ communityId }) => {
         setGoods(Array.isArray(response.data) ? response.data : []);
         setError(null);
       } catch (err) {
-        setError('Failed to fetch goods. Please try again later.');
-        console.error("Error fetching goods:", err);
+        // If 404, just set empty goods
+        if (err.response?.status === 404) {
+            setGoods([]);
+        } else {
+            setError('Failed to fetch goods. Please try again later.');
+            console.error("Error fetching goods:", err);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -68,6 +73,7 @@ const CommunityMarketplace = ({ communityId }) => {
       setGoods(prevGoods => [response.data, ...prevGoods]);
       setNewGood({ name: '', description: '', price: '' });
       setIsModalOpen(false);
+      toast.success('Item listed in the marketplace.');
       if (window.navigator.vibrate) window.navigator.vibrate([30, 30]);
     } catch (err) {
       setError('Failed to list new good. Please try again.');
@@ -91,19 +97,25 @@ const CommunityMarketplace = ({ communityId }) => {
   };
 
   return (
-    <Box sx={{ color: '#e0e0e0' }}>
+    <Box sx={{ color: 'var(--hud-text-color)', mt: 4, mb: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', textShadow: '0 0 10px rgba(255, 174, 109, 0.3)' }}>
-          MARKETPLACE
+        <Typography variant="h5" sx={{ fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)', textShadow: '0 0 10px var(--hud-glow-color)' }}>
+          COMMUNITY MARKETPLACE
         </Typography>
         <Button
           variant="outlined"
           startIcon={<Plus size={18} />}
           onClick={() => setIsModalOpen(true)}
           sx={{
-            color: '#ffae6d',
-            borderColor: 'rgba(255, 174, 109, 0.5)',
-            height: isMobile ? '44px' : 'auto'
+            color: 'var(--hud-primary-color)',
+            borderColor: 'rgba(95, 240, 255, 0.5)',
+            height: isMobile ? '44px' : 'auto',
+            fontFamily: 'var(--hud-header-font)',
+            '&:hover': {
+                borderColor: 'var(--hud-primary-color)',
+                bgcolor: 'rgba(95, 240, 255, 0.1)',
+                boxShadow: '0 0 10px var(--hud-glow-color)'
+            }
           }}
         >
           {isMobile ? 'LIST' : 'LIST NEW GOOD'}
@@ -111,56 +123,56 @@ const CommunityMarketplace = ({ communityId }) => {
       </Box>
 
       {error && (
-        <Typography color="error" sx={{ mb: 2, p: 1, border: '1px solid #ff3232', borderRadius: 1, bgcolor: 'rgba(255, 50, 50, 0.1)' }}>
-          {error}
+        <Typography sx={{ mb: 2, p: 1, border: '1px solid var(--hud-error-color)', borderRadius: 1, bgcolor: 'rgba(255, 65, 54, 0.1)', color: 'var(--hud-error-color)', fontFamily: 'var(--hud-header-font)' }}>
+          SYSTEM_ERROR: {error}
         </Typography>
       )}
 
       {isLoading ? (
-        <Box display="flex" justifyContent="center" py={4}><CircularProgress sx={{ color: '#ffae6d' }} /></Box>
+        <Box display="flex" justifyContent="center" py={4}><CircularProgress sx={{ color: 'var(--hud-primary-color)' }} /></Box>
       ) : (
         <Grid container spacing={2}>
           {goods.length === 0 ? (
             <Grid item xs={12}>
-              <Typography sx={{ opacity: 0.5, textAlign: 'center', py: 4 }}>NO GOODS AVAILABLE IN THIS SECTOR</Typography>
+              <Typography sx={{ color: 'var(--hud-text-secondary)', textAlign: 'center', py: 4 }}>NO GOODS AVAILABLE IN THIS SECTOR</Typography>
             </Grid>
           ) : (
             goods.map(good => (
               <Grid item xs={12} sm={6} key={good.id}>
-                <Card sx={{
-                  background: 'rgba(25, 15, 8, 0.4)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 174, 109, 0.15)',
-                  color: '#fff',
+                <Card className="glass-panel" sx={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(var(--hud-primary-color-rgb), 0.15)',
+                  color: 'var(--hud-text-color)',
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                   transition: 'all 0.3s ease-in-out',
                   '&:hover': {
-                    borderColor: 'rgba(255, 174, 109, 0.5)',
-                    boxShadow: '0 0 20px rgba(255, 174, 109, 0.2)'
+                    borderColor: 'var(--hud-primary-color)',
+                    boxShadow: '0 0 20px var(--hud-glow-color)',
+                    background: 'rgba(255, 255, 255, 0.05)',
                   }
                 }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                      <Typography variant="h6" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', fontSize: '1rem' }}>
+                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                      <Typography variant="h6" sx={{ fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)', fontSize: '1.1rem' }}>
                         {good.name.toUpperCase()}
                       </Typography>
                       <Chip
                         label={`${good.price} Ȼ`}
                         size="small"
-                        sx={{ bgcolor: 'rgba(255, 174, 109, 0.1)', color: '#ffae6d', fontWeight: 'bold' }}
+                        sx={{ bgcolor: 'rgba(95, 240, 255, 0.1)', color: 'var(--hud-primary-color)', fontWeight: 'bold', border: '1px solid rgba(95, 240, 255, 0.3)' }}
                       />
                     </Box>
-                    <Typography variant="body2" sx={{ mb: 2, opacity: 0.8, minHeight: '3em' }}>
+                    <Typography variant="body2" sx={{ mb: 3, color: 'var(--hud-text-secondary)', minHeight: '3em', lineHeight: 1.6 }}>
                       {good.description}
                     </Typography>
 
-                    <Divider sx={{ my: 1.5, bgcolor: 'rgba(255,255,255,0.1)' }} />
+                    <Divider sx={{ my: 2, bgcolor: 'rgba(95, 240, 255, 0.1)' }} />
 
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <User size={14} style={{ color: '#ff00ff' }} />
-                      <Typography variant="caption" sx={{ color: '#ff00ff' }}>
+                    <Box display="flex" alignItems="center" gap={1} mb={3}>
+                      <User size={14} style={{ color: 'var(--hud-secondary-color)' }} />
+                      <Typography variant="caption" sx={{ color: 'var(--hud-secondary-color)', fontFamily: 'var(--hud-header-font)' }}>
                         PROVIDER: {good.seller_name || 'ANON_CORE'}
                       </Typography>
                     </Box>
@@ -171,11 +183,15 @@ const CommunityMarketplace = ({ communityId }) => {
                       startIcon={<ShoppingCart size={18} />}
                       onClick={() => handlePurchase(good.id)}
                       sx={{
-                        bgcolor: '#ffae6d',
-                        color: '#000',
+                        background: 'linear-gradient(45deg, var(--hud-primary-color), #4DABF7)',
+                        color: 'black',
                         fontWeight: 'bold',
-                        height: isMobile ? '48px' : 'auto',
-                        '&:hover': { bgcolor: '#f97316' }
+                        fontFamily: 'var(--hud-header-font)',
+                        height: isMobile ? '48px' : '40px',
+                        '&:hover': {
+                            background: 'linear-gradient(45deg, #4DABF7, var(--hud-primary-color))',
+                            boxShadow: '0 0 15px var(--hud-glow-color)'
+                        }
                       }}
                     >
                       PURCHASE
@@ -190,17 +206,17 @@ const CommunityMarketplace = ({ communityId }) => {
 
       {/* Modal for listing new good */}
       <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <Box sx={{
+        <Box className="glass-panel" sx={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: isMobile ? '100%' : 500, height: isMobile ? '100%' : 'auto',
-          background: 'rgba(25, 15, 8, 0.9)',
-          backdropFilter: 'blur(20px)',
-          border: isMobile ? 'none' : '1px solid rgba(255, 174, 109, 0.3)',
-          p: isMobile ? 3 : 4, borderRadius: isMobile ? 0 : 4,
-          boxShadow: '0 0 40px rgba(0, 0, 0, 0.6)',
-          maxHeight: isMobile ? '100vh' : '90vh', overflowY: 'auto'
+          width: { xs: '95%', sm: 500 },
+          bgcolor: 'rgba(3, 6, 18, 0.95)',
+          border: '1px solid var(--hud-primary-color)',
+          p: 4, borderRadius: 2,
+          boxShadow: '0 0 40px var(--hud-glow-color)',
+          maxHeight: '90vh', overflowY: 'auto',
+          backdropFilter: 'blur(20px)'
         }}>
-          <Typography variant="h5" sx={{ fontFamily: 'Orbitron', color: '#ffae6d', mb: 3 }}>LIST_GOOD_PROTOCOL</Typography>
+          <Typography variant="h5" sx={{ fontFamily: 'var(--hud-header-font)', color: 'var(--hud-primary-color)', mb: 4, textAlign: 'center' }}>LIST_GOOD_PROTOCOL</Typography>
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -210,8 +226,18 @@ const CommunityMarketplace = ({ communityId }) => {
               value={newGood.name}
               onChange={handleInputChange}
               required
-              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#ffae6d' } }}
+              variant="outlined"
+              sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
+                      color: '#fff',
+                      fontFamily: 'var(--hud-header-font)',
+                      '& fieldset': { borderColor: 'rgba(95,240,255,0.3)' },
+                      '&:hover fieldset': { borderColor: 'var(--hud-primary-color)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--hud-primary-color)' }
+                  }
+              }}
+              InputLabelProps={{ style: { color: 'rgba(95,240,255,0.7)', fontFamily: 'var(--hud-header-font)' } }}
             />
             <TextField
               fullWidth
@@ -221,8 +247,17 @@ const CommunityMarketplace = ({ communityId }) => {
               name="description"
               value={newGood.description}
               onChange={handleInputChange}
-              sx={{ mb: 2, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#ffae6d' } }}
+              variant="outlined"
+              sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
+                      color: '#fff',
+                      '& fieldset': { borderColor: 'rgba(95,240,255,0.3)' },
+                      '&:hover fieldset': { borderColor: 'var(--hud-primary-color)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--hud-primary-color)' }
+                  }
+              }}
+              InputLabelProps={{ style: { color: 'rgba(95,240,255,0.7)', fontFamily: 'var(--hud-header-font)' } }}
             />
             <TextField
               fullWidth
@@ -232,8 +267,18 @@ const CommunityMarketplace = ({ communityId }) => {
               value={newGood.price}
               onChange={handleInputChange}
               required
-              sx={{ mb: 3, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,174,109,0.3)' } } }}
-              InputLabelProps={{ style: { color: '#ffae6d' } }}
+              variant="outlined"
+              sx={{
+                  mb: 4,
+                  '& .MuiOutlinedInput-root': {
+                      color: '#fff',
+                      fontFamily: 'var(--hud-header-font)',
+                      '& fieldset': { borderColor: 'rgba(95,240,255,0.3)' },
+                      '&:hover fieldset': { borderColor: 'var(--hud-primary-color)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--hud-primary-color)' }
+                  }
+              }}
+              InputLabelProps={{ style: { color: 'rgba(95,240,255,0.7)', fontFamily: 'var(--hud-header-font)' } }}
             />
 
             <Box display="flex" gap={2}>
@@ -241,7 +286,16 @@ const CommunityMarketplace = ({ communityId }) => {
                 fullWidth
                 variant="outlined"
                 onClick={() => setIsModalOpen(false)}
-                sx={{ color: '#ff3232', borderColor: '#ff3232', height: isMobile ? '48px' : 'auto' }}
+                sx={{
+                    color: 'var(--hud-error-color)',
+                    borderColor: 'var(--hud-error-color)',
+                    height: '48px',
+                    fontFamily: 'var(--hud-header-font)',
+                    '&:hover': {
+                        borderColor: 'var(--hud-error-color)',
+                        bgcolor: 'rgba(255, 65, 54, 0.1)'
+                    }
+                }}
               >
                 ABORT
               </Button>
@@ -249,7 +303,17 @@ const CommunityMarketplace = ({ communityId }) => {
                 fullWidth
                 type="submit"
                 variant="contained"
-                sx={{ bgcolor: '#ffae6d', color: '#000', fontWeight: 'bold', height: isMobile ? '48px' : 'auto' }}
+                sx={{
+                    background: 'linear-gradient(45deg, var(--hud-primary-color), #4DABF7)',
+                    color: '#000',
+                    fontWeight: 'bold',
+                    height: '48px',
+                    fontFamily: 'var(--hud-header-font)',
+                    '&:hover': {
+                        background: 'linear-gradient(45deg, #4DABF7, var(--hud-primary-color))',
+                        boxShadow: '0 0 15px var(--hud-glow-color)'
+                    }
+                }}
               >
                 INITIALIZE_LISTING
               </Button>
