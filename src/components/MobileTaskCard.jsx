@@ -31,14 +31,19 @@ const MobileTaskCard = ({ task, onAccept }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.98 }}
     >
-      <Card sx={{
+      <Card className="glass-panel" sx={{
         mb: 2,
-        backgroundColor: 'rgba(28, 28, 30, 0.9)',
-        border: '1px solid rgba(0, 243, 255, 0.3)',
-        borderRadius: '8px',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
         color: '#fff',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        padding: '0 !important',
+        '&:hover': {
+          borderColor: 'rgba(95, 240, 255, 0.3)',
+          background: 'rgba(255, 255, 255, 0.05)',
+        }
       }}>
         {/* Decorative HUD Scanline */}
         <Box sx={{
@@ -49,8 +54,8 @@ const MobileTaskCard = ({ task, onAccept }) => {
           animation: 'scanline-anim 3s linear infinite'
         }} />
 
-        <CardContent>
-        <Typography variant="h6" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+        <CardContent sx={{ p: '1.5rem !important' }}>
+        <Typography variant="h6" sx={{ color: '#5FF0FF', fontWeight: 'bold', fontFamily: 'Orbitron', fontSize: '1rem', letterSpacing: '1px' }}>
           {task.name}
         </Typography>
         <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
@@ -72,7 +77,8 @@ const MobileTaskCard = ({ task, onAccept }) => {
               fullWidth
               size="small"
               disabled={loading || success}
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
                 setLoading(true);
                 if (window.navigator.vibrate) window.navigator.vibrate(50);
                 await onAccept(task.id);
@@ -83,10 +89,16 @@ const MobileTaskCard = ({ task, onAccept }) => {
                 setTimeout(() => setSuccess(false), 2000);
               }}
               sx={{
-                backgroundColor: success ? '#00ff64' : '#00F3FF',
-                color: '#000',
+                backgroundColor: success ? '#00ff64' : 'rgba(95, 240, 255, 0.15)',
+                color: success ? '#000' : '#5FF0FF',
+                border: success ? 'none' : '1px solid rgba(95, 240, 255, 0.4)',
+                fontFamily: 'Orbitron',
+                letterSpacing: '1px',
                 transition: 'all 0.3s ease',
-                '&:hover': { backgroundColor: success ? '#00ff64' : '#00e5f2' }
+                '&:hover': {
+                    backgroundColor: success ? '#00ff64' : 'rgba(95, 240, 255, 0.25)',
+                    borderColor: '#5FF0FF'
+                }
               }}
             >
               <AnimatePresence mode="wait">
@@ -110,10 +122,20 @@ const MobileTaskCard = ({ task, onAccept }) => {
             variant="outlined"
             fullWidth
             size="small"
-            onClick={handleView}
-            sx={{ borderColor: '#00F3FF', color: '#00F3FF', fontSize: '0.7rem' }}
+            onClick={(e) => { e.stopPropagation(); handleView(); }}
+            sx={{
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.7rem',
+                fontFamily: 'Orbitron',
+                '&:hover': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#fff'
+                }
+            }}
           >
-            VIEW PROJECT
+            VIEW MISSION
           </Button>
         </Box>
         </CardContent>
