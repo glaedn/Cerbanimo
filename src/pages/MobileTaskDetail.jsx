@@ -493,9 +493,11 @@ const MobileTaskDetail = () => {
                 {task.name}
               </Typography>
 
-              <Box display="flex" gap={1} mb={2} flexWrap="wrap">
-                <Chip label={task.skill_name || 'General'} className="cyber-chip skill" />
-                <Chip label={`Lvl ${task.skill_level || 1}`} className="cyber-chip level" />
+              <Box display="flex" gap={1} mb={2} flexWrap="wrap" justifyContent="center">
+                <Chip label={(task.skill_name || 'General').toUpperCase()} className="cyber-chip skill" />
+                <Chip label={`LVL ${task.skill_level || 1}`} className="cyber-chip level" />
+              </Box>
+              <Box display="flex" gap={1} mb={3} justifyContent="center">
                 <Chip label={task.status.toUpperCase()} className={`cyber-chip status ${task.status.toLowerCase()}`} />
               </Box>
 
@@ -558,8 +560,8 @@ const MobileTaskDetail = () => {
               </Box>
 
               <Typography variant="subtitle2" className="section-title">RESOURCES & REWARDS</Typography>
-              <List dense>
-                <ListItem sx={{ px: 0 }}>
+              <List dense sx={{ mb: 2 }}>
+                <ListItem sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
                   <ListItemText
                     primary="CO-TOKENS"
                     secondary={`${task.reward_tokens || 0} units`}
@@ -567,7 +569,7 @@ const MobileTaskDetail = () => {
                     secondaryTypographyProps={{ className: 'list-secondary' }}
                   />
                 </ListItem>
-                <ListItem sx={{ px: 0 }}>
+                <ListItem sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start', mt: 1 }}>
                   <ListItemText
                     primary="VERIFICATION"
                     secondary={task.verification_model?.toUpperCase() || 'STANDARD'}
