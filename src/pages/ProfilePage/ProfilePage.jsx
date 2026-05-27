@@ -33,8 +33,11 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { profile: dynamicProfile, loading: profileLoading } = useUserProfile();
+  const { profile: dynamicProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const [userChronicle, setUserChronicle] = useState([]);
+  const [resumeText, setResumeText] = useState('');
+  const [isResumeOpen, setIsResumeOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Base style for panels
   const panelStyle = {
@@ -457,6 +460,47 @@ const ProfilePage = () => {
     }
   }, [profileData.id, fetchUserBadges]);
   // --- End Badge Management Functions ---
+
+  useEffect(() => {
+    if (profileData.resume_text) {
+      setResumeText(profileData.resume_text);
+    }
+  }, [profileData.resume_text]);
+
+  const handleAnalyzeResume = async () => {
+    if (!resumeText.trim()) {
+      toast.error('Please enter resume text to analyze.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const token = await getAccessTokenSilently({
+        audience: import.meta.env.VITE_BACKEND_URL,
+        scope: 'openid profile email read:write:profile',
+      });
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/profile/analyze-resume`,
+        { resumeText },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      toast.success(response.data.message || 'Resume analyzed successfully!');
+      if (refreshProfile) refreshProfile();
+      // Update local skills if needed, though refreshProfile should handle it
+    } catch (err) {
+      console.error('Error analyzing resume:', err);
+      const errorMsg = err.response?.data?.error || 'Failed to analyze resume.';
+      toast.error(errorMsg);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // --- Community Management Functions ---
   const fetchUserCommunities = useCallback(async () => {
@@ -1405,6 +1449,69 @@ const ProfilePage = () => {
             })
           }
         />
+      </Box>
+
+      {/* Resume Analysis Panel */}
+      <Box sx={{
+        ...panelStyle,
+        borderColor: theme.colors.accentBlue,
+        boxShadow: theme.effects.glowSubtle(theme.colors.accentBlue)
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <Typography variant="h6" sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}>
+            Resume-to-Skill Unlock
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => setIsResumeOpen(!isResumeOpen)}
+            sx={{ color: theme.colors.primary, fontFamily: theme.typography.fontFamilyAccent }}
+          >
+            {isResumeOpen ? 'Minimize' : 'Expand'}
+          </Button>
+        </Box>
+
+        {isResumeOpen && (
+          <Box sx={{ width: '100%', mt: 2 }}>
+            <Typography variant="body2" sx={{ color: theme.colors.textSecondary, mb: 2, fontFamily: theme.typography.fontFamilyBase }}>
+              Paste your resume below to automatically identify and unlock skills. This can be done once every 2 hours.
+            </Typography>
+            <TextField
+              multiline
+              rows={6}
+              fullWidth
+              placeholder="Paste resume text here..."
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: theme.colors.textPrimary,
+                  fontFamily: theme.typography.fontFamilyBase,
+                  backgroundColor: 'rgba(10, 10, 46, 0.4)',
+                  '& fieldset': { borderColor: theme.colors.border },
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleAnalyzeResume}
+              disabled={isAnalyzing}
+              sx={{
+                mt: 2,
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.backgroundDefault,
+                fontFamily: theme.typography.fontFamilyAccent,
+                boxShadow: theme.effects.glowSubtle(theme.colors.primary),
+                '&:hover': {
+                  backgroundColor: theme.colors.accentBlue,
+                  boxShadow: theme.effects.glowStrong(theme.colors.primary),
+                }
+              }}
+            >
+              {isAnalyzing ? <CircularProgress size={24} color="inherit" /> : 'Analyze & Update Skills'}
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Experience Panel */}
