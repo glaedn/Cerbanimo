@@ -158,9 +158,15 @@ const AuthWrapper = ({ children }) => {
           console.log(
             "User needs onboarding. Profile:",
             profileData,
-            "Redirecting..."
+            "Redirecting to Profile for soft-onboarding..."
           );
-          navigate("/onboarding");
+
+          // Use sessionStorage to ensure the soft-redirect only happens once per session
+          const hasBeenRedirected = sessionStorage.getItem('softOnboardingDone');
+          if (!hasBeenRedirected) {
+            sessionStorage.setItem('softOnboardingDone', 'true');
+            navigate("/profile");
+          }
         } else if (location.state?.fromOnboarding && !needsOnboarding) {
           // If coming from onboarding and profile is complete, navigate to projects
           console.log("Onboarding complete, navigating to projects");
