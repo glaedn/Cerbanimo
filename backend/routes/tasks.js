@@ -97,9 +97,10 @@ router.get("/accepted", async (req, res) => {
     console.log("Fetching accepted tasks for userId:", userId);
 
     const result = await pool.query(
-      `SELECT t.id AS task_id, t.*, p.name AS project_name, p.id AS project_id
+      `SELECT t.id AS task_id, t.*, p.name AS project_name, p.id AS project_id, s.name as skill_name
       FROM tasks t 
       LEFT JOIN projects p ON t.project_id = p.id
+      LEFT JOIN skills s ON t.skill_id = s.id
       WHERE $1 = ANY(t.assigned_user_ids::int[])`, 
       [userId]
     );

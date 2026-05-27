@@ -93,7 +93,68 @@
 
 .project-card:hover {
     transform: scale(1.02);
-    background: rgba(0, 243, 255, 0.1);
+    background: rgba(0, 243, 255, 0.05);
+}
+
+.relevance-meter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.meter-label {
+    font-size: 0.6rem;
+    color: rgba(95, 240, 255, 0.7);
+    letter-spacing: 1px;
+}
+
+.relevance-meter {
+    width: 80px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.relevance-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00F3FF, #4DABF7);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.glass-btn-contribute, .glass-btn-open {
+    border-radius: 24px !important;
+    padding: 6px 20px !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    transition: all 0.3s ease !important;
+    background: transparent !important;
+}
+
+.glass-btn-contribute {
+    color: #5FF0FF !important;
+    border: 1px solid rgba(95, 240, 255, 0.4) !important;
+    box-shadow: 0 0 15px rgba(95, 240, 255, 0.1) !important;
+}
+
+.glass-btn-contribute:hover {
+    border-color: #5FF0FF !important;
+    box-shadow: 0 0 20px rgba(95, 240, 255, 0.3) !important;
+    text-shadow: 0 0 8px rgba(95, 240, 255, 0.6);
+}
+
+.glass-btn-open {
+    color: #FFB800 !important;
+    border: 1px solid rgba(255, 184, 0, 0.4) !important;
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.1) !important;
+}
+
+.glass-btn-open:hover {
+    border-color: #FFB800 !important;
+    box-shadow: 0 0 20px rgba(255, 184, 0, 0.3) !important;
+    text-shadow: 0 0 8px rgba(255, 184, 0, 0.6);
 }
 
 /* Project Title (inside card) - this selector is identical to page title, be careful */
