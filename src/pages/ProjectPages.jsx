@@ -212,25 +212,45 @@ const ProjectPages = () => {
         <Grid container spacing={isMobile ? 2 : 0} direction={isMobile ? 'column' : 'row'}>
         {projects.map((project) => (
           <Grid item xs={12} key={project.id} sx={{ width: '100%' }}>
-            <div className="project-card">
-              <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                {project.tags.map((tag, index) => (
+            <div className="project-card glass-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+                <div className="relevance-meter-container">
+                  <span className="meter-label">RELEVANCE</span>
+                  <div className="relevance-meter">
+                    <div
+                      className="relevance-fill"
+                      style={{ width: `${Math.min(100, (project.relevance_score || 0) * 20)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', marginTop: '8px' }}>
+                {project.project_skills && project.project_skills.map((skill, index) => (
                   <Chip
-                    className="tag-chip"
                     key={index}
-                    label={tag}
+                    label={`${skill.name} (Lv. ${Math.round(skill.level || 0)})`}
                     size="small"
+                    sx={{
+                      backgroundColor: 'rgba(95, 240, 255, 0.1)',
+                      color: '#5FF0FF',
+                      border: '1px solid rgba(95, 240, 255, 0.3)',
+                      fontFamily: 'Orbitron',
+                      fontSize: '0.7rem'
+                    }}
                   />
                 ))}
               </div>
+
               <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
-              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={1} mt={1}>
+
+              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={2}>
                 <Button
-                  variant="contained"
+                  className="glass-btn-contribute"
+                  variant="text"
                   size="small"
                   fullWidth={isMobile}
-                  sx={{ backgroundColor: 'primary.main', color: 'common.black', height: isMobile ? '48px' : 'auto' }}
                   onClick={() => {
                     setSelectedProject(project);
                     fetchTasks(project.id);
@@ -239,10 +259,10 @@ const ProjectPages = () => {
                   Contribute
                 </Button>
                 <Button
-                  variant="outlined"
+                  className="glass-btn-open"
+                  variant="text"
                   size="small"
                   fullWidth={isMobile}
-                  sx={{ borderColor: 'primary.main', color: 'primary.main', height: isMobile ? '48px' : 'auto' }}
                   onClick={() => {
                     navigate(`/visualizer/${project.id}`);
                   }}

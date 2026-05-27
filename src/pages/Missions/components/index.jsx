@@ -131,6 +131,14 @@ export const ActiveMissionsList = () => {
               status={task.status.toUpperCase()}
               actions={
                 <div className="mission-card-actions">
+                  {task.skill_name && (
+                    <div className="skill-tags" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <SignalChip
+                        label={`${task.skill_name} (Lv. ${task.skill_level || 0})`}
+                        type="info"
+                      />
+                    </div>
+                  )}
                   <button
                     className="orbit-btn primary small"
                     onClick={() => navigate(`/missions/visualizer/${task.project_id}/${task.id}`)}

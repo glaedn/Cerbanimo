@@ -19,12 +19,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Fetch all projects with optional search, pagination, and prioritizing user-created projects
+// Fetch all projects with optional search, pagination, and prioritizing relevance, activity, and recency
 router.get('/personal', async (req, res) => {
     const { search = '', page = 1, auth0Id = '' } = req.query;
   
     try {
-      // Get the internal user ID from the Auth0 ID
+      // Get the internal user ID and skills from the Auth0 ID
       const userQuery = `
         SELECT id FROM users WHERE auth0_id = $1
       `;
@@ -34,21 +34,67 @@ router.get('/personal', async (req, res) => {
       if (!userId) {
         return res.status(404).json({ message: 'User not found' });
       }
+
+      // Get user skill IDs from skills table where they are unlocked
+      const userSkillsQuery = `
+        SELECT id FROM skills WHERE EXISTS (
+          SELECT 1 FROM jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(unlocked_users) = 'array' THEN unlocked_users
+              ELSE '[]'::jsonb
+            END
+          ) elem
+          WHERE (elem->>'user_id')::int = $1
+        )
+      `;
+      const userSkillsResult = await pool.query(userSkillsQuery, [userId]);
+      const userSkillIds = userSkillsResult.rows.map(r => r.id);
   
-      // Fetch projects, prioritizing those created by the user
+      // Fetch projects with relevance metrics
       const projectsQuery = `
-        SELECT *, ST_AsGeoJSON(location_point) as location_point FROM projects
+        WITH project_metrics AS (
+          SELECT
+            t.project_id,
+            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%' AND t.skill_id = ANY($1::int[])) as relevance_score,
+            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%') as activity_count,
+            AVG(t.skill_level) as avg_skill_level
+          FROM tasks t
+          GROUP BY t.project_id
+        ),
+        project_skills_agg AS (
+          SELECT
+            project_id,
+            jsonb_agg(jsonb_build_object('name', skill_name, 'level', avg_lvl)) as project_skills
+          FROM (
+            SELECT t.project_id, s.name as skill_name, AVG(t.skill_level) as avg_lvl
+            FROM tasks t
+            JOIN skills s ON t.skill_id = s.id
+            GROUP BY t.project_id, s.name
+          ) s_avg
+          GROUP BY project_id
+        )
+        SELECT
+          p.*,
+          ST_AsGeoJSON(p.location_point) as location_point,
+          COALESCE(m.relevance_score, 0) as relevance_score,
+          COALESCE(m.activity_count, 0) as activity_count,
+          COALESCE(m.avg_skill_level, 0) as avg_skill_level,
+          COALESCE(ps.project_skills, '[]'::jsonb) as project_skills
+        FROM projects p
+        LEFT JOIN project_metrics m ON p.id = m.project_id
+        LEFT JOIN project_skills_agg ps ON p.id = ps.project_id
         WHERE 
-          LOWER(name) LIKE LOWER($1) OR 
-          LOWER(description) LIKE LOWER($1)
+          LOWER(p.name) LIKE LOWER($2) OR
+          LOWER(p.description) LIKE LOWER($2)
         ORDER BY 
-          (CASE WHEN creator_id = $2 THEN 0 ELSE 1 END), 
-          id ASC
+          relevance_score DESC,
+          activity_count DESC,
+          p.created_at DESC
         LIMIT 10 OFFSET $3
       `;
       const offset = (page - 1) * 10;
       const searchParam = `%${search}%`;
-      const projectsResult = await pool.query(projectsQuery, [searchParam, userId, offset]);
+      const projectsResult = await pool.query(projectsQuery, [userSkillIds, searchParam, offset]);
   
       res.status(200).json(projectsResult.rows);
     } catch (err) {
