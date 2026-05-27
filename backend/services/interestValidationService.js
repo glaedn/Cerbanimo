@@ -23,7 +23,7 @@ export const validatePendingInterests = async () => {
     }
 
     const pendingInterests = pendingInterestsRes.rows;
-    const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const BATCH_SIZE = 20;
 
     for (let i = 0; i < pendingInterests.length; i += BATCH_SIZE) {

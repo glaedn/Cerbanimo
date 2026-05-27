@@ -10,10 +10,12 @@ import RoleProfileEngine from '../services/RoleProfileEngine.js';
 import ProgressionEngine from '../services/ProgressionEngine.js';
 import IdentityGateService from '../services/IdentityGateService.js';
 import PotentialUserService from '../services/PotentialUserService.js';
-
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Create a router instance
 const router = express.Router();
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
@@ -32,13 +34,8 @@ router.get("/public/:userId",
     try {
       const { userId } = req.params;
 
-      // Use a join to filter out pending interests from public view
-      // We need to handle the fact that users.interests is currently a jsonb[] or text[]
-      // This is slightly complex due to the denormalized storage in users table.
-      // For now, let's fetch the user and then filter interests based on their status in the interests table.
-
       const result = await pool.query(
-        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status, discord_user_id FROM users WHERE id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status, discord_user_id, resume_text FROM users WHERE id = $1`,
         [userId]
       );
 
@@ -272,7 +269,7 @@ router.get('/', async (req, res) => {
 
     const query = `
       SELECT id, username, skills, interests, profile_picture, cotokens, contact_links, capacity_status, discord_user_id, share_location_publicly, city, state, region, country, formatted_address, ST_AsGeoJSON(location_point) as location,
-             participation_modes, trust_level, onboarding_stage, role_weights, mentorship_status, adaptive_preferences, token_ledger, total_decayed
+             participation_modes, trust_level, onboarding_stage, role_weights, mentorship_status, adaptive_preferences, token_ledger, total_decayed, resume_text, last_resume_analysis_at
       FROM users
       WHERE auth0_id = $1;
     `;
@@ -317,6 +314,85 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Error fetching profile:', err);
     res.status(500).json({ message: 'Failed to fetch profile' });
+  }
+});
+
+router.post('/analyze-resume', async (req, res) => {
+  try {
+    const auth0Id = req.auth.payload.sub;
+    const { resumeText } = req.body;
+
+    if (!resumeText) {
+      return res.status(400).json({ error: "Resume text is required" });
+    }
+
+    // 1. Get user and check cooldown
+    const userRes = await pool.query(
+      "SELECT id, last_resume_analysis_at, skills FROM users WHERE auth0_id = $1",
+      [auth0Id]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userRes.rows[0];
+    const now = new Date();
+    if (user.last_resume_analysis_at) {
+      const lastAnalysis = new Date(user.last_resume_analysis_at);
+      const hoursSince = (now - lastAnalysis) / (1000 * 60 * 60);
+      if (hoursSince < 2) {
+        return res.status(429).json({
+          error: `Cooldown active. Please wait ${Math.ceil(2 - hoursSince)} more hours before re-analyzing your resume.`
+        });
+      }
+    }
+
+    // 2. Use Gemini to extract skills
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `
+      Extract a list of professional skills from the following resume text.
+      Return ONLY a JSON array of strings representing the skill names.
+      Be concise (e.g., "React", "Project Management", "Python").
+
+      Resume Text:
+      ${resumeText}
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text();
+    text = text.replace(/```json|```/g, "").trim();
+
+    let extractedSkillNames = [];
+    try {
+      extractedSkillNames = JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse Gemini response:", text);
+      return res.status(500).json({ error: "Failed to parse skill analysis" });
+    }
+
+    // 3. Process skills using existing service
+    const processedSkills = await processSkills(extractedSkillNames, user.id);
+
+    // 4. Update user profile with skills, resume_text, and timestamp
+    await pool.query(
+      `UPDATE users SET
+        skills = $1,
+        resume_text = $2,
+        last_resume_analysis_at = $3
+       WHERE id = $4`,
+      [processedSkills, resumeText, now, user.id]
+    );
+
+    res.json({
+      message: "Resume analyzed and skills updated successfully!",
+      skills: processedSkills
+    });
+
+  } catch (err) {
+    console.error("Error in resume analysis:", err);
+    res.status(500).json({ error: "Failed to analyze resume" });
   }
 });
 
