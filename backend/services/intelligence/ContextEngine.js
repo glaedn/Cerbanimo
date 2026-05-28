@@ -26,17 +26,33 @@ class ContextEngine {
   }
 
   async getPersonalContext(userId) {
-    // In many environments, the table is user_profiles, let's be resilient
-    const profile = await pool.query('SELECT * FROM user_profiles WHERE user_id = $1', [userId]);
+    // The table is 'users', and skills are stored as JSONB in the 'skills' column
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     const missions = await pool.query('SELECT id, name as title, status FROM projects WHERE creator_id = $1', [userId]);
-    const skills = await pool.query('SELECT skill_name FROM user_skills WHERE user_id = $1', [userId]);
+
+    const user = userRes.rows[0] || {};
+
+    // Extract skills from JSONB. Expected format: [{name: 'Skill', level: 1}, ...] or ['Skill1', 'Skill2']
+    let skillNames = [];
+    if (Array.isArray(user.skills)) {
+      skillNames = user.skills.map(s => typeof s === 'string' ? s : s.name);
+    } else if (typeof user.skills === 'string' && user.skills.trim() !== '') {
+      try {
+        const parsed = JSON.parse(user.skills);
+        if (Array.isArray(parsed)) {
+          skillNames = parsed.map(s => typeof s === 'string' ? s : s.name);
+        }
+      } catch (e) {
+        console.error('Failed to parse user skills:', e);
+      }
+    }
 
     return {
-      role: profile.rows[0]?.primary_role || 'Explorer',
-      onboarding_stage: profile.rows[0]?.onboarding_stage || 1,
+      role: user.roles?.[0] || 'Explorer', // fallback to first role or Explorer
+      onboarding_stage: user.onboarding_stage || 1,
       activeMissions: missions.rows.filter(m => m.status === 'active'),
-      skills: skills.rows.map(s => s.skill_name),
-      trustLevel: profile.rows[0]?.trust_level || 1
+      skills: skillNames,
+      trustLevel: user.trust_level || 1
     };
   }
 

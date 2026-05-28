@@ -14,7 +14,7 @@ class TrustInferenceEngine {
     else if (count > 20) trustLevel = 3;
     else if (count > 5) trustLevel = 2;
 
-    await pool.query('UPDATE user_profiles SET trust_level = $1 WHERE user_id = $2', [trustLevel, userId]);
+    await pool.query('UPDATE users SET trust_level = $1 WHERE id = $2', [trustLevel, userId]);
 
     return { status: 'stable', trend: 'positive', trustLevel };
   }
