@@ -36,14 +36,10 @@ router.get('/personal', async (req, res) => {
       }
 
       // Get user skill IDs from skills table where they are unlocked
+      // Handle the fact that unlocked_users is JSONB[]
       const userSkillsQuery = `
         SELECT id FROM skills WHERE EXISTS (
-          SELECT 1 FROM jsonb_array_elements(
-            CASE
-              WHEN jsonb_typeof(unlocked_users) = 'array' THEN unlocked_users
-              ELSE '[]'::jsonb
-            END
-          ) elem
+          SELECT 1 FROM unnest(unlocked_users) elem
           WHERE (elem->>'user_id')::int = $1
         )
       `;
@@ -64,12 +60,24 @@ router.get('/personal', async (req, res) => {
         project_skills_agg AS (
           SELECT
             project_id,
-            jsonb_agg(jsonb_build_object('name', skill_name, 'level', avg_lvl)) as project_skills
+            jsonb_agg(jsonb_build_object(
+              'name', skill_name,
+              'level', avg_lvl,
+              'user_level', user_lvl
+            )) as project_skills
           FROM (
-            SELECT t.project_id, s.name as skill_name, AVG(t.skill_level) as avg_lvl
+            SELECT
+              t.project_id,
+              s.name as skill_name,
+              AVG(t.skill_level) as avg_lvl,
+              MAX(COALESCE((
+                SELECT (uelem->>'level')::int
+                FROM unnest(s.unlocked_users) uelem
+                WHERE (uelem->>'user_id')::int = $4
+              ), 0)) as user_lvl
             FROM tasks t
             JOIN skills s ON t.skill_id = s.id
-            GROUP BY t.project_id, s.name
+            GROUP BY t.project_id, s.id, s.name
           ) s_avg
           GROUP BY project_id
         )
@@ -94,7 +102,7 @@ router.get('/personal', async (req, res) => {
       `;
       const offset = (page - 1) * 10;
       const searchParam = `%${search}%`;
-      const projectsResult = await pool.query(projectsQuery, [userSkillIds, searchParam, offset]);
+      const projectsResult = await pool.query(projectsQuery, [userSkillIds, searchParam, offset, userId]);
   
       res.status(200).json(projectsResult.rows);
     } catch (err) {
