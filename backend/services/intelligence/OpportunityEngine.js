@@ -1,5 +1,5 @@
 import pool from '../../db.js';
-import { findMatchesForNeed } from '../matchingService.js';
+import { findMatchesForResource } from '../matchingService.js';
 import BountyService from '../BountyService.js';
 
 class OpportunityEngine {
@@ -17,11 +17,12 @@ class OpportunityEngine {
     const userSkills = context.personal.skills;
     if (!userSkills.length) return [];
 
+    // needs table: title -> name, skills_required -> skill_ids
     const matches = await pool.query(
-      `SELECT id, title, description, 'skill_match' as match_type
+      `SELECT id, name, description, skill_ids, 'skill_match' as match_type
        FROM needs
        WHERE status = 'open'
-       AND (skills_required && $1 OR $2 @> skills_required)
+       AND (skill_ids && $1 OR $2 @> skill_ids)
        LIMIT 3`,
       [userSkills, userSkills]
     );
@@ -30,25 +31,27 @@ class OpportunityEngine {
       ...m,
       priority: 'medium',
       type: 'opportunity',
-      requiredSkills: m.skills_required || [],
-      message: `Your skill in ${userSkills[0]} is needed for: ${m.title}`
+      requiredSkills: m.skill_ids || [],
+      message: `Your skill in ${userSkills[0]} is needed for: ${m.name}`
     }));
   }
 
   async matchResources(userId, context) {
-    const resources = await pool.query('SELECT id, name FROM resources WHERE owner_id = $1', [userId]);
+    // resources table: owner_id -> owner_user_id
+    const resources = await pool.query('SELECT id, name FROM resources WHERE owner_user_id = $1', [userId]);
     if (!resources.rowCount) return [];
 
     const matches = [];
     for (const resource of resources.rows) {
-      const matchResults = await findMatchesForNeed(resource.id); // Reusing logic if applicable or need to find needs for resource
-      if (matchResults.needs?.length) {
-        matches.push(...matchResults.needs.map(n => ({
+      // Corrected call: findMatchesForResource finds needs that match a resource
+      const matchResults = await findMatchesForResource(resource.id, pool);
+      if (matchResults?.length) {
+        matches.push(...matchResults.map(n => ({
           id: n.id,
-          title: n.title,
+          title: n.name, // needs table: name
           type: 'opportunity',
           match_type: 'resource_match',
-          message: `Your resource '${resource.name}' matches a need: ${n.title}`
+          message: `Your resource '${resource.name}' matches a need: ${n.name}`
         })));
       }
     }

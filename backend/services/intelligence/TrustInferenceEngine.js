@@ -4,7 +4,7 @@ class TrustInferenceEngine {
   async updateReputation(userId, context) {
     // Logic to increment trust/reputation based on completed missions and social health
     const completedTasks = await pool.query(
-      'SELECT count(*) FROM tasks WHERE assigned_to = $1 AND status = \'completed\'',
+      'SELECT count(*) FROM tasks WHERE $1 = ANY(assigned_user_ids) AND status = \'completed\'',
       [userId]
     );
 
