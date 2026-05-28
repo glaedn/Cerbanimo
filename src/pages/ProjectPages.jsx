@@ -227,23 +227,59 @@ const ProjectPages = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', marginTop: '8px' }}>
-                {project.project_skills && project.project_skills.map((skill, index) => (
-                  <Chip
-                    key={index}
-                    label={`${skill.name} (Lv. ${Math.round(skill.level || 0)})`}
-                    size="small"
-                    sx={{
-                      backgroundColor: 'rgba(95, 240, 255, 0.1)',
-                      color: '#5FF0FF',
-                      border: '1px solid rgba(95, 240, 255, 0.3)',
-                      fontFamily: 'Orbitron',
-                      fontSize: '0.7rem'
-                    }}
-                  />
-                ))}
+                {project.project_skills && project.project_skills.map((skill, index) => {
+                  const reqLevel = Math.round(skill.level || 0);
+                  const userLevel = skill.user_level || 0;
+                  const hasLevel = userLevel >= reqLevel;
+
+                  // Calculate redshift
+                  // max red (255, 0, 0) at 20 levels below
+                  // cyan (95, 240, 255) if at or above
+                  let levelColor = '#5FF0FF';
+                  if (!hasLevel) {
+                    const diff = Math.min(20, reqLevel - userLevel);
+                    const ratio = diff / 20;
+                    // Interpolate between cyan (95, 240, 255) and red (255, 0, 0)
+                    const r = Math.round(95 + (255 - 95) * ratio);
+                    const g = Math.round(240 * (1 - ratio));
+                    const b = Math.round(255 * (1 - ratio));
+                    levelColor = `rgb(${r}, ${g}, ${b})`;
+                  }
+
+                  return (
+                    <Chip
+                      key={index}
+                      className={hasLevel ? 'skill-chip-glow' : ''}
+                      label={
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
+                          <span style={{ fontSize: '0.7rem' }}>{skill.name}</span>
+                          <span style={{ fontSize: '0.6rem', color: levelColor, fontWeight: 'bold' }}>
+                            Req: {reqLevel} | Your: {userLevel}
+                          </span>
+                        </Box>
+                      }
+                      size="medium"
+                      sx={{
+                        height: 'auto',
+                        backgroundColor: 'rgba(95, 240, 255, 0.05)',
+                        border: `1px solid ${hasLevel ? 'rgba(95, 240, 255, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+                        fontFamily: 'Orbitron',
+                        borderRadius: '8px'
+                      }}
+                    />
+                  );
+                })}
               </div>
 
-              <ReactMarkdown variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>{project.description}</ReactMarkdown>
+              <Box sx={{ mb: 1 }}>
+                <ReactMarkdown
+                  components={{
+                    p: ({ node, ...props }) => <Typography variant="body2" sx={{ color: 'text.secondary' }} {...props} />,
+                  }}
+                >
+                  {project.description}
+                </ReactMarkdown>
+              </Box>
 
               <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={2}>
                 <Button
