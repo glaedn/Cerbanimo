@@ -14,17 +14,18 @@ class OpportunityEngine {
   }
 
   async matchSkills(userId, context) {
-    const userSkills = context.personal.skills;
-    if (!userSkills.length) return [];
+    const userSkillIds = context.personal.skillIds || [];
+    if (!userSkillIds.length) return [];
 
     // needs table: title -> name, skills_required -> skill_ids
+    // matching against skill_ids (INTEGER[]) using integer array $1
     const matches = await pool.query(
       `SELECT id, name, description, skill_ids, 'skill_match' as match_type
        FROM needs
        WHERE status = 'open'
        AND (skill_ids && $1 OR $2 @> skill_ids)
        LIMIT 3`,
-      [userSkills, userSkills]
+      [userSkillIds, userSkillIds]
     );
 
     return matches.rows.map(m => ({
@@ -32,7 +33,7 @@ class OpportunityEngine {
       priority: 'medium',
       type: 'opportunity',
       requiredSkills: m.skill_ids || [],
-      message: `Your skill in ${userSkills[0]} is needed for: ${m.name}`
+      message: `Your skill matching one of the requirements is needed for: ${m.name}`
     }));
   }
 

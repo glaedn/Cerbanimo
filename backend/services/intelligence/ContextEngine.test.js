@@ -16,7 +16,7 @@ describe('ContextEngine', () => {
       roles: ['Architect'],
       onboarding_stage: 3,
       trust_level: 5,
-      skills: JSON.stringify([{ name: 'Engineering', level: 10 }, { name: 'Design', level: 8 }])
+      skills: JSON.stringify([{ id: 356, name: 'Engineering', level: 10 }, { id: 357, name: 'Design', level: 8 }])
     };
 
     const mockMissions = [
@@ -40,6 +40,7 @@ describe('ContextEngine', () => {
     expect(result.onboarding_stage).toBe(3);
     expect(result.trustLevel).toBe(5);
     expect(result.skills).toEqual(['Engineering', 'Design']);
+    expect(result.skillIds).toEqual([356, 357]);
     expect(result.activeMissions).toHaveLength(1);
     expect(result.activeMissions[0].title).toBe('Mission 1');
   });
