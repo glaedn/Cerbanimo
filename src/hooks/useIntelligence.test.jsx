@@ -2,13 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useIntelligence } from './useIntelligence';
 import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 
 vi.mock('axios');
+vi.mock('@auth0/auth0-react');
 
 describe('useIntelligence', () => {
+  const mockGetAccessTokenSilently = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem('token', 'fake-token');
+    useAuth0.mockReturnValue({
+      getAccessTokenSilently: mockGetAccessTokenSilently,
+      isAuthenticated: true,
+    });
+    mockGetAccessTokenSilently.mockResolvedValue('fake-token');
   });
 
   it('fetches pulse and applies no filtering by default', async () => {
