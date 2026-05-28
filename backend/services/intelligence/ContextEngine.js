@@ -57,13 +57,14 @@ class ContextEngine {
   }
 
   async getTemporalContext(userId) {
+    // assigned_to -> assigned_user_ids (array)
     const recentActivity = await pool.query(
-      'SELECT id FROM tasks WHERE (assigned_to = $1 OR creator_id = $1) AND updated_at > NOW() - INTERVAL \'7 days\'',
+      'SELECT id FROM tasks WHERE ($1 = ANY(assigned_user_ids) OR creator_id = $1) AND updated_at > NOW() - INTERVAL \'7 days\'',
       [userId]
     );
 
     const deadlines = await pool.query(
-      'SELECT id FROM tasks WHERE (assigned_to = $1 OR creator_id = $1) AND deadline > NOW() AND deadline < NOW() + INTERVAL \'3 days\'',
+      'SELECT id FROM tasks WHERE ($1 = ANY(assigned_user_ids) OR creator_id = $1) AND due_date > NOW() AND due_date < NOW() + INTERVAL \'3 days\'',
       [userId]
     );
 
@@ -75,18 +76,24 @@ class ContextEngine {
   }
 
   async getSocialContext(userId) {
+    // assigned_to -> assigned_user_ids (array)
+    // Collaborators are users assigned to the same projects as the current user, excluding the user themselves
     const collaborators = await pool.query(
-      'SELECT DISTINCT assigned_to FROM tasks WHERE project_id IN (SELECT project_id FROM tasks WHERE assigned_to = $1) AND assigned_to != $1',
+      `SELECT DISTINCT unnest(assigned_user_ids) as collaborator_id
+       FROM tasks
+       WHERE project_id IN (SELECT project_id FROM tasks WHERE $1 = ANY(assigned_user_ids))
+       AND NOT ($1 = ANY(assigned_user_ids) AND array_length(assigned_user_ids, 1) = 1)`,
       [userId]
     );
 
+    // community_members table replaced by members array in communities table
     const constellations = await pool.query(
-      'SELECT community_id FROM community_members WHERE user_id = $1',
+      'SELECT id as community_id FROM communities WHERE $1 = ANY(members)',
       [userId]
     );
 
     return {
-      collaboratorCount: collaborators.rowCount,
+      collaboratorCount: collaborators.rowCount > 0 ? collaborators.rows.filter(r => r.collaborator_id !== parseInt(userId)).length : 0,
       activeConstellations: constellations.rows,
       mentorshipStatus: collaborators.rowCount > 5 ? 'mentor' : 'active'
     };
