@@ -44,21 +44,43 @@ describe('ContextEngine', () => {
     expect(result.activeMissions[0].title).toBe('Mission 1');
   });
 
-  it('getPersonalContext should handle empty skills', async () => {
+  it('getTemporalContext should use assigned_user_ids', async () => {
     const mockUserId = 15;
-    const mockUser = {
-      id: 15,
-      skills: null
-    };
+    pool.query.mockResolvedValue({ rowCount: 2, rows: [{ id: 101 }, { id: 102 }] });
 
+    const result = await ContextEngine.getTemporalContext(mockUserId);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('ANY(assigned_user_ids)'),
+      [mockUserId]
+    );
+    expect(result.recentActivityCount).toBe(2);
+    expect(result.upcomingDeadlines).toHaveLength(2);
+  });
+
+  it('getSocialContext should use assigned_user_ids and communities', async () => {
+    const mockUserId = 15;
     pool.query.mockImplementation((query, params) => {
-      if (query.includes('FROM users')) {
-        return Promise.resolve({ rows: [mockUser] });
+      if (query.includes('unnest(assigned_user_ids)')) {
+        return Promise.resolve({ rowCount: 3, rows: [{ collaborator_id: 1 }, { collaborator_id: 2 }, { collaborator_id: 3 }] });
+      }
+      if (query.includes('FROM communities')) {
+        return Promise.resolve({ rows: [{ community_id: 10 }, { community_id: 20 }] });
       }
       return Promise.resolve({ rows: [] });
     });
 
-    const result = await ContextEngine.getPersonalContext(mockUserId);
-    expect(result.skills).toEqual([]);
+    const result = await ContextEngine.getSocialContext(mockUserId);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('ANY(assigned_user_ids)'),
+      [mockUserId]
+    );
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('FROM communities WHERE $1 = ANY(members)'),
+      [mockUserId]
+    );
+    expect(result.collaboratorCount).toBe(3);
+    expect(result.activeConstellations).toHaveLength(2);
   });
 });
