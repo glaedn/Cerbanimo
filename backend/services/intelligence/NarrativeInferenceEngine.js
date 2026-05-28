@@ -16,23 +16,23 @@ class NarrativeInferenceEngine {
       });
     }
 
-    // Pull from StoryEngine
+    // Pull from StoryEngine - story_summaries contains generated content
     try {
-      const storyUnits = await pool.query(
-        'SELECT content FROM story_units WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
+      const storySummaries = await pool.query(
+        'SELECT content FROM story_summaries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
         [userId]
       );
-      if (storyUnits.rowCount > 0 && storyUnits.rows[0].content) {
+      if (storySummaries.rowCount > 0 && storySummaries.rows[0].content) {
         narratives.push({
           type: 'narrative',
           priority: 'medium',
           persona: 'Chronicler',
-          message: storyUnits.rows[0].content,
+          message: storySummaries.rows[0].content,
           impact_level: 'personal'
         });
       }
     } catch (err) {
-      console.error('Error fetching story units for NarrativeInferenceEngine:', err);
+      console.error('Error fetching story summaries for NarrativeInferenceEngine:', err);
     }
 
     return narratives;

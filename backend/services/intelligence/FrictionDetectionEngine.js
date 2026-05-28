@@ -26,8 +26,9 @@ class FrictionDetectionEngine {
     }
 
     // Detect overdue tasks
+    // assigned_to -> assigned_user_ids (array), deadline -> due_date
     const overdueTasks = await pool.query(
-      'SELECT id, name FROM tasks WHERE assigned_to = $1 AND deadline < NOW() AND status != \'completed\'',
+      'SELECT id, name FROM tasks WHERE $1 = ANY(assigned_user_ids) AND due_date < NOW() AND status != \'completed\'',
       [userId]
     );
 
