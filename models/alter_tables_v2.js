@@ -106,7 +106,7 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS total_decayed NUMERIC(36, 18) DEFAULT 0,
     ADD COLUMN IF NOT EXISTS resume_text TEXT,
     ADD COLUMN IF NOT EXISTS last_resume_analysis_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS focus_project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS focus_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
   `;
 
   const alterSkillsQuery = `
