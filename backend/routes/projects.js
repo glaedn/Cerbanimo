@@ -54,7 +54,7 @@ router.get('/personal', async (req, res) => {
         WITH project_metrics AS (
           SELECT
             t.project_id,
-            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%' AND t.skill_id = ANY($1::int[])) as skill_relevance,
+            COUNT(*) FILTER (WHERE (t.status = 'active-unassigned' OR t.status = 'urgent-unassigned') AND t.skill_id = ANY($1::int[])) as skill_relevance,
             COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%') as activity_count,
             AVG(t.skill_level) as avg_skill_level
           FROM tasks t
@@ -80,6 +80,7 @@ router.get('/personal', async (req, res) => {
               ), 0)) as user_lvl
             FROM tasks t
             JOIN skills s ON t.skill_id = s.id
+            WHERE t.status = 'active-unassigned' OR t.status = 'urgent-unassigned'
             GROUP BY t.project_id, s.id, s.name
           ) s_avg
           GROUP BY project_id
@@ -100,6 +101,12 @@ router.get('/personal', async (req, res) => {
             (SELECT COUNT(*) FROM unnest(p.tags) t WHERE t = ANY($5::text[])) +
             COALESCE((SELECT COUNT(*) FROM unnest(ci.interest_names) ci_name WHERE ci_name = ANY($5::text[])), 0)
           ) as relevance_score,
+          (
+            SELECT array_agg(t) FROM unnest(p.tags) t WHERE t = ANY($5::text[])
+          ) as matched_tags,
+          (
+            SELECT array_agg(ci_name) FROM unnest(ci.interest_names) ci_name WHERE ci_name = ANY($5::text[])
+          ) as matched_interests,
           COALESCE(m.activity_count, 0) as activity_count,
           COALESCE(m.avg_skill_level, 0) as avg_skill_level,
           COALESCE(ps.project_skills, '[]'::jsonb) as project_skills

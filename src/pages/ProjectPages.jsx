@@ -2,11 +2,170 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-import { Button, TextField, Typography, Chip, Box, Grid } from '@mui/material';
+import { Button, TextField, Typography, Chip, Box, Grid, Popover } from '@mui/material';
 import { useIsMobile } from '../hooks/useIsMobile';
 import './ProjectPages.css';
 import ReactMarkdown from 'react-markdown';
 import useSkillData from '../hooks/useSkillData';
+
+const ProjectCard = ({ project, isMobile, onContribute, onOpen }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const handleTagsClick = (event) => setAnchorEl(event.currentTarget);
+  const handleTagsClose = () => setAnchorEl(null);
+  const open = Boolean(anchorEl);
+
+  const matchedInterests = [
+    ...(project.matched_tags || []),
+    ...(project.matched_interests || [])
+  ];
+
+  return (
+    <Grid item xs={12} sx={{ width: '100%' }}>
+      <div className="project-card glass-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
+          <div className="relevance-container" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {matchedInterests.length > 0 && (
+              <div
+                className="interest-match-badge"
+                onClick={handleTagsClick}
+                style={{
+                  cursor: 'pointer',
+                  background: 'rgba(95, 240, 255, 0.1)',
+                  border: '1px solid rgba(95, 240, 255, 0.3)',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '0.7rem',
+                  color: '#5FF0FF',
+                  fontFamily: 'Orbitron'
+                }}
+              >
+                {matchedInterests.length} MATCHES
+              </div>
+            )}
+            <div className="relevance-meter-container">
+              <span className="meter-label">RELEVANCE</span>
+              <div className="relevance-meter">
+                <div
+                  className="relevance-fill"
+                  style={{ width: `${Math.min(100, (project.relevance_score || 0) * 20)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Popover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={handleTagsClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{
+            sx: {
+              background: 'rgba(8, 20, 41, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(95, 240, 255, 0.3)',
+              padding: '12px',
+              maxWidth: '300px'
+            }
+          }}
+        >
+          <Typography variant="caption" sx={{ color: 'rgba(95, 240, 255, 0.7)', mb: 1, display: 'block', fontFamily: 'Orbitron' }}>
+            MATCHED INTERESTS
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {matchedInterests.map((tag, i) => (
+              <Chip
+                key={i}
+                label={tag}
+                size="small"
+                sx={{
+                  background: 'rgba(95, 240, 255, 0.1)',
+                  color: '#5FF0FF',
+                  border: '1px solid rgba(95, 240, 255, 0.2)',
+                  fontSize: '0.65rem'
+                }}
+              />
+            ))}
+          </Box>
+        </Popover>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', marginTop: '8px' }}>
+          {project.project_skills && project.project_skills.map((skill, index) => {
+            const reqLevel = Math.round(skill.level || 0);
+            const userLevel = skill.user_level || 0;
+            const hasLevel = userLevel >= reqLevel;
+
+            let levelColor = '#5FF0FF';
+            if (!hasLevel) {
+              const diff = Math.min(20, reqLevel - userLevel);
+              const ratio = diff / 20;
+              const r = Math.round(95 + (255 - 95) * ratio);
+              const g = Math.round(240 * (1 - ratio));
+              const b = Math.round(255 * (1 - ratio));
+              levelColor = `rgb(${r}, ${g}, ${b})`;
+            }
+
+            return (
+              <Chip
+                key={index}
+                className={hasLevel ? 'skill-chip-glow' : ''}
+                label={
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
+                    <span style={{ fontSize: '0.7rem' }}>{skill.name}</span>
+                    <span style={{ fontSize: '0.6rem', color: levelColor, fontWeight: 'bold' }}>
+                      Req: {reqLevel} | Your: {userLevel}
+                    </span>
+                  </Box>
+                }
+                size="medium"
+                sx={{
+                  height: 'auto',
+                  backgroundColor: 'rgba(95, 240, 255, 0.05)',
+                  border: `1px solid ${hasLevel ? 'rgba(95, 240, 255, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+                  fontFamily: 'Orbitron',
+                  borderRadius: '8px'
+                }}
+              />
+            );
+          })}
+        </div>
+
+        <Box sx={{ mb: 1 }}>
+          <ReactMarkdown
+            components={{
+              p: ({ node, ...props }) => <Typography variant="body2" sx={{ color: 'text.secondary' }} {...props} />,
+            }}
+          >
+            {project.description}
+          </ReactMarkdown>
+        </Box>
+
+        <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={2}>
+          <Button
+            className="glass-btn-contribute"
+            variant="text"
+            size="small"
+            fullWidth={isMobile}
+            onClick={() => onContribute(project)}
+          >
+            Contribute
+          </Button>
+          <Button
+            className="glass-btn-open"
+            variant="text"
+            size="small"
+            fullWidth={isMobile}
+            onClick={() => onOpen(project.id)}
+          >
+            Open Project
+          </Button>
+        </Box>
+      </div>
+    </Grid>
+  );
+};
 
 const ProjectPages = () => {
   const isMobile = useIsMobile();
@@ -211,103 +370,16 @@ const ProjectPages = () => {
       <div className="project-list-wrapper" style={{ width: isMobile ? '100%' : '80%' }}>
         <Grid container spacing={isMobile ? 2 : 0} direction={isMobile ? 'column' : 'row'}>
         {projects.map((project) => (
-          <Grid item xs={12} key={project.id} sx={{ width: '100%' }}>
-            <div className="project-card glass-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Typography variant="h6" sx={{ color: 'primary.main' }}>{project.name}</Typography>
-                <div className="relevance-meter-container">
-                  <span className="meter-label">RELEVANCE</span>
-                  <div className="relevance-meter">
-                    <div
-                      className="relevance-fill"
-                      style={{ width: `${Math.min(100, (project.relevance_score || 0) * 20)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', marginTop: '8px' }}>
-                {project.project_skills && project.project_skills.map((skill, index) => {
-                  const reqLevel = Math.round(skill.level || 0);
-                  const userLevel = skill.user_level || 0;
-                  const hasLevel = userLevel >= reqLevel;
-
-                  // Calculate redshift
-                  // max red (255, 0, 0) at 20 levels below
-                  // cyan (95, 240, 255) if at or above
-                  let levelColor = '#5FF0FF';
-                  if (!hasLevel) {
-                    const diff = Math.min(20, reqLevel - userLevel);
-                    const ratio = diff / 20;
-                    // Interpolate between cyan (95, 240, 255) and red (255, 0, 0)
-                    const r = Math.round(95 + (255 - 95) * ratio);
-                    const g = Math.round(240 * (1 - ratio));
-                    const b = Math.round(255 * (1 - ratio));
-                    levelColor = `rgb(${r}, ${g}, ${b})`;
-                  }
-
-                  return (
-                    <Chip
-                      key={index}
-                      className={hasLevel ? 'skill-chip-glow' : ''}
-                      label={
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
-                          <span style={{ fontSize: '0.7rem' }}>{skill.name}</span>
-                          <span style={{ fontSize: '0.6rem', color: levelColor, fontWeight: 'bold' }}>
-                            Req: {reqLevel} | Your: {userLevel}
-                          </span>
-                        </Box>
-                      }
-                      size="medium"
-                      sx={{
-                        height: 'auto',
-                        backgroundColor: 'rgba(95, 240, 255, 0.05)',
-                        border: `1px solid ${hasLevel ? 'rgba(95, 240, 255, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
-                        fontFamily: 'Orbitron',
-                        borderRadius: '8px'
-                      }}
-                    />
-                  );
-                })}
-              </div>
-
-              <Box sx={{ mb: 1 }}>
-                <ReactMarkdown
-                  components={{
-                    p: ({ node, ...props }) => <Typography variant="body2" sx={{ color: 'text.secondary' }} {...props} />,
-                  }}
-                >
-                  {project.description}
-                </ReactMarkdown>
-              </Box>
-
-              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={2}>
-                <Button
-                  className="glass-btn-contribute"
-                  variant="text"
-                  size="small"
-                  fullWidth={isMobile}
-                  onClick={() => {
-                    setSelectedProject(project);
-                    fetchTasks(project.id);
-                  }}
-                >
-                  Contribute
-                </Button>
-                <Button
-                  className="glass-btn-open"
-                  variant="text"
-                  size="small"
-                  fullWidth={isMobile}
-                  onClick={() => {
-                    navigate(`/visualizer/${project.id}`);
-                  }}
-                >
-                  Open Project
-                </Button>
-              </Box>
-            </div>
-          </Grid>
+          <ProjectCard
+            key={project.id}
+            project={project}
+            isMobile={isMobile}
+            onContribute={(p) => {
+              setSelectedProject(p);
+              fetchTasks(p.id);
+            }}
+            onOpen={(id) => navigate(`/visualizer/${id}`)}
+          />
         ))}
         </Grid>
       </div>
