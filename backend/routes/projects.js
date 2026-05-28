@@ -55,7 +55,7 @@ router.get('/personal', async (req, res) => {
           SELECT
             t.project_id,
             COUNT(*) FILTER (WHERE (t.status = 'active-unassigned' OR t.status = 'urgent-unassigned') AND t.skill_id = ANY($1::int[])) as skill_relevance,
-            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%') as activity_count,
+            COUNT(*) FILTER (WHERE t.status::text NOT LIKE 'completed%') as activity_count,
             AVG(t.skill_level) as avg_skill_level
           FROM tasks t
           GROUP BY t.project_id
@@ -73,11 +73,11 @@ router.get('/personal', async (req, res) => {
               t.project_id,
               s.name as skill_name,
               AVG(t.skill_level) as avg_lvl,
-              MAX(COALESCE((
-                SELECT (uelem->>'level')::int
+              COALESCE((
+                SELECT MAX((uelem->>'level')::int)
                 FROM unnest(s.unlocked_users) uelem
                 WHERE (uelem->>'user_id')::int = $4
-              ), 0)) as user_lvl
+              ), 0) as user_lvl
             FROM tasks t
             JOIN skills s ON t.skill_id = s.id
             WHERE t.status = 'active-unassigned' OR t.status = 'urgent-unassigned'
