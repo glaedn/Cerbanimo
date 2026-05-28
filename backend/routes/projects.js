@@ -24,12 +24,15 @@ router.get('/personal', async (req, res) => {
     const { search = '', page = 1, auth0Id = '' } = req.query;
   
     try {
-      // Get the internal user ID and skills from the Auth0 ID
+      // Get the internal user ID, skills and interests from the Auth0 ID
       const userQuery = `
-        SELECT id FROM users WHERE auth0_id = $1
+        SELECT id, interests FROM users WHERE auth0_id = $1
       `;
       const userResult = await pool.query(userQuery, [auth0Id]);
-      const userId = userResult.rows[0]?.id || null;
+      const user = userResult.rows[0];
+      const userId = user?.id || null;
+      const userInterests = user?.interests || [];
+      const userInterestNames = userInterests.map(i => typeof i === 'string' ? JSON.parse(i).name : i.name);
   
       if (!userId) {
         return res.status(404).json({ message: 'User not found' });
@@ -51,7 +54,7 @@ router.get('/personal', async (req, res) => {
         WITH project_metrics AS (
           SELECT
             t.project_id,
-            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%' AND t.skill_id = ANY($1::int[])) as relevance_score,
+            COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%' AND t.skill_id = ANY($1::int[])) as skill_relevance,
             COUNT(*) FILTER (WHERE t.status NOT LIKE 'completed%') as activity_count,
             AVG(t.skill_level) as avg_skill_level
           FROM tasks t
@@ -80,17 +83,30 @@ router.get('/personal', async (req, res) => {
             GROUP BY t.project_id, s.id, s.name
           ) s_avg
           GROUP BY project_id
+        ),
+        community_interests AS (
+          SELECT
+            c.id as community_id,
+            array_agg(i.name) as interest_names
+          FROM communities c
+          LEFT JOIN interests i ON i.id = ANY(c.interest_tags)
+          GROUP BY c.id
         )
         SELECT
           p.*,
           ST_AsGeoJSON(p.location_point) as location_point,
-          COALESCE(m.relevance_score, 0) as relevance_score,
+          (
+            COALESCE(m.skill_relevance, 0) +
+            (SELECT COUNT(*) FROM unnest(p.tags) t WHERE t = ANY($5::text[])) +
+            COALESCE((SELECT COUNT(*) FROM unnest(ci.interest_names) ci_name WHERE ci_name = ANY($5::text[])), 0)
+          ) as relevance_score,
           COALESCE(m.activity_count, 0) as activity_count,
           COALESCE(m.avg_skill_level, 0) as avg_skill_level,
           COALESCE(ps.project_skills, '[]'::jsonb) as project_skills
         FROM projects p
         LEFT JOIN project_metrics m ON p.id = m.project_id
         LEFT JOIN project_skills_agg ps ON p.id = ps.project_id
+        LEFT JOIN community_interests ci ON ci.community_id = p.community_id
         WHERE 
           LOWER(p.name) LIKE LOWER($2) OR
           LOWER(p.description) LIKE LOWER($2)
@@ -102,7 +118,7 @@ router.get('/personal', async (req, res) => {
       `;
       const offset = (page - 1) * 10;
       const searchParam = `%${search}%`;
-      const projectsResult = await pool.query(projectsQuery, [userSkillIds, searchParam, offset, userId]);
+      const projectsResult = await pool.query(projectsQuery, [userSkillIds, searchParam, offset, userId, userInterestNames]);
   
       res.status(200).json(projectsResult.rows);
     } catch (err) {

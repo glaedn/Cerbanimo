@@ -38,6 +38,7 @@ const useAssignedTasks = (userId) => {
         deadline: task.due_date || null,
         skill_name: task.skill_name || null,
         skill_level: task.skill_level || 0,
+        user_skill_level: task.user_skill_level || 0,
         timeRemaining: 'N/A', // Placeholder
       }));
       

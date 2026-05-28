@@ -97,11 +97,17 @@ router.get("/accepted", async (req, res) => {
     console.log("Fetching accepted tasks for userId:", userId);
 
     const result = await pool.query(
-      `SELECT t.id AS task_id, t.*, p.name AS project_name, p.id AS project_id, s.name as skill_name
+      `SELECT t.id AS task_id, t.*, p.name AS project_name, p.id AS project_id, s.name as skill_name,
+              MAX(COALESCE((
+                SELECT (uelem->>'level')::int
+                FROM unnest(s.unlocked_users) uelem
+                WHERE (uelem->>'user_id')::int = $1
+              ), 0)) as user_skill_level
       FROM tasks t 
       LEFT JOIN projects p ON t.project_id = p.id
       LEFT JOIN skills s ON t.skill_id = s.id
-      WHERE $1 = ANY(t.assigned_user_ids::int[])`, 
+      WHERE $1 = ANY(t.assigned_user_ids::int[])
+      GROUP BY t.id, p.name, p.id, s.name`,
       [userId]
     );
 
