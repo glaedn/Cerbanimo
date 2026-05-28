@@ -132,3 +132,17 @@
   padding: 8px 12px;
   font-size: 0.7rem;
 }
+
+.skill-chip-glow {
+  box-shadow: 0 0 15px rgba(95, 240, 255, 0.3) !important;
+  animation: glow-pulse 2s infinite alternate;
+}
+
+@keyframes glow-pulse {
+  from {
+      box-shadow: 0 0 8px rgba(95, 240, 255, 0.2);
+  }
+  to {
+      box-shadow: 0 0 18px rgba(95, 240, 255, 0.5);
+  }
+}

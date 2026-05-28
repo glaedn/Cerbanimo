@@ -133,10 +133,37 @@ export const ActiveMissionsList = () => {
                 <div className="mission-card-actions">
                   {task.skill_name && (
                     <div className="skill-tags" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <SignalChip
-                        label={`${task.skill_name} (Lv. ${task.skill_level || 0})`}
-                        type="info"
-                      />
+                      {(() => {
+                        const reqLevel = task.skill_level || 0;
+                        const userLevel = task.user_skill_level || 0;
+                        const hasLevel = userLevel >= reqLevel;
+
+                        let levelColor = '#5FF0FF';
+                        if (!hasLevel) {
+                          const diff = Math.min(20, reqLevel - userLevel);
+                          const ratio = diff / 20;
+                          const r = Math.round(95 + (255 - 95) * ratio);
+                          const g = Math.round(240 * (1 - ratio));
+                          const b = Math.round(255 * (1 - ratio));
+                          levelColor = `rgb(${r}, ${g}, ${b})`;
+                        }
+
+                        return (
+                          <div className={hasLevel ? 'skill-chip-glow' : ''} style={{ borderRadius: '4px' }}>
+                            <SignalChip
+                              label={
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2px 0' }}>
+                                  <span>{task.skill_name}</span>
+                                  <span style={{ fontSize: '0.6rem', color: levelColor, fontWeight: 'bold' }}>
+                                    Req: {reqLevel} | Your: {userLevel}
+                                  </span>
+                                </div>
+                              }
+                              type={hasLevel ? "accent" : "info"}
+                            />
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   <button
