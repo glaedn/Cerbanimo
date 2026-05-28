@@ -18,8 +18,8 @@ const getAllTasks = async () => {
     SELECT 
       tasks.*,
       skills.name as skill_name,
-      COALESCE(projects.public_good_score, 1.0) as public_good_score,
-      projects.public_good_source
+      COALESCE(p.public_good_score, 1.0) as public_good_score,
+      p.public_good_source
     FROM tasks
     LEFT JOIN skills ON tasks.skill_id = skills.id
     LEFT JOIN projects p ON tasks.project_id = p.id;
