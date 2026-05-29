@@ -32,15 +32,28 @@ class ContextEngine {
 
     const user = userRes.rows[0] || {};
 
-    // Extract skills from JSONB. Expected format: [{name: 'Skill', level: 1}, ...] or ['Skill1', 'Skill2']
+    // Extract skills from JSONB. Expected format: [{id, name, level}, ...] or ['Skill1', 'Skill2']
     let skillNames = [];
+    let skillIds = [];
+
+    const processSkillsArray = (arr) => {
+      arr.forEach(s => {
+        if (typeof s === 'string') {
+          skillNames.push(s);
+        } else if (typeof s === 'object' && s !== null) {
+          if (s.name) skillNames.push(s.name);
+          if (s.id) skillIds.push(parseInt(s.id));
+        }
+      });
+    };
+
     if (Array.isArray(user.skills)) {
-      skillNames = user.skills.map(s => typeof s === 'string' ? s : s.name);
+      processSkillsArray(user.skills);
     } else if (typeof user.skills === 'string' && user.skills.trim() !== '') {
       try {
         const parsed = JSON.parse(user.skills);
         if (Array.isArray(parsed)) {
-          skillNames = parsed.map(s => typeof s === 'string' ? s : s.name);
+          processSkillsArray(parsed);
         }
       } catch (e) {
         console.error('Failed to parse user skills:', e);
@@ -52,6 +65,7 @@ class ContextEngine {
       onboarding_stage: user.onboarding_stage || 1,
       activeMissions: missions.rows.filter(m => m.status === 'active'),
       skills: skillNames,
+      skillIds: skillIds,
       trustLevel: user.trust_level || 1
     };
   }

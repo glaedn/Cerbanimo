@@ -66,19 +66,19 @@ describe('Intelligence Engines Schema Compatibility', () => {
   });
 
   describe('OpportunityEngine', () => {
-    it('should use correct columns in matchSkills', async () => {
-      pool.query.mockResolvedValue({ rows: [{ id: 1, name: 'Need 1', description: 'Desc', skill_ids: [1] }] });
-      const context = { personal: { skills: ['Skill 1'] } };
+    it('should use integer arrays in matchSkills', async () => {
+      pool.query.mockResolvedValue({ rows: [{ id: 1, name: 'Need 1', description: 'Desc', skill_ids: [356] }] });
+      const context = { personal: { skillIds: [356] } };
 
       await OpportunityEngine.matchSkills(15, context);
 
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id, name, description, skill_ids'),
-        expect.any(Array)
+        [[356], [356]]
       );
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining('skill_ids && $1'),
-        expect.any(Array)
+        [[356], [356]]
       );
     });
 
