@@ -48,7 +48,7 @@
   .orbit-page-container {
     padding: 12px;
     padding-bottom: 100px; /* Extra padding for mobile bottom nav */
-    width: 100vw;
+    width: 100%;
   }
 
   .orbit-layout-grid {
