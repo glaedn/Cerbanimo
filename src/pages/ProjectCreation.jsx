@@ -109,13 +109,14 @@ const ProjectCreation = () => {
     setLoadingPopupOpen(true);
     try {
       const token = await getAccessTokenSilently();
+      const projectName = limitText(name, 100);
 
       // Step 1: Create the project
 
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/projects/create`,
         {
-          name: name,
+          name: projectName,
           description: description,
           tags: selectedTags,
           auth0_id: user.sub,
@@ -165,7 +166,12 @@ const ProjectCreation = () => {
       }
     } catch (error) {
       console.error("Failed to create project:", error);
-      setLoadingPopupMessages(["Error creating project. Please try again."]);
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Error creating project. Please try again.";
+      setLoadingPopupMessages([message]);
       setLoadingPopupOpen(true); // Ensure it's open if it wasn't already
     }
   };
@@ -376,5 +382,11 @@ const ProjectCreation = () => {
     </LocalizationProvider>
   );
 };
+
+function limitText(value, maxLength) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
+}
 
 export default ProjectCreation;

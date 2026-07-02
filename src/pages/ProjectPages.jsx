@@ -242,9 +242,9 @@ const ProjectPages = () => {
     try {
       const token = await getAccessTokenSilently();
       
-      const skillNames = userProfile.skills.map(skill => 
+      const skillNames = (Array.isArray(userProfile.skills) ? userProfile.skills : []).map(skill => 
         typeof skill === 'object' ? skill.name : skill
-      );
+      ).filter(Boolean);
   
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/tasks/prelevant`, {
         params: { 

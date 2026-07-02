@@ -171,6 +171,36 @@ router.get('/userprojects', async (req, res) => {
   }
 });
 
+router.get('/:projectId/task-status', async (req, res) => {
+  const { projectId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT t.*, s.name AS skill_name
+       FROM tasks t
+       LEFT JOIN skills s ON t.skill_id = s.id
+       WHERE t.project_id = $1
+       ORDER BY t.id ASC`,
+      [projectId]
+    );
+
+    const tasks = result.rows;
+    const activeTasks = tasks.filter((task) => isActiveTaskStatus(task.status));
+
+    res.json({
+      success: true,
+      projectId: Number(projectId),
+      totalTasks: tasks.length,
+      activeTasks: activeTasks.length,
+      tasks,
+      status: activeTasks.length > 0 ? 'active_tasks_ready' : tasks.length > 0 ? 'tasks_created_waiting_activation' : 'waiting_for_tasks'
+    });
+  } catch (error) {
+    console.error('Failed to fetch project task status:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to fetch project task status' });
+  }
+});
+
 // Fetch a project by ID
 router.get('/:projectId', async (req, res) => {
   const { projectId } = req.params;
@@ -298,6 +328,7 @@ router.post('/create', async (req, res) => {
 
     const result = await pool.query(insertQuery, queryParams);
     const project = result.rows[0];
+    console.log(`[Kamiya] Created project ${project.id} (${project.name}) for user ${creator_id}.`);
 
     // Trigger next task activation if applicable (though usually no tasks yet)
     try {
@@ -672,6 +703,36 @@ router.post('/auto-generate', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
+    const existingTasksResult = await pool.query(
+      `SELECT t.*, s.name AS skill_name
+       FROM tasks t
+       LEFT JOIN skills s ON t.skill_id = s.id
+       WHERE t.project_id = $1
+       ORDER BY t.id ASC`,
+      [projectId]
+    );
+
+    if (existingTasksResult.rows.length > 0) {
+      console.log(`[Kamiya] Project ${projectId} already has ${existingTasksResult.rows.length} tasks; activating and returning existing task graph.`);
+      try {
+        const TaskRoutingService = (await import('../services/TaskRoutingService.js')).default;
+        await TaskRoutingService.activateProjectTasks(projectId);
+      } catch (actErr) {
+        console.error("Failed to activate existing project tasks:", actErr);
+      }
+
+      const refreshedTasksResult = await pool.query(
+        `SELECT t.*, s.name AS skill_name
+         FROM tasks t
+         LEFT JOIN skills s ON t.skill_id = s.id
+         WHERE t.project_id = $1
+         ORDER BY t.id ASC`,
+        [projectId]
+      );
+
+      return res.json({ success: true, tasks: refreshedTasksResult.rows, reusedExistingTasks: true });
+    }
+
     const outcomeResult = await pool.query(
       'SELECT statement FROM outcomes WHERE project_id = $1 ORDER BY id ASC LIMIT 1',
       [projectId]
@@ -687,9 +748,13 @@ router.post('/auto-generate', async (req, res) => {
       generatedData = await autoGenerateTasks(project.name, project.description, project.tags, project.creator_id, project.due_date, outcomeStatement);
     }
 
-    console.log('Generated data:', generatedData);
-    const tasks = generatedData.tasks
-    console.log('Generated tasks:', tasks);
+    console.log(`[Kamiya] Generated data for project ${projectId}:`, generatedData);
+    const tasks = Array.isArray(generatedData.tasks) ? generatedData.tasks.map(sanitizeGeneratedTask) : [];
+    console.log(`[Kamiya] Generated ${tasks.length} task(s) for project ${projectId}:`, tasks);
+
+    if (tasks.length === 0) {
+      return res.status(502).json({ success: false, error: 'Project plan generation returned no tasks.' });
+    }
 
     // Save project plan if it exists
     if (generatedData.projectPlan) {
@@ -751,11 +816,43 @@ router.post('/auto-generate', async (req, res) => {
     res.json({ success: true, tasks: insertedTasks });
   } catch (error) {
     console.error('Auto-generate tasks failed:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    res.status(500).json({ success: false, error: error.message || 'Internal server error' });
   }
 });
 
 
+
+function isActiveTaskStatus(status) {
+  return typeof status === 'string' && /^(active|urgent|ready|open|available|in_progress)/i.test(status);
+}
+
+function sanitizeGeneratedTask(task) {
+  return {
+    ...task,
+    name: limitText(task.name || 'Untitled task', 100),
+    description: String(task.description || '').trim(),
+    skill_name: limitText(task.skill_name || 'Project Management', 100),
+    skill_level: Number.isFinite(Number(task.skill_level)) ? Number(task.skill_level) : 0,
+    reward_tokens: Number.isFinite(Number(task.reward_tokens)) ? Number(task.reward_tokens) : 50,
+    resource_requirements: Array.isArray(task.resource_requirements) ? task.resource_requirements : [],
+    start_date: normalizeDate(task.start_date),
+    due_date: normalizeDate(task.due_date),
+    dependencies: Array.isArray(task.dependencies) ? task.dependencies : [],
+    is_local: Boolean(task.is_local)
+  };
+}
+
+function normalizeDate(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function limitText(value, maxLength) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
+}
 
 
 export default router;

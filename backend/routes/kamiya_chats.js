@@ -12,6 +12,7 @@ router.get('/chats', async (req, res) => {
 
     const result = await pool.query('SELECT kamiya_chats FROM users WHERE id = $1', [userId]);
     const chats = normalizeChats(result.rows[0]?.kamiya_chats, userId);
+    console.log(`[Kamiya] Listed ${chats.length} chat(s) for user ${userId}.`);
 
     res.json({
       chats: chats
@@ -40,6 +41,7 @@ router.get('/chats/:chatId', async (req, res) => {
     const chat = chats.find((item) => String(item.id) === String(req.params.chatId));
 
     if (!chat) return res.status(404).json({ message: 'Kamiya chat not found' });
+    console.log(`[Kamiya] Loaded chat ${chat.id} for user ${userId}.`);
     res.json({ chat });
   } catch (error) {
     console.error('Failed to load Kamiya chat:', error);
@@ -97,6 +99,7 @@ router.post('/chats', async (req, res) => {
     );
     await client.query('COMMIT');
 
+    console.log(`[Kamiya] Saved chat ${chat.id} for user ${userId} with ${chat.messages.length} message(s).`);
     res.status(chat.createdAt === now && !requestedId ? 201 : 200).json({ chat });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -109,6 +112,7 @@ router.post('/chats', async (req, res) => {
 
 function requireUserId(req, res) {
   if (!req.user?.id) {
+    console.warn('[Kamiya] Chat storage rejected request because no resolved Cerbanimo user was attached.');
     res.status(401).json({ message: 'Authenticated Cerbanimo user required' });
     return undefined;
   }

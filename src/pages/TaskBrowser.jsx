@@ -38,25 +38,9 @@ const TaskBrowser = ({ initialTab = 0 }) => {
             headers: { Authorization: `Bearer ${token}` },
           });
       
-          const usersInterests = profileResponse.data.interests?.map(interest => {
-            try {
-              const parsedInterest = JSON.parse(interest);
-              return parsedInterest.name.toLowerCase().trim();
-            } catch (error) {
-              return null;
-            }
-          }).filter(interest => interest !== null) || [];
+          const usersInterests = normalizeNameList(profileResponse.data.interests);
       
-          const userSkills = profileResponse.data.skills
-            .map(skill => {
-              try {
-                const parsedSkill = JSON.parse(skill);
-                return parsedSkill.name.toLowerCase().trim();
-              } catch (error) {
-                return null;
-              }
-            })
-            .filter(skill => skill !== null);
+          const userSkills = normalizeNameList(profileResponse.data.skills);
       
           const fetchedUserId = profileResponse.data.id || null;
           setUserId(fetchedUserId);
@@ -276,3 +260,24 @@ const TaskBrowser = ({ initialTab = 0 }) => {
 };
 
 export default TaskBrowser;
+
+function normalizeNameList(value) {
+  return (Array.isArray(value) ? value : [])
+    .map((item) => {
+      if (typeof item === 'string') {
+        try {
+          const parsed = JSON.parse(item);
+          return parsed?.name ? String(parsed.name).toLowerCase().trim() : item.toLowerCase().trim();
+        } catch {
+          return item.toLowerCase().trim();
+        }
+      }
+
+      if (item && typeof item === 'object' && item.name) {
+        return String(item.name).toLowerCase().trim();
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+}
