@@ -1,5 +1,7 @@
 import pool from '../db.js';
 import CapabilityRegistryService from './CapabilityRegistryService.js';
+import boss from '../jobs/boss.js';
+import { AUTOMATION_EXECUTION_QUEUE } from '../jobs/workers/automationWorker.js';
 
 const destructiveNames = new Set([
   'projects.delete',
@@ -34,8 +36,82 @@ function buildPreviewPayload(intent = {}) {
   };
 }
 
+async function executeKnownIntent(client, action, actorUserId) {
+  const intent = action.intent_json || {};
+  const functionName = intent.functionName || intent.function || intent.type;
+  const args = intent.arguments || intent.input || intent;
+
+  if (functionName === 'projects.create') {
+    const result = await client.query(
+      `INSERT INTO projects (
+         name, description, tags, creator_id, due_date, auto_assign, status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'planning'))
+       RETURNING *`,
+      [
+        args.name,
+        args.description,
+        Array.isArray(args.tags) ? args.tags : [],
+        actorUserId,
+        args.dueDate || args.due_date || null,
+        Boolean(args.autoAssign || args.auto_assign),
+        args.status || null
+      ]
+    );
+
+    return {
+      status: 'executed',
+      entityType: 'project',
+      entityId: result.rows[0].id,
+      project: result.rows[0]
+    };
+  }
+
+  if (functionName === 'tasks.create') {
+    const result = await client.query(
+      `INSERT INTO tasks (
+         project_id, name, description, skill_id, status, reward_tokens, dependencies, skill_level
+       )
+       VALUES ($1, $2, $3, $4, COALESCE($5, 'inactive-unassigned'), COALESCE($6, 10), $7::int[], COALESCE($8, 0))
+       RETURNING *`,
+      [
+        args.projectId || args.project_id || action.related_project_id,
+        args.name,
+        args.description,
+        args.skillId || args.skill_id || null,
+        args.status || null,
+        args.rewardTokens || args.reward_tokens || null,
+        Array.isArray(args.dependencies) ? args.dependencies : [],
+        args.skillLevel || args.skill_level || null
+      ]
+    );
+
+    return {
+      status: 'executed',
+      entityType: 'task',
+      entityId: result.rows[0].id,
+      task: result.rows[0]
+    };
+  }
+
+  return {
+    status: 'queued',
+    message: 'Action confirmed and queued for policy-controlled execution.'
+  };
+}
+
 class ActionQueueService {
-  async createPreview({ actorUserId, sourceClient, intent, previewPayload, riskLevel }) {
+  async createPreview({
+    actorUserId,
+    actorBotIdentity,
+    sourceClient,
+    intent,
+    previewPayload,
+    riskLevel,
+    relatedProjectId,
+    relatedTaskId,
+    relatedCommunityId
+  }) {
     const normalizedRisk = normalizeRiskLevel(intent, riskLevel);
     const preview = previewPayload || buildPreviewPayload(intent);
 
@@ -45,15 +121,28 @@ class ActionQueueService {
 
       const actionResult = await client.query(
         `INSERT INTO api_actions (
-           intent_json, preview_payload, source_client, actor_user_id, risk_level, status
+           intent_json,
+           preview_payload,
+           source_client,
+           actor_user_id,
+           actor_bot_identity,
+           related_project_id,
+           related_task_id,
+           related_community_id,
+           risk_level,
+           status
          )
-         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, 'previewed')
+         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5::jsonb, $6, $7, $8, $9, 'previewed')
          RETURNING *`,
         [
           JSON.stringify(intent || {}),
           JSON.stringify(preview),
           sourceClient || null,
           actorUserId || null,
+          actorBotIdentity ? JSON.stringify(actorBotIdentity) : null,
+          relatedProjectId || intent?.relatedProjectId || intent?.projectId || null,
+          relatedTaskId || intent?.relatedTaskId || intent?.taskId || null,
+          relatedCommunityId || intent?.relatedCommunityId || intent?.communityId || null,
           normalizedRisk
         ]
       );
@@ -75,17 +164,45 @@ class ActionQueueService {
     }
   }
 
-  async listActions({ actorUserId, limit = 50, status }) {
+  async listActions({
+    actorUserId,
+    limit = 50,
+    status,
+    projectId,
+    taskId,
+    communityId,
+    automationRunId
+  }) {
     const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
     const params = [actorUserId, boundedLimit];
-    const statusFilter = status ? 'AND status = $3' : '';
-    if (status) params.push(status);
+    const filters = [];
+    if (status) {
+      params.push(status);
+      filters.push(`status = $${params.length}`);
+    }
+    if (projectId) {
+      params.push(projectId);
+      filters.push(`related_project_id = $${params.length}`);
+    }
+    if (taskId) {
+      params.push(taskId);
+      filters.push(`related_task_id = $${params.length}`);
+    }
+    if (communityId) {
+      params.push(communityId);
+      filters.push(`related_community_id = $${params.length}`);
+    }
+    if (automationRunId) {
+      params.push(automationRunId);
+      filters.push(`related_automation_run_id = $${params.length}`);
+    }
+    const filterSql = filters.length > 0 ? `AND ${filters.join(' AND ')}` : '';
 
     const result = await pool.query(
       `SELECT *
        FROM api_actions
        WHERE ($1::int IS NULL OR actor_user_id = $1)
-       ${statusFilter}
+       ${filterSql}
        ORDER BY created_at DESC
        LIMIT $2`,
       params
@@ -107,6 +224,7 @@ class ActionQueueService {
 
   async confirmAction({ actionId, actorUserId, confirmation }) {
     const client = await pool.connect();
+    let automationJobToSend = null;
     try {
       await client.query('BEGIN');
 
@@ -127,17 +245,22 @@ class ActionQueueService {
         throw error;
       }
 
-      const executionResult = {
-        status: 'queued',
-        message: 'Action confirmed and queued for policy-controlled execution.'
-      };
+      const automationIntent = action.intent_json?.automation;
+      const executionResult = automationIntent?.templateKey
+        ? {
+            status: 'queued',
+            message: 'Automation action confirmed and queued for worker execution.'
+          }
+        : await executeKnownIntent(client, action, actorUserId);
+      const actionStatus = executionResult.status === 'executed' ? 'executed' : 'confirmed';
 
       const result = await client.query(
         `UPDATE api_actions
-         SET status = 'confirmed',
+         SET status = $4,
              confirmation_event = $2::jsonb,
              execution_result = $3::jsonb,
-             confirmed_at = NOW()
+             confirmed_at = NOW(),
+             executed_at = CASE WHEN $4 = 'executed' THEN NOW() ELSE executed_at END
          WHERE id = $1
          RETURNING *`,
         [
@@ -147,7 +270,8 @@ class ActionQueueService {
             confirmedAt: new Date().toISOString(),
             confirmation: confirmation || {}
           }),
-          JSON.stringify(executionResult)
+          JSON.stringify(executionResult),
+          actionStatus
         ]
       );
 
@@ -158,7 +282,14 @@ class ActionQueueService {
         [action.id, actorUserId || null, JSON.stringify({ confirmation: confirmation || {} })]
       );
 
-      const automationIntent = updatedAction.intent_json?.automation;
+      if (executionResult.status === 'executed') {
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+           VALUES ($1, 'action.executed', $2, $3::jsonb)`,
+          [action.id, actorUserId || null, JSON.stringify(executionResult)]
+        );
+      }
+
       if (automationIntent?.templateKey) {
         const template = CapabilityRegistryService.findAutomationTemplate(automationIntent.templateKey);
         const runResult = await client.query(
@@ -182,9 +313,31 @@ class ActionQueueService {
            VALUES ($1, 'info', 'Automation run queued after action confirmation.', $2::jsonb)`,
           [runResult.rows[0].id, JSON.stringify({ actionId: action.id })]
         );
+
+        await client.query(
+          'UPDATE api_actions SET related_automation_run_id = $1 WHERE id = $2',
+          [runResult.rows[0].id, action.id]
+        );
+
+        automationJobToSend = {
+          runId: runResult.rows[0].id,
+          templateKey: automationIntent.templateKey,
+          actionId: action.id
+        };
       }
 
       await client.query('COMMIT');
+      if (automationJobToSend) {
+        try {
+          await boss.send(AUTOMATION_EXECUTION_QUEUE, automationJobToSend);
+        } catch (queueError) {
+          await pool.query(
+            `INSERT INTO automation_logs (run_id, level, message, payload)
+             VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
+            [automationJobToSend.runId, JSON.stringify({ error: queueError.message || String(queueError) })]
+          );
+        }
+      }
       return updatedAction;
     } catch (error) {
       await client.query('ROLLBACK');

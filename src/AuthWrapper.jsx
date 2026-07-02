@@ -18,6 +18,10 @@ const AuthWrapper = ({ children }) => {
   const [initialSaveDone, setInitialSaveDone] = useState(false);
 
   useEffect(() => {
+    if (location.pathname.startsWith('/auth/bridge')) {
+      return;
+    }
+
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     if (!backendUrl || backendUrl === 'undefined') {
       console.error('CRITICAL ERROR: VITE_BACKEND_URL is not defined or is invalid. API calls will fail. Current value:', backendUrl);
@@ -104,6 +108,10 @@ const AuthWrapper = ({ children }) => {
   ]);
 
   useEffect(() => {
+    if (location.pathname.startsWith('/auth/bridge')) {
+      return;
+    }
+
     if (location.state?.onboardingJustCompleted) {
       console.log("AuthWrapper: Onboarding just completed. Processing state data.");
       if (location.state.updatedUserFromOnboarding) {

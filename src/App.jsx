@@ -34,6 +34,8 @@ const ResourcesDashboard = React.lazy(() => import("./pages/ResourcesDashboard.j
 const GalacticActivityMap = React.lazy(() => import("./components/GalacticActivityMap/GalacticActivityMap.jsx"));
 const OnboardingPage = React.lazy(() => import("./pages/OnboardingPage/OnboardingPage"));
 const WaitingListPage = React.lazy(() => import("./pages/WaitingListPage.jsx"));
+const AuthBridgeStart = React.lazy(() => import("./pages/AuthBridge.jsx").then(module => ({ default: module.AuthBridgeStart })));
+const AuthBridgeCallback = React.lazy(() => import("./pages/AuthBridge.jsx").then(module => ({ default: module.AuthBridgeCallback })));
 const Rezzler = React.lazy(() => import("./mobile/Rezzler.jsx"));
 const MobileDashboard = React.lazy(() => import("./pages/MobileDashboard.jsx"));
 const MobileNotifications = React.lazy(() => import("./pages/MobileNotifications.jsx"));
@@ -290,6 +292,8 @@ const AppContent = () => {
 
               {/* Public Routes */}
               <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
+              <Route path="/auth/bridge/start" element={<PageWrapper><AuthBridgeStart /></PageWrapper>} />
+              <Route path="/auth/bridge/callback" element={<PageWrapper><AuthBridgeCallback /></PageWrapper>} />
               <Route path="/waiting-list" element={<PageWrapper><WaitingListPage /></PageWrapper>} />
               <Route path="/onboarding" element={<PrivateRoute><PageWrapper><OnboardingPage /></PageWrapper></PrivateRoute>} />
 

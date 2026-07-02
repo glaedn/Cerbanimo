@@ -53,6 +53,8 @@ import impactReceiptRoutes from './routes/impact_receipts.js';
 import needFulfillmentRoutes from './routes/need_fulfillments.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import apiV1Routes from './routes/api_v1/index.js';
+import platformRoutes from './routes/platform.js';
+import kamiyaChatRoutes from './routes/kamiya_chats.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -110,10 +112,43 @@ import { fixSequences } from './utils/dbFix.js';
 // Initialize app
 const app = express();
 app.set('trust proxy', 1);
+
+const normalizeOrigin = (value) => {
+  const origin = (value || '').trim();
+  if (!origin) return '';
+
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return origin.replace(/\/+$/, '');
+  }
+};
+
+const parseOriginList = (value) => (value || '')
+  .split(',')
+  .map(normalizeOrigin)
+  .filter(Boolean);
+
+const allowedCorsOrigins = Array.from(new Set([
+  normalizeOrigin(process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"),
+  ...parseOriginList(process.env.KAMIYA_ALLOWED_ORIGINS || process.env.VITE_AUTH_BRIDGE_ALLOWED_ORIGINS)
+].filter(Boolean)));
+
+const corsOptions = {
+  origin(origin, callback) {
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (!origin || allowedCorsOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
+  credentials: true
+};
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: allowedCorsOrigins,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -153,7 +188,7 @@ const jwtCheck = auth({
 });
 
 // Middleware
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000", credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -189,6 +224,7 @@ if (!fs.existsSync('uploads')) {
 app.use('/uploads', express.static('uploads'));
 
 // Register routes
+app.use(platformRoutes);
 app.use('/auth/2fa', jwtCheck);
 app.use('/auth', authRoutes);
 app.use('/notifications', jwtCheck, notificationRoutes);
@@ -296,6 +332,7 @@ app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
 app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
 app.use('/need-fulfillments', jwtCheck, resolveUser, needFulfillmentRoutes);
 app.use('/marketplace', jwtCheck, resolveUser, marketplaceRoutes);
+app.use('/kamiya', jwtCheck, resolveUser, kamiyaChatRoutes);
 app.use('/api/v1', apiV1Routes);
 
 // Global Error Handler

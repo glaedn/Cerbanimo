@@ -1,4 +1,5 @@
 import { startAgentWorker } from './workers/agentWorker.js';
+import { AUTOMATION_EXECUTION_QUEUE, startAutomationWorker } from './workers/automationWorker.js';
 import { startDomainWorkers } from './workers/domain/domainWorkers.js';
 import boss from './boss.js';
 import VestingService from '../services/VestingService.js';
@@ -41,7 +42,8 @@ export async function startWorkers() {
       'audit-process-job',
       'founding-member-decay-job',
       'token-decay-job',
-      'community-health-update-job'
+      'community-health-update-job',
+      AUTOMATION_EXECUTION_QUEUE
     ];
 
     for (const queue of queues) {
@@ -58,6 +60,7 @@ export async function startWorkers() {
     await boss.createQueue('chronicle-generation');
 
     await startAgentWorker();
+    await startAutomationWorker();
     await startDomainWorkers();
 
     // Define worker for scheduled tasks

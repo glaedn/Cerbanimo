@@ -24,8 +24,8 @@ const root = createRoot(document.getElementById('root'));
 
 root.render(
   <Auth0Provider
-      domain="dev-i5331ndl5kxve1hd.us.auth0.com"
-      clientId="vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"
+      domain={import.meta.env.VITE_AUTH0_DOMAIN || "dev-i5331ndl5kxve1hd.us.auth0.com"}
+      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID || "vh3gl8nk3NF6uNkjRT8suuzfFjgCIdiB"}
       authorizationParams={{
         redirect_uri: `${window.location.origin}/dashboard`,
         audience: import.meta.env.VITE_BACKEND_URL,

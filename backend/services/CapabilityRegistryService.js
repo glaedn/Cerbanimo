@@ -168,6 +168,13 @@ export const automationTemplates = [
     status: 'planned'
   },
   {
+    key: 'pull_request_generation',
+    name: 'Pull Request Generation',
+    workerName: 'pullRequestGenerationWorker',
+    riskLevel: 'high',
+    status: 'planned'
+  },
+  {
     key: 'pr_review',
     name: 'PR Review',
     workerName: 'prReviewWorker',
@@ -213,6 +220,13 @@ export const automationTemplates = [
     key: 'staging_deploy_hooks',
     name: 'Staging Deploy Hooks',
     workerName: 'stagingDeployHookWorker',
+    riskLevel: 'high',
+    status: 'planned'
+  },
+  {
+    key: 'staging_deployment',
+    name: 'Staging Deployment',
+    workerName: 'stagingDeploymentWorker',
     riskLevel: 'high',
     status: 'planned'
   }
