@@ -224,6 +224,17 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ message: 'Name, description, Auth0 ID, and outcomeStatement are required' });
     }
 
+    const normalizedName = normalizeString(name);
+    const normalizedDescription = normalizeString(description);
+    const normalizedOutcomeStatement = normalizeString(outcomeStatement);
+    if (normalizedName.length > 100) {
+      return res.status(400).json({
+        message: `Project name must be 100 characters or fewer. Received ${normalizedName.length} characters.`,
+        field: 'name',
+        maxLength: 100
+      });
+    }
+
     // Step 1: Fetch the internal user ID from the Auth0 ID
     const userQuery = `
       SELECT id FROM users WHERE auth0_id = $1
@@ -269,8 +280,8 @@ router.post('/create', async (req, res) => {
     `;
 
     const queryParams = [
-      name,
-      description,
+      normalizedName,
+      normalizedDescription,
       tags,
       creator_id,
       due_date,
@@ -297,7 +308,7 @@ router.post('/create', async (req, res) => {
     }
 
     // Step 3: Enforce Outcome authorship (Phase 0)
-    await ImpactGraphService.createOutcome(project.id, outcomeStatement);
+    await ImpactGraphService.createOutcome(project.id, normalizedOutcomeStatement);
 
     res.status(201).json(project);
   } catch (err) {
@@ -305,6 +316,10 @@ router.post('/create', async (req, res) => {
     res.status(500).json({ message: 'Failed to create project' });
   }
 });
+
+function normalizeString(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
 
 // Update an existing project
 router.put('/:projectId', async (req, res) => {
