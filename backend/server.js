@@ -55,6 +55,7 @@ import marketplaceRoutes from './routes/marketplace.js';
 import apiV1Routes from './routes/api_v1/index.js';
 import platformRoutes from './routes/platform.js';
 import kamiyaChatRoutes from './routes/kamiya_chats.js';
+import { apiAuthenticate } from './services/apiAuthService.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -332,7 +333,7 @@ app.use('/crisis', jwtCheck, resolveUser, crisisRoutes);
 app.use('/impact-receipts', jwtCheck, resolveUser, impactReceiptRoutes);
 app.use('/need-fulfillments', jwtCheck, resolveUser, needFulfillmentRoutes);
 app.use('/marketplace', jwtCheck, resolveUser, marketplaceRoutes);
-app.use('/kamiya', jwtCheck, resolveUser, kamiyaChatRoutes);
+app.use('/kamiya', apiAuthenticate, resolveUser, kamiyaChatRoutes);
 app.use('/api/v1', apiV1Routes);
 
 // Global Error Handler

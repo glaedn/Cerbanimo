@@ -4,6 +4,7 @@ import ImpactGraphService from './ImpactGraphService.js';
 import TaskRoutingService from './TaskRoutingService.js';
 import { autoGenerateTasks, autogeneratePlan } from './taskGenerator.js';
 import { validateGeneratedGraph } from './ProjectTaskGraphValidator.js';
+import { createDeterministicBootstrapGenerators } from './ProjectBootstrapDeterministicProvider.js';
 
 export const BOOTSTRAP_STEPS = [
   'validateInput',
@@ -48,7 +49,7 @@ export class ProjectBootstrapService {
     this.guildService = deps.guildService || GuildService;
     this.impactGraphService = deps.impactGraphService || ImpactGraphService;
     this.taskRoutingService = deps.taskRoutingService || TaskRoutingService;
-    this.generators = deps.generators || { autoGenerateTasks, autogeneratePlan };
+    this.generators = deps.generators || defaultGenerators();
   }
 
   async bootstrapFromWorkflow(workflowRunId) {
@@ -274,7 +275,10 @@ export class ProjectBootstrapService {
       isService: Boolean(args.isService ?? args.is_service),
       serviceVisibility: Array.isArray(args.serviceVisibility ?? args.service_visibility) ? (args.serviceVisibility ?? args.service_visibility) : ['private'],
       servicePrice: Math.max(0, Number.parseInt(args.servicePrice ?? args.service_price ?? 0, 10) || 0),
-      generationMode: args.generationMode === 'tasks_only' ? 'tasks_only' : 'plan_then_tasks'
+      generationMode: args.generationMode === 'tasks_only' ? 'tasks_only' : 'plan_then_tasks',
+      e2eScenario: e2eOnly(args.e2eScenario ?? args._e2eScenario),
+      e2eRunId: e2eOnly(args.e2eRunId ?? args._e2eRunId),
+      e2eControlDir: e2eOnly(args.e2eControlDir ?? args._e2eControlDir)
     };
     const missing = [];
     if (!normalized.name) missing.push('name');
@@ -287,11 +291,11 @@ export class ProjectBootstrapService {
   }
 
   async generateProjectPlan(input) {
-    return this.generators.autogeneratePlan(input.name, input.description, input.tags, null, input.dueDate, input.outcomeStatement);
+    return this.generators.autogeneratePlan(input.name, input.description, input.tags, null, input.dueDate, input.outcomeStatement, e2eOptions(input));
   }
 
   async generateTaskGraph(input) {
-    return this.generators.autoGenerateTasks(input.name, input.description, input.tags, null, input.dueDate, input.outcomeStatement);
+    return this.generators.autoGenerateTasks(input.name, input.description, input.tags, null, input.dueDate, input.outcomeStatement, e2eOptions(input));
   }
 
   async persistTasksForExistingProject(projectId, projectInput, generatedData) {
@@ -690,6 +694,27 @@ function normalizeLocation(value) {
 
 function isActiveStatus(status) {
   return typeof status === 'string' && /^(active|urgent|ready|open|available|in_progress)/i.test(status);
+}
+
+function defaultGenerators() {
+  if (process.env.CERBANIMO_PROJECT_BOOTSTRAP_PROVIDER === 'deterministic') {
+    return createDeterministicBootstrapGenerators();
+  }
+  return { autoGenerateTasks, autogeneratePlan };
+}
+
+function e2eOnly(value) {
+  if (process.env.CERBANIMO_E2E_MODE !== 'true') return undefined;
+  if (value == null) return undefined;
+  return limitText(value, 500);
+}
+
+function e2eOptions(input) {
+  return {
+    e2eScenario: input.e2eScenario,
+    e2eRunId: input.e2eRunId,
+    e2eControlDir: input.e2eControlDir
+  };
 }
 
 function canAccessActionLike(action, { actorUserId, isServiceActor = false } = {}) {
