@@ -38,7 +38,6 @@ const humanRiskPatterns = [
   { code: 'INTERPERSONAL_CARE_REQUIRES_HUMAN', pattern: /\b(care|support group|counsel|therapy|medical|health|safety-critical)\b/i },
   { code: 'GOVERNANCE_DECISION_REQUIRES_HUMAN', pattern: /\b(hold .*vote|facilitate .*vote|binding .*vote|governance meeting|binding decision|constitution decision|ratify|mediate|mediation|conflict)\b/i },
   { code: 'FINANCIAL_COMMITMENT_REQUIRES_HUMAN', pattern: /\b(payment|payments|money|funds|token transfer|financial commitment|purchase|budget approval)\b/i },
-  { code: 'EXTERNAL_PUBLICATION_REQUIRES_APPROVAL', pattern: /\b(publish|post publicly|send outreach|email campaign|public announcement)\b/i },
   { code: 'UNSPECIFIED_ACCOUNT_ACCESS_REQUIRES_HUMAN', pattern: /\b(account access|credentials|password|secret|production access|admin access)\b/i }
 ];
 
@@ -89,6 +88,18 @@ export function normalizeTaskAutomationClassification(task = {}, options = {}) {
       normalizedSource = 'policy_downgrade';
       break;
     }
+  }
+
+  const communicationFinding = externalCommunicationFinding({
+    text,
+    classification,
+    requiredHumanInputs,
+    automationRequirements
+  });
+  if (communicationFinding) {
+    findings.push(communicationFinding);
+    classification = 'human_driven';
+    normalizedSource = 'policy_downgrade';
   }
 
   if (classification === 'fully_automatable' && requiredHumanInputs.length > 0) {
@@ -252,6 +263,24 @@ function stripMisleadingExecutionClaims(requirements) {
     permissions: [],
     expectedArtifacts: []
   };
+}
+
+function externalCommunicationFinding({ text, classification, requiredHumanInputs, automationRequirements }) {
+  const publicationIntent = /\b(publish|post publicly|send outreach|send .*email|email campaign|public announcement)\b/i.test(text);
+  if (!publicationIntent) return null;
+
+  const hasApproval = requiredHumanInputs.some((input) => input.inputType === 'approval');
+  const hasAudienceOrTarget = requiredHumanInputs.some((input) => /audience|target|channel|recipient/.test(input.key));
+  const hasContentContext = requiredHumanInputs.some((input) => /content|source|message|draft|context/.test(input.key));
+  const capabilities = arrayOfStrings(automationRequirements.capabilities);
+  const preparationOnly = capabilities.some((capability) => /(draft|prepare|review)/i.test(capability));
+  const immediateExternalEffect = capabilities.some((capability) => /(publish|send|post)/i.test(capability));
+
+  if (classification === 'assisted_automation' && hasApproval && hasAudienceOrTarget && hasContentContext && preparationOnly && !immediateExternalEffect) {
+    return null;
+  }
+
+  return finding('EXTERNAL_PUBLICATION_REQUIRES_APPROVAL', 'description', 'External communication requires an approval boundary and cannot be treated as immediately executable.');
 }
 
 function normalizeRationale(value, classification) {

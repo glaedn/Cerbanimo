@@ -151,7 +151,7 @@ export const functionSchemas = [
     version: '1.0.0',
     scope: 'automation:write',
     confirmationRequired: true,
-    description: 'Queue quality checks for a project or repository target after confirmation.',
+    description: 'Queue quality checks for a project or repository target after confirmation. Task-owned executions should use tasks.run_automation with a persisted preparation.',
     inputSchema: {
       type: 'object',
       required: ['targetType', 'targetId'],
@@ -161,6 +161,32 @@ export const functionSchemas = [
       }
     },
     outputSchema: { type: 'object' }
+  },
+  {
+    name: 'tasks.run_automation',
+    domain: 'tasks',
+    version: '1.0.0',
+    scope: 'automation:write',
+    confirmationRequired: true,
+    async: true,
+    description: 'Queue a capability-backed task automation from an actor-owned preparation after preview and confirmation.',
+    inputSchema: {
+      type: 'object',
+      required: ['taskId', 'preparationId', 'capabilityName'],
+      properties: {
+        taskId: { type: 'integer' },
+        preparationId: { oneOf: [{ type: 'integer' }, { type: 'string' }] },
+        capabilityName: { type: 'string', enum: ['github.run_quality_checks'] }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'object' },
+        automationRun: { type: 'object' },
+        report: { type: 'object' }
+      }
+    }
   },
   {
     name: 'automation.create_github_issue',

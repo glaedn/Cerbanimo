@@ -95,4 +95,39 @@ describe('TaskAutomationClassificationService', () => {
 
     expect(result.rationale.length).toBeLessThanOrEqual(240);
   });
+
+  it('allows assisted external communication only when it is bounded to drafting with approval', () => {
+    const result = normalizeTaskAutomationClassification({
+      name: 'Draft email campaign',
+      description: 'Prepare a public announcement draft for approval before anyone sends it.',
+      automation_classification: 'assisted_automation',
+      required_human_inputs: [
+        { key: 'approval', label: 'Approval', inputType: 'approval', required: true },
+        { key: 'audience', label: 'Audience', inputType: 'text', required: true },
+        { key: 'message_context', label: 'Message context', inputType: 'long_text', required: true }
+      ],
+      automation_requirements: {
+        capabilities: ['communications.prepare_draft'],
+        expectedArtifacts: ['draft-message']
+      }
+    });
+
+    expect(result.classification).toBe('assisted_automation');
+    expect(result.findings.some((finding) => finding.code === 'EXTERNAL_PUBLICATION_REQUIRES_APPROVAL')).toBe(false);
+  });
+
+  it('downgrades immediate external publishing requests without a safe approval boundary', () => {
+    const result = normalizeTaskAutomationClassification({
+      name: 'Send outreach emails',
+      description: 'Send outreach emails to potential partners.',
+      automation_classification: 'fully_automatable',
+      automation_requirements: {
+        capabilities: ['communications.send_email'],
+        expectedArtifacts: ['sent-email-log']
+      }
+    });
+
+    expect(result.classification).toBe('human_driven');
+    expect(result.findings.some((finding) => finding.code === 'EXTERNAL_PUBLICATION_REQUIRES_APPROVAL')).toBe(true);
+  });
 });

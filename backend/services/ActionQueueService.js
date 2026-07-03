@@ -357,14 +357,16 @@ class ActionQueueService {
 
       if (automationIntent?.templateKey) {
         const template = CapabilityRegistryService.findAutomationTemplate(automationIntent.templateKey);
+        const preparationId = automationIntent.input?.preparationId || automationIntent.input?.preparation_id || null;
         const runResult = await client.query(
           `INSERT INTO automation_runs (
-             action_id, template_key, status, input, worker_name, source_client, actor_user_id
+             action_id, preparation_id, template_key, status, input, worker_name, source_client, actor_user_id
            )
-           VALUES ($1, $2, 'queued', $3::jsonb, $4, $5, $6)
+           VALUES ($1, $2, $3, 'queued', $4::jsonb, $5, $6, $7)
            RETURNING *`,
           [
             action.id,
+            preparationId,
             automationIntent.templateKey,
             JSON.stringify(automationIntent.input || {}),
             template?.workerName || null,
@@ -384,8 +386,29 @@ class ActionQueueService {
           [runResult.rows[0].id, action.id]
         );
 
+        if (preparationId) {
+          await client.query(
+            `UPDATE task_automation_preparations
+             SET status = 'consumed',
+                 consumed_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = $1
+               AND actor_user_id = $2
+               AND status IN ('ready', 'previewed')`,
+            [preparationId, actorUserId || null]
+          );
+        }
+
+        updatedAction.related_automation_run_id = runResult.rows[0].id;
+        updatedAction.execution_result = {
+          ...updatedAction.execution_result,
+          automationRunId: runResult.rows[0].id,
+          runUuid: runResult.rows[0].run_uuid
+        };
+
         automationJobToSend = {
           runId: runResult.rows[0].id,
+          automationRunId: runResult.rows[0].id,
           templateKey: automationIntent.templateKey,
           actionId: action.id
         };
@@ -444,6 +467,24 @@ class ActionQueueService {
           await boss.send(AUTOMATION_EXECUTION_QUEUE, automationJobToSend);
         } catch (queueError) {
           await pool.query(
+            `UPDATE automation_runs
+             SET status = 'blocked',
+                 result = $2::jsonb,
+                 completed_at = NOW()
+             WHERE id = $1
+               AND status = 'queued'`,
+            [
+              automationJobToSend.runId,
+              JSON.stringify({
+                status: 'blocked',
+                reason: 'AUTOMATION_QUEUE_FAILED',
+                message: queueError.message || String(queueError),
+                retryable: true,
+                completedAt: new Date().toISOString()
+              })
+            ]
+          );
+          await pool.query(
             `INSERT INTO automation_logs (run_id, level, message, payload)
              VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
             [automationJobToSend.runId, JSON.stringify({ error: queueError.message || String(queueError) })]
@@ -481,7 +522,7 @@ class ActionQueueService {
           );
         }
       }
-      return updatedAction;
+      return this.hydrateActionOnly(updatedAction.id, { actorUserId, isServiceActor });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -554,6 +595,37 @@ class ActionQueueService {
           [action.id, actorUserId || null, JSON.stringify({ workflowRunId: workflow.id, reason: reason || null })]
         );
       }
+
+      if (action.related_automation_run_id) {
+        await client.query(
+          `UPDATE automation_runs
+           SET status = 'cancelled',
+               cancelled_at = NOW(),
+               completed_at = COALESCE(completed_at, NOW()),
+               result = COALESCE(result, '{}'::jsonb) || $2::jsonb
+           WHERE id = $1
+             AND status IN ('queued', 'running', 'blocked')`,
+          [
+            action.related_automation_run_id,
+            JSON.stringify({
+              status: 'cancelled',
+              reason: reason || null,
+              cancelledAt: new Date().toISOString()
+            })
+          ]
+        );
+      }
+
+      await client.query(
+        `UPDATE task_automation_preparations
+         SET status = 'cancelled',
+             cancelled_at = NOW(),
+             updated_at = NOW()
+         WHERE preview_action_id = $1
+           AND actor_user_id = $2
+           AND status IN ('draft', 'invalid', 'ready', 'previewed')`,
+        [action.id, actorUserId || null]
+      );
 
       await client.query('COMMIT');
       return result.rows[0];
@@ -695,7 +767,7 @@ class ActionQueueService {
     return canAccessAction(action, authContext) ? action : null;
   }
 
-  async getAutomationRun(runId) {
+  async getAutomationRun(runId, authContext = {}) {
     const runResult = await pool.query(
       `SELECT *
        FROM automation_runs
@@ -704,6 +776,10 @@ class ActionQueueService {
     );
     const run = runResult.rows[0];
     if (!run) return null;
+    if (!authContext.isServiceActor && authContext.actorUserId && Number(run.actor_user_id) !== Number(authContext.actorUserId)) {
+      return null;
+    }
+    if (!authContext.isServiceActor && !authContext.actorUserId) return null;
 
     const logsResult = await pool.query(
       'SELECT level, message, payload, created_at FROM automation_logs WHERE run_id = $1 ORDER BY created_at ASC',

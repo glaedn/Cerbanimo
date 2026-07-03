@@ -23,6 +23,8 @@ describe('api v1 public contract', () => {
     expect(response.body.data.openapi).toBe('3.1.0');
     expect(response.body.data.paths['/actions/preview']).toBeTruthy();
     expect(response.body.data.paths['/actions/{id}']).toBeTruthy();
+    expect(response.body.data.paths['/tasks/{id}/automation']).toBeTruthy();
+    expect(response.body.data.paths['/tasks/{id}/automation/preparations/{preparationId}/preview']).toBeTruthy();
   });
 
   it('marks functions unavailable when the actor lacks their scope', () => {
@@ -44,5 +46,15 @@ describe('api v1 public contract', () => {
     expect(bootstrapProject.available).toBe(true);
     expect(bootstrapProject.async).toBe(true);
     expect(bootstrapProject.inputSchema.required).toEqual(['name', 'description', 'outcomeStatement']);
+  });
+
+  it('exposes task automation execution as a confirmation-gated capability', () => {
+    const functions = CapabilityRegistryService.listFunctions(['automation:write']);
+    const runTaskAutomation = functions.find(fn => fn.name === 'tasks.run_automation');
+
+    expect(runTaskAutomation).toBeTruthy();
+    expect(runTaskAutomation.available).toBe(true);
+    expect(runTaskAutomation.confirmationRequired).toBe(true);
+    expect(runTaskAutomation.inputSchema.required).toEqual(['taskId', 'preparationId', 'capabilityName']);
   });
 });

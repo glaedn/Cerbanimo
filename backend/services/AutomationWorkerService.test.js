@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AutomationWorkerService from './AutomationWorkerService.js';
 import pool from '../db.js';
+import { qualityCheckInputSchema } from './TaskAutomationInputValidator.js';
 
 vi.mock('../db.js', () => ({
   default: {
@@ -13,8 +14,11 @@ vi.mock('./NotificationService.js', () => ({
 }));
 
 describe('AutomationWorkerService', () => {
+  const originalEnv = { ...process.env };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env = { ...originalEnv };
   });
 
   it('returns blocked results for external integrations without credentials', async () => {
@@ -49,5 +53,44 @@ describe('AutomationWorkerService', () => {
     expect(result.stats.taskCount).toBe(2);
     expect(result.findings[0].type).toBe('overdue_tasks');
   });
-});
 
+  it('submits a task when deterministic prepared quality checks pass', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.CERBANIMO_E2E_MODE = 'true';
+    process.env.POSTGRES_URL = 'postgres://postgres@127.0.0.1:5432/cerbanimo_e2e_quality';
+    process.env.CERBANIMO_QUALITY_CHECK_EXECUTOR = 'deterministic';
+
+    pool.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 5,
+          task_id: 99,
+          actor_user_id: 42,
+          input_schema_snapshot: qualityCheckInputSchema(),
+          input_values: {
+            repository: 'glaedn/Kamiya',
+            ref: 'main',
+            checkProfile: 'node_standard',
+            approval: { approved: true }
+          },
+          task_name: 'Run baseline repository quality checks',
+          task_status: 'active-unassigned',
+          project_id: 7
+        }]
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await AutomationWorkerService.runPreparedQualityChecks({
+      id: 77,
+      run_uuid: '11111111-1111-4111-8111-111111111111',
+      input: { preparationId: 5 },
+      actor_user_id: 42
+    });
+
+    expect(result.status).toBe('checks_passed');
+    expect(result.submittedTask).toBe(true);
+    expect(pool.query.mock.calls[1][0]).toContain("status = 'submitted'");
+    expect(pool.query.mock.calls[1][1][0]).toBe(99);
+  });
+});

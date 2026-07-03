@@ -25,6 +25,7 @@ import {
 import CapabilityRegistryService from '../../services/CapabilityRegistryService.js';
 import ActionQueueService from '../../services/ActionQueueService.js';
 import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
+import TaskAutomationPreparationService from '../../services/TaskAutomationPreparationService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 
 const router = express.Router();
@@ -40,6 +41,12 @@ function actionAuthContext(req) {
     actorUserId: req.user?.id || null,
     isServiceActor: req.apiAuth?.type === 'apiToken' && scopes.includes(API_SCOPES.ACTIONS_SERVICE)
   };
+}
+
+function actorScopes(req) {
+  return req.apiAuth?.type === 'auth0'
+    ? allScopesForUser(req.user)
+    : req.apiAuth?.scopes || [];
 }
 
 const openApiDocument = {
@@ -117,6 +124,12 @@ const openApiDocument = {
     },
     '/projects': { get: { summary: 'List projects' } },
     '/tasks': { get: { summary: 'List tasks' } },
+    '/tasks/{id}/automation': { get: { summary: 'Read task automation classification, preparation, and executable capability state' } },
+    '/tasks/{id}/automation/preparations': { post: { summary: 'Create or update an actor-owned task automation preparation' } },
+    '/tasks/{id}/automation/preparations/{preparationId}': { get: { summary: 'Read an actor-owned task automation preparation' }, patch: { summary: 'Update an actor-owned task automation preparation' } },
+    '/tasks/{id}/automation/preparations/{preparationId}/validate': { post: { summary: 'Validate a task automation preparation' } },
+    '/tasks/{id}/automation/preparations/{preparationId}/preview': { post: { summary: 'Create a confirmation-gated action preview from a ready preparation' } },
+    '/tasks/{id}/automation/preparations/{preparationId}/cancel': { post: { summary: 'Cancel an actor-owned task automation preparation' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
     '/stats': { get: { summary: 'Read dashboard stats' } },
@@ -369,6 +382,82 @@ router.get('/tasks', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async 
   });
 }));
 
+router.get('/tasks/:taskId/automation', requireScopes([API_SCOPES.READ_TASKS, API_SCOPES.AUTOMATION_READ]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.getTaskAutomationContext({
+    taskId: req.params.taskId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req)
+  });
+  if (!context) return sendError(req, res, 404, 'Task not found');
+  return sendOk(req, res, context);
+}));
+
+router.post('/tasks/:taskId/automation/preparations', requireScopes([API_SCOPES.AUTOMATION_WRITE]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.createPreparation({
+    taskId: req.params.taskId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req),
+    capabilityName: req.body?.capabilityName || req.body?.capability_name,
+    inputValues: req.body?.inputValues || req.body?.input_values || {}
+  });
+  return sendOk(req, res, context, 201);
+}));
+
+router.get('/tasks/:taskId/automation/preparations/:preparationId', requireScopes([API_SCOPES.AUTOMATION_READ]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.getPreparation({
+    taskId: req.params.taskId,
+    preparationId: req.params.preparationId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req)
+  });
+  if (!context) return sendError(req, res, 404, 'Task automation preparation not found');
+  return sendOk(req, res, context);
+}));
+
+router.patch('/tasks/:taskId/automation/preparations/:preparationId', requireScopes([API_SCOPES.AUTOMATION_WRITE]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.updatePreparation({
+    taskId: req.params.taskId,
+    preparationId: req.params.preparationId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req),
+    inputValues: req.body?.inputValues || req.body?.input_values || {},
+    status: req.body?.status
+  });
+  return sendOk(req, res, context);
+}));
+
+router.post('/tasks/:taskId/automation/preparations/:preparationId/validate', requireScopes([API_SCOPES.AUTOMATION_WRITE]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.validatePreparation({
+    taskId: req.params.taskId,
+    preparationId: req.params.preparationId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req)
+  });
+  return sendOk(req, res, context);
+}));
+
+router.post('/tasks/:taskId/automation/preparations/:preparationId/preview', requireScopes([API_SCOPES.AUTOMATION_WRITE, API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const context = await TaskAutomationPreparationService.previewPreparation({
+    taskId: req.params.taskId,
+    preparationId: req.params.preparationId,
+    actorUserId: req.user?.id,
+    scopes: actorScopes(req),
+    sourceClient: req.body?.sourceClient || req.apiAuth?.clientName || 'api'
+  });
+  return sendOk(req, res, context, 201);
+}));
+
+router.post('/tasks/:taskId/automation/preparations/:preparationId/cancel', requireScopes([API_SCOPES.AUTOMATION_WRITE]), asyncHandler(async (req, res) => {
+  const preparation = await TaskAutomationPreparationService.cancelPreparation({
+    taskId: req.params.taskId,
+    preparationId: req.params.preparationId,
+    actorUserId: req.user?.id,
+    reason: req.body?.reason
+  });
+  if (!preparation) return sendError(req, res, 404, 'Task automation preparation not found');
+  return sendOk(req, res, { preparation });
+}));
+
 router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
   const result = await pool.query(
     `SELECT t.*, s.name AS skill_name
@@ -456,7 +545,7 @@ router.post('/automation/actions', requireScopes([API_SCOPES.AUTOMATION_WRITE]),
 }));
 
 router.get('/automation/runs/:id', requireScopes([API_SCOPES.AUTOMATION_READ]), asyncHandler(async (req, res) => {
-  const run = await ActionQueueService.getAutomationRun(req.params.id);
+  const run = await ActionQueueService.getAutomationRun(req.params.id, actionAuthContext(req));
   if (!run) {
     return sendError(req, res, 404, 'Automation run not found');
   }

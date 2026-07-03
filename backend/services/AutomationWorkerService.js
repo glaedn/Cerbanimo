@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import fetch from 'node-fetch';
 import pool from '../db.js';
 import { sendNotification } from './NotificationService.js';
+import { qualityCheckInputSchema, validatePreparationInputs } from './TaskAutomationInputValidator.js';
 
 const externalIntegrationTemplates = new Set([
   'github_issue_creation',
@@ -9,6 +11,8 @@ const externalIntegrationTemplates = new Set([
   'staging_deploy_hooks',
   'staging_deployment'
 ]);
+const AUTOMATION_LEASE_MS = 5 * 60 * 1000;
+const productionHostPattern = /(neon\.tech|amazonaws\.com|render\.com|onrender\.com|prod|production)/i;
 
 function nowIso() {
   return new Date().toISOString();
@@ -53,30 +57,61 @@ class AutomationWorkerService {
     );
   }
 
-  async markRunning(runId) {
-    await pool.query(
+  async claimRun(runId) {
+    const claimToken = crypto.randomBytes(18).toString('base64url');
+    const result = await pool.query(
       `UPDATE automation_runs
-       SET status = 'running', started_at = COALESCE(started_at, NOW())
-       WHERE id = $1`,
-      [runId]
+       SET status = 'running',
+           attempt_count = COALESCE(attempt_count, 0) + 1,
+           claim_token = $2,
+           lease_expires_at = NOW() + ($3::int * INTERVAL '1 millisecond'),
+           started_at = COALESCE(started_at, NOW())
+       WHERE id::text = $1
+         AND status IN ('queued', 'running')
+         AND (status <> 'running' OR lease_expires_at IS NULL OR lease_expires_at <= NOW())
+         AND cancelled_at IS NULL
+       RETURNING *`,
+      [String(runId), claimToken, AUTOMATION_LEASE_MS]
     );
+
+    if (result.rows[0]) return { claimed: true, run: await this.getRun(result.rows[0].id), claimToken };
+    return { claimed: false, run: await this.getRun(runId), claimToken: null };
   }
 
-  async markCompleted(runId, result) {
-    await pool.query(
+  async markCompleted(runId, result, claimToken) {
+    const status = statusForResult(result);
+    const update = await pool.query(
       `UPDATE automation_runs
-       SET status = $2, result = $3::jsonb, completed_at = NOW()
-       WHERE id = $1`,
-      [runId, result.status === 'blocked' ? 'blocked' : 'completed', JSON.stringify(result)]
+       SET status = $2,
+           result = $3::jsonb,
+           completed_at = NOW(),
+           lease_expires_at = NULL,
+           claim_token = NULL
+       WHERE id = $1
+         AND ($4::text IS NULL OR claim_token = $4)
+       RETURNING id`,
+      [runId, status, JSON.stringify(result), claimToken || null]
     );
+    if (claimToken && update.rowCount === 0) {
+      throw new Error(`Automation run ${runId} claim was lost before completion.`);
+    }
   }
 
-  async markFailed(runId, error) {
+  async markFailed(runId, error, claimToken = null) {
     await pool.query(
       `UPDATE automation_runs
-       SET status = 'failed', result = $2::jsonb, completed_at = NOW()
-       WHERE id = $1`,
-      [runId, JSON.stringify({ status: 'failed', error: error.message || String(error), failedAt: nowIso() })]
+       SET status = 'failed',
+           result = $2::jsonb,
+           completed_at = NOW(),
+           lease_expires_at = NULL,
+           claim_token = NULL
+       WHERE id = $1
+         AND ($3::text IS NULL OR claim_token = $3)`,
+      [
+        runId,
+        JSON.stringify({ status: 'executor_failed', error: error.message || String(error), failedAt: nowIso() }),
+        claimToken
+      ]
     );
   }
 
@@ -92,21 +127,24 @@ class AutomationWorkerService {
   }
 
   async run(runId) {
-    const run = await this.getRun(runId);
-    if (!run) throw new Error(`Automation run ${runId} not found`);
+    const claim = await this.claimRun(runId);
+    if (!claim.run) throw new Error(`Automation run ${runId} not found`);
+    if (!claim.claimed) {
+      return claim.run.result || { status: claim.run.status, message: 'Automation run is already claimed or terminal.' };
+    }
 
-    await this.markRunning(runId);
-    await this.log(runId, 'info', `Starting automation ${run.template_key}`, { input: run.input || {} });
+    const run = claim.run;
+    await this.log(run.id, 'info', `Starting automation ${run.template_key}`, { input: redactRunInput(run.input || {}) });
 
     try {
       const result = await this.dispatch(run);
-      await this.markCompleted(runId, result);
-      await this.log(runId, result.status === 'blocked' ? 'warn' : 'info', `Automation ${run.template_key} finished`, result);
+      await this.markCompleted(run.id, result, claim.claimToken);
+      await this.log(run.id, result.status === 'blocked' ? 'warn' : 'info', `Automation ${run.template_key} finished`, result);
       await this.updateActionAfterRun(run, result);
       return result;
     } catch (error) {
-      await this.markFailed(runId, error);
-      await this.log(runId, 'error', `Automation ${run.template_key} failed`, { error: error.message || String(error) });
+      await this.markFailed(run.id, error, claim.claimToken);
+      await this.log(run.id, 'error', `Automation ${run.template_key} failed`, { error: error.message || String(error) });
       throw error;
     }
   }
@@ -155,7 +193,7 @@ class AutomationWorkerService {
       [
         JSON.stringify(result),
         JSON.stringify(result.notificationsEmitted || []),
-        result.status !== 'blocked',
+        shouldMarkActionExecuted(result),
         run.action_id
       ]
     );
@@ -163,6 +201,10 @@ class AutomationWorkerService {
 
   async runQualityChecks(run) {
     const input = run.input || {};
+    if (input.preparationId || input.preparation_id) {
+      return this.runPreparedQualityChecks(run);
+    }
+
     const targetType = input.targetType || (input.projectId ? 'project' : 'task');
     const targetId = input.targetId || input.projectId || input.taskId;
     const checks = [];
@@ -206,6 +248,146 @@ class AutomationWorkerService {
     }
 
     return this.runSubmissionValidation({ ...run, input: { ...input, taskId: targetId } });
+  }
+
+  async runPreparedQualityChecks(run) {
+    const context = await this.loadQualityCheckPreparation(run);
+    if (context.blocked) return context.blocked;
+
+    const { task, preparation, values } = context;
+    const executor = resolveQualityCheckExecutor();
+    if (!executor.available) {
+      return {
+        status: 'blocked',
+        reason: executor.reason,
+        taskId: task.id,
+        preparationId: preparation.id,
+        message: executor.message,
+        completedAt: nowIso()
+      };
+    }
+
+    const forcedResult = process.env.CERBANIMO_QUALITY_CHECK_E2E_RESULT;
+    const failed = forcedResult === 'checks_failed';
+    const checks = [
+      { key: 'repository_access', status: 'passed', message: `Repository ${values.repository} accepted by deterministic executor.` },
+      { key: 'dependency_install', status: failed ? 'failed' : 'passed', message: failed ? 'Dependency installation failed in deterministic scenario.' : 'Dependencies installed.' },
+      { key: 'typecheck', status: failed ? 'skipped' : 'passed', message: failed ? 'Skipped after dependency failure.' : 'Type check passed.' },
+      { key: 'lint', status: failed ? 'skipped' : 'passed', message: failed ? 'Skipped after dependency failure.' : 'Lint passed.' },
+      { key: 'unit_tests', status: failed ? 'skipped' : 'passed', message: failed ? 'Skipped after dependency failure.' : 'Unit tests passed.' },
+      { key: 'build', status: failed ? 'skipped' : 'passed', message: failed ? 'Skipped after dependency failure.' : 'Build passed.' }
+    ];
+    const status = failed ? 'checks_failed' : 'checks_passed';
+    const report = {
+      status,
+      reportType: 'quality_check',
+      taskId: task.id,
+      taskName: task.name,
+      preparationId: preparation.id,
+      repository: values.repository,
+      ref: values.ref,
+      checkProfile: values.checkProfile,
+      executor: executor.name,
+      checks,
+      summary: failed
+        ? 'Quality checks completed with failures. The task was not submitted.'
+        : 'Quality checks passed. Cerbanimo attached this report and submitted the task for review.',
+      artifactUri: `cerbanimo://automation-runs/${run.run_uuid || run.id}/quality-check-report`,
+      submittedTask: false,
+      completedAt: nowIso()
+    };
+
+    if (status === 'checks_passed') {
+      await this.submitTaskFromQualityReport(task, run, report);
+      report.submittedTask = true;
+    }
+
+    return report;
+  }
+
+  async loadQualityCheckPreparation(run) {
+    const input = run.input || {};
+    const preparationId = input.preparationId || input.preparation_id || run.preparation_id;
+    const result = await pool.query(
+      `SELECT p.*,
+              t.id AS task_id,
+              t.name AS task_name,
+              t.status AS task_status,
+              t.project_id,
+              t.automation_classification,
+              t.automation_requirements,
+              t.required_human_inputs,
+              t.validation_requirements
+       FROM task_automation_preparations p
+       JOIN tasks t ON t.id = p.task_id
+       WHERE p.id::text = $1 OR p.preparation_uuid::text = $1
+       LIMIT 1`,
+      [String(preparationId)]
+    );
+    const row = result.rows[0];
+    if (!row) {
+      return {
+        blocked: {
+          status: 'blocked',
+          reason: 'PREPARATION_NOT_FOUND',
+          message: 'Quality-check preparation was not found.',
+          completedAt: nowIso()
+        }
+      };
+    }
+
+    const validation = validatePreparationInputs(row.input_schema_snapshot || qualityCheckInputSchema(), row.input_values || {}, { actorUserId: row.actor_user_id });
+    if (!validation.valid) {
+      return {
+        blocked: {
+          status: 'blocked',
+          reason: 'INPUTS_INCOMPLETE',
+          message: 'Prepared quality-check inputs are incomplete.',
+          validation,
+          completedAt: nowIso()
+        }
+      };
+    }
+
+    return {
+      preparation: row,
+      task: {
+        id: row.task_id,
+        name: row.task_name,
+        status: row.task_status,
+        project_id: row.project_id
+      },
+      values: validation.sanitizedValues
+    };
+  }
+
+  async submitTaskFromQualityReport(task, run, report) {
+    const proofUri = report.artifactUri;
+    await pool.query(
+      `UPDATE tasks
+       SET submitted = TRUE,
+           submitted_at = NOW(),
+           status = 'submitted',
+           peer_review_deadline = NOW() + INTERVAL '6 hours',
+           proof_of_work_links = CASE
+             WHEN $2 = ANY(COALESCE(proof_of_work_links, '{}'::text[])) THEN proof_of_work_links
+             ELSE array_append(COALESCE(proof_of_work_links, '{}'::text[]), $2)
+           END,
+           reflection = COALESCE(NULLIF(reflection, ''), $3),
+           submitted_by = COALESCE(submitted_by, $4)
+       WHERE id = $1`,
+      [
+        task.id,
+        proofUri,
+        `Automated quality-check report from run ${run.run_uuid || run.id}: ${report.summary}`,
+        run.actor_user_id || null
+      ]
+    );
+    await this.log(run.id, 'info', 'Task submitted from passing quality-check report.', {
+      taskId: task.id,
+      proofUri,
+      status: 'submitted'
+    });
   }
 
   async runSubmissionValidation(run) {
@@ -508,6 +690,72 @@ class AutomationWorkerService {
       input: run.input || {},
       completedAt: nowIso()
     };
+  }
+}
+
+function statusForResult(result = {}) {
+  if (result.status === 'blocked') return 'blocked';
+  if (result.status === 'cancelled') return 'cancelled';
+  if (result.status === 'executor_failed') return 'failed';
+  return 'completed';
+}
+
+function shouldMarkActionExecuted(result = {}) {
+  return ['completed', 'checks_passed', 'checks_failed'].includes(result.status);
+}
+
+function redactRunInput(input = {}) {
+  const copy = { ...input };
+  for (const key of Object.keys(copy)) {
+    if (/secret|token|password|credential/i.test(key)) copy[key] = '[redacted]';
+  }
+  return copy;
+}
+
+function resolveQualityCheckExecutor() {
+  const mode = process.env.CERBANIMO_QUALITY_CHECK_EXECUTOR || '';
+  if (mode === 'deterministic') {
+    return deterministicExecutorAllowed()
+      ? { available: true, name: 'deterministic' }
+      : {
+          available: false,
+          reason: 'PRODUCTION_SANDBOX_REQUIRED',
+          message: 'Deterministic quality checks are only available in protected E2E test mode.'
+        };
+  }
+  if (mode === 'local_trusted_workspace') {
+    return {
+      available: false,
+      reason: 'EXECUTOR_NOT_CONFIGURED',
+      message: 'The local trusted workspace quality-check executor has not been configured for production use.'
+    };
+  }
+  return {
+    available: false,
+    reason: 'PRODUCTION_SANDBOX_REQUIRED',
+    message: 'Quality checks require an explicitly configured sandbox executor.'
+  };
+}
+
+function deterministicExecutorAllowed() {
+  const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
+  const parsed = parseDatabaseUrl(databaseUrl);
+  const target = `${parsed.host || ''}/${parsed.database || ''}`.toLowerCase();
+  return process.env.NODE_ENV === 'test'
+    && process.env.CERBANIMO_E2E_MODE === 'true'
+    && /(e2e|test)/i.test(parsed.database || '')
+    && !productionHostPattern.test(target);
+}
+
+function parseDatabaseUrl(value) {
+  try {
+    const url = new URL(value);
+    return {
+      host: url.hostname,
+      database: url.pathname.replace(/^\/+/, '')
+    };
+  } catch {
+    return { host: '', database: '' };
   }
 }
 
