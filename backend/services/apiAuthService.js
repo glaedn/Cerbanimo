@@ -20,6 +20,7 @@ export const API_SCOPES = Object.freeze({
   AI_ROUTE: 'ai:route',
   ACTIONS_READ: 'actions:read',
   ACTIONS_WRITE: 'actions:write',
+  ACTIONS_SERVICE: 'actions:service',
   AUTOMATION_READ: 'automation:read',
   AUTOMATION_WRITE: 'automation:write',
   CAPABILITIES_READ: 'capabilities:read',
@@ -73,7 +74,7 @@ function getBearerToken(req) {
 }
 
 export function allScopesForUser(user) {
-  const base = new Set(Object.values(API_SCOPES));
+  const base = new Set(Object.values(API_SCOPES).filter(scope => scope !== API_SCOPES.ACTIONS_SERVICE));
   return [...base].sort();
 }
 
@@ -86,7 +87,8 @@ export async function createApiToken({ userId, name, scopes, clientName, expires
   const allowed = new Set(Object.values(API_SCOPES));
   const normalizedScopes = [...new Set(requestedScopes)]
     .filter(scope => allowed.has(scope))
-    .filter(scope => scope !== API_SCOPES.TOKENS_WRITE);
+    .filter(scope => scope !== API_SCOPES.TOKENS_WRITE)
+    .filter(scope => scope !== API_SCOPES.ACTIONS_SERVICE);
 
   const result = await pool.query(
     `INSERT INTO api_tokens (user_id, name, token_hash, scopes, client_name, expires_at)

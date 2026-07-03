@@ -31,6 +31,16 @@ const router = express.Router();
 router.use(requestIdMiddleware);
 router.use(envelopeMiddleware);
 
+function actionAuthContext(req) {
+  const scopes = req.apiAuth?.type === 'auth0'
+    ? allScopesForUser(req.user)
+    : req.apiAuth?.scopes || [];
+  return {
+    actorUserId: req.user?.id || null,
+    isServiceActor: req.apiAuth?.type === 'apiToken' && scopes.includes(API_SCOPES.ACTIONS_SERVICE)
+  };
+}
+
 const openApiDocument = {
   openapi: '3.1.0',
   info: {
@@ -104,6 +114,7 @@ const openApiDocument = {
     '/actions/{id}': { get: { summary: 'Read action, workflow, project, and active task detail' } },
     '/actions/{id}/confirm': { post: { summary: 'Confirm a previewed action' } },
     '/actions/{id}/cancel': { post: { summary: 'Cancel a previewed or confirmed action' } },
+    '/actions/{id}/retry': { post: { summary: 'Requeue a retryable project bootstrap workflow' } },
     '/actions': { get: { summary: 'List actor action history' } },
     '/automation/templates': { get: { summary: 'List automation templates' } },
     '/automation/actions': { post: { summary: 'Create an automation action preview' } },
@@ -300,8 +311,10 @@ router.post('/actions/preview', requireScopes([API_SCOPES.ACTIONS_WRITE]), async
 }));
 
 router.get('/actions', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
   const actions = await ActionQueueService.listActions({
-    actorUserId: req.user?.id,
+    actorUserId: authContext.actorUserId,
+    isServiceActor: authContext.isServiceActor,
     limit: req.query.limit,
     status: req.query.status
   });
@@ -309,7 +322,8 @@ router.get('/actions', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(as
 }));
 
 router.get('/actions/:id', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(async (req, res) => {
-  const detail = await ProjectBootstrapService.hydrateActionDetail(req.params.id, req.user?.id);
+  const authContext = actionAuthContext(req);
+  const detail = await ProjectBootstrapService.hydrateActionDetail(req.params.id, authContext);
   if (!detail) {
     return sendError(req, res, 404, 'Action not found');
   }
@@ -317,21 +331,36 @@ router.get('/actions/:id', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandle
 }));
 
 router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
   const action = await ActionQueueService.confirmAction({
     actionId: req.params.id,
-    actorUserId: req.user?.id,
+    actorUserId: authContext.actorUserId,
+    isServiceActor: authContext.isServiceActor,
     confirmation: req.body || {}
   });
   return sendOk(req, res, action, action.status === 'confirmed' ? 202 : 200);
 }));
 
 router.post('/actions/:id/cancel', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
   const action = await ActionQueueService.cancelAction({
     actionId: req.params.id,
-    actorUserId: req.user?.id,
+    actorUserId: authContext.actorUserId,
+    isServiceActor: authContext.isServiceActor,
     reason: req.body?.reason
   });
   return sendOk(req, res, action);
+}));
+
+router.post('/actions/:id/retry', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
+  const action = await ActionQueueService.retryAction({
+    actionId: req.params.id,
+    actorUserId: authContext.actorUserId,
+    isServiceActor: authContext.isServiceActor,
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, action, 202);
 }));
 
 router.get('/automation/templates', requireScopes([API_SCOPES.AUTOMATION_READ]), (req, res) => {

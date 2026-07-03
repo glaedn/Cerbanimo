@@ -5,6 +5,13 @@ import { AUTOMATION_EXECUTION_QUEUE } from '../jobs/workers/automationWorker.js'
 import { PROJECT_BOOTSTRAP_QUEUE } from '../jobs/workers/projectBootstrapWorker.js';
 import { BOOTSTRAP_STEPS } from './ProjectBootstrapService.js';
 
+export function canAccessAction(action, { actorUserId, isServiceActor = false } = {}) {
+  if (!action) return false;
+  if (isServiceActor) return true;
+  if (!actorUserId) return false;
+  return Number(action.actor_user_id) === Number(actorUserId);
+}
+
 const destructiveNames = new Set([
   'projects.delete',
   'tasks.delete',
@@ -126,6 +133,7 @@ async function executeKnownIntent(client, action, actorUserId) {
 class ActionQueueService {
   async createPreview({
     actorUserId,
+    isServiceActor = false,
     actorBotIdentity,
     sourceClient,
     intent,
@@ -197,6 +205,8 @@ class ActionQueueService {
     automationRunId
   }) {
     const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+    if (!isServiceActor && !actorUserId) return [];
+
     const params = [actorUserId, boundedLimit];
     const filters = [];
     if (status) {
@@ -224,7 +234,7 @@ class ActionQueueService {
     const result = await pool.query(
       `SELECT *
        FROM api_actions
-       WHERE ($1::int IS NULL OR actor_user_id = $1)
+       WHERE ($1::int IS NOT NULL AND actor_user_id = $1)
        ${filterSql}
        ORDER BY created_at DESC
        LIMIT $2`,
@@ -234,7 +244,7 @@ class ActionQueueService {
     return result.rows;
   }
 
-  async getActionForUpdate(client, id) {
+  async getActionForUpdate(client, id, authContext = {}) {
     const result = await client.query(
       `SELECT *
        FROM api_actions
@@ -242,17 +252,18 @@ class ActionQueueService {
        FOR UPDATE`,
       [String(id)]
     );
-    return result.rows[0];
+    const action = result.rows[0];
+    return canAccessAction(action, authContext) ? action : null;
   }
 
-  async confirmAction({ actionId, actorUserId, confirmation }) {
+  async confirmAction({ actionId, actorUserId, isServiceActor = false, confirmation }) {
     const client = await pool.connect();
     let automationJobToSend = null;
     let projectBootstrapJobToSend = null;
     try {
       await client.query('BEGIN');
 
-      const action = await this.getActionForUpdate(client, actionId);
+      const action = await this.getActionForUpdate(client, actionId, { actorUserId, isServiceActor });
       if (!action) {
         const error = new Error('Action not found');
         error.status = 404;
@@ -361,14 +372,11 @@ class ActionQueueService {
         const args = action.intent_json?.arguments || action.intent_json?.input || {};
         const workflowResult = await client.query(
           `INSERT INTO workflow_runs (
-             workflow_type,
-             status,
-             state,
-             action_id,
-             actor_user_id,
-             source_client
+             workflow_type, status, state, action_id, actor_user_id, source_client
            )
            VALUES ('projects.bootstrap', 'queued', $1::jsonb, $2, $3, $4)
+           ON CONFLICT (action_id, workflow_type) WHERE action_id IS NOT NULL
+           DO UPDATE SET updated_at = workflow_runs.updated_at
            RETURNING *`,
           [
             JSON.stringify({
@@ -389,7 +397,8 @@ class ActionQueueService {
         for (const stepName of BOOTSTRAP_STEPS) {
           await client.query(
             `INSERT INTO workflow_steps (workflow_run_id, step_name, status, payload)
-             VALUES ($1, $2, 'pending', '{}'::jsonb)`,
+             VALUES ($1, $2, 'pending', '{}'::jsonb)
+             ON CONFLICT (workflow_run_id, step_name) DO NOTHING`,
             [workflowRun.id, stepName]
           );
         }
@@ -458,12 +467,12 @@ class ActionQueueService {
     }
   }
 
-  async cancelAction({ actionId, actorUserId, reason }) {
+  async cancelAction({ actionId, actorUserId, isServiceActor = false, reason }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      const action = await this.getActionForUpdate(client, actionId);
+      const action = await this.getActionForUpdate(client, actionId, { actorUserId, isServiceActor });
       if (!action) {
         const error = new Error('Action not found');
         error.status = 404;
@@ -471,6 +480,16 @@ class ActionQueueService {
       }
       if (!['previewed', 'confirmed'].includes(action.status)) {
         const error = new Error(`Action cannot be cancelled from status ${action.status}`);
+        error.status = 409;
+        throw error;
+      }
+
+      const functionName = action.intent_json?.functionName || action.intent_json?.function || action.intent_json?.type;
+      const workflow = functionName === 'projects.bootstrap'
+        ? (await client.query('SELECT * FROM workflow_runs WHERE action_id = $1 AND workflow_type = $2 FOR UPDATE', [action.id, 'projects.bootstrap'])).rows[0]
+        : null;
+      if (workflow?.related_project_id || ['completed'].includes(workflow?.status)) {
+        const error = new Error('Cannot cancel a project bootstrap after project persistence has completed');
         error.status = 409;
         throw error;
       }
@@ -490,6 +509,29 @@ class ActionQueueService {
         [action.id, actorUserId || null, JSON.stringify({ reason: reason || null })]
       );
 
+      if (workflow) {
+        await client.query(
+          `UPDATE workflow_runs
+           SET status = 'cancelled',
+               completed_at = NOW(),
+               updated_at = NOW(),
+               state = COALESCE(state, '{}'::jsonb) || $2::jsonb
+           WHERE id = $1`,
+          [workflow.id, JSON.stringify({ cancelledAt: new Date().toISOString(), cancelReason: reason || null })]
+        );
+        await client.query(
+          `UPDATE workflow_steps
+           SET status = 'cancelled', completed_at = COALESCE(completed_at, NOW())
+           WHERE workflow_run_id = $1 AND status IN ('pending','running','failed')`,
+          [workflow.id]
+        );
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+           VALUES ($1, 'workflow.cancelled', $2, $3::jsonb)`,
+          [action.id, actorUserId || null, JSON.stringify({ workflowRunId: workflow.id, reason: reason || null })]
+        );
+      }
+
       await client.query('COMMIT');
       return result.rows[0];
     } catch (error) {
@@ -498,6 +540,70 @@ class ActionQueueService {
     } finally {
       client.release();
     }
+  }
+
+  async retryAction({ actionId, actorUserId, isServiceActor = false, reason }) {
+    const client = await pool.connect();
+    let workflowRunId = null;
+    try {
+      await client.query('BEGIN');
+      const action = await this.getActionForUpdate(client, actionId, { actorUserId, isServiceActor });
+      if (!action) {
+        const error = new Error('Action not found');
+        error.status = 404;
+        throw error;
+      }
+      const workflow = (await client.query(
+        `SELECT * FROM workflow_runs
+         WHERE action_id = $1 AND workflow_type = 'projects.bootstrap'
+         FOR UPDATE`,
+        [action.id]
+      )).rows[0];
+      if (!workflow) {
+        const error = new Error('Project bootstrap workflow not found');
+        error.status = 404;
+        throw error;
+      }
+      if (['completed', 'cancelled'].includes(workflow.status) || ['executed', 'cancelled'].includes(action.status)) {
+        const error = new Error(`Workflow cannot be retried from status ${workflow.status}`);
+        error.status = 409;
+        throw error;
+      }
+      await client.query(
+        `UPDATE workflow_runs
+         SET status = 'queued',
+             next_retry_at = NOW(),
+             lease_expires_at = NULL,
+             claim_token = NULL,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [workflow.id]
+      );
+      await client.query(
+        `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+         VALUES ($1, 'workflow.requeued', $2, $3::jsonb)`,
+        [action.id, actorUserId || null, JSON.stringify({ workflowRunId: workflow.id, reason: reason || null })]
+      );
+      workflowRunId = workflow.id;
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    await boss.send(PROJECT_BOOTSTRAP_QUEUE, { workflowRunId });
+    return this.hydrateActionOnly(actionId, { actorUserId, isServiceActor });
+  }
+
+  async hydrateActionOnly(actionId, authContext) {
+    const result = await pool.query(
+      `SELECT * FROM api_actions WHERE id::text = $1 OR action_uuid::text = $1`,
+      [String(actionId)]
+    );
+    const action = result.rows[0];
+    return canAccessAction(action, authContext) ? action : null;
   }
 
   async getAutomationRun(runId) {

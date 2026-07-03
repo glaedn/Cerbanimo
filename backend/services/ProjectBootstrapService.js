@@ -27,6 +27,9 @@ export const BOOTSTRAP_ERROR_CODES = {
   PERMISSION_DENIED: 'BOOTSTRAP_PERMISSION_DENIED'
 };
 
+export const BOOTSTRAP_MAX_ATTEMPTS = 3;
+const BOOTSTRAP_LEASE_MS = 5 * 60 * 1000;
+
 class ProjectBootstrapError extends Error {
   constructor(code, message, stage, details = {}, retryable = false) {
     super(message);
@@ -37,7 +40,7 @@ class ProjectBootstrapError extends Error {
   }
 }
 
-class ProjectBootstrapService {
+export class ProjectBootstrapService {
   constructor(deps = {}) {
     this.pool = deps.pool || pool;
     this.guildService = deps.guildService || GuildService;
@@ -47,15 +50,13 @@ class ProjectBootstrapService {
   }
 
   async bootstrapFromWorkflow(workflowRunId) {
-    const workflow = await this.getWorkflow(workflowRunId);
-    if (!workflow) throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.INPUT_INVALID, 'Workflow run not found.', 'validateInput');
-    if (['completed', 'failed', 'blocked'].includes(workflow.status)) return workflow.state?.result || workflow;
-
-    await this.incrementAttempt(workflow.id);
-    await this.updateWorkflow(workflow.id, 'running', { startedAt: workflow.started_at || new Date().toISOString() });
-    await this.recordActionEvent(workflow.action_id, 'workflow.started', workflow.actor_user_id, { workflowRunId: workflow.id });
+    const claim = await this.claimWorkflow(workflowRunId);
+    if (!claim.workflow) throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.INPUT_INVALID, 'Workflow run not found.', 'claimWorkflow');
+    if (!claim.claimed) return claim.workflow.state?.result || { status: claim.workflow.status, workflowRunId: claim.workflow.id };
+    const workflow = claim.workflow;
 
     try {
+      await this.assertNotCancelled(workflow.id, 'validateInput');
       const projectInput = await this.runStep(workflow.id, 'validateInput', () => this.validateInput(workflow.state?.input || {}, workflow.actor_user_id));
 
       let generatedData = workflow.state?.generatedData;
@@ -74,6 +75,7 @@ class ProjectBootstrapService {
         }
 
         const validation = await this.runStep(workflow.id, 'validateTaskGraph', () => this.validateGeneratedGraph(generatedData, projectInput));
+        await this.assertNotCancelled(workflow.id, 'persistProjectGraph');
         const persisted = await this.runStep(workflow.id, 'persistProjectGraph', () => this.persistGeneratedGraph(null, workflow.actor_user_id, projectInput, { ...generatedData, tasks: validation.tasks }));
         await this.updateWorkflow(workflow.id, 'running', {
           relatedProjectId: persisted.project.id,
@@ -84,14 +86,56 @@ class ProjectBootstrapService {
       }
 
       const latest = await this.getWorkflow(workflow.id);
+      await this.assertNotCancelled(workflow.id, 'finalizeAction');
       const activation = await this.runStep(workflow.id, 'activateRootTasks', () => this.activateAndVerify(latest.related_project_id));
       const result = await this.runStep(workflow.id, 'finalizeAction', () => this.finalizeAction(latest.action_id, latest.related_project_id, activation));
       await this.updateWorkflow(workflow.id, 'completed', { result, completedAt: new Date().toISOString() });
+      await this.recordActionEvent(latest.action_id, 'workflow.completed', latest.actor_user_id, { workflowRunId: latest.id, projectId: latest.related_project_id, attempt: latest.attempt_count });
       await this.recordActionEvent(latest.action_id, 'action.executed', latest.actor_user_id, result);
       return result;
     } catch (error) {
       return this.failWorkflow(workflow, error);
     }
+  }
+
+  async claimWorkflow(workflowRunId) {
+    const claimToken = cryptoRandomId();
+    const claimResult = await this.pool.query(
+      `UPDATE workflow_runs
+       SET status = 'running',
+           attempt_count = COALESCE(attempt_count, 0) + 1,
+           claimed_at = NOW(),
+           lease_expires_at = NOW() + ($2::int * INTERVAL '1 millisecond'),
+           claim_token = $3,
+           started_at = COALESCE(started_at, NOW()),
+           updated_at = NOW()
+       WHERE id::text = $1
+         AND status IN ('queued', 'retry_wait', 'running')
+         AND (status <> 'running' OR lease_expires_at IS NULL OR lease_expires_at <= NOW())
+       RETURNING *`,
+      [String(workflowRunId), BOOTSTRAP_LEASE_MS, claimToken]
+    );
+    if (claimResult.rows[0]) {
+      const workflow = claimResult.rows[0];
+      await this.recordActionEvent(workflow.action_id, 'workflow.claimed', workflow.actor_user_id, {
+        workflowRunId: workflow.id,
+        attempt: workflow.attempt_count,
+        claimToken,
+        leaseExpiresAt: workflow.lease_expires_at
+      });
+      return { claimed: true, workflow, claimToken };
+    }
+
+    const workflow = await this.getWorkflow(workflowRunId);
+    if (workflow) {
+      await this.recordActionEvent(workflow.action_id, 'workflow.claim_rejected', workflow.actor_user_id, {
+        workflowRunId: workflow.id,
+        status: workflow.status,
+        attempt: workflow.attempt_count,
+        leaseExpiresAt: workflow.lease_expires_at
+      });
+    }
+    return { claimed: false, workflow, claimToken: null };
   }
 
   async generateForExistingProject(projectId, options = {}) {
@@ -282,12 +326,13 @@ class ProjectBootstrapService {
     return result.rows[0];
   }
 
-  async hydrateActionDetail(actionId, actorUserId) {
+  async hydrateActionDetail(actionId, authContext = {}) {
     const actionResult = await this.pool.query(
-      `SELECT * FROM api_actions WHERE (id::text = $1 OR action_uuid::text = $1) AND ($2::int IS NULL OR actor_user_id = $2)`,
-      [String(actionId), actorUserId || null]
+      `SELECT * FROM api_actions WHERE id::text = $1 OR action_uuid::text = $1`,
+      [String(actionId)]
     );
     const action = actionResult.rows[0];
+    if (!canAccessActionLike(action, authContext)) return null;
     if (!action) return null;
     const workflowResult = await this.pool.query('SELECT * FROM workflow_runs WHERE action_id = $1 ORDER BY created_at DESC LIMIT 1', [action.id]);
     const workflow = workflowResult.rows[0] || null;
@@ -295,7 +340,7 @@ class ProjectBootstrapService {
     const projectId = workflow?.related_project_id || action.related_project_id || action.execution_result?.projectId || null;
     const project = projectId ? (await this.pool.query('SELECT * FROM projects WHERE id = $1', [projectId])).rows[0] || null : null;
     const { tasks, activeTasks } = projectId ? await this.loadProjectTasks(projectId) : { tasks: [], activeTasks: [] };
-    const terminal = ['executed', 'failed', 'cancelled'].includes(action.status) || ['completed', 'failed', 'blocked'].includes(workflow?.status);
+    const terminal = ['executed', 'failed', 'cancelled'].includes(action.status) || ['completed', 'failed', 'blocked', 'cancelled'].includes(workflow?.status);
     return {
       action,
       workflow,
@@ -323,11 +368,17 @@ class ProjectBootstrapService {
   }
 
   async runStep(workflowRunId, stepName, fn) {
-    const existing = await this.pool.query('SELECT * FROM workflow_steps WHERE workflow_run_id = $1 AND step_name = $2 ORDER BY created_at DESC LIMIT 1', [workflowRunId, stepName]);
+    const existing = await this.pool.query('SELECT * FROM workflow_steps WHERE workflow_run_id = $1 AND step_name = $2 LIMIT 1', [workflowRunId, stepName]);
     if (existing.rows[0]?.status === 'completed' && existing.rows[0].result) return existing.rows[0].result;
-    const stepId = existing.rows[0]?.id || (await this.pool.query(
-      'INSERT INTO workflow_steps (workflow_run_id, step_name, status, started_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
-      [workflowRunId, stepName, 'running']
+    const stepId = (await this.pool.query(
+      `INSERT INTO workflow_steps (workflow_run_id, step_name, status, started_at)
+       VALUES ($1, $2, 'running', NOW())
+       ON CONFLICT (workflow_run_id, step_name)
+       DO UPDATE SET status = 'running',
+                     started_at = COALESCE(workflow_steps.started_at, NOW()),
+                     completed_at = NULL
+       RETURNING id`,
+      [workflowRunId, stepName]
     )).rows[0].id;
     try {
       const result = await fn();
@@ -346,15 +397,13 @@ class ProjectBootstrapService {
 
   async completeStep(workflowRunId, stepName, result, status = 'completed') {
     await this.pool.query(
-      'INSERT INTO workflow_steps (workflow_run_id, step_name, status, result, started_at, completed_at) VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW()) ON CONFLICT DO NOTHING',
-      [workflowRunId, stepName, status, JSON.stringify(result)]
-    );
-    await this.pool.query(
-      `UPDATE workflow_steps
-       SET status = $3,
-           result = $4::jsonb,
-           completed_at = NOW()
-       WHERE workflow_run_id = $1 AND step_name = $2`,
+      `INSERT INTO workflow_steps (workflow_run_id, step_name, status, result, started_at, completed_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
+       ON CONFLICT (workflow_run_id, step_name)
+       DO UPDATE SET status = EXCLUDED.status,
+                     result = EXCLUDED.result,
+                     started_at = COALESCE(workflow_steps.started_at, NOW()),
+                     completed_at = NOW()`,
       [workflowRunId, stepName, status, JSON.stringify(result)]
     );
   }
@@ -385,7 +434,9 @@ class ProjectBootstrapService {
       `UPDATE workflow_runs
        SET status = $1,
            state = COALESCE(state, '{}'::jsonb) || $2::jsonb,
-           completed_at = CASE WHEN $1 IN ('completed','failed','blocked') THEN COALESCE(completed_at, NOW()) ELSE completed_at END,
+           completed_at = CASE WHEN $1 IN ('completed','failed','blocked','cancelled') THEN COALESCE(completed_at, NOW()) ELSE completed_at END,
+           lease_expires_at = CASE WHEN $1 IN ('completed','failed','blocked','cancelled','retry_wait') THEN NULL ELSE lease_expires_at END,
+           claim_token = CASE WHEN $1 IN ('completed','failed','blocked','cancelled','retry_wait') THEN NULL ELSE claim_token END,
            updated_at = NOW()
        WHERE id = $3`,
       [status, JSON.stringify(statePatch), id]
@@ -407,16 +458,62 @@ class ProjectBootstrapService {
 
   async failWorkflow(workflow, error) {
     const payload = serializeError(error, error.stage || 'unknown', workflow);
-    const status = error.code === BOOTSTRAP_ERROR_CODES.INPUT_INVALID || error.code === BOOTSTRAP_ERROR_CODES.PERMISSION_DENIED ? 'blocked' : 'failed';
+    if (error.code === 'BOOTSTRAP_CANCELLED') {
+      await this.pool.query(
+        `UPDATE workflow_runs SET status = 'cancelled', last_error = $1::jsonb, completed_at = NOW(), lease_expires_at = NULL, claim_token = NULL, updated_at = NOW() WHERE id = $2`,
+        [JSON.stringify(payload), workflow.id]
+      );
+      await this.recordActionEvent(workflow.action_id, 'workflow.cancelled', workflow.actor_user_id, payload);
+      return payload;
+    }
+
+    const nonRetryable = [
+      BOOTSTRAP_ERROR_CODES.INPUT_INVALID,
+      BOOTSTRAP_ERROR_CODES.PERMISSION_DENIED,
+      BOOTSTRAP_ERROR_CODES.GRAPH_INVALID
+    ].includes(error.code);
+    const exhausted = Number(workflow.attempt_count || 0) >= BOOTSTRAP_MAX_ATTEMPTS;
+    const status = error.retryable && !nonRetryable && !exhausted ? 'retry_wait' : (nonRetryable ? 'blocked' : 'failed');
+    const nextRetryAt = status === 'retry_wait'
+      ? new Date(Date.now() + retryDelayMs(workflow.attempt_count)).toISOString()
+      : null;
     await this.pool.query(
-      `UPDATE workflow_runs SET status = $1, last_error = $2::jsonb, state = COALESCE(state, '{}'::jsonb) || $3::jsonb, completed_at = NOW(), updated_at = NOW() WHERE id = $4`,
-      [status, JSON.stringify(payload), JSON.stringify({ error: payload }), workflow.id]
+      `UPDATE workflow_runs
+       SET status = $1,
+           last_error = $2::jsonb,
+           state = COALESCE(state, '{}'::jsonb) || $3::jsonb,
+           next_retry_at = $4,
+           completed_at = CASE WHEN $1 IN ('failed','blocked') THEN NOW() ELSE completed_at END,
+           lease_expires_at = NULL,
+           claim_token = NULL,
+           updated_at = NOW()
+       WHERE id = $5`,
+      [status, JSON.stringify(payload), JSON.stringify({ error: payload }), nextRetryAt, workflow.id]
     );
     if (workflow.action_id) {
-      await this.pool.query('UPDATE api_actions SET status = $1, execution_result = $2::jsonb WHERE id = $3', ['failed', JSON.stringify(payload), workflow.action_id]);
-      await this.recordActionEvent(workflow.action_id, 'action.failed', workflow.actor_user_id, payload);
+      if (status === 'retry_wait') {
+        await this.recordActionEvent(workflow.action_id, 'workflow.retry_scheduled', workflow.actor_user_id, { ...payload, nextRetryAt });
+      } else {
+        await this.pool.query('UPDATE api_actions SET status = $1, execution_result = $2::jsonb WHERE id = $3', ['failed', JSON.stringify(payload), workflow.action_id]);
+        await this.recordActionEvent(workflow.action_id, exhausted ? 'workflow.retry_exhausted' : 'action.failed', workflow.actor_user_id, payload);
+      }
     }
+    if (status === 'retry_wait') throw error;
     return payload;
+  }
+
+  async assertNotCancelled(workflowRunId, stage) {
+    const result = await this.pool.query(
+      `SELECT wr.status AS workflow_status, wr.related_project_id, a.status AS action_status
+       FROM workflow_runs wr
+       LEFT JOIN api_actions a ON a.id = wr.action_id
+       WHERE wr.id = $1`,
+      [workflowRunId]
+    );
+    const row = result.rows[0];
+    if (row?.workflow_status === 'cancelled' || row?.action_status === 'cancelled') {
+      throw new ProjectBootstrapError('BOOTSTRAP_CANCELLED', 'Project bootstrap was cancelled before persistence.', stage, { workflowRunId }, false);
+    }
   }
 }
 
@@ -449,6 +546,22 @@ function normalizeLocation(value) {
 
 function isActiveStatus(status) {
   return typeof status === 'string' && /^(active|urgent|ready|open|available|in_progress)/i.test(status);
+}
+
+function canAccessActionLike(action, { actorUserId, isServiceActor = false } = {}) {
+  if (!action) return false;
+  if (isServiceActor) return true;
+  if (!actorUserId) return false;
+  return Number(action.actor_user_id) === Number(actorUserId);
+}
+
+function cryptoRandomId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function retryDelayMs(attemptCount = 0) {
+  const attempt = Math.max(1, Number(attemptCount) || 1);
+  return Math.min(300000, 10000 * (2 ** (attempt - 1)));
 }
 
 function serializeError(error, stage, workflow = {}) {
