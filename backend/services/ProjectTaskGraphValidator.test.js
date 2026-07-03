@@ -45,4 +45,37 @@ describe('ProjectTaskGraphValidator', () => {
     expect(result.valid).toBe(false);
     expect(result.findings.some(finding => finding.field === 'tasks[1].start_date' && finding.message.includes('before dependency'))).toBe(true);
   });
+
+  it('normalizes generated automation metadata without invalidating the graph', () => {
+    const result = validateGeneratedGraph({
+      tasks: [
+        {
+          id: 1,
+          name: 'Hold a governance vote',
+          description: 'Facilitate a binding constitution vote with community members.',
+          skill_name: 'Governance',
+          reward_tokens: 50,
+          dependencies: [],
+          automation_classification: 'fully_automatable',
+          automation_requirements: { capabilities: ['ai.do_everything'], expectedArtifacts: ['vote-result'] }
+        },
+        {
+          id: 2,
+          name: 'Run baseline quality checks',
+          description: 'Run the configured test command and return logs.',
+          skill_name: 'QA',
+          reward_tokens: 50,
+          dependencies: [],
+          automation_classification: 'fully_automatable',
+          automation_requirements: { capabilities: ['github.run_quality_checks'], expectedArtifacts: ['quality-check-report'], networkAccess: 'restricted' },
+          validation_requirements: [{ requirementId: 'checks-pass', description: 'Command result exists.', proofTypes: ['command_result'], checks: ['exit_code_recorded'] }]
+        }
+      ]
+    }, projectInput);
+
+    expect(result.valid).toBe(true);
+    expect(result.tasks[0].automation_classification).toBe('human_driven');
+    expect(result.tasks[0].automation_policy_findings.some(finding => finding.code === 'GOVERNANCE_DECISION_REQUIRES_HUMAN')).toBe(true);
+    expect(result.tasks[1].automation_classification).toBe('fully_automatable');
+  });
 });

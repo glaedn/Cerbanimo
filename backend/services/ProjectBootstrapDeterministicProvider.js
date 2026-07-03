@@ -102,7 +102,20 @@ function validTasks(dueDate) {
       start_date: isoDate(start),
       due_date: isoDate(mid),
       impact_label: 'Clarifies how democratic group constitutions should work.',
-      impact_weight: 35
+      impact_weight: 35,
+      automation_classification: 'human_driven',
+      automation_confidence: 0.91,
+      automation_rationale: 'This task requires stakeholder interviews, judgment, and consent-aware governance research.',
+      required_human_inputs: [],
+      automation_requirements: {},
+      validation_requirements: [
+        {
+          requirementId: 'interview-notes',
+          description: 'Research notes summarize stakeholder input and consent constraints.',
+          proofTypes: ['document'],
+          checks: ['human_review']
+        }
+      ]
     },
     {
       id: 'voting-prototype',
@@ -115,20 +128,95 @@ function validTasks(dueDate) {
       start_date: isoDate(start),
       due_date: isoDate(mid),
       impact_label: 'Creates the first usable collective decision mechanism.',
-      impact_weight: 40
+      impact_weight: 40,
+      automation_classification: 'assisted_automation',
+      automation_confidence: 0.78,
+      automation_rationale: 'Kamiya can help implement the prototype after repository, branch, constraints, and acceptance criteria are supplied.',
+      required_human_inputs: [
+        {
+          key: 'repository',
+          label: 'Repository',
+          description: 'The repository where the voting prototype should be implemented.',
+          inputType: 'repository',
+          required: true,
+          sensitive: false
+        },
+        {
+          key: 'target_branch',
+          label: 'Target branch',
+          description: 'The branch or base branch to use for implementation work.',
+          inputType: 'text',
+          required: true,
+          sensitive: false
+        },
+        {
+          key: 'acceptance_criteria',
+          label: 'Acceptance criteria',
+          description: 'The behavior the prototype must satisfy before review.',
+          inputType: 'long_text',
+          required: true,
+          sensitive: false
+        },
+        {
+          key: 'pull_request_approval',
+          label: 'Pull request approval',
+          description: 'Approval boundary before any pull request is opened.',
+          inputType: 'approval',
+          required: true,
+          sensitive: false
+        }
+      ],
+      automation_requirements: {
+        capabilities: ['github.generate_pull_request'],
+        tools: ['git', 'npm'],
+        externalServices: ['github'],
+        permissions: ['repository:read', 'pull_request:write'],
+        expectedArtifacts: ['implementation-plan', 'pull-request-draft'],
+        estimatedDurationMinutes: 45,
+        networkAccess: 'restricted'
+      },
+      validation_requirements: [
+        {
+          requirementId: 'criteria-reviewed',
+          description: 'A person reviews generated implementation against acceptance criteria before external effects.',
+          proofTypes: ['review_note'],
+          checks: ['human_approval']
+        }
+      ]
     },
     {
       id: 'coordination-ledger',
-      name: 'Design cooperative exchange ledger',
-      description: 'Design a transparent activity ledger for non-hierarchical economic coordination.',
-      skill_name: 'Systems Design',
-      skill_level: 3,
+      name: 'Run baseline repository quality checks',
+      description: 'Run the known repository quality-check command and return a bounded quality-check report.',
+      skill_name: 'Quality Assurance',
+      skill_level: 2,
       reward_tokens: 70,
-      dependencies: ['governance-map', 'voting-prototype'],
-      start_date: isoDate(mid),
+      dependencies: [],
+      start_date: isoDate(start),
       due_date: isoDate(late),
-      impact_label: 'Connects governance decisions to practical coordination tools.',
-      impact_weight: 25
+      impact_label: 'Verifies the implementation baseline before deeper coordination work proceeds.',
+      impact_weight: 25,
+      automation_classification: 'fully_automatable',
+      automation_confidence: 0.86,
+      automation_rationale: 'The task is bounded digital work with a known capability and expected quality-check report.',
+      required_human_inputs: [],
+      automation_requirements: {
+        capabilities: ['github.run_quality_checks'],
+        tools: ['git', 'npm'],
+        externalServices: ['github'],
+        permissions: ['repository:read', 'checks:run'],
+        expectedArtifacts: ['quality-check-report'],
+        estimatedDurationMinutes: 10,
+        networkAccess: 'restricted'
+      },
+      validation_requirements: [
+        {
+          requirementId: 'checks-pass',
+          description: 'The configured quality-check command exits successfully or returns a clear failure report.',
+          proofTypes: ['automation_log', 'command_result'],
+          checks: ['exit_code_recorded']
+        }
+      ]
     }
   ];
 }
@@ -149,7 +237,12 @@ function invalidCycleTasks(dueDate) {
       reward_tokens: 10,
       dependencies: ['cycle-b'],
       start_date: isoDate(start),
-      due_date: isoDate(due)
+      due_date: isoDate(due),
+      automation_classification: 'human_driven',
+      automation_rationale: 'Invalid graph fixture task defaults to human-driven classification.',
+      required_human_inputs: [],
+      automation_requirements: {},
+      validation_requirements: []
     },
     {
       id: 'cycle-b',
@@ -159,7 +252,12 @@ function invalidCycleTasks(dueDate) {
       reward_tokens: 10,
       dependencies: ['cycle-a'],
       start_date: isoDate(start),
-      due_date: isoDate(due)
+      due_date: isoDate(due),
+      automation_classification: 'human_driven',
+      automation_rationale: 'Invalid graph fixture task defaults to human-driven classification.',
+      required_human_inputs: [],
+      automation_requirements: {},
+      validation_requirements: []
     }
   ];
 }

@@ -45,7 +45,13 @@ describe('ProjectBootstrap deterministic provider guard', () => {
 
     expect(result.tasks).toHaveLength(3);
     expect(result.tasks.some((task) => task.dependencies.length === 0)).toBe(true);
-    expect(result.tasks.some((task) => task.dependencies.length > 0)).toBe(true);
+    expect(new Set(result.tasks.map((task) => task.automation_classification))).toEqual(new Set([
+      'human_driven',
+      'assisted_automation',
+      'fully_automatable'
+    ]));
+    expect(result.tasks.find((task) => task.automation_classification === 'assisted_automation')?.required_human_inputs.length).toBeGreaterThan(0);
+    expect(result.tasks.find((task) => task.automation_classification === 'fully_automatable')?.automation_requirements.capabilities).toContain('github.run_quality_checks');
   });
 
   it('times out once and then succeeds for retry coverage', async () => {

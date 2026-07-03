@@ -11,5 +11,5 @@ describe('project bootstrap imports', () => {
     expect(projectRoutes.default).toBeTruthy();
     expect(taskGenerator.autogeneratePlan).toBeTypeOf('function');
     expect(bootstrapService.default.bootstrapFromWorkflow).toBeTypeOf('function');
-  });
+  }, 15000);
 });

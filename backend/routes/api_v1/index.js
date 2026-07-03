@@ -25,6 +25,7 @@ import {
 import CapabilityRegistryService from '../../services/CapabilityRegistryService.js';
 import ActionQueueService from '../../services/ActionQueueService.js';
 import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
+import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 
 const router = express.Router();
 
@@ -78,6 +79,21 @@ const openApiDocument = {
             ]
           },
           requestId: { type: 'string' }
+        }
+      },
+      TaskAutomation: {
+        type: 'object',
+        properties: {
+          classification: { enum: ['human_driven', 'assisted_automation', 'fully_automatable'] },
+          confidenceBand: { enum: ['low', 'medium', 'high', null] },
+          rationale: { type: 'string' },
+          requiredHumanInputs: { type: 'array' },
+          requirements: { type: 'object' },
+          validationRequirements: { type: 'array' },
+          source: { enum: ['generated', 'manual', 'legacy_default', 'policy_downgrade', 'review_override'] },
+          version: { type: 'string' },
+          classifiedAt: {},
+          findings: { type: 'array' }
         }
       }
     }
@@ -331,6 +347,41 @@ router.get('/actions/:id', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandle
   return sendOk(req, res, detail);
 }));
 
+router.get('/tasks', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const q = String(req.query.query || req.query.q || '').trim();
+  const params = [];
+  let where = '';
+  if (q) {
+    params.push(`%${q}%`);
+    where = 'WHERE t.name ILIKE $1 OR t.description ILIKE $1';
+  }
+  const result = await pool.query(
+    `SELECT t.*, s.name AS skill_name
+     FROM tasks t
+     LEFT JOIN skills s ON t.skill_id = s.id
+     ${where}
+     ORDER BY t.created_at DESC
+     LIMIT 50`,
+    params
+  );
+  return sendOk(req, res, {
+    tasks: result.rows.map(toCanonicalTask)
+  });
+}));
+
+router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await pool.query(
+    `SELECT t.*, s.name AS skill_name
+     FROM tasks t
+     LEFT JOIN skills s ON t.skill_id = s.id
+     WHERE t.id::text = $1
+     LIMIT 1`,
+    [String(req.params.id)]
+  );
+  if (!result.rows[0]) return sendError(req, res, 404, 'Task not found');
+  return sendOk(req, res, toCanonicalTask(result.rows[0]));
+}));
+
 router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
   const authContext = actionAuthContext(req);
   const action = await ActionQueueService.confirmAction({
@@ -485,3 +536,10 @@ router.use((err, req, res, next) => {
 });
 
 export default router;
+
+function toCanonicalTask(task) {
+  return {
+    ...task,
+    automation: serializeTaskAutomation(task)
+  };
+}

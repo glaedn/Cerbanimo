@@ -1,4 +1,8 @@
 import { normalizeTaskImpactWeights } from './taskGenerator.js';
+import {
+  classificationDbFields,
+  normalizeTaskAutomationClassification
+} from './TaskAutomationClassificationService.js';
 
 const limits = {
   name: 100,
@@ -68,9 +72,13 @@ function normalizeTask(task, index, findings) {
   const startDate = normalizeDate(task.start_date, index, 'start_date', findings);
   const dueDate = normalizeDate(task.due_date, index, 'due_date', findings);
   const reward = Number(task.reward_tokens ?? 50);
+  const automation = normalizeTaskAutomationClassification(task, { source: 'generated' });
+  const automationFields = classificationDbFields(automation);
 
   return {
     ...task,
+    ...automationFields,
+    automation,
     index,
     generated_id: generatedId,
     id: generatedId,

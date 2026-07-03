@@ -100,6 +100,24 @@ export const normalizeTaskImpactWeights = (tasks = []) => {
   }));
 };
 
+export const TASK_AUTOMATION_CLASSIFICATION_PROMPT = `
+Task automation classification is eligibility only. It never grants capability, authorization, confirmation, execution, or validation permission.
+
+For every task, include these fields:
+- "automation_classification": exactly one of "human_driven", "assisted_automation", "fully_automatable".
+- "automation_confidence": number from 0 to 1.
+- "automation_rationale": one short user-safe sentence. Do not include hidden reasoning or chain-of-thought.
+- "required_human_inputs": array. Use [] unless the task is assisted_automation.
+- "automation_requirements": object with optional arrays "capabilities", "tools", "externalServices", "permissions", "expectedArtifacts", optional number "estimatedDurationMinutes", and "networkAccess" as "none", "restricted", or "required".
+- "validation_requirements": array of objects with "requirementId", "description", "proofTypes", and "checks".
+
+Classification rules:
+- Use "human_driven" when work requires physical presence, local delivery, direct interpersonal care, governance decisions, conflict mediation, legal/medical/safety-critical judgment, money or token commitments, secrets without approved references, public communication without approval, or unspecified account access.
+- Use "assisted_automation" when automation can help but a person must supply inputs, select authorization, provide repository/source/audience/acceptance criteria, or review before external effects. Assisted tasks must include at least one required_human_inputs item.
+- Use "fully_automatable" only for bounded digital work with no missing human inputs, at least one capability requirement, and at least one expected artifact. Do not invent credentials, account access, repository availability, or installed tools.
+Allowed required_human_inputs inputType values: text, long_text, number, boolean, date, url, repository, file, choice, secret_reference, approval.
+`;
+
 export const generateProjectIdea = async (skills, interests, primeDirective = "") => {
   const skillsString = JSON.stringify(skills);
   const interestsString = JSON.stringify(interests);
@@ -277,6 +295,7 @@ Rules:
   - "is_local": boolean (true if the task requires physical presence/local routing, false otherwise).
 - The sum of all task impact_weight values must equal 100.
 - Reward Scaling: Assign base reward tokens (50-150 range). Note: these will be scaled later.
+${TASK_AUTOMATION_CLASSIFICATION_PROMPT}
 `;
 
 export const autogeneratePlan = async (
@@ -411,6 +430,7 @@ Here are the rules for task generation:
   - "impact_weight": an integer from 0 to 100 representing that task's share of the total project impact.
   - "is_local": boolean (true if the task requires physical presence or local routing, false if it can be done globally/remotely).
 - The sum of all task impact_weight values for this project must equal exactly 100.
+${TASK_AUTOMATION_CLASSIFICATION_PROMPT}
 
 Example skills you can use or be inspired by:
 - Web Development
@@ -445,9 +465,9 @@ Expected Output Format:
     { "id": 1, "name": "${projectName}", "description": "${projectDescription}", "tags": ["tag1", "tag2"], "creator_id": ${creator_id}, "due_date": "${project_due_date || ''}" }
   ],
   "tasks": [
-    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30, "is_local": false },
-    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45, "is_local": true },
-    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25, "is_local": false }
+    { "id": 1, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [], "reward_tokens": 80, "start_date": "2025-01-01T09:00:00Z", "due_date": "2025-01-05T17:00:00Z", "impact_label": "This task establishes the baseline needed to reach the outcome.", "impact_weight": 30, "is_local": false, "automation_classification": "human_driven", "automation_confidence": 0.7, "automation_rationale": "This task requires a person to make accountable decisions.", "required_human_inputs": [], "automation_requirements": {}, "validation_requirements": [] },
+    { "id": 2, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 2, "dependencies": [1], "reward_tokens": 120, "start_date": "2025-01-06T09:00:00Z", "due_date": "2025-01-10T17:00:00Z", "impact_label": "This task delivers the main user-facing change tied to the outcome.", "impact_weight": 45, "is_local": false, "automation_classification": "assisted_automation", "automation_confidence": 0.7, "automation_rationale": "Kamiya can help after repository and acceptance criteria are supplied.", "required_human_inputs": [{ "key": "repository", "label": "Repository", "description": "Repository to work in.", "inputType": "repository", "required": true, "sensitive": false }], "automation_requirements": { "capabilities": ["github.generate_pull_request"], "tools": ["git"], "externalServices": ["github"], "permissions": ["repository:read"], "expectedArtifacts": ["pull-request-draft"], "networkAccess": "restricted" }, "validation_requirements": [{ "requirementId": "review", "description": "Human review before external effects.", "proofTypes": ["review_note"], "checks": ["human_approval"] }] },
+    { "id": 3, "name": "Task Name", "description": "Task Desc", "project_id": 1, "skill_name": "Skill Name", "skill_level": 1, "dependencies": [1,2], "reward_tokens": 60, "start_date": "2025-01-11T09:00:00Z", "due_date": "2025-01-15T17:00:00Z", "impact_label": "This task verifies and stabilizes the outcome.", "impact_weight": 25, "is_local": false, "automation_classification": "fully_automatable", "automation_confidence": 0.8, "automation_rationale": "The task is bounded digital verification with explicit output.", "required_human_inputs": [], "automation_requirements": { "capabilities": ["github.run_quality_checks"], "tools": ["git", "npm"], "externalServices": ["github"], "permissions": ["repository:read", "checks:run"], "expectedArtifacts": ["quality-check-report"], "networkAccess": "restricted" }, "validation_requirements": [{ "requirementId": "checks", "description": "Command result is captured.", "proofTypes": ["automation_log", "command_result"], "checks": ["exit_code_recorded"] }] }
   ]
 }
 

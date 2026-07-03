@@ -4,6 +4,10 @@ import boss from '../jobs/boss.js';
 import { AUTOMATION_EXECUTION_QUEUE } from '../jobs/workers/automationWorker.js';
 import { PROJECT_BOOTSTRAP_QUEUE } from '../jobs/workers/projectBootstrapWorker.js';
 import { BOOTSTRAP_STEPS } from './ProjectBootstrapService.js';
+import {
+  classificationDbFields,
+  normalizeTaskAutomationClassification
+} from './TaskAutomationClassificationService.js';
 
 export function canAccessAction(action, { actorUserId, isServiceActor = false } = {}) {
   if (!action) return false;
@@ -98,11 +102,18 @@ async function executeKnownIntent(client, action, actorUserId) {
   }
 
   if (functionName === 'tasks.create') {
+    const classification = classificationDbFields(normalizeTaskAutomationClassification(args, { source: 'manual' }));
     const result = await client.query(
       `INSERT INTO tasks (
-         project_id, name, description, skill_id, status, reward_tokens, dependencies, skill_level
+         project_id, name, description, skill_id, status, reward_tokens, dependencies, skill_level,
+         automation_classification, automation_confidence, automation_rationale,
+         required_human_inputs, automation_requirements, validation_requirements,
+         automation_policy_findings, classification_source, classification_version, classified_at
        )
-       VALUES ($1, $2, $3, $4, COALESCE($5, 'inactive-unassigned'), COALESCE($6, 10), $7::int[], COALESCE($8, 0))
+       VALUES (
+         $1, $2, $3, $4, COALESCE($5, 'inactive-unassigned'), COALESCE($6, 10), $7::int[], COALESCE($8, 0),
+         $9, $10, $11, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16, $17, NOW()
+       )
        RETURNING *`,
       [
         args.projectId || args.project_id || action.related_project_id,
@@ -112,7 +123,16 @@ async function executeKnownIntent(client, action, actorUserId) {
         args.status || null,
         args.rewardTokens || args.reward_tokens || null,
         Array.isArray(args.dependencies) ? args.dependencies : [],
-        args.skillLevel || args.skill_level || null
+        args.skillLevel || args.skill_level || null,
+        classification.automation_classification,
+        classification.automation_confidence,
+        classification.automation_rationale,
+        JSON.stringify(classification.required_human_inputs),
+        JSON.stringify(classification.automation_requirements),
+        JSON.stringify(classification.validation_requirements),
+        JSON.stringify(classification.automation_policy_findings),
+        classification.classification_source === 'legacy_default' ? 'manual' : classification.classification_source,
+        classification.classification_version
       ]
     );
 

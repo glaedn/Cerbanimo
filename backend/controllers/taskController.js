@@ -12,6 +12,10 @@ import ResourceService from "../services/ResourceService.js";
 import CivicEventService from "../services/CivicEventService.js";
 import IdentityGateService from "../services/IdentityGateService.js";
 import { verificationService } from "../services/VerificationService.js";
+import {
+  classificationDbFields,
+  normalizeTaskAutomationClassification
+} from "../services/TaskAutomationClassificationService.js";
 
 const getAllTasks = async () => {
   const query = `
@@ -304,10 +308,21 @@ const createNewTask = async (
     //   console.log(`Reserved ${tokenReservation} tokens for new task`);
     // }
 
+    const classification = classificationDbFields(normalizeTaskAutomationClassification({
+      name,
+      description,
+      is_local: false
+    }, { source: "manual" }));
+
     // Create the task
     const createQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level, resource_requirements, start_date, due_date)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO tasks (
+        name, description, skill_id, status, project_id, reward_tokens, dependencies, skill_level,
+        resource_requirements, start_date, due_date, automation_classification, automation_confidence,
+        automation_rationale, required_human_inputs, automation_requirements, validation_requirements,
+        automation_policy_findings, classification_source, classification_version, classified_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb, $19, $20, NOW())
       RETURNING *;
     `;
 
@@ -322,7 +337,16 @@ const createNewTask = async (
       skill_level,
       resource_requirements,
       start_date,
-      due_date
+      due_date,
+      classification.automation_classification,
+      classification.automation_confidence,
+      classification.automation_rationale,
+      JSON.stringify(classification.required_human_inputs),
+      JSON.stringify(classification.automation_requirements),
+      JSON.stringify(classification.validation_requirements),
+      JSON.stringify(classification.automation_policy_findings),
+      "manual",
+      classification.classification_version
     ]);
 
     await client.query("COMMIT");
@@ -591,9 +615,19 @@ const createTaskRoute = async (req, res) => {
     }
 
     // Insert task and update project in a single transaction
+    const classification = classificationDbFields(normalizeTaskAutomationClassification({
+      name,
+      description,
+      is_local: false
+    }, { source: "manual" }));
     const insertTaskQuery = `
-      INSERT INTO tasks (name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids, skill_level)
-      VALUES ($1, $2, $3, $4, $5, $6, COALESCE(used_tokens, 0) + $6, $7, $8)
+      INSERT INTO tasks (
+        name, description, skill_id, status, project_id, reward_tokens, used_tokens, assigned_user_ids, skill_level,
+        automation_classification, automation_confidence, automation_rationale,
+        required_human_inputs, automation_requirements, validation_requirements,
+        automation_policy_findings, classification_source, classification_version, classified_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, COALESCE(used_tokens, 0) + $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16, $17, NOW())
       RETURNING *;
     `;
 
@@ -606,6 +640,15 @@ const createTaskRoute = async (req, res) => {
       reward_tokens,
       assigned_user_ids,
       skill_level,
+      classification.automation_classification,
+      classification.automation_confidence,
+      classification.automation_rationale,
+      JSON.stringify(classification.required_human_inputs),
+      JSON.stringify(classification.automation_requirements),
+      JSON.stringify(classification.validation_requirements),
+      JSON.stringify(classification.automation_policy_findings),
+      "manual",
+      classification.classification_version
     ]);
 
     // Update project tokens if task is active
@@ -1710,10 +1753,16 @@ const granularizeTasks = async (req, res) => {
 
     for (const subtask of sanitizedSubtasks) {
       const skillId = await GuildService.getOrCreateSkill(subtask.skill_name);
+      const classification = classificationDbFields(normalizeTaskAutomationClassification(subtask, { source: "generated" }));
 
       const result = await client.query(
-        `INSERT INTO tasks (project_id, name, description, skill_id, skill_level, status, reward_tokens, dependencies)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::int[]) RETURNING id`,
+        `INSERT INTO tasks (
+           project_id, name, description, skill_id, skill_level, status, reward_tokens, dependencies,
+           automation_classification, automation_confidence, automation_rationale,
+           required_human_inputs, automation_requirements, validation_requirements,
+           automation_policy_findings, classification_source, classification_version, classified_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::int[], $9, $10, $11, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16, $17, NOW()) RETURNING id`,
         [
           subtask.project_id,
           subtask.name,
@@ -1723,6 +1772,15 @@ const granularizeTasks = async (req, res) => {
           "inactive-unassigned",
           subtask.reward_tokens ?? 100,
           [], // empty dependencies for now
+          classification.automation_classification,
+          classification.automation_confidence,
+          classification.automation_rationale,
+          JSON.stringify(classification.required_human_inputs),
+          JSON.stringify(classification.automation_requirements),
+          JSON.stringify(classification.validation_requirements),
+          JSON.stringify(classification.automation_policy_findings),
+          classification.classification_source,
+          classification.classification_version
         ]
       );
       uniqueKeyToRealId[subtask.uniqueKey] = result.rows[0].id;

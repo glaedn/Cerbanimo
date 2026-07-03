@@ -5,6 +5,7 @@ import TaskRoutingService from './TaskRoutingService.js';
 import { autoGenerateTasks, autogeneratePlan } from './taskGenerator.js';
 import { validateGeneratedGraph } from './ProjectTaskGraphValidator.js';
 import { createDeterministicBootstrapGenerators } from './ProjectBootstrapDeterministicProvider.js';
+import { serializeTaskAutomation } from './TaskAutomationClassificationService.js';
 
 export const BOOTSTRAP_STEPS = [
   'validateInput',
@@ -328,11 +329,38 @@ export class ProjectBootstrapService {
       const result = await client.query(
         `INSERT INTO tasks (
            project_id, name, description, skill_id, skill_level, status, dependencies,
-           reward_tokens, resource_requirements, start_date, due_date, is_local
+           reward_tokens, resource_requirements, start_date, due_date, is_local,
+           automation_classification, automation_confidence, automation_rationale,
+           required_human_inputs, automation_requirements, validation_requirements,
+           automation_policy_findings, classification_source, classification_version, classified_at
          )
-         VALUES ($1, $2, $3, $4, $5, 'inactive-unassigned', $6::int[], $7, $8, $9, $10, $11)
+         VALUES (
+           $1, $2, $3, $4, $5, 'inactive-unassigned', $6::int[], $7, $8, $9, $10, $11,
+           $12, $13, $14, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb, $19, $20, NOW()
+         )
          RETURNING *`,
-        [projectId, task.name, task.description, skillId, task.skill_level || 0, [], task.reward_tokens, task.resource_requirements || [], task.start_date, task.due_date, task.is_local || false]
+        [
+          projectId,
+          task.name,
+          task.description,
+          skillId,
+          task.skill_level || 0,
+          [],
+          task.reward_tokens,
+          task.resource_requirements || [],
+          task.start_date,
+          task.due_date,
+          task.is_local || false,
+          task.automation_classification || 'human_driven',
+          task.automation_confidence ?? null,
+          task.automation_rationale || null,
+          JSON.stringify(task.required_human_inputs || []),
+          JSON.stringify(task.automation_requirements || {}),
+          JSON.stringify(task.validation_requirements || []),
+          JSON.stringify(task.automation_policy_findings || []),
+          task.classification_source || 'generated',
+          task.classification_version || 'task-automation-v1'
+        ]
       );
       const dbTask = result.rows[0];
       idMap.set(String(task.generated_id ?? task.id), dbTask.id);
@@ -447,7 +475,7 @@ export class ProjectBootstrapService {
        ORDER BY t.id ASC`,
       [projectId]
     );
-    const tasks = result.rows;
+    const tasks = result.rows.map((task) => ({ ...task, automation: serializeTaskAutomation(task) }));
     return { tasks, activeTasks: tasks.filter((task) => isActiveStatus(task.status)) };
   }
 
