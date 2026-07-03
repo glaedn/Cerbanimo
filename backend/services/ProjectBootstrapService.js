@@ -24,7 +24,9 @@ export const BOOTSTRAP_ERROR_CODES = {
   PERSIST_FAILED: 'BOOTSTRAP_PERSIST_FAILED',
   ACTIVATION_FAILED: 'BOOTSTRAP_ACTIVATION_FAILED',
   QUEUE_FAILED: 'BOOTSTRAP_QUEUE_FAILED',
-  PERMISSION_DENIED: 'BOOTSTRAP_PERMISSION_DENIED'
+  PERMISSION_DENIED: 'BOOTSTRAP_PERMISSION_DENIED',
+  CLAIM_LOST: 'BOOTSTRAP_CLAIM_LOST',
+  CANCELLED: 'BOOTSTRAP_CANCELLED'
 };
 
 export const BOOTSTRAP_MAX_ATTEMPTS = 3;
@@ -54,42 +56,51 @@ export class ProjectBootstrapService {
     if (!claim.workflow) throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.INPUT_INVALID, 'Workflow run not found.', 'claimWorkflow');
     if (!claim.claimed) return claim.workflow.state?.result || { status: claim.workflow.status, workflowRunId: claim.workflow.id };
     const workflow = claim.workflow;
+    const claimToken = claim.claimToken;
 
     try {
-      await this.assertNotCancelled(workflow.id, 'validateInput');
-      const projectInput = await this.runStep(workflow.id, 'validateInput', () => this.validateInput(workflow.state?.input || {}, workflow.actor_user_id));
+      await this.assertNotCancelled(workflow.id, 'validateInput', claimToken);
+      const projectInput = await this.runStep(workflow.id, 'validateInput', () => this.validateInput(workflow.state?.input || {}, workflow.actor_user_id), claimToken);
 
       let generatedData = workflow.state?.generatedData;
       if (!workflow.related_project_id) {
         if (projectInput.generationMode === 'plan_then_tasks') {
-          generatedData = await this.runStep(workflow.id, 'generateProjectPlan', () => this.generateProjectPlan(projectInput));
+          generatedData = await this.runStep(workflow.id, 'generateProjectPlan', () => this.generateProjectPlan(projectInput), claimToken);
           await this.completeStep(workflow.id, 'generateTaskGraph', {
             source: 'generateProjectPlan',
             taskCount: Array.isArray(generatedData?.tasks) ? generatedData.tasks.length : 0
-          });
+          }, 'completed', claimToken);
         } else {
-          await this.skipStep(workflow.id, 'generateProjectPlan', { reason: 'tasks_only generation mode' });
+          await this.skipStep(workflow.id, 'generateProjectPlan', { reason: 'tasks_only generation mode' }, claimToken);
         }
         if (projectInput.generationMode !== 'plan_then_tasks') {
-          generatedData = await this.runStep(workflow.id, 'generateTaskGraph', () => this.generateTaskGraph(projectInput));
+          generatedData = await this.runStep(workflow.id, 'generateTaskGraph', () => this.generateTaskGraph(projectInput), claimToken);
         }
 
-        const validation = await this.runStep(workflow.id, 'validateTaskGraph', () => this.validateGeneratedGraph(generatedData, projectInput));
-        await this.assertNotCancelled(workflow.id, 'persistProjectGraph');
-        const persisted = await this.runStep(workflow.id, 'persistProjectGraph', () => this.persistGeneratedGraph(null, workflow.actor_user_id, projectInput, { ...generatedData, tasks: validation.tasks }));
+        const validation = await this.runStep(workflow.id, 'validateTaskGraph', () => this.validateGeneratedGraph(generatedData, projectInput), claimToken);
+        await this.assertNotCancelled(workflow.id, 'persistProjectGraph', claimToken);
+        const persisted = await this.runStep(
+          workflow.id,
+          'persistProjectGraph',
+          () => this.persistGeneratedGraph(null, workflow.actor_user_id, projectInput, { ...generatedData, tasks: validation.tasks }, {
+            workflowRunId: workflow.id,
+            actionId: workflow.action_id,
+            claimToken
+          }),
+          claimToken
+        );
         await this.updateWorkflow(workflow.id, 'running', {
           relatedProjectId: persisted.project.id,
           result: { project: persisted.project, tasksCreated: persisted.tasks.length }
-        });
-        await this.setWorkflowProject(workflow.id, persisted.project.id, workflow.action_id);
+        }, claimToken);
         await this.recordActionEvent(workflow.action_id, 'project.created', workflow.actor_user_id, { projectId: persisted.project.id });
       }
 
       const latest = await this.getWorkflow(workflow.id);
-      await this.assertNotCancelled(workflow.id, 'finalizeAction');
-      const activation = await this.runStep(workflow.id, 'activateRootTasks', () => this.activateAndVerify(latest.related_project_id));
-      const result = await this.runStep(workflow.id, 'finalizeAction', () => this.finalizeAction(latest.action_id, latest.related_project_id, activation));
-      await this.updateWorkflow(workflow.id, 'completed', { result, completedAt: new Date().toISOString() });
+      await this.assertNotCancelled(workflow.id, 'finalizeAction', claimToken);
+      const activation = await this.runStep(workflow.id, 'activateRootTasks', () => this.activateAndVerify(latest.related_project_id), claimToken);
+      const result = await this.runStep(workflow.id, 'finalizeAction', () => this.finalizeAction(latest.action_id, latest.related_project_id, activation, claimToken), claimToken);
+      await this.updateWorkflow(workflow.id, 'completed', { result, completedAt: new Date().toISOString() }, claimToken);
       await this.recordActionEvent(latest.action_id, 'workflow.completed', latest.actor_user_id, { workflowRunId: latest.id, projectId: latest.related_project_id, attempt: latest.attempt_count });
       await this.recordActionEvent(latest.action_id, 'action.executed', latest.actor_user_id, result);
       return result;
@@ -181,12 +192,51 @@ export class ProjectBootstrapService {
     return result;
   }
 
-  async persistGeneratedGraph(client, actorUserId, projectInput, generatedData) {
+  async persistGeneratedGraph(client, actorUserId, projectInput, generatedData, workflowContext = null) {
     return this.withTransaction(client, async (trx) => {
+      if (workflowContext) {
+        const actionResult = await trx.query(
+          'SELECT * FROM api_actions WHERE id = $1 FOR UPDATE',
+          [workflowContext.actionId]
+        );
+        const action = actionResult.rows[0];
+        const workflowResult = await trx.query(
+          'SELECT * FROM workflow_runs WHERE id = $1 FOR UPDATE',
+          [workflowContext.workflowRunId]
+        );
+        const workflow = workflowResult.rows[0];
+        if (!action || !workflow) {
+          throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.INPUT_INVALID, 'Workflow or action not found during persistence.', 'persistProjectGraph');
+        }
+        if (action.status === 'cancelled' || workflow.status === 'cancelled') {
+          throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CANCELLED, 'Project bootstrap was cancelled before persistence.', 'persistProjectGraph');
+        }
+        if (workflow.status !== 'running' || workflow.claim_token !== workflowContext.claimToken) {
+          throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost before persistence.', 'persistProjectGraph', { workflowRunId: workflow.id }, false);
+        }
+        if (workflow.related_project_id) {
+          const { tasks, activeTasks } = await this.loadProjectTasks(workflow.related_project_id);
+          return { project: { id: workflow.related_project_id }, tasks, activeTasks, reusedExistingProject: true };
+        }
+      }
+
       const project = await this.insertProject(trx, actorUserId, projectInput, generatedData.projectPlan);
       await this.impactGraphService.createOutcome(project.id, projectInput.outcomeStatement, trx);
       const tasks = await this.insertTasks(trx, actorUserId, project.id, generatedData.tasks);
       await this.impactGraphService.createTaskImpactNodesForProject(project.id, tasks, trx);
+      if (workflowContext) {
+        const workflowUpdate = await trx.query(
+          'UPDATE workflow_runs SET related_project_id = $1, updated_at = NOW() WHERE id = $2 AND claim_token = $3 AND status = \'running\' RETURNING id',
+          [project.id, workflowContext.workflowRunId, workflowContext.claimToken]
+        );
+        if (!workflowUpdate.rows[0]) {
+          throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost before linking the persisted project.', 'persistProjectGraph', { workflowRunId: workflowContext.workflowRunId }, false);
+        }
+        await trx.query(
+          'UPDATE api_actions SET related_project_id = $1 WHERE id = $2',
+          [project.id, workflowContext.actionId]
+        );
+      }
       return { project, tasks };
     }, 'persistProjectGraph');
   }
@@ -300,7 +350,7 @@ export class ProjectBootstrapService {
     return created.rows[0].id;
   }
 
-  async finalizeAction(actionId, projectId, activation) {
+  async finalizeAction(actionId, projectId, activation, claimToken = null) {
     const result = {
       status: 'executed',
       entityType: 'project',
@@ -311,12 +361,42 @@ export class ProjectBootstrapService {
       activeTasks: activation.activeTasks
     };
     if (actionId) {
-      await this.pool.query(
-        `UPDATE api_actions
-         SET status = 'executed', execution_result = $1::jsonb, executed_at = NOW()
-         WHERE id = $2`,
-        [JSON.stringify(result), actionId]
-      );
+      if (claimToken) {
+        const claim = await this.pool.query(
+          `SELECT wr.id
+           FROM workflow_runs wr
+           WHERE wr.action_id = $1 AND wr.claim_token = $2 AND wr.status = 'running'`,
+          [actionId, claimToken]
+        );
+        if (!claim.rows[0]) {
+          throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost before finalization.', 'finalizeAction');
+        }
+      }
+      const update = claimToken
+        ? await this.pool.query(
+          `UPDATE api_actions
+           SET status = 'executed', execution_result = $1::jsonb, executed_at = NOW()
+           WHERE id = $2
+             AND EXISTS (
+               SELECT 1
+               FROM workflow_runs wr
+               WHERE wr.action_id = $2
+                 AND wr.claim_token = $3
+                 AND wr.status = 'running'
+             )
+           RETURNING id`,
+          [JSON.stringify(result), actionId, claimToken]
+        )
+        : await this.pool.query(
+          `UPDATE api_actions
+           SET status = 'executed', execution_result = $1::jsonb, executed_at = NOW()
+           WHERE id = $2
+           RETURNING id`,
+          [JSON.stringify(result), actionId]
+        );
+      if (!update.rows[0]) {
+        throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost before finalization.', 'finalizeAction');
+      }
     }
     return result;
   }
@@ -367,7 +447,8 @@ export class ProjectBootstrapService {
     return { tasks, activeTasks: tasks.filter((task) => isActiveStatus(task.status)) };
   }
 
-  async runStep(workflowRunId, stepName, fn) {
+  async runStep(workflowRunId, stepName, fn, claimToken = null) {
+    await this.renewLease(workflowRunId, claimToken, stepName);
     const existing = await this.pool.query('SELECT * FROM workflow_steps WHERE workflow_run_id = $1 AND step_name = $2 LIMIT 1', [workflowRunId, stepName]);
     if (existing.rows[0]?.status === 'completed' && existing.rows[0].result) return existing.rows[0].result;
     const stepId = (await this.pool.query(
@@ -382,20 +463,40 @@ export class ProjectBootstrapService {
     )).rows[0].id;
     try {
       const result = await fn();
-      await this.pool.query('UPDATE workflow_steps SET status = $1, result = $2::jsonb, completed_at = NOW() WHERE id = $3', ['completed', JSON.stringify(safeJson(result)), stepId]);
+      await this.assertClaim(workflowRunId, claimToken, stepName);
+      await this.pool.query(
+        `UPDATE workflow_steps
+         SET status = $1, result = $2::jsonb, completed_at = NOW()
+         WHERE id = $3
+           AND ($4::text IS NULL OR EXISTS (
+             SELECT 1 FROM workflow_runs WHERE id = workflow_steps.workflow_run_id AND claim_token = $4
+           ))`,
+        ['completed', JSON.stringify(safeJson(result)), stepId, claimToken]
+      );
       return result;
     } catch (error) {
       const payload = serializeError(error, stepName);
-      await this.pool.query('UPDATE workflow_steps SET status = $1, result = $2::jsonb, completed_at = NOW() WHERE id = $3', ['failed', JSON.stringify(payload), stepId]);
+      if (error.code !== BOOTSTRAP_ERROR_CODES.CLAIM_LOST) {
+        await this.pool.query(
+          `UPDATE workflow_steps
+           SET status = $1, result = $2::jsonb, completed_at = NOW()
+           WHERE id = $3
+             AND ($4::text IS NULL OR EXISTS (
+               SELECT 1 FROM workflow_runs WHERE id = workflow_steps.workflow_run_id AND claim_token = $4
+             ))`,
+          ['failed', JSON.stringify(payload), stepId, claimToken]
+        );
+      }
       throw error;
     }
   }
 
-  async skipStep(workflowRunId, stepName, result) {
-    return this.completeStep(workflowRunId, stepName, result, 'skipped');
+  async skipStep(workflowRunId, stepName, result, claimToken = null) {
+    return this.completeStep(workflowRunId, stepName, result, 'skipped', claimToken);
   }
 
-  async completeStep(workflowRunId, stepName, result, status = 'completed') {
+  async completeStep(workflowRunId, stepName, result, status = 'completed', claimToken = null) {
+    await this.renewLease(workflowRunId, claimToken, stepName);
     await this.pool.query(
       `INSERT INTO workflow_steps (workflow_run_id, step_name, status, result, started_at, completed_at)
        VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
@@ -403,8 +504,11 @@ export class ProjectBootstrapService {
        DO UPDATE SET status = EXCLUDED.status,
                      result = EXCLUDED.result,
                      started_at = COALESCE(workflow_steps.started_at, NOW()),
-                     completed_at = NOW()`,
-      [workflowRunId, stepName, status, JSON.stringify(result)]
+                     completed_at = NOW()
+       WHERE $5::text IS NULL OR EXISTS (
+         SELECT 1 FROM workflow_runs WHERE id = workflow_steps.workflow_run_id AND claim_token = $5
+       )`,
+      [workflowRunId, stepName, status, JSON.stringify(result), claimToken]
     );
   }
 
@@ -429,8 +533,8 @@ export class ProjectBootstrapService {
     await this.pool.query('UPDATE workflow_runs SET attempt_count = COALESCE(attempt_count, 0) + 1, started_at = COALESCE(started_at, NOW()) WHERE id = $1', [workflowRunId]);
   }
 
-  async updateWorkflow(id, status, statePatch = {}) {
-    await this.pool.query(
+  async updateWorkflow(id, status, statePatch = {}, claimToken = null) {
+    const result = await this.pool.query(
       `UPDATE workflow_runs
        SET status = $1,
            state = COALESCE(state, '{}'::jsonb) || $2::jsonb,
@@ -438,9 +542,14 @@ export class ProjectBootstrapService {
            lease_expires_at = CASE WHEN $1 IN ('completed','failed','blocked','cancelled','retry_wait') THEN NULL ELSE lease_expires_at END,
            claim_token = CASE WHEN $1 IN ('completed','failed','blocked','cancelled','retry_wait') THEN NULL ELSE claim_token END,
            updated_at = NOW()
-       WHERE id = $3`,
-      [status, JSON.stringify(statePatch), id]
+       WHERE id = $3
+         AND ($4::text IS NULL OR claim_token = $4)
+       RETURNING *`,
+      [status, JSON.stringify(statePatch), id, claimToken]
     );
+    if (claimToken && result.rows.length === 0) {
+      throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost before state update.', 'updateWorkflow', { workflowRunId: id });
+    }
   }
 
   async setWorkflowProject(workflowRunId, projectId, actionId) {
@@ -458,7 +567,11 @@ export class ProjectBootstrapService {
 
   async failWorkflow(workflow, error) {
     const payload = serializeError(error, error.stage || 'unknown', workflow);
-    if (error.code === 'BOOTSTRAP_CANCELLED') {
+    if (error.code === BOOTSTRAP_ERROR_CODES.CLAIM_LOST) {
+      await this.recordActionEvent(workflow.action_id, 'workflow.claim_lost', workflow.actor_user_id, payload);
+      return payload;
+    }
+    if (error.code === BOOTSTRAP_ERROR_CODES.CANCELLED) {
       await this.pool.query(
         `UPDATE workflow_runs SET status = 'cancelled', last_error = $1::jsonb, completed_at = NOW(), lease_expires_at = NULL, claim_token = NULL, updated_at = NOW() WHERE id = $2`,
         [JSON.stringify(payload), workflow.id]
@@ -502,7 +615,37 @@ export class ProjectBootstrapService {
     return payload;
   }
 
-  async assertNotCancelled(workflowRunId, stage) {
+  async renewLease(workflowRunId, claimToken, stage) {
+    if (!claimToken) return;
+    const result = await this.pool.query(
+      `UPDATE workflow_runs
+       SET lease_expires_at = NOW() + ($3::int * INTERVAL '1 millisecond'),
+           updated_at = NOW()
+       WHERE id = $1
+         AND claim_token = $2
+         AND status = 'running'
+       RETURNING id`,
+      [workflowRunId, claimToken, BOOTSTRAP_LEASE_MS]
+    );
+    if (result.rows.length === 0) {
+      throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost.', stage, { workflowRunId });
+    }
+  }
+
+  async assertClaim(workflowRunId, claimToken, stage) {
+    if (!claimToken) return;
+    const result = await this.pool.query(
+      `SELECT id FROM workflow_runs
+       WHERE id = $1 AND claim_token = $2 AND status = 'running'`,
+      [workflowRunId, claimToken]
+    );
+    if (!result.rows[0]) {
+      throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CLAIM_LOST, 'Workflow claim was lost.', stage, { workflowRunId });
+    }
+  }
+
+  async assertNotCancelled(workflowRunId, stage, claimToken = null) {
+    await this.renewLease(workflowRunId, claimToken, stage);
     const result = await this.pool.query(
       `SELECT wr.status AS workflow_status, wr.related_project_id, a.status AS action_status
        FROM workflow_runs wr
@@ -512,8 +655,9 @@ export class ProjectBootstrapService {
     );
     const row = result.rows[0];
     if (row?.workflow_status === 'cancelled' || row?.action_status === 'cancelled') {
-      throw new ProjectBootstrapError('BOOTSTRAP_CANCELLED', 'Project bootstrap was cancelled before persistence.', stage, { workflowRunId }, false);
+      throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.CANCELLED, 'Project bootstrap was cancelled before persistence.', stage, { workflowRunId }, false);
     }
+    await this.assertClaim(workflowRunId, claimToken, stage);
   }
 }
 
@@ -570,7 +714,7 @@ function serializeError(error, stage, workflow = {}) {
     message: error.message || 'Project bootstrap failed.',
     stage,
     retryable: Boolean(error.retryable),
-    attempt: Number(workflow.attempt_count || 0) + 1,
+    attempt: Number(workflow.attempt_count || 0),
     workflowRunId: workflow.id,
     actionId: workflow.action_id,
     details: safeJson(error.details || {}),

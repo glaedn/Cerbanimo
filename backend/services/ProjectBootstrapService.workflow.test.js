@@ -50,13 +50,21 @@ describe('ProjectBootstrapService workflow durability', () => {
   });
 
   it('upserts a completed step instead of adding duplicate logical rows', async () => {
+    const pool = fakePool([{ rows: [{ id: 'wf-1' }] }, { rows: [] }]);
+    const service = new ProjectBootstrapService({ pool });
+
+    await service.completeStep('wf-1', 'validateInput', { ok: true }, 'completed', 'token-1');
+
+    expect(pool.query.mock.calls[1][0]).toContain('ON CONFLICT (workflow_run_id, step_name)');
+  });
+
+  it('rejects stale claim tokens during lease renewal', async () => {
     const pool = fakePool([{ rows: [] }]);
     const service = new ProjectBootstrapService({ pool });
 
-    await service.completeStep('wf-1', 'validateInput', { ok: true });
-
-    expect(pool.query).toHaveBeenCalledTimes(1);
-    expect(pool.query.mock.calls[0][0]).toContain('ON CONFLICT (workflow_run_id, step_name)');
+    await expect(service.renewLease('wf-1', 'stale-token', 'generateTaskGraph')).rejects.toMatchObject({
+      code: 'BOOTSTRAP_CLAIM_LOST'
+    });
   });
 
   it('marks retryable failures retry_wait before exhausting attempts', async () => {
@@ -87,5 +95,40 @@ describe('ProjectBootstrapService workflow durability', () => {
     expect(result.code).toBe('BOOTSTRAP_GRAPH_INVALID');
     expect(pool.query.mock.calls[0][1][0]).toBe('blocked');
     expect(pool.query.mock.calls[2][1][1]).toBe('action.failed');
+  });
+
+  it('locks action then workflow and writes project relation inside persistence transaction', async () => {
+    const client = {
+      query: vi.fn(async (sql) => {
+        const text = String(sql);
+        if (text.includes('FROM api_actions')) return { rows: [{ id: 5, status: 'confirmed' }] };
+        if (text.includes('FROM workflow_runs')) return { rows: [{ id: 'wf-1', status: 'running', claim_token: 'token-1', related_project_id: null }] };
+        if (text.includes('INSERT INTO projects')) return { rows: [{ id: 100, name: 'Project' }] };
+        if (text.includes('SELECT id FROM skills')) return { rows: [{ id: 9 }] };
+        if (text.includes('INSERT INTO tasks')) return { rows: [{ id: 200, dependencies: [] }] };
+        if (text.includes('UPDATE workflow_runs SET related_project_id')) return { rows: [{ id: 'wf-1' }] };
+        return { rows: [] };
+      })
+    };
+    const impactGraphService = {
+      createOutcome: vi.fn(async () => ({})),
+      createTaskImpactNodesForProject: vi.fn(async () => [])
+    };
+    const service = new ProjectBootstrapService({ pool: fakePool(), impactGraphService });
+
+    await service.persistGeneratedGraph(
+      client,
+      42,
+      { name: 'Project', description: 'Desc', outcomeStatement: 'Outcome', tags: [] },
+      { projectPlan: 'Plan', tasks: [{ id: 1, name: 'Task', description: 'Desc', skill_name: 'Ops', dependencies: [] }] },
+      { workflowRunId: 'wf-1', actionId: 5, claimToken: 'token-1' }
+    );
+
+    expect(client.query.mock.calls[0][0]).toContain('FROM api_actions');
+    expect(client.query.mock.calls[0][0]).toContain('FOR UPDATE');
+    expect(client.query.mock.calls[1][0]).toContain('FROM workflow_runs');
+    expect(client.query.mock.calls[1][0]).toContain('FOR UPDATE');
+    expect(client.query.mock.calls.some(([sql]) => String(sql).includes('UPDATE workflow_runs SET related_project_id'))).toBe(true);
+    expect(client.query.mock.calls.some(([sql]) => String(sql).includes('UPDATE api_actions SET related_project_id'))).toBe(true);
   });
 });

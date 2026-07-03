@@ -315,6 +315,7 @@ router.get('/actions', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(as
   const actions = await ActionQueueService.listActions({
     actorUserId: authContext.actorUserId,
     isServiceActor: authContext.isServiceActor,
+    targetActorUserId: authContext.isServiceActor ? req.query.actorUserId : null,
     limit: req.query.limit,
     status: req.query.status
   });

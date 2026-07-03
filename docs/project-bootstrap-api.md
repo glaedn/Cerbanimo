@@ -40,6 +40,8 @@ Required input:
 
 Kamiya should poll this endpoint after confirmation. If no project/tasks appear within 30 seconds, Kamiya can show a retry affordance that confirms a new preview with the same project input.
 
+`GET /api/v1/actions` is always actor-bounded. Normal users only list rows where `actor_user_id` equals the authenticated user. Service actors require an API token with `actions:service`; they still default to their own actor's actions and may target another actor only by passing an explicit `actorUserId` filter. Missing actor context returns an empty list, never all actions.
+
 ## State Machine
 
 Workflow states:
@@ -65,13 +67,25 @@ Workflow states:
 
 ## Retry
 
-`POST /api/v1/actions/{id}/retry` requires `actions:write`, enforces the same ownership/service policy as confirm and cancel, refuses completed/cancelled workflows, avoids creating a second workflow, records `workflow.requeued`, and returns `202`.
+`POST /api/v1/actions/{id}/retry` requires `actions:write`, enforces the same ownership/service policy as confirm and cancel, avoids creating a second workflow, records `workflow.requeued`, and returns `202`.
+
+Manual retry is eligible only from workflow states:
+
+- `retry_wait`
+- `blocked`
+- `failed`
+
+Manual retry rejects `queued`, `running`, `completed`, and `cancelled` with `409`. It never clears a live worker lease. When retrying a failed action, Cerbanimo resets the action to `confirmed` and replaces the current execution result with a small queued retry status so hydration is nonterminal while the retry runs. The prior failure remains in immutable action events and workflow error history.
 
 Automatic retries are bounded to 3 worker attempts with pg-boss exponential backoff. Retryable provider, queue, and transient persistence failures move the workflow to `retry_wait`. Non-retryable input, permission, and graph failures move to `blocked` or `failed` and are not retried automatically.
+
+If queue send fails after a manual retry transaction, the workflow is marked `blocked`, the action is marked `failed` with `BOOTSTRAP_QUEUE_FAILED`, `workflow.queue_failed` is recorded, and a later retry can safely requeue the same workflow.
 
 ## Cancellation
 
 Cancelling a previewed action remains immediate. Cancelling a confirmed bootstrap before project persistence marks the action and workflow `cancelled`, cancels pending/running steps, records `workflow.cancelled`, and prevents worker side effects. After `related_project_id` exists or completion has occurred, cancellation is rejected with `409` instead of pretending durable project state was not created.
+
+Cancellation and persistence use a deterministic lock order: action row first, workflow row second. The persistence transaction locks both rows, verifies the action is not cancelled, verifies the workflow is `running`, verifies the current worker still owns the claim token, and writes the project plus both `related_project_id` links before commit. If cancellation obtains the locks first, persistence aborts with `BOOTSTRAP_CANCELLED`; if persistence obtains them first, cancellation waits and then returns `409`.
 
 ## Worker Behavior
 
@@ -94,6 +108,8 @@ The worker executes these steps:
 Project and task graph persistence is atomic. If graph validation or persistence fails, no partial task graph is saved.
 
 Each worker attempt must atomically claim the workflow. Duplicate pg-boss delivery while a lease is valid records `workflow.claim_rejected` and performs no side effects. Expired leases can be reclaimed.
+
+The active `claim_token` is an execution fence. The worker renews the lease before each side-effecting stage, verifies claim ownership after model calls, requires the claim token during persistence, and guards step completion, workflow updates, and finalization with the same token. A stale worker that loses its claim records `workflow.claim_lost` and stops without persisting or overwriting newer results.
 
 ## Legacy Compatibility
 

@@ -197,6 +197,8 @@ class ActionQueueService {
 
   async listActions({
     actorUserId,
+    isServiceActor = false,
+    targetActorUserId,
     limit = 50,
     status,
     projectId,
@@ -205,9 +207,10 @@ class ActionQueueService {
     automationRunId
   }) {
     const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
-    if (!isServiceActor && !actorUserId) return [];
+    const effectiveActorUserId = isServiceActor && targetActorUserId ? targetActorUserId : actorUserId;
+    if (!effectiveActorUserId) return [];
 
-    const params = [actorUserId, boundedLimit];
+    const params = [effectiveActorUserId, boundedLimit];
     const filters = [];
     if (status) {
       params.push(status);
@@ -564,8 +567,13 @@ class ActionQueueService {
         error.status = 404;
         throw error;
       }
-      if (['completed', 'cancelled'].includes(workflow.status) || ['executed', 'cancelled'].includes(action.status)) {
+      if (!['retry_wait', 'blocked', 'failed'].includes(workflow.status)) {
         const error = new Error(`Workflow cannot be retried from status ${workflow.status}`);
+        error.status = 409;
+        throw error;
+      }
+      if (['executed', 'cancelled'].includes(action.status)) {
+        const error = new Error(`Action cannot be retried from status ${action.status}`);
         error.status = 409;
         throw error;
       }
@@ -575,9 +583,25 @@ class ActionQueueService {
              next_retry_at = NOW(),
              lease_expires_at = NULL,
              claim_token = NULL,
+             completed_at = NULL,
              updated_at = NOW()
          WHERE id = $1`,
         [workflow.id]
+      );
+      await client.query(
+        `UPDATE api_actions
+         SET status = 'confirmed',
+             execution_result = $2::jsonb,
+             executed_at = NULL
+         WHERE id = $1`,
+        [
+          action.id,
+          JSON.stringify({
+            status: 'queued',
+            message: 'Project bootstrap retry queued.',
+            previousStatus: action.status
+          })
+        ]
       );
       await client.query(
         `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
@@ -593,7 +617,52 @@ class ActionQueueService {
       client.release();
     }
 
-    await boss.send(PROJECT_BOOTSTRAP_QUEUE, { workflowRunId });
+    try {
+      await boss.send(PROJECT_BOOTSTRAP_QUEUE, { workflowRunId });
+    } catch (queueError) {
+      await pool.query(
+        `UPDATE workflow_runs
+         SET status = 'blocked',
+             last_error = $2::jsonb,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [
+          workflowRunId,
+          JSON.stringify({
+            code: 'BOOTSTRAP_QUEUE_FAILED',
+            message: queueError.message || String(queueError),
+            retryable: true,
+            timestamp: new Date().toISOString()
+          })
+        ]
+      );
+      await pool.query(
+        `UPDATE api_actions
+         SET status = 'failed',
+             execution_result = $2::jsonb
+         WHERE id = (SELECT action_id FROM workflow_runs WHERE id = $1)`,
+        [
+          workflowRunId,
+          JSON.stringify({
+            status: 'failed',
+            code: 'BOOTSTRAP_QUEUE_FAILED',
+            message: queueError.message || String(queueError),
+            retryable: true
+          })
+        ]
+      );
+      await pool.query(
+        `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+         SELECT action_id, 'workflow.queue_failed', actor_user_id, $2::jsonb
+         FROM workflow_runs
+         WHERE id = $1`,
+        [workflowRunId, JSON.stringify({ workflowRunId, error: queueError.message || String(queueError), retryable: true })]
+      );
+      const error = new Error('Failed to enqueue project bootstrap retry.');
+      error.status = 503;
+      error.retryable = true;
+      throw error;
+    }
     return this.hydrateActionOnly(actionId, { actorUserId, isServiceActor });
   }
 
