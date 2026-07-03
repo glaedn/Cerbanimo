@@ -1,8 +1,27 @@
 // services/taskGenerator.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { max } from "d3";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
+
+function getGeminiModel(envName) {
+  return genAI.getGenerativeModel({
+    model: process.env[envName] || DEFAULT_GEMINI_MODEL,
+  });
+}
+
+async function generateContentWithTimeout(model, payload) {
+  const timeoutMs = Number.parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "60000", 10);
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  try {
+    return await Promise.race([model.generateContent(payload), timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 // Shared JSON parsing helper
 export const parseLLMJsonResponse = (text) => {
@@ -101,10 +120,8 @@ export const generateProjectIdea = async (skills, interests, primeDirective = ""
   //const systemPrompt = "You are a helpful assistant that generates project ideas.";
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-    });
-    const result = await model.generateContent(userPrompt);
+    const model = getGeminiModel("GEMINI_PROJECT_PLAN_MODEL");
+    const result = await generateContentWithTimeout(model, userPrompt);
     const response = await result.response;
     const responseText = response.text();
 
@@ -208,9 +225,7 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
   //const systemPrompt = "You are an expert project manager and task engineer.";
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-    });
+    const model = getGeminiModel("GEMINI_TASK_GRAPH_MODEL");
 
     // Maximize the capability of the call with targeted configuration
     const generationConfig = {
@@ -222,7 +237,7 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
       }
     };
 
-    const result = await model.generateContent({
+    const result = await generateContentWithTimeout(model, {
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: generationConfig
     });
@@ -238,7 +253,7 @@ Include "resource_requirements" (array of strings) for each task if labor alone 
     }
     return data;
   } catch (err) {
-    console.error("Failed to parse LLM response for subtasks:", text);
+    console.error("Failed to parse LLM response for subtasks:", err);
     throw new Error("Failed to parse tasks from LLM output for subtasks");
   }
 };
@@ -296,9 +311,7 @@ export const autogeneratePlan = async (
   Maximize depth and tactical detail. This plan will serve as the foundation for granular task generation.
   `
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-    });
+    const model = getGeminiModel("GEMINI_PROJECT_PLAN_MODEL");
 
     // Maximize the capability of the call with targeted configuration
     const generationConfig = {
@@ -306,7 +319,7 @@ export const autogeneratePlan = async (
       maxOutputTokens: 2048,                 // Open up the ceiling so it doesn't rush to finish the plan
     };
 
-    const result = await model.generateContent({
+    const result = await generateContentWithTimeout(model, {
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: generationConfig
     });
@@ -448,9 +461,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   //const systemPrompt = "You are an expert Project Manager AI.";
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-    });
+    const model = getGeminiModel("GEMINI_TASK_GRAPH_MODEL");
 
     // Maximize the capability of the call with targeted configuration
     const generationConfig = {
@@ -459,7 +470,7 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
       maxOutputTokens: 4096,                // Open up the ceiling so it doesn't rush to finish the array
     };
 
-    const result = await model.generateContent({
+    const result = await generateContentWithTimeout(model, {
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: generationConfig
     });
@@ -494,10 +505,8 @@ export const analyzeResume = async (resumeText) => {
   `;
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite",
-    });
-    const result = await model.generateContent(userPrompt);
+    const model = getGeminiModel("GEMINI_PROJECT_PLAN_MODEL");
+    const result = await generateContentWithTimeout(model, userPrompt);
     const response = await result.response;
     const responseText = response.text();
 

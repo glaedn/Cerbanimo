@@ -22,14 +22,27 @@ describe('api v1 public contract', () => {
     expect(response.body.requestId).toBeTruthy();
     expect(response.body.data.openapi).toBe('3.1.0');
     expect(response.body.data.paths['/actions/preview']).toBeTruthy();
+    expect(response.body.data.paths['/actions/{id}']).toBeTruthy();
   });
 
   it('marks functions unavailable when the actor lacks their scope', () => {
     const functions = CapabilityRegistryService.listFunctions(['projects:read']);
     const listProjects = functions.find(fn => fn.name === 'projects.list');
     const createProject = functions.find(fn => fn.name === 'projects.create');
+    const bootstrapProject = functions.find(fn => fn.name === 'projects.bootstrap');
 
     expect(listProjects.available).toBe(true);
     expect(createProject.available).toBe(false);
+    expect(bootstrapProject.available).toBe(false);
+  });
+
+  it('exposes projects.bootstrap when the actor has projects:write', () => {
+    const functions = CapabilityRegistryService.listFunctions(['projects:write']);
+    const bootstrapProject = functions.find(fn => fn.name === 'projects.bootstrap');
+
+    expect(bootstrapProject).toBeTruthy();
+    expect(bootstrapProject.available).toBe(true);
+    expect(bootstrapProject.async).toBe(true);
+    expect(bootstrapProject.inputSchema.required).toEqual(['name', 'description', 'outcomeStatement']);
   });
 });

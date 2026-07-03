@@ -2,6 +2,8 @@ import pool from '../db.js';
 import CapabilityRegistryService from './CapabilityRegistryService.js';
 import boss from '../jobs/boss.js';
 import { AUTOMATION_EXECUTION_QUEUE } from '../jobs/workers/automationWorker.js';
+import { PROJECT_BOOTSTRAP_QUEUE } from '../jobs/workers/projectBootstrapWorker.js';
+import { BOOTSTRAP_STEPS } from './ProjectBootstrapService.js';
 
 const destructiveNames = new Set([
   'projects.delete',
@@ -22,13 +24,34 @@ function normalizeRiskLevel(intent = {}, requestedRisk = null) {
 function buildPreviewPayload(intent = {}) {
   const functionName = intent.functionName || intent.function || intent.type || 'unknown';
   const knownFunction = CapabilityRegistryService.findFunctionByName(functionName);
+  const args = intent.arguments || intent.input || {};
+
+  if (functionName === 'projects.bootstrap') {
+    return {
+      title: intent.title || `Create project: ${args.name || args.title || 'Untitled project'}`,
+      summary:
+        intent.summary ||
+        `Cerbanimo will generate and persist a project plan and task graph for "${args.name || args.title || 'Untitled project'}" after confirmation.`,
+      functionName,
+      functionSchema: knownFunction || null,
+      arguments: args,
+      confirmationRequired: true,
+      effects: intent.effects || [
+        'Create a Cerbanimo project',
+        'Generate a project plan and dependency-aware task graph',
+        'Persist tasks atomically and activate root tasks'
+      ],
+      missingInputs: intent.missingInputs || [],
+      irreversible: false
+    };
+  }
 
   return {
     title: intent.title || `Preview ${functionName}`,
     summary: intent.summary || intent.description || `Cerbanimo will prepare ${functionName} for execution after confirmation.`,
     functionName,
     functionSchema: knownFunction || null,
-    arguments: intent.arguments || intent.input || {},
+    arguments: args,
     confirmationRequired: true,
     effects: intent.effects || [],
     missingInputs: intent.missingInputs || [],
@@ -225,6 +248,7 @@ class ActionQueueService {
   async confirmAction({ actionId, actorUserId, confirmation }) {
     const client = await pool.connect();
     let automationJobToSend = null;
+    let projectBootstrapJobToSend = null;
     try {
       await client.query('BEGIN');
 
@@ -245,8 +269,15 @@ class ActionQueueService {
         throw error;
       }
 
+      const functionName = action.intent_json?.functionName || action.intent_json?.function || action.intent_json?.type;
+      const isProjectBootstrap = functionName === 'projects.bootstrap';
       const automationIntent = action.intent_json?.automation;
-      const executionResult = automationIntent?.templateKey
+      const executionResult = isProjectBootstrap
+        ? {
+            status: 'queued',
+            message: 'Project bootstrap action confirmed and queued for worker execution.'
+          }
+        : automationIntent?.templateKey
         ? {
             status: 'queued',
             message: 'Automation action confirmed and queued for worker execution.'
@@ -326,6 +357,55 @@ class ActionQueueService {
         };
       }
 
+      if (isProjectBootstrap) {
+        const args = action.intent_json?.arguments || action.intent_json?.input || {};
+        const workflowResult = await client.query(
+          `INSERT INTO workflow_runs (
+             workflow_type,
+             status,
+             state,
+             action_id,
+             actor_user_id,
+             source_client
+           )
+           VALUES ('projects.bootstrap', 'queued', $1::jsonb, $2, $3, $4)
+           RETURNING *`,
+          [
+            JSON.stringify({
+              input: args,
+              policySnapshot: {
+                sourceClient: updatedAction.source_client,
+                relatedProjectId: updatedAction.related_project_id || null,
+                confirmedAt: updatedAction.confirmed_at
+              }
+            }),
+            action.id,
+            actorUserId || null,
+            updatedAction.source_client || null
+          ]
+        );
+
+        const workflowRun = workflowResult.rows[0];
+        for (const stepName of BOOTSTRAP_STEPS) {
+          await client.query(
+            `INSERT INTO workflow_steps (workflow_run_id, step_name, status, payload)
+             VALUES ($1, $2, 'pending', '{}'::jsonb)`,
+            [workflowRun.id, stepName]
+          );
+        }
+
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+           VALUES ($1, 'workflow.queued', $2, $3::jsonb)`,
+          [action.id, actorUserId || null, JSON.stringify({ workflowRunId: workflowRun.id, queue: PROJECT_BOOTSTRAP_QUEUE })]
+        );
+
+        projectBootstrapJobToSend = {
+          workflowRunId: workflowRun.id,
+          actionId: action.id
+        };
+      }
+
       await client.query('COMMIT');
       if (automationJobToSend) {
         try {
@@ -335,6 +415,37 @@ class ActionQueueService {
             `INSERT INTO automation_logs (run_id, level, message, payload)
              VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
             [automationJobToSend.runId, JSON.stringify({ error: queueError.message || String(queueError) })]
+          );
+        }
+      }
+      if (projectBootstrapJobToSend) {
+        try {
+          await boss.send(PROJECT_BOOTSTRAP_QUEUE, {
+            workflowRunId: projectBootstrapJobToSend.workflowRunId
+          });
+        } catch (queueError) {
+          await pool.query(
+            `UPDATE workflow_runs
+             SET status = 'blocked',
+                 last_error = $2::jsonb,
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [
+              projectBootstrapJobToSend.workflowRunId,
+              JSON.stringify({
+                code: 'BOOTSTRAP_QUEUE_FAILED',
+                message: queueError.message || String(queueError)
+              })
+            ]
+          );
+          await pool.query(
+            `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+             VALUES ($1, 'workflow.queue_failed', $2, $3::jsonb)`,
+            [
+              projectBootstrapJobToSend.actionId,
+              actorUserId || null,
+              JSON.stringify({ workflowRunId: projectBootstrapJobToSend.workflowRunId, error: queueError.message || String(queueError) })
+            ]
           );
         }
       }

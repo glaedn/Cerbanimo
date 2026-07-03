@@ -36,6 +36,12 @@ const nextQuestions = {
 
 router.use(requestIdMiddleware);
 router.use(envelopeMiddleware);
+router.use((req, res, next) => {
+  res.setHeader('Deprecation', 'true');
+  res.setHeader('Link', '</api/v1>; rel="successor-version"');
+  res.setHeader('Sunset', 'Wed, 31 Dec 2026 23:59:59 GMT');
+  next();
+});
 router.use(apiAuthenticate);
 
 function inferIntent(message = '') {

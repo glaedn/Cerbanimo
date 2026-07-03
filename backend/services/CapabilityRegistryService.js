@@ -37,6 +37,42 @@ export const functionSchemas = [
     outputSchema: { type: 'object' }
   },
   {
+    name: 'projects.bootstrap',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    async: true,
+    description: 'Create a project, generate its project plan and dependency-aware task graph, persist the graph atomically, and activate root tasks.',
+    inputSchema: {
+      type: 'object',
+      required: ['name', 'description', 'outcomeStatement'],
+      properties: {
+        name: { type: 'string', maxLength: 100 },
+        description: { type: 'string' },
+        outcomeStatement: { type: 'string' },
+        dueDate: { type: 'string', format: 'date-time' },
+        tags: { type: 'array', items: { type: 'string' } },
+        autoAssign: { type: 'boolean' },
+        location: { type: 'object' },
+        isService: { type: 'boolean' },
+        servicePrice: { type: 'integer', minimum: 0 },
+        serviceVisibility: { type: 'array', items: { type: 'string' } },
+        generationMode: { type: 'string', enum: ['plan_then_tasks', 'tasks_only'] }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'object' },
+        workflow: { type: 'object' },
+        project: { type: 'object' },
+        tasks: { type: 'array', items: { type: 'object' } },
+        activeTasks: { type: 'array', items: { type: 'object' } }
+      }
+    }
+  },
+  {
     name: 'tasks.list',
     domain: 'tasks',
     version: '1.0.0',

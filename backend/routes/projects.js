@@ -1,9 +1,11 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import pool from '../db.js';
 import { autoGenerateTasks } from '../services/taskGenerator.js';
 import ImpactGraphService from '../services/ImpactGraphService.js';
 import ProjectHealthService from '../services/ProjectHealthService.js';
 import GuildService from '../services/GuildService.js';
+import ProjectBootstrapService from '../services/ProjectBootstrapService.js';
 import { applyBurn } from '../utils/burnUtils.js';
 
 
@@ -689,6 +691,35 @@ router.post('/import', async (req, res) => {
 
 router.post('/auto-generate', async (req, res) => {
   const { projectId, usePlan = true } = req.body;
+  const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+
+  try {
+    if (!projectId) {
+      return res.status(400).json({ success: false, code: 'BOOTSTRAP_INPUT_INVALID', error: 'Missing projectId', requestId });
+    }
+
+    const result = await ProjectBootstrapService.generateForExistingProject(projectId, { usePlan });
+    return res.json({
+      success: true,
+      requestId,
+      project: result.project,
+      tasks: result.tasks,
+      activeTasks: result.activeTasks,
+      reusedExistingTasks: result.reusedExistingTasks
+    });
+  } catch (error) {
+    console.error('Auto-generate tasks failed:', error);
+    const status = error.code === 'BOOTSTRAP_INPUT_INVALID' ? 404 : 500;
+    return res.status(error.status || status).json({
+      success: false,
+      code: error.code || 'BOOTSTRAP_LEGACY_AUTOGENERATE_FAILED',
+      error: error.message || 'Internal server error',
+      stage: error.stage || null,
+      retryable: Boolean(error.retryable),
+      requestId
+    });
+  }
 
   if (!projectId) {
     return res.status(400).json({ success: false, error: 'Missing projectId' });

@@ -1,14 +1,14 @@
 import pool from '../db.js';
 
 class ImpactGraphService {
-  async createOutcome(projectId, statement) {
-    const existing = await pool.query(
+  async createOutcome(projectId, statement, client = pool) {
+    const existing = await client.query(
       'SELECT * FROM outcomes WHERE project_id = $1 AND statement = $2 ORDER BY id ASC LIMIT 1',
       [projectId, statement]
     );
     if (existing.rows.length > 0) {
       const outcome = existing.rows[0];
-      await this.createImpactNode('outcome', outcome.id, outcome.statement);
+      await this.createImpactNode('outcome', outcome.id, outcome.statement, '', null, client);
       return outcome;
     }
 
@@ -17,11 +17,11 @@ class ImpactGraphService {
       VALUES ($1, $2)
       RETURNING *;
     `;
-    const result = await pool.query(query, [projectId, statement]);
+    const result = await client.query(query, [projectId, statement]);
     const outcome = result.rows[0];
 
     // Create impact node for the outcome
-    await this.createImpactNode('outcome', outcome.id, outcome.statement);
+    await this.createImpactNode('outcome', outcome.id, outcome.statement, '', null, client);
 
     return outcome;
   }
@@ -32,13 +32,13 @@ class ImpactGraphService {
     return result.rows;
   }
 
-  async createImpactNode(type, entityId, label, description = '', impactWeight = null) {
-    const existing = await pool.query(
+  async createImpactNode(type, entityId, label, description = '', impactWeight = null, client = pool) {
+    const existing = await client.query(
       'SELECT * FROM impact_nodes WHERE type = $1 AND entity_id = $2 ORDER BY id ASC LIMIT 1',
       [type, entityId]
     );
     if (existing.rows.length > 0) {
-      const result = await pool.query(
+      const result = await client.query(
         `UPDATE impact_nodes
          SET label = COALESCE($2, label),
              description = COALESCE($3, description),
@@ -55,12 +55,12 @@ class ImpactGraphService {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const result = await pool.query(query, [type, entityId, label, description, impactWeight]);
+    const result = await client.query(query, [type, entityId, label, description, impactWeight]);
     return result.rows[0];
   }
 
-  async linkNodes(fromNodeId, toNodeId, relationType) {
-    const existing = await pool.query(
+  async linkNodes(fromNodeId, toNodeId, relationType, client = pool) {
+    const existing = await client.query(
       'SELECT * FROM impact_edges WHERE from_node_id = $1 AND to_node_id = $2 AND relation_type = $3 LIMIT 1',
       [fromNodeId, toNodeId, relationType]
     );
@@ -73,16 +73,16 @@ class ImpactGraphService {
       VALUES ($1, $2, $3)
       RETURNING *;
     `;
-    const result = await pool.query(query, [fromNodeId, toNodeId, relationType]);
+    const result = await client.query(query, [fromNodeId, toNodeId, relationType]);
     return result.rows[0];
   }
 
-  async createTaskImpactNodesForProject(projectId, tasks = []) {
+  async createTaskImpactNodesForProject(projectId, tasks = [], client = pool) {
     if (!projectId || !Array.isArray(tasks) || tasks.length === 0) {
       return [];
     }
 
-    const outcomeResult = await pool.query(
+    const outcomeResult = await client.query(
       'SELECT id, statement FROM outcomes WHERE project_id = $1 ORDER BY id ASC LIMIT 1',
       [projectId]
     );
@@ -91,7 +91,7 @@ class ImpactGraphService {
     }
 
     const outcome = outcomeResult.rows[0];
-    const outcomeNode = await this.createImpactNode('outcome', outcome.id, outcome.statement);
+    const outcomeNode = await this.createImpactNode('outcome', outcome.id, outcome.statement, '', null, client);
     const createdNodes = [];
 
     for (const task of tasks) {
@@ -100,8 +100,8 @@ class ImpactGraphService {
 
       const label = task.impact_label || task.impact_statement || `Contributes to the project outcome through: ${task.name}`;
       const weight = Number.isFinite(Number(task.impact_weight)) ? Number(task.impact_weight) : null;
-      const taskNode = await this.createImpactNode('task', taskId, label, task.description || '', weight);
-      await this.linkNodes(taskNode.id, outcomeNode.id, 'contributes_to');
+      const taskNode = await this.createImpactNode('task', taskId, label, task.description || '', weight, client);
+      await this.linkNodes(taskNode.id, outcomeNode.id, 'contributes_to', client);
       createdNodes.push(taskNode);
     }
 

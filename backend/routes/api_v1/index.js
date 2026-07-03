@@ -24,6 +24,7 @@ import {
 } from '../../services/apiAuthService.js';
 import CapabilityRegistryService from '../../services/CapabilityRegistryService.js';
 import ActionQueueService from '../../services/ActionQueueService.js';
+import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
 
 const router = express.Router();
 
@@ -100,6 +101,7 @@ const openApiDocument = {
     '/capabilities/functions': { get: { summary: 'List versioned function schemas' } },
     '/capabilities/prompts': { get: { summary: 'List active prompt registry entries' } },
     '/actions/preview': { post: { summary: 'Create a persisted action preview' } },
+    '/actions/{id}': { get: { summary: 'Read action, workflow, project, and active task detail' } },
     '/actions/{id}/confirm': { post: { summary: 'Confirm a previewed action' } },
     '/actions/{id}/cancel': { post: { summary: 'Cancel a previewed or confirmed action' } },
     '/actions': { get: { summary: 'List actor action history' } },
@@ -211,7 +213,7 @@ router.post('/ai/intent-route', requireScopes([API_SCOPES.AI_ROUTE]), (req, res)
   const text = String(message).toLowerCase();
   const matches = [];
 
-  if (text.includes('project') || text.includes('plan')) matches.push('projects.create');
+  if (text.includes('project') || text.includes('plan')) matches.push('projects.bootstrap');
   if (text.includes('task') || text.includes('todo')) matches.push('tasks.create');
   if (text.includes('community')) matches.push('communities.list');
   if (text.includes('stat') || text.includes('dashboard')) matches.push('stats.get');
@@ -220,7 +222,7 @@ router.post('/ai/intent-route', requireScopes([API_SCOPES.AI_ROUTE]), (req, res)
 
   const suggestedFunctions = matches.length > 0 ? matches : ['search.query'];
   const missingInputs = [];
-  if (suggestedFunctions.includes('projects.create') && !context.outcomeStatement) {
+  if (suggestedFunctions.includes('projects.bootstrap') && !context.outcomeStatement) {
     missingInputs.push('outcomeStatement');
   }
   if (suggestedFunctions.includes('tasks.create') && !context.projectId) {
@@ -276,6 +278,15 @@ router.post('/actions/preview', requireScopes([API_SCOPES.ACTIONS_WRITE]), async
   if (!intent || typeof intent !== 'object') {
     return sendError(req, res, 400, 'intent object is required');
   }
+  const functionName = intent.functionName || intent.function || intent.type;
+  if (functionName === 'projects.bootstrap') {
+    const scopes = req.apiAuth?.type === 'auth0'
+      ? allScopesForUser(req.user)
+      : req.apiAuth?.scopes || [];
+    if (!scopes.includes(API_SCOPES.WRITE_PROJECTS)) {
+      return sendError(req, res, 403, 'projects.bootstrap requires projects:write scope');
+    }
+  }
 
   const action = await ActionQueueService.createPreview({
     actorUserId: req.user?.id,
@@ -297,13 +308,21 @@ router.get('/actions', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(as
   return sendOk(req, res, { actions });
 }));
 
+router.get('/actions/:id', requireScopes([API_SCOPES.ACTIONS_READ]), asyncHandler(async (req, res) => {
+  const detail = await ProjectBootstrapService.hydrateActionDetail(req.params.id, req.user?.id);
+  if (!detail) {
+    return sendError(req, res, 404, 'Action not found');
+  }
+  return sendOk(req, res, detail);
+}));
+
 router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
   const action = await ActionQueueService.confirmAction({
     actionId: req.params.id,
     actorUserId: req.user?.id,
     confirmation: req.body || {}
   });
-  return sendOk(req, res, action);
+  return sendOk(req, res, action, action.status === 'confirmed' ? 202 : 200);
 }));
 
 router.post('/actions/:id/cancel', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
