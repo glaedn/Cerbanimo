@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 const allowedInputTypes = new Set([
   'text',
   'long_text',
@@ -21,6 +23,7 @@ export function validatePreparationInputs(schema = [], values = {}, options = {}
   const fieldSchemas = Array.isArray(schema) ? schema : [];
   const seen = new Set();
   const knownKeys = new Set();
+  const approvalFields = [];
 
   for (const field of fieldSchemas) {
     const key = safeKey(field?.key);
@@ -46,8 +49,28 @@ export function validatePreparationInputs(schema = [], values = {}, options = {}
       continue;
     }
 
+    if (inputType === 'approval') {
+      approvalFields.push({ key, field, value: rawValue });
+      continue;
+    }
+
     const normalized = normalizeValue({ key, field, inputType, value: rawValue, options, errors });
     if (normalized.ok) sanitized[key] = normalized.value;
+  }
+
+  const effectSnapshot = stableStringify(sanitized);
+  const effectHash = hashEffectSnapshot(effectSnapshot);
+  for (const approval of approvalFields) {
+    const normalized = normalizeApproval({
+      key: approval.key,
+      field: approval.field,
+      value: approval.value,
+      options,
+      effectSnapshot,
+      effectHash,
+      errors
+    });
+    if (normalized.ok) sanitized[approval.key] = normalized.value;
   }
 
   for (const key of Object.keys(values || {})) {
@@ -120,23 +143,12 @@ function normalizeValue({ key, field, inputType, value, options, errors }) {
     return { ok: true, value: parsed };
   }
 
-  if (inputType === 'boolean') return { ok: true, value: Boolean(value) };
-
-  if (inputType === 'approval') {
-    const approved = typeof value === 'object' && value !== null ? value.approved === true : value === true;
-    if (!approved) {
-      errors.push(error(key, 'APPROVAL_REQUIRED', `${field.label || key} requires explicit approval.`));
+  if (inputType === 'boolean') {
+    if (typeof value !== 'boolean') {
+      errors.push(error(key, 'TYPE_BOOLEAN_STRICT', `${field.label || key} must be a JSON boolean.`));
       return { ok: false };
     }
-    return {
-      ok: true,
-      value: {
-        approved: true,
-        approvedAt: new Date().toISOString(),
-        actorUserId: options.actorUserId || null,
-        statement: limitText(field.description || 'Explicit approval captured.', 500)
-      }
-    };
+    return { ok: true, value };
   }
 
   if (inputType === 'date') {
@@ -187,6 +199,15 @@ function normalizeValue({ key, field, inputType, value, options, errors }) {
       errors.push(error(key, 'SECRET_REFERENCE_INVALID', `${field.label || key} must be a secret reference, not a raw secret.`));
       return { ok: false };
     }
+    if (typeof options.resolveSecretReference !== 'function') {
+      errors.push(error(key, 'SECRET_REFERENCE_UNSUPPORTED', 'Secret references require an authoritative secret registry.'));
+      return { ok: false };
+    }
+    const resolved = options.resolveSecretReference(reference, { actorUserId: options.actorUserId });
+    if (!resolved?.ok) {
+      errors.push(error(key, 'SECRET_REFERENCE_DENIED', 'Secret reference was not found or is not accessible to this actor.'));
+      return { ok: false };
+    }
     return { ok: true, value: { secretReference: reference, redacted: true } };
   }
 
@@ -196,11 +217,52 @@ function normalizeValue({ key, field, inputType, value, options, errors }) {
       errors.push(error(key, 'FILE_REFERENCE_INVALID', `${field.label || key} must be a valid file or artifact reference.`));
       return { ok: false };
     }
+    if (typeof options.resolveFileReference !== 'function') {
+      errors.push(error(key, 'FILE_REFERENCE_UNSUPPORTED', 'File references require an authoritative artifact registry.'));
+      return { ok: false };
+    }
+    const resolved = options.resolveFileReference(fileReference, { actorUserId: options.actorUserId });
+    if (!resolved?.ok) {
+      errors.push(error(key, 'FILE_REFERENCE_DENIED', 'File reference was not found or is not accessible to this actor.'));
+      return { ok: false };
+    }
     return { ok: true, value: fileReference };
   }
 
   const maxLength = inputType === 'long_text' ? 5000 : 500;
   return { ok: true, value: limitText(value, maxLength) };
+}
+
+function normalizeApproval({ key, field, value, options, effectSnapshot, effectHash, errors }) {
+  const existing = typeof value === 'object' && value !== null ? value : null;
+  const approved = existing ? existing.approved === true : value === true;
+  if (!approved) {
+    errors.push(error(key, 'APPROVAL_REQUIRED', `${field.label || key} requires explicit approval.`));
+    return { ok: false };
+  }
+
+  if (existing?.effectHash && existing.effectHash !== effectHash) {
+    errors.push(error(key, 'APPROVAL_STALE', `${field.label || key} must be reapproved because effect-relevant inputs changed.`));
+    return { ok: false };
+  }
+
+  if (existing && !existing.effectHash && existing.approvedAt) {
+    errors.push(error(key, 'APPROVAL_EFFECT_SNAPSHOT_REQUIRED', `${field.label || key} must be reapproved with the current effect summary.`));
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    value: {
+      approved: true,
+      approvedAt: existing?.approvedAt || new Date().toISOString(),
+      actorUserId: existing?.actorUserId || options.actorUserId || null,
+      statement: existing?.statement || limitText(field.description || 'Explicit approval captured.', 500),
+      statementVersion: existing?.statementVersion || field.statementVersion || '1',
+      effectSummary: limitText(effectSnapshot, 1000),
+      effectHash
+    }
+  };
 }
 
 function error(key, code, message) {
@@ -218,4 +280,16 @@ function safeKey(value) {
 function limitText(value, maxLength) {
   const text = String(value || '').trim();
   return text.length <= maxLength ? text : text.slice(0, maxLength);
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function hashEffectSnapshot(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
 }

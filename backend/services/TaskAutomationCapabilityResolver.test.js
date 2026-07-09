@@ -14,7 +14,8 @@ describe('TaskAutomationCapabilityResolver', () => {
       task: qualityCheckTask(),
       preparation: { capability_name: 'github.run_quality_checks' },
       scopes: ['automation:write'],
-      validationResult: { valid: true }
+      validationResult: { valid: true },
+      taskAuthority: true
     });
 
     expect(capability.executionAvailable).toBe(false);
@@ -31,11 +32,30 @@ describe('TaskAutomationCapabilityResolver', () => {
       task: qualityCheckTask(),
       preparation: { capability_name: 'github.run_quality_checks' },
       scopes: ['automation:write'],
-      validationResult: { valid: true }
+      validationResult: { valid: true },
+      taskAuthority: true
     });
 
     expect(capability.executionAvailable).toBe(true);
     expect(capability.availableCapabilities).toContain('github.run_quality_checks');
+  });
+
+  it('requires task-level authority in addition to automation scope', () => {
+    process.env.NODE_ENV = 'test';
+    process.env.CERBANIMO_E2E_MODE = 'true';
+    process.env.POSTGRES_URL = 'postgres://postgres@127.0.0.1:5432/cerbanimo_e2e_quality';
+    process.env.CERBANIMO_QUALITY_CHECK_EXECUTOR = 'deterministic';
+
+    const capability = resolveTaskAutomationCapability({
+      task: qualityCheckTask(),
+      preparation: { capability_name: 'github.run_quality_checks' },
+      scopes: ['automation:write'],
+      validationResult: { valid: true },
+      taskAuthority: false
+    });
+
+    expect(capability.executionAvailable).toBe(false);
+    expect(capability.reasons).toContain('TASK_AUTHORITY_MISSING');
   });
 
   it('separates registered capability from actor authorization', () => {

@@ -13,7 +13,8 @@ export function resolveTaskAutomationCapability({
   preparation,
   scopes = [],
   validationResult,
-  actorUserId
+  actorUserId,
+  taskAuthority = false
 } = {}) {
   const automation = task?.automation || {};
   const requiredCapabilities = [
@@ -37,8 +38,10 @@ export function resolveTaskAutomationCapability({
   const executor = definition ? resolveExecutor(definition) : { available: false, reason: 'CAPABILITY_NOT_REGISTERED' };
   if (definition && !executor.available) reasons.push(executor.reason);
 
-  const actorAuthorized = definition ? scopeSet.has(definition.requiredScope) : false;
-  if (definition && !actorAuthorized) reasons.push('ACTOR_SCOPE_MISSING');
+  const hasRequiredScope = definition ? scopeSet.has(definition.requiredScope) : false;
+  const actorAuthorized = Boolean(definition && hasRequiredScope && taskAuthority);
+  if (definition && !hasRequiredScope) reasons.push('ACTOR_SCOPE_MISSING');
+  if (definition && hasRequiredScope && !taskAuthority) reasons.push('TASK_AUTHORITY_MISSING');
 
   if (validationResult && validationResult.valid === false) reasons.push('INPUTS_INCOMPLETE');
   if (task?.automation?.classification === 'human_driven') reasons.push('TASK_POLICY_BLOCKED');

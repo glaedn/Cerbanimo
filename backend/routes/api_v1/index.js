@@ -39,7 +39,9 @@ function actionAuthContext(req) {
     : req.apiAuth?.scopes || [];
   return {
     actorUserId: req.user?.id || null,
-    isServiceActor: req.apiAuth?.type === 'apiToken' && scopes.includes(API_SCOPES.ACTIONS_SERVICE)
+    isServiceActor: req.apiAuth?.type === 'apiToken' && scopes.includes(API_SCOPES.ACTIONS_SERVICE),
+    scopes,
+    roles: req.user?.roles || []
   };
 }
 
@@ -477,6 +479,8 @@ router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), a
     actionId: req.params.id,
     actorUserId: authContext.actorUserId,
     isServiceActor: authContext.isServiceActor,
+    scopes: authContext.scopes,
+    roles: authContext.roles,
     confirmation: req.body || {}
   });
   return sendOk(req, res, action, action.status === 'confirmed' ? 202 : 200);
@@ -514,6 +518,14 @@ router.post('/automation/actions', requireScopes([API_SCOPES.AUTOMATION_WRITE]),
   const { templateKey, input = {}, sourceClient } = req.body;
   if (!templateKey) {
     return sendError(req, res, 400, 'templateKey is required');
+  }
+  if (templateKey === 'run_quality_checks') {
+    return sendError(
+      req,
+      res,
+      409,
+      'run_quality_checks is task-owned automation. Create a task automation preparation and preview that preparation instead.'
+    );
   }
 
   const template = CapabilityRegistryService.findAutomationTemplate(templateKey);

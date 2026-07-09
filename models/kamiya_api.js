@@ -100,6 +100,7 @@ export async function createKamiyaApiTables() {
         related_task_id INTEGER,
         related_community_id INTEGER,
         related_automation_run_id BIGINT,
+        preparation_id BIGINT,
         risk_level TEXT NOT NULL DEFAULT 'normal',
         status TEXT NOT NULL DEFAULT 'previewed',
         notifications_emitted JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -117,7 +118,8 @@ export async function createKamiyaApiTables() {
         ADD COLUMN IF NOT EXISTS related_project_id INTEGER,
         ADD COLUMN IF NOT EXISTS related_task_id INTEGER,
         ADD COLUMN IF NOT EXISTS related_community_id INTEGER,
-        ADD COLUMN IF NOT EXISTS related_automation_run_id BIGINT;
+        ADD COLUMN IF NOT EXISTS related_automation_run_id BIGINT,
+        ADD COLUMN IF NOT EXISTS preparation_id BIGINT;
     `);
 
     await client.query(`
@@ -202,6 +204,24 @@ export async function createKamiyaApiTables() {
     `);
 
     await client.query(`
+      UPDATE automation_runs
+      SET status = 'blocked'
+      WHERE status NOT IN ('queued', 'running', 'retry_wait', 'blocked', 'failed', 'completed', 'cancelled');
+
+      ALTER TABLE automation_runs DROP CONSTRAINT IF EXISTS automation_runs_status_check;
+      ALTER TABLE automation_runs ADD CONSTRAINT automation_runs_status_check
+        CHECK (status IN ('queued', 'running', 'retry_wait', 'blocked', 'failed', 'completed', 'cancelled'));
+
+      ALTER TABLE api_actions DROP CONSTRAINT IF EXISTS api_actions_preparation_fk;
+      ALTER TABLE api_actions ADD CONSTRAINT api_actions_preparation_fk
+        FOREIGN KEY (preparation_id) REFERENCES task_automation_preparations(id) ON DELETE SET NULL;
+
+      ALTER TABLE automation_runs DROP CONSTRAINT IF EXISTS automation_runs_preparation_fk;
+      ALTER TABLE automation_runs ADD CONSTRAINT automation_runs_preparation_fk
+        FOREIGN KEY (preparation_id) REFERENCES task_automation_preparations(id) ON DELETE SET NULL;
+    `);
+
+    await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_task_automation_preparations_one_active
         ON task_automation_preparations (task_id, actor_user_id, COALESCE(capability_name, ''))
         WHERE status IN ('draft', 'invalid', 'ready', 'previewed');
@@ -215,6 +235,31 @@ export async function createKamiyaApiTables() {
         message TEXT NOT NULL,
         payload JSONB NOT NULL DEFAULT '{}'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS automation_run_reports (
+        id BIGSERIAL PRIMARY KEY,
+        run_id BIGINT NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
+        report_type TEXT NOT NULL,
+        report JSONB NOT NULL DEFAULT '{}'::jsonb,
+        artifact_uri TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (run_id, report_type)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_automation_submissions (
+        id BIGSERIAL PRIMARY KEY,
+        run_id BIGINT NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        proof_uri TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (run_id),
+        UNIQUE (task_id, proof_uri)
       );
     `);
 
@@ -240,11 +285,19 @@ export async function createKamiyaApiTables() {
       CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash);
       CREATE INDEX IF NOT EXISTS idx_api_actions_actor ON api_actions(actor_user_id);
       CREATE INDEX IF NOT EXISTS idx_api_actions_status ON api_actions(status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_api_actions_one_active_preparation_preview
+        ON api_actions(preparation_id)
+        WHERE preparation_id IS NOT NULL AND status IN ('previewed', 'confirmed', 'executed');
       CREATE INDEX IF NOT EXISTS idx_api_action_events_action ON api_action_events(action_id);
       CREATE INDEX IF NOT EXISTS idx_automation_runs_action ON automation_runs(action_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_automation_runs_one_per_action
+        ON automation_runs(action_id)
+        WHERE action_id IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_automation_runs_status ON automation_runs(status);
       CREATE INDEX IF NOT EXISTS idx_automation_runs_preparation ON automation_runs(preparation_id);
       CREATE INDEX IF NOT EXISTS idx_automation_logs_run ON automation_logs(run_id);
+      CREATE INDEX IF NOT EXISTS idx_automation_run_reports_run ON automation_run_reports(run_id);
+      CREATE INDEX IF NOT EXISTS idx_task_automation_submissions_task ON task_automation_submissions(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_task ON task_automation_preparations(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_actor ON task_automation_preparations(actor_user_id);
       CREATE INDEX IF NOT EXISTS idx_work_memory_user_id ON work_memory(user_id);

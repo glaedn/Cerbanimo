@@ -54,7 +54,7 @@ describe('AutomationWorkerService', () => {
     expect(result.findings[0].type).toBe('overdue_tasks');
   });
 
-  it('submits a task when deterministic prepared quality checks pass', async () => {
+  it('returns a deterministic prepared quality-check report without submitting directly', async () => {
     process.env.NODE_ENV = 'test';
     process.env.CERBANIMO_E2E_MODE = 'true';
     process.env.POSTGRES_URL = 'postgres://postgres@127.0.0.1:5432/cerbanimo_e2e_quality';
@@ -78,8 +78,6 @@ describe('AutomationWorkerService', () => {
           project_id: 7
         }]
       })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
 
     const result = await AutomationWorkerService.runPreparedQualityChecks({
       id: 77,
@@ -89,8 +87,7 @@ describe('AutomationWorkerService', () => {
     });
 
     expect(result.status).toBe('checks_passed');
-    expect(result.submittedTask).toBe(true);
-    expect(pool.query.mock.calls[1][0]).toContain("status = 'submitted'");
-    expect(pool.query.mock.calls[1][1][0]).toBe(99);
+    expect(result.submittedTask).toBe(false);
+    expect(pool.query).toHaveBeenCalledTimes(1);
   });
 });

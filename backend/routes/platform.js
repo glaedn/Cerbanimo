@@ -159,9 +159,14 @@ router.post('/actions/preview', requireScopes([API_SCOPES.ACTIONS_WRITE]), async
 }));
 
 router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const scopes = req.apiAuth?.type === 'auth0'
+    ? allScopesForUser(req.user)
+    : req.apiAuth?.scopes || [];
   const action = await ActionQueueService.confirmAction({
     actionId: req.params.id,
     actorUserId: req.user?.id,
+    scopes,
+    roles: req.user?.roles || [],
     confirmation: req.body || {}
   });
   return sendOk(req, res, action);
@@ -205,6 +210,14 @@ router.post('/automation/actions', requireScopes([API_SCOPES.AUTOMATION_WRITE]),
   const { templateKey, input = {}, sourceClient, actorBotIdentity } = req.body;
   if (!templateKey) {
     return sendError(req, res, 400, 'templateKey is required');
+  }
+  if (templateKey === 'run_quality_checks') {
+    return sendError(
+      req,
+      res,
+      409,
+      'run_quality_checks is task-owned automation. Create a task automation preparation and preview that preparation instead.'
+    );
   }
 
   const template = CapabilityRegistryService.findAutomationTemplate(templateKey);

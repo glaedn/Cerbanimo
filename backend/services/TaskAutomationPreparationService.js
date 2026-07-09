@@ -6,6 +6,7 @@ import {
   automationTemplateForCapability,
   resolveTaskAutomationCapability
 } from './TaskAutomationCapabilityResolver.js';
+import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
 
 const ACTIVE_PREPARATION_STATUSES = ['draft', 'invalid', 'ready', 'previewed'];
 const DEFAULT_QUALITY_CHECK_CAPABILITY = 'github.run_quality_checks';
@@ -14,6 +15,8 @@ class TaskAutomationPreparationService {
   async getTaskAutomationContext({ taskId, actorUserId, scopes = [] }) {
     const task = await this.getTask(taskId);
     if (!task) return null;
+    const authContext = { actorUserId, scopes };
+    await TaskAutomationAuthorizationService.assert(task.id, authContext, 'canViewTaskAutomation');
 
     const activePreparation = await this.getActivePreparation(task.id, actorUserId);
     const inputSchema = this.inputSchemaForTask(task, activePreparation?.capability_name);
@@ -27,7 +30,8 @@ class TaskAutomationPreparationService {
       preparation: activePreparation,
       scopes,
       validationResult,
-      actorUserId
+      actorUserId,
+      taskAuthority: true
     });
 
     return {
@@ -58,6 +62,8 @@ class TaskAutomationPreparationService {
       error.status = 404;
       throw error;
     }
+    const authContext = { actorUserId, scopes };
+    await TaskAutomationAuthorizationService.assert(task.id, authContext, 'canCreatePreparation');
 
     const resolvedCapabilityName = this.defaultCapabilityForTask(task, capabilityName);
     const inputSchema = this.inputSchemaForTask(task, resolvedCapabilityName);
@@ -67,7 +73,8 @@ class TaskAutomationPreparationService {
       preparation: { capability_name: resolvedCapabilityName },
       scopes,
       validationResult: validation,
-      actorUserId
+      actorUserId,
+      taskAuthority: true
     });
     const status = this.statusFor(validation, capability);
 
@@ -107,12 +114,14 @@ class TaskAutomationPreparationService {
     if (!preparation) return null;
     const task = await this.getTask(preparation.task_id);
     if (!task) return null;
+    await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes }, 'canViewTaskAutomation');
     const capability = resolveTaskAutomationCapability({
       task,
       preparation,
       scopes,
       validationResult: preparation.validation_result,
-      actorUserId
+      actorUserId,
+      taskAuthority: true
     });
     return {
       task,
@@ -138,6 +147,7 @@ class TaskAutomationPreparationService {
     }
 
     const task = await this.getTask(current.task_id);
+    await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes }, 'canEditPreparation');
     const inputSchema = current.input_schema_snapshot || this.inputSchemaForTask(task, current.capability_name);
     const mergedValues = { ...(current.input_values || {}), ...(inputValues || {}) };
     const validation = validatePreparationInputs(inputSchema, mergedValues, { actorUserId });
@@ -146,7 +156,8 @@ class TaskAutomationPreparationService {
       preparation: current,
       scopes,
       validationResult: validation,
-      actorUserId
+      actorUserId,
+      taskAuthority: true
     });
     const nextStatus = status === 'draft' ? 'draft' : this.statusFor(validation, capability);
     const saved = await this.updatePreparationRecord(current.id, actorUserId, {
@@ -177,6 +188,7 @@ class TaskAutomationPreparationService {
     }
 
     const task = await this.getTask(current.task_id);
+    await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes }, 'canEditPreparation');
     const inputSchema = current.input_schema_snapshot || this.inputSchemaForTask(task, current.capability_name);
     const validation = validatePreparationInputs(inputSchema, current.input_values || {}, { actorUserId });
     const capability = resolveTaskAutomationCapability({
@@ -184,7 +196,8 @@ class TaskAutomationPreparationService {
       preparation: current,
       scopes,
       validationResult: validation,
-      actorUserId
+      actorUserId,
+      taskAuthority: true
     });
     const status = this.statusFor(validation, capability);
     const saved = await this.updatePreparationRecord(current.id, actorUserId, {
@@ -207,85 +220,144 @@ class TaskAutomationPreparationService {
   }
 
   async previewPreparation({ taskId, preparationId, actorUserId, scopes = [], sourceClient = 'api' }) {
-    const validationContext = await this.validatePreparation({ taskId, preparationId, actorUserId, scopes });
-    const { task, preparation, validation, capability } = validationContext;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const preparation = await this.findPreparationForUpdate(client, preparationId, actorUserId, taskId);
+      if (!preparation) {
+        const error = new Error('Task automation preparation not found');
+        error.status = 404;
+        throw error;
+      }
+      if (!ACTIVE_PREPARATION_STATUSES.includes(preparation.status)) {
+        const error = new Error(`Preparation cannot be previewed from status ${preparation.status}`);
+        error.status = 409;
+        throw error;
+      }
 
-    if (!validation.valid) {
-      const error = new Error('Preparation inputs are incomplete.');
-      error.status = 422;
-      error.details = { validation };
-      throw error;
-    }
-    if (!capability.executionAvailable) {
-      const error = new Error('Task automation capability is not executable.');
-      error.status = 409;
-      error.details = { capability };
-      throw error;
-    }
+      const task = await this.getTask(preparation.task_id, client);
+      await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes }, 'canPreviewAutomation', client);
+      const inputSchema = preparation.input_schema_snapshot || this.inputSchemaForTask(task, preparation.capability_name);
+      const validation = validatePreparationInputs(inputSchema, preparation.input_values || {}, { actorUserId });
+      const capability = resolveTaskAutomationCapability({
+        task,
+        preparation,
+        scopes,
+        validationResult: validation,
+        actorUserId,
+        taskAuthority: true
+      });
+      const status = this.statusFor(validation, capability);
 
-    const existingAction = preparation.preview_action_id
-      ? await ActionQueueService.hydrateActionOnly(preparation.preview_action_id, { actorUserId })
-      : null;
-    if (existingAction && ['previewed', 'confirmed', 'executed'].includes(existingAction.status)) {
-      return {
-        ...validationContext,
-        action: existingAction,
-        template: automationTemplateForCapability(preparation.capability_name)
-      };
-    }
+      const updatedPrep = await this.updatePreparationRecord(preparation.id, actorUserId, {
+        inputSchema,
+        inputValues: validation.sanitizedValues,
+        validation,
+        capability,
+        status,
+        capabilityName: preparation.capability_name,
+        client
+      });
 
-    const template = automationTemplateForCapability(preparation.capability_name);
-    const action = await ActionQueueService.createPreview({
-      actorUserId,
-      sourceClient,
-      relatedTaskId: task.id,
-      intent: {
-        functionName: 'tasks.run_automation',
-        type: 'tasks.run_automation',
-        summary: `Run ${preparation.capability_name} for task "${task.name}".`,
-        arguments: {
-          taskId: task.id,
-          preparationId: preparation.id,
-          capabilityName: preparation.capability_name
+      if (!validation.valid) {
+        const error = new Error('Preparation inputs are incomplete.');
+        error.status = 422;
+        error.details = { validation };
+        throw error;
+      }
+      if (!capability.executionAvailable) {
+        const error = new Error('Task automation capability is not executable.');
+        error.status = 409;
+        error.details = { capability };
+        throw error;
+      }
+
+      const existingAction = updatedPrep.preview_action_id
+        ? await this.hydrateActionForUpdate(client, updatedPrep.preview_action_id, actorUserId)
+        : null;
+      if (existingAction && ['previewed', 'confirmed', 'executed'].includes(existingAction.status)) {
+        await client.query('COMMIT');
+        return {
+          task,
+          automation: task.automation,
+          inputSchema,
+          preparation: updatedPrep,
+          validation,
+          capability,
+          action: existingAction,
+          template: automationTemplateForCapability(updatedPrep.capability_name)
+        };
+      }
+
+      const template = automationTemplateForCapability(updatedPrep.capability_name);
+      const action = await ActionQueueService.createPreviewWithClient(client, {
+        actorUserId,
+        sourceClient,
+        relatedTaskId: task.id,
+        preparationId: updatedPrep.id,
+        intent: {
+          functionName: 'tasks.run_automation',
+          type: 'tasks.run_automation',
+          summary: `Run ${updatedPrep.capability_name} for task "${task.name}".`,
+          arguments: {
+            taskId: task.id,
+            preparationId: updatedPrep.id,
+            capabilityName: updatedPrep.capability_name
+          },
+          automation: {
+            templateKey: capability.templateKey,
+            input: {
+              taskId: task.id,
+              preparationId: updatedPrep.id,
+              capabilityName: updatedPrep.capability_name
+            }
+          }
         },
-        automation: {
-          templateKey: capability.templateKey,
+        previewPayload: {
+          title: `Run quality checks for ${task.name}`,
+          summary: 'Cerbanimo will run configured repository quality checks and attach the resulting report. Passing checks submit the task for review.',
+          functionName: 'tasks.run_automation',
+          template,
           input: {
             taskId: task.id,
-            preparationId: preparation.id,
-            capabilityName: preparation.capability_name
-          }
-        }
-      },
-      previewPayload: {
-        title: `Run quality checks for ${task.name}`,
-        summary: 'Cerbanimo will run configured repository quality checks and attach the resulting report. Passing checks submit the task for review.',
-        functionName: 'tasks.run_automation',
-        template,
-        input: {
-          taskId: task.id,
-          preparationId: preparation.id,
-          capabilityName: preparation.capability_name
+            preparationId: updatedPrep.id,
+            capabilityName: updatedPrep.capability_name
+          },
+          confirmationRequired: true,
+          effects: [
+            'Create an auditable automation run',
+            'Run deterministic quality checks in the configured executor',
+            'Attach a quality-check report to the task',
+            'Move the task to submitted only if checks pass'
+          ],
+          irreversible: false
         },
-        confirmationRequired: true,
-        effects: [
-          'Create an auditable automation run',
-          'Run deterministic quality checks in the configured executor',
-          'Attach a quality-check report to the task',
-          'Move the task to submitted only if checks pass'
-        ],
-        irreversible: false
-      },
-      riskLevel: template?.riskLevel || 'normal'
-    });
+        riskLevel: template?.riskLevel || 'normal'
+      });
 
-    const saved = await this.linkPreviewAction(preparation.id, actorUserId, action.id);
-    return {
-      ...validationContext,
-      preparation: saved,
-      action,
-      template
-    };
+      const saved = await this.linkPreviewAction(updatedPrep.id, actorUserId, action.id, client);
+      await client.query(
+        `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+         VALUES ($1, 'automation.preview.linked', $2, $3::jsonb)`,
+        [action.id, actorUserId, JSON.stringify({ preparationId: saved.id, taskId: task.id })]
+      );
+      await client.query('COMMIT');
+      return {
+        task,
+        automation: task.automation,
+        inputSchema,
+        preparation: saved,
+        validation,
+        capability,
+        action,
+        template
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async cancelPreparation({ taskId, preparationId, actorUserId, reason }) {
@@ -295,6 +367,7 @@ class TaskAutomationPreparationService {
       error.status = 404;
       throw error;
     }
+    await TaskAutomationAuthorizationService.assert(current.task_id, { actorUserId }, 'canEditPreparation');
     if (!ACTIVE_PREPARATION_STATUSES.includes(current.status)) {
       const error = new Error(`Preparation cannot be cancelled from status ${current.status}`);
       error.status = 409;
@@ -322,11 +395,12 @@ class TaskAutomationPreparationService {
     return result.rows[0] || null;
   }
 
-  async getTask(taskId) {
-    const result = await pool.query(
-      `SELECT t.*, s.name AS skill_name
+  async getTask(taskId, client = pool) {
+    const result = await client.query(
+      `SELECT t.*, s.name AS skill_name, p.creator_id AS project_creator_id
        FROM tasks t
        LEFT JOIN skills s ON t.skill_id = s.id
+       LEFT JOIN projects p ON p.id = t.project_id
        WHERE t.id::text = $1
        LIMIT 1`,
       [String(taskId)]
@@ -377,6 +451,38 @@ class TaskAutomationPreparationService {
     return result.rows[0] || null;
   }
 
+  async findPreparationForUpdate(client, preparationId, actorUserId, taskId = null) {
+    const params = [String(preparationId), actorUserId];
+    const filters = [
+      '(id::text = $1 OR preparation_uuid::text = $1)',
+      'actor_user_id = $2'
+    ];
+    if (taskId) {
+      params.push(String(taskId));
+      filters.push(`task_id::text = $${params.length}`);
+    }
+    const result = await client.query(
+      `SELECT *
+       FROM task_automation_preparations
+       WHERE ${filters.join(' AND ')}
+       FOR UPDATE`,
+      params
+    );
+    return result.rows[0] || null;
+  }
+
+  async hydrateActionForUpdate(client, actionId, actorUserId) {
+    const result = await client.query(
+      `SELECT *
+       FROM api_actions
+       WHERE (id::text = $1 OR action_uuid::text = $1)
+         AND actor_user_id = $2
+       FOR UPDATE`,
+      [String(actionId), actorUserId]
+    );
+    return result.rows[0] || null;
+  }
+
   inputSchemaForTask(task, capabilityName = null) {
     if (capabilityName === DEFAULT_QUALITY_CHECK_CAPABILITY) return qualityCheckInputSchema();
     if (task.automation?.requirements?.capabilities?.includes(DEFAULT_QUALITY_CHECK_CAPABILITY)) {
@@ -407,9 +513,10 @@ class TaskAutomationPreparationService {
     inputValues,
     validation,
     capability,
-    status
+    status,
+    client = pool
   }) {
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO task_automation_preparations (
          task_id, actor_user_id, capability_name, status, input_schema_snapshot,
          input_values, validation_result, capability_snapshot, permission_snapshot, ready_at
@@ -442,9 +549,10 @@ class TaskAutomationPreparationService {
     validation,
     capability,
     status,
-    capabilityName
+    capabilityName,
+    client = pool
   }) {
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE task_automation_preparations
        SET capability_name = COALESCE($7, capability_name),
            status = $2,
@@ -477,8 +585,8 @@ class TaskAutomationPreparationService {
     return result.rows[0];
   }
 
-  async linkPreviewAction(preparationId, actorUserId, actionId) {
-    const result = await pool.query(
+  async linkPreviewAction(preparationId, actorUserId, actionId, client = pool) {
+    const result = await client.query(
       `UPDATE task_automation_preparations
        SET preview_action_id = $3,
            status = 'previewed',

@@ -3,6 +3,9 @@ import fetch from 'node-fetch';
 import pool from '../db.js';
 import { sendNotification } from './NotificationService.js';
 import { qualityCheckInputSchema, validatePreparationInputs } from './TaskAutomationInputValidator.js';
+import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
+import { resolveTaskAutomationCapability } from './TaskAutomationCapabilityResolver.js';
+import { serializeTaskAutomation } from './TaskAutomationClassificationService.js';
 
 const externalIntegrationTemplates = new Set([
   'github_issue_creation',
@@ -11,7 +14,7 @@ const externalIntegrationTemplates = new Set([
   'staging_deploy_hooks',
   'staging_deployment'
 ]);
-const AUTOMATION_LEASE_MS = 5 * 60 * 1000;
+const AUTOMATION_LEASE_MS = Number(process.env.CERBANIMO_AUTOMATION_LEASE_MS || 5 * 60 * 1000);
 const productionHostPattern = /(neon\.tech|amazonaws\.com|render\.com|onrender\.com|prod|production)/i;
 
 function nowIso() {
@@ -97,6 +100,43 @@ class AutomationWorkerService {
     }
   }
 
+  async assertClaimOwned(runId, claimToken, client = pool) {
+    const result = await client.query(
+      `SELECT id, status
+       FROM automation_runs
+       WHERE id = $1
+         AND claim_token = $2
+         AND status = 'running'
+         AND cancelled_at IS NULL
+         AND (lease_expires_at IS NULL OR lease_expires_at > NOW())`,
+      [runId, claimToken]
+    );
+    if (result.rowCount !== 1) {
+      const error = new Error(`Automation run ${runId} claim is no longer active.`);
+      error.code = 'AUTOMATION_CLAIM_LOST';
+      throw error;
+    }
+  }
+
+  async renewLease(runId, claimToken) {
+    const result = await pool.query(
+      `UPDATE automation_runs
+       SET lease_expires_at = NOW() + ($3::int * INTERVAL '1 millisecond'),
+           updated_at = NOW()
+       WHERE id = $1
+         AND claim_token = $2
+         AND status = 'running'
+         AND cancelled_at IS NULL
+       RETURNING id`,
+      [runId, claimToken, AUTOMATION_LEASE_MS]
+    );
+    if (result.rowCount !== 1) {
+      const error = new Error(`Automation run ${runId} claim could not be renewed.`);
+      error.code = 'AUTOMATION_CLAIM_LOST';
+      throw error;
+    }
+  }
+
   async markFailed(runId, error, claimToken = null) {
     await pool.query(
       `UPDATE automation_runs
@@ -137,10 +177,11 @@ class AutomationWorkerService {
     await this.log(run.id, 'info', `Starting automation ${run.template_key}`, { input: redactRunInput(run.input || {}) });
 
     try {
+      await this.assertClaimOwned(run.id, claim.claimToken);
       const result = await this.dispatch(run);
-      await this.markCompleted(run.id, result, claim.claimToken);
+      await this.renewLease(run.id, claim.claimToken);
+      await this.finalizeRunTransaction(run.id, result, claim.claimToken);
       await this.log(run.id, result.status === 'blocked' ? 'warn' : 'info', `Automation ${run.template_key} finished`, result);
-      await this.updateActionAfterRun(run, result);
       return result;
     } catch (error) {
       await this.markFailed(run.id, error, claim.claimToken);
@@ -197,6 +238,168 @@ class AutomationWorkerService {
         run.action_id
       ]
     );
+  }
+
+  async finalizeRunTransaction(runId, result, claimToken) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const run = (await client.query(
+        `SELECT *
+         FROM automation_runs
+         WHERE id = $1
+         FOR UPDATE`,
+        [runId]
+      )).rows[0];
+      if (!run) {
+        const error = new Error(`Automation run ${runId} not found.`);
+        error.status = 404;
+        throw error;
+      }
+      if (run.claim_token !== claimToken || run.status !== 'running' || run.cancelled_at) {
+        const error = new Error(`Automation run ${runId} claim was lost before finalization.`);
+        error.code = 'AUTOMATION_CLAIM_LOST';
+        throw error;
+      }
+
+      const action = run.action_id
+        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [run.action_id])).rows[0]
+        : null;
+      const preparation = run.preparation_id
+        ? (await client.query('SELECT * FROM task_automation_preparations WHERE id = $1 FOR UPDATE', [run.preparation_id])).rows[0]
+        : null;
+      const task = preparation
+        ? (await client.query(
+            `SELECT t.*, p.creator_id AS project_creator_id
+             FROM tasks t
+             LEFT JOIN projects p ON p.id = t.project_id
+             WHERE t.id = $1
+             FOR UPDATE OF t`,
+            [preparation.task_id]
+          )).rows[0]
+        : null;
+
+      if (run.template_key === 'run_quality_checks') {
+        if (!preparation || !task) {
+          const error = new Error('Task automation finalization requires a locked preparation and task.');
+          error.status = 409;
+          throw error;
+        }
+        const actorUserId = run.actor_user_id || preparation.actor_user_id;
+        const validation = validatePreparationInputs(preparation.input_schema_snapshot || qualityCheckInputSchema(), preparation.input_values || {}, { actorUserId });
+        const capability = resolveTaskAutomationCapability({
+          task: { ...task, automation: serializeTaskAutomation(task) },
+          preparation,
+          scopes: ['automation:write'],
+          validationResult: validation,
+          actorUserId,
+          taskAuthority: true
+        });
+        await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes: ['automation:write'] }, 'canSubmitAutomationResult', client);
+        if (!validation.valid || !capability.executionAvailable) {
+          result = {
+            status: 'blocked',
+            reason: 'FINALIZATION_REVALIDATION_FAILED',
+            message: 'Task automation authorization or inputs changed before finalization.',
+            validation,
+            capability,
+            completedAt: nowIso()
+          };
+        }
+
+        await client.query(
+          `INSERT INTO automation_run_reports (run_id, task_id, report_type, status, report, artifact_uri)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+           ON CONFLICT (run_id, report_type)
+           DO UPDATE SET status = EXCLUDED.status,
+                         report = EXCLUDED.report,
+                         artifact_uri = EXCLUDED.artifact_uri,
+                         updated_at = NOW()`,
+          [
+            run.id,
+            task.id,
+            result.reportType || 'quality_check',
+            result.status || 'completed',
+            JSON.stringify(result),
+            result.artifactUri || null
+          ]
+        );
+
+        if (result.status === 'checks_passed') {
+          const proofUri = result.artifactUri || `cerbanimo://automation-runs/${run.run_uuid || run.id}/quality-check-report`;
+          await client.query(
+            `INSERT INTO task_automation_submissions (run_id, task_id, submitted_by, proof_uri, report)
+             VALUES ($1, $2, $3, $4, $5::jsonb)
+             ON CONFLICT (run_id) DO NOTHING`,
+            [run.id, task.id, actorUserId || null, proofUri, JSON.stringify(result)]
+          );
+          await client.query(
+            `UPDATE tasks
+             SET submitted = TRUE,
+                 submitted_at = COALESCE(submitted_at, NOW()),
+                 status = 'submitted',
+                 peer_review_deadline = COALESCE(peer_review_deadline, NOW() + INTERVAL '6 hours'),
+                 proof_of_work_links = CASE
+                   WHEN $2 = ANY(COALESCE(proof_of_work_links, '{}'::text[])) THEN proof_of_work_links
+                   ELSE array_append(COALESCE(proof_of_work_links, '{}'::text[]), $2)
+                 END,
+                 reflection = COALESCE(NULLIF(reflection, ''), $3),
+                 submitted_by = COALESCE(submitted_by, $4)
+             WHERE id = $1`,
+            [
+              task.id,
+              proofUri,
+              `Automated quality-check report from run ${run.run_uuid || run.id}: ${result.summary || 'Quality checks passed.'}`,
+              actorUserId || null
+            ]
+          );
+          await client.query(
+            `INSERT INTO automation_logs (run_id, level, message, payload)
+             VALUES ($1, 'info', 'Task submitted from passing quality-check report.', $2::jsonb)`,
+            [run.id, JSON.stringify({ taskId: task.id, proofUri, status: 'submitted' })]
+          );
+          result = { ...result, submittedTask: true };
+        }
+      }
+
+      const finalStatus = statusForResult(result);
+      await client.query(
+        `UPDATE automation_runs
+         SET status = $2,
+             result = $3::jsonb,
+             completed_at = NOW(),
+             lease_expires_at = NULL,
+             claim_token = NULL,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [run.id, finalStatus, JSON.stringify(result)]
+      );
+      if (action) {
+        await client.query(
+          `UPDATE api_actions
+           SET execution_result = $1::jsonb,
+               notifications_emitted = COALESCE($2::jsonb, notifications_emitted),
+               executed_at = CASE WHEN $3 THEN NOW() ELSE executed_at END,
+               status = CASE WHEN $3 THEN 'executed' WHEN $4 IN ('blocked', 'failed') THEN 'failed' ELSE status END
+           WHERE id = $5`,
+          [
+            JSON.stringify(result),
+            JSON.stringify(result.notificationsEmitted || []),
+            shouldMarkActionExecuted(result),
+            finalStatus,
+            action.id
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async runQualityChecks(run) {
@@ -296,11 +499,6 @@ class AutomationWorkerService {
       submittedTask: false,
       completedAt: nowIso()
     };
-
-    if (status === 'checks_passed') {
-      await this.submitTaskFromQualityReport(task, run, report);
-      report.submittedTask = true;
-    }
 
     return report;
   }

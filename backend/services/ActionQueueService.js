@@ -8,6 +8,9 @@ import {
   classificationDbFields,
   normalizeTaskAutomationClassification
 } from './TaskAutomationClassificationService.js';
+import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
+import { validatePreparationInputs } from './TaskAutomationInputValidator.js';
+import { resolveTaskAutomationCapability } from './TaskAutomationCapabilityResolver.js';
 
 export function canAccessAction(action, { actorUserId, isServiceActor = false } = {}) {
   if (!action) return false;
@@ -215,6 +218,63 @@ class ActionQueueService {
     }
   }
 
+  async createPreviewWithClient(client, {
+    actorUserId,
+    actorBotIdentity,
+    sourceClient,
+    intent,
+    previewPayload,
+    riskLevel,
+    relatedProjectId,
+    relatedTaskId,
+    relatedCommunityId,
+    preparationId
+  }) {
+    const normalizedRisk = normalizeRiskLevel(intent, riskLevel);
+    const preview = previewPayload || buildPreviewPayload(intent);
+    const actionResult = await client.query(
+      `INSERT INTO api_actions (
+         intent_json,
+         preview_payload,
+         source_client,
+         actor_user_id,
+         actor_bot_identity,
+         related_project_id,
+         related_task_id,
+         related_community_id,
+         related_automation_run_id,
+         preparation_id,
+         risk_level,
+         status
+       )
+       VALUES ($1::jsonb, $2::jsonb, $3, $4, $5::jsonb, $6, $7, $8, NULL, $9, $10, 'previewed')
+       ON CONFLICT (preparation_id) WHERE preparation_id IS NOT NULL AND status IN ('previewed', 'confirmed', 'executed')
+       DO UPDATE SET preview_payload = api_actions.preview_payload
+       RETURNING *`,
+      [
+        JSON.stringify(intent || {}),
+        JSON.stringify(preview),
+        sourceClient || null,
+        actorUserId || null,
+        actorBotIdentity ? JSON.stringify(actorBotIdentity) : null,
+        relatedProjectId || intent?.relatedProjectId || intent?.projectId || null,
+        relatedTaskId || intent?.relatedTaskId || intent?.taskId || null,
+        relatedCommunityId || intent?.relatedCommunityId || intent?.communityId || null,
+        preparationId || null,
+        normalizedRisk
+      ]
+    );
+
+    const action = actionResult.rows[0];
+    await client.query(
+      `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+       VALUES ($1, 'preview.created', $2, $3::jsonb)
+       ON CONFLICT DO NOTHING`,
+      [action.id, actorUserId || null, JSON.stringify({ sourceClient, riskLevel: normalizedRisk, preparationId: preparationId || null })]
+    );
+    return action;
+  }
+
   async listActions({
     actorUserId,
     isServiceActor = false,
@@ -279,7 +339,7 @@ class ActionQueueService {
     return canAccessAction(action, authContext) ? action : null;
   }
 
-  async confirmAction({ actionId, actorUserId, isServiceActor = false, confirmation }) {
+  async confirmAction({ actionId, actorUserId, isServiceActor = false, scopes = [], roles = [], confirmation }) {
     const client = await pool.connect();
     let automationJobToSend = null;
     let projectBootstrapJobToSend = null;
@@ -304,6 +364,25 @@ class ActionQueueService {
       }
 
       const functionName = action.intent_json?.functionName || action.intent_json?.function || action.intent_json?.type;
+      if (functionName === 'tasks.run_automation') {
+        const { updatedAction, automationJob } = await this.confirmTaskAutomationAction(client, action, {
+          actorUserId,
+          isServiceActor,
+          scopes,
+          roles,
+          confirmation
+        });
+        automationJobToSend = automationJob;
+        await client.query('COMMIT');
+        if (automationJobToSend) {
+          try {
+            await boss.send(AUTOMATION_EXECUTION_QUEUE, automationJobToSend);
+          } catch (queueError) {
+            await this.markAutomationQueueFailure(automationJobToSend.runId, queueError);
+          }
+        }
+        return this.hydrateActionOnly(updatedAction.id, { actorUserId, isServiceActor });
+      }
       const isProjectBootstrap = functionName === 'projects.bootstrap';
       const automationIntent = action.intent_json?.automation;
       const executionResult = isProjectBootstrap
@@ -531,6 +610,209 @@ class ActionQueueService {
     }
   }
 
+  async confirmTaskAutomationAction(client, action, { actorUserId, isServiceActor = false, scopes = [], roles = [], confirmation }) {
+    const args = action.intent_json?.arguments || action.intent_json?.input || {};
+    const automationInput = action.intent_json?.automation?.input || {};
+    const preparationId = action.preparation_id || args.preparationId || args.preparation_id || automationInput.preparationId || automationInput.preparation_id;
+    const taskId = action.related_task_id || args.taskId || args.task_id || automationInput.taskId || automationInput.task_id;
+    if (!preparationId || !taskId) {
+      const error = new Error('Task automation actions require a preparationId and taskId.');
+      error.status = 400;
+      throw error;
+    }
+
+    const preparation = (await client.query(
+      `SELECT *
+       FROM task_automation_preparations
+       WHERE id::text = $1 OR preparation_uuid::text = $1
+       FOR UPDATE`,
+      [String(preparationId)]
+    )).rows[0];
+    if (!preparation || Number(preparation.task_id) !== Number(taskId)) {
+      const error = new Error('Task automation preparation not found.');
+      error.status = 404;
+      throw error;
+    }
+    if (preparation.cancelled_at || preparation.consumed_at || !['ready', 'previewed'].includes(preparation.status)) {
+      const error = new Error(`Preparation cannot be confirmed from status ${preparation.status}.`);
+      error.status = 409;
+      throw error;
+    }
+    if (!isServiceActor && Number(preparation.actor_user_id) !== Number(actorUserId)) {
+      const error = new Error('Task automation preparation belongs to another actor.');
+      error.status = 403;
+      throw error;
+    }
+
+    const task = (await client.query(
+      `SELECT t.*, p.creator_id AS project_creator_id
+       FROM tasks t
+       LEFT JOIN projects p ON p.id = t.project_id
+       WHERE t.id = $1
+       FOR UPDATE OF t`,
+      [preparation.task_id]
+    )).rows[0];
+    if (!task) {
+      const error = new Error('Task not found.');
+      error.status = 404;
+      throw error;
+    }
+
+    await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, isServiceActor, scopes, roles }, 'canConfirmAutomation', client);
+    const validation = validatePreparationInputs(preparation.input_schema_snapshot || [], preparation.input_values || {}, { actorUserId });
+    const capability = resolveTaskAutomationCapability({
+      task,
+      preparation,
+      scopes,
+      validationResult: validation,
+      actorUserId,
+      taskAuthority: true
+    });
+    if (!validation.valid) {
+      const error = new Error('Task automation inputs are incomplete.');
+      error.status = 422;
+      error.details = { validation };
+      throw error;
+    }
+    if (!capability.executionAvailable || !capability.templateKey) {
+      const error = new Error('Task automation capability is not executable.');
+      error.status = 409;
+      error.details = { capability };
+      throw error;
+    }
+
+    const consumed = await client.query(
+      `UPDATE task_automation_preparations
+       SET status = 'consumed',
+           consumed_at = NOW(),
+           updated_at = NOW(),
+           validation_result = $3::jsonb,
+           capability_snapshot = $4::jsonb
+       WHERE id = $1
+         AND actor_user_id = $2
+         AND status IN ('ready', 'previewed')
+         AND cancelled_at IS NULL
+         AND consumed_at IS NULL
+       RETURNING *`,
+      [preparation.id, preparation.actor_user_id, JSON.stringify(validation), JSON.stringify(capability)]
+    );
+    if (consumed.rowCount !== 1) {
+      const error = new Error('Task automation preparation was already consumed or cancelled.');
+      error.status = 409;
+      throw error;
+    }
+
+    const template = CapabilityRegistryService.findAutomationTemplate(capability.templateKey);
+    const run = (await client.query(
+      `INSERT INTO automation_runs (
+         action_id, preparation_id, template_key, status, input, worker_name, source_client, actor_user_id
+       )
+       VALUES ($1, $2, $3, 'queued', $4::jsonb, $5, $6, $7)
+       ON CONFLICT (action_id) WHERE action_id IS NOT NULL
+       DO UPDATE SET updated_at = automation_runs.updated_at
+       RETURNING *`,
+      [
+        action.id,
+        preparation.id,
+        capability.templateKey,
+        JSON.stringify({
+          taskId: task.id,
+          preparationId: preparation.id,
+          capabilityName: preparation.capability_name
+        }),
+        template?.workerName || null,
+        action.source_client,
+        actorUserId || null
+      ]
+    )).rows[0];
+
+    const executionResult = {
+      status: 'queued',
+      message: 'Task automation action confirmed and queued for worker execution.',
+      automationRunId: run.id,
+      runUuid: run.run_uuid
+    };
+    const updatedAction = (await client.query(
+      `UPDATE api_actions
+       SET status = 'confirmed',
+           related_automation_run_id = $2,
+           confirmation_event = $3::jsonb,
+           execution_result = $4::jsonb,
+           confirmed_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [
+        action.id,
+        run.id,
+        JSON.stringify({ actorUserId, confirmedAt: new Date().toISOString(), confirmation: confirmation || {} }),
+        JSON.stringify(executionResult)
+      ]
+    )).rows[0];
+
+    await client.query(
+      `INSERT INTO automation_logs (run_id, level, message, payload)
+       VALUES ($1, 'info', 'Task automation run queued after action confirmation.', $2::jsonb)`,
+      [run.id, JSON.stringify({ actionId: action.id, preparationId: preparation.id, taskId: task.id })]
+    );
+    await client.query(
+      `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+       VALUES ($1, 'action.confirmed', $2, $3::jsonb), ($1, 'automation.queued', $2, $4::jsonb)`,
+      [
+        action.id,
+        actorUserId || null,
+        JSON.stringify({ confirmation: confirmation || {} }),
+        JSON.stringify({ runId: run.id, preparationId: preparation.id, taskId: task.id })
+      ]
+    );
+
+    return {
+      updatedAction,
+      automationJob: {
+        runId: run.id,
+        automationRunId: run.id,
+        templateKey: capability.templateKey,
+        actionId: action.id
+      }
+    };
+  }
+
+  async markAutomationQueueFailure(runId, queueError) {
+    const payload = {
+      status: 'blocked',
+      reason: 'AUTOMATION_QUEUE_FAILED',
+      message: queueError.message || String(queueError),
+      retryable: true,
+      completedAt: new Date().toISOString()
+    };
+    await pool.query(
+      `UPDATE automation_runs
+       SET status = 'blocked',
+           result = $2::jsonb,
+           completed_at = NOW(),
+           lease_expires_at = NULL,
+           claim_token = NULL
+       WHERE id = $1
+         AND status = 'queued'`,
+      [
+        runId,
+        JSON.stringify(payload)
+      ]
+    );
+    await pool.query(
+      `UPDATE api_actions
+       SET status = 'failed',
+           execution_result = $2::jsonb
+       WHERE related_automation_run_id = $1
+          OR id = (SELECT action_id FROM automation_runs WHERE id = $1)`,
+      [runId, JSON.stringify(payload)]
+    );
+    await pool.query(
+      `INSERT INTO automation_logs (run_id, level, message, payload)
+       VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
+      [runId, JSON.stringify({ error: queueError.message || String(queueError) })]
+    );
+  }
+
   async cancelAction({ actionId, actorUserId, isServiceActor = false, reason }) {
     const client = await pool.connect();
     try {
@@ -602,9 +884,11 @@ class ActionQueueService {
            SET status = 'cancelled',
                cancelled_at = NOW(),
                completed_at = COALESCE(completed_at, NOW()),
+               claim_token = NULL,
+               lease_expires_at = NULL,
                result = COALESCE(result, '{}'::jsonb) || $2::jsonb
            WHERE id = $1
-             AND status IN ('queued', 'running', 'blocked')`,
+             AND status IN ('queued', 'running', 'blocked', 'retry_wait', 'failed')`,
           [
             action.related_automation_run_id,
             JSON.stringify({
@@ -640,6 +924,7 @@ class ActionQueueService {
   async retryAction({ actionId, actorUserId, isServiceActor = false, reason }) {
     const client = await pool.connect();
     let workflowRunId = null;
+    let automationJobToSend = null;
     try {
       await client.query('BEGIN');
       const action = await this.getActionForUpdate(client, actionId, { actorUserId, isServiceActor });
@@ -648,6 +933,71 @@ class ActionQueueService {
         error.status = 404;
         throw error;
       }
+      const functionName = action.intent_json?.functionName || action.intent_json?.function || action.intent_json?.type;
+      if (functionName === 'tasks.run_automation' || action.related_automation_run_id) {
+        const run = (await client.query(
+          `SELECT *
+           FROM automation_runs
+           WHERE action_id = $1
+           FOR UPDATE`,
+          [action.id]
+        )).rows[0];
+        if (!run) {
+          const error = new Error('Automation run not found');
+          error.status = 404;
+          throw error;
+        }
+        if (!['retry_wait', 'blocked', 'failed'].includes(run.status)) {
+          const error = new Error(`Automation run cannot be retried from status ${run.status}`);
+          error.status = 409;
+          throw error;
+        }
+        if (['executed', 'cancelled'].includes(action.status) || run.status === 'cancelled') {
+          const error = new Error(`Action cannot be retried from status ${action.status}`);
+          error.status = 409;
+          throw error;
+        }
+        await client.query(
+          `UPDATE automation_runs
+           SET status = 'queued',
+               claim_token = NULL,
+               lease_expires_at = NULL,
+               completed_at = NULL,
+               cancelled_at = NULL,
+               result = NULL,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [run.id]
+        );
+        await client.query(
+          `UPDATE api_actions
+           SET status = 'confirmed',
+               execution_result = $2::jsonb,
+               executed_at = NULL,
+               cancelled_at = NULL
+           WHERE id = $1`,
+          [
+            action.id,
+            JSON.stringify({
+              status: 'queued',
+              message: 'Task automation retry queued.',
+              previousStatus: action.status
+            })
+          ]
+        );
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+           VALUES ($1, 'automation.requeued', $2, $3::jsonb)`,
+          [action.id, actorUserId || null, JSON.stringify({ runId: run.id, reason: reason || null })]
+        );
+        automationJobToSend = {
+          runId: run.id,
+          automationRunId: run.id,
+          templateKey: run.template_key,
+          actionId: action.id
+        };
+        await client.query('COMMIT');
+      } else {
       const workflow = (await client.query(
         `SELECT * FROM workflow_runs
          WHERE action_id = $1 AND workflow_type = 'projects.bootstrap'
@@ -702,11 +1052,25 @@ class ActionQueueService {
       );
       workflowRunId = workflow.id;
       await client.query('COMMIT');
+      }
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
+    }
+
+    if (automationJobToSend) {
+      try {
+        await boss.send(AUTOMATION_EXECUTION_QUEUE, automationJobToSend);
+      } catch (queueError) {
+        await this.markAutomationQueueFailure(automationJobToSend.runId, queueError);
+        const error = new Error('Failed to enqueue task automation retry.');
+        error.status = 503;
+        error.retryable = true;
+        throw error;
+      }
+      return this.hydrateActionOnly(actionId, { actorUserId, isServiceActor });
     }
 
     try {

@@ -27,7 +27,7 @@ Confirmed `tasks.run_automation` actions create an `automation_runs` row and enq
 }
 ```
 
-The worker claims runs with a token/lease, revalidates the preparation, resolves executor availability, writes bounded logs, produces a structured report, and finalizes the action.
+The worker claims runs with a token/lease, revalidates the preparation, resolves executor availability, writes bounded logs, produces a structured report, and finalizes the action. Report creation, task submission, run completion, and action execution are committed together in one finalization transaction after the worker proves it still owns the claim.
 
 ## Executor Policy
 
@@ -48,3 +48,8 @@ Production returns `PRODUCTION_SANDBOX_REQUIRED` until a real sandbox executor i
 
 `blocked`, `cancelled`, and `executor_failed` keep the task from being falsely submitted.
 
+## Fencing and Retry
+
+`tasks.run_automation` cannot be created through the generic automation action route. Clients must create an actor-owned task preparation, preview that preparation, and confirm the resulting action.
+
+Retries are allowed only from `retry_wait`, `blocked`, or `failed` automation run states. Cancellation clears the worker claim and lease for queued, running, blocked, retry-wait, or failed runs.
