@@ -80,4 +80,24 @@ describe('tasks task automation schema initialization', () => {
     expect(kamiyaApiSource).toContain('idx_task_evidence_one_active_draft');
     expect(kamiyaApiSource).toContain('idx_task_validation_results_run');
   });
+
+  it('defines human review rounds, assignments, decisions, events, and acceptance records', () => {
+    for (const table of [
+      'task_review_rounds',
+      'task_review_assignments',
+      'task_review_decisions',
+      'task_review_events',
+      'task_acceptance_records',
+      'task_evidence_access_events'
+    ]) {
+      expect(kamiyaApiSource).toContain(table);
+    }
+
+    expect(kamiyaApiSource).toContain("'accepted_pending_settlement'");
+    expect(kamiyaApiSource).toContain("'validation_reviewer'");
+    expect(kamiyaApiSource).toContain("'peer_reviewer'");
+    expect(kamiyaApiSource).toContain("'pm_reviewer'");
+    expect(kamiyaApiSource).toContain('idx_task_review_one_active_round');
+    expect(kamiyaApiSource).toContain('idx_task_acceptance_one_round');
+  });
 });

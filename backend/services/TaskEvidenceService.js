@@ -1185,6 +1185,13 @@ class TaskEvidenceService {
 
     if (status === 'validation_passed') {
       await this.bridgeTaskToReview(client, { task, bundle, run, result });
+      await this.maybeCreateReviewRound(client, {
+        task,
+        bundle,
+        validation,
+        result,
+        requestedBy: run.actor_user_id || bundle.actor_user_id || null
+      });
     } else if (status === 'manual_review_required') {
       await client.query(
         `INSERT INTO task_validation_reviews (
@@ -1200,6 +1207,13 @@ class TaskEvidenceService {
           result.summary || 'Validation requires manual review.'
         ]
       );
+      await this.maybeCreateReviewRound(client, {
+        task,
+        bundle,
+        validation,
+        result,
+        requestedBy: run.actor_user_id || bundle.actor_user_id || null
+      });
     }
 
     await client.query(
@@ -1395,6 +1409,13 @@ class TaskEvidenceService {
     });
     if (status === 'validation_passed') {
       await this.bridgeTaskToReview(client, { task, bundle, run, result: validationResult });
+      await this.maybeCreateReviewRound(client, {
+        task,
+        bundle,
+        validation,
+        result: validationResult,
+        requestedBy: actorUserId || null
+      });
     } else if (status === 'manual_review_required') {
       await client.query(
         `INSERT INTO task_validation_reviews (
@@ -1404,6 +1425,13 @@ class TaskEvidenceService {
          ON CONFLICT DO NOTHING`,
         [validation.id, bundle.id, task.id, actorUserId || null, validationResult.summary]
       );
+      await this.maybeCreateReviewRound(client, {
+        task,
+        bundle,
+        validation,
+        result: validationResult,
+        requestedBy: actorUserId || null
+      });
     }
     await client.query(
       `UPDATE task_evidence_bundles
@@ -1911,6 +1939,18 @@ class TaskEvidenceService {
        VALUES ($1, 'info', 'Task evidence passed validation and was bridged to review.', $2::jsonb)`,
       [run.id, JSON.stringify({ taskId: task.id, bundleId: bundle.id, proofUri })]
     );
+  }
+
+  async maybeCreateReviewRound(client, { task, bundle, validation, result, requestedBy }) {
+    const { default: TaskReviewService, humanReviewEnabled } = await import('./TaskReviewService.js');
+    if (!humanReviewEnabled()) return null;
+    return TaskReviewService.createRoundForValidation(client, {
+      task,
+      bundle,
+      validation,
+      validationResult: result,
+      requestedBy
+    });
   }
 
   async authorizationContextFromRun(run, client = pool) {

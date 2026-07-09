@@ -27,6 +27,7 @@ import ActionQueueService from '../../services/ActionQueueService.js';
 import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
 import TaskAutomationPreparationService from '../../services/TaskAutomationPreparationService.js';
 import TaskEvidenceService from '../../services/TaskEvidenceService.js';
+import TaskReviewService from '../../services/TaskReviewService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 
 const router = express.Router();
@@ -143,6 +144,16 @@ const openApiDocument = {
     '/tasks/{id}/evidence/bundles/{bundleId}/cancel': { post: { summary: 'Cancel an evidence bundle before terminal validation' } },
     '/tasks/{id}/evidence/bundles/{bundleId}/supersede': { post: { summary: 'Create a new draft bundle that supersedes a needs-more-evidence or manual-review bundle' } },
     '/tasks/{id}/validations/{validationId}': { get: { summary: 'Read a task validation result and findings' } },
+    '/tasks/{id}/review': { get: { summary: 'Read task review context' } },
+    '/tasks/{id}/review-status': { get: { summary: 'Read contributor-safe task review status' } },
+    '/reviews/assignments': { get: { summary: 'List current actor review assignments' } },
+    '/reviews/assignments/{assignmentId}': { get: { summary: 'Read a review assignment' } },
+    '/reviews/assignments/{assignmentId}/accept': { post: { summary: 'Accept a review assignment' } },
+    '/reviews/assignments/{assignmentId}/decline': { post: { summary: 'Decline a review assignment' } },
+    '/reviews/assignments/{assignmentId}/recuse': { post: { summary: 'Recuse from a review assignment' } },
+    '/validation-reviews/{reviewId}/decision': { post: { summary: 'Submit a manual validation review decision' } },
+    '/review-rounds/{roundId}/peer-decisions': { post: { summary: 'Submit a peer Blessing decision' } },
+    '/review-rounds/{roundId}/pm-decisions': { post: { summary: 'Submit a PM Ritual Seal decision' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
     '/stats': { get: { summary: 'Read dashboard stats' } },
@@ -586,6 +597,99 @@ router.get('/tasks/:taskId/validations/:validationId', requireScopes([API_SCOPES
     authContext: actionAuthContext(req)
   });
   if (!result) return sendError(req, res, 404, 'Validation result not found');
+  return sendOk(req, res, result);
+}));
+
+router.get('/tasks/:taskId/review', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.getReviewStatus({
+    taskId: req.params.taskId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/tasks/:taskId/review-status', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.getReviewStatus({
+    taskId: req.params.taskId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/reviews/assignments', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.listAssignments({
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/reviews/assignments/:assignmentId', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.getAssignment({
+    assignmentId: req.params.assignmentId,
+    authContext: actionAuthContext(req)
+  });
+  if (!result) return sendError(req, res, 404, 'Review assignment not found');
+  return sendOk(req, res, result);
+}));
+
+router.post('/reviews/assignments/:assignmentId/accept', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.acceptAssignment({
+    assignmentId: req.params.assignmentId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/reviews/assignments/:assignmentId/decline', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.declineAssignment({
+    assignmentId: req.params.assignmentId,
+    authContext: actionAuthContext(req),
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/reviews/assignments/:assignmentId/recuse', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.recuseAssignment({
+    assignmentId: req.params.assignmentId,
+    authContext: actionAuthContext(req),
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/validation-reviews/:reviewId/decision', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.decideValidationReview({
+    reviewId: req.params.reviewId,
+    authContext: actionAuthContext(req),
+    decision: req.body?.decision,
+    reason: req.body?.reason,
+    requirementFindings: req.body?.requirementFindings || req.body?.requirement_findings || []
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/review-rounds/:roundId/peer-decisions', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.decidePeer({
+    roundId: req.params.roundId,
+    authContext: actionAuthContext(req),
+    assignmentId: req.body?.assignmentId || req.body?.assignment_id,
+    decision: req.body?.decision,
+    reason: req.body?.reason,
+    requirementFindings: req.body?.requirementFindings || req.body?.requirement_findings || []
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/review-rounds/:roundId/pm-decisions', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskReviewService.decidePm({
+    roundId: req.params.roundId,
+    authContext: actionAuthContext(req),
+    assignmentId: req.body?.assignmentId || req.body?.assignment_id,
+    decision: req.body?.decision,
+    reason: req.body?.reason,
+    requirementFindings: req.body?.requirementFindings || req.body?.requirement_findings || []
+  });
   return sendOk(req, res, result);
 }));
 

@@ -487,6 +487,8 @@ export async function createKamiyaApiTables() {
         validation_result_id BIGINT NOT NULL REFERENCES task_validation_results(id) ON DELETE CASCADE,
         bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
         task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        review_round_id BIGINT,
+        assignment_id BIGINT,
         requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         status TEXT NOT NULL DEFAULT 'pending',
@@ -496,6 +498,155 @@ export async function createKamiyaApiTables() {
         decided_at TIMESTAMP WITH TIME ZONE,
         CHECK (status IN ('pending', 'assigned', 'completed', 'cancelled')),
         CHECK (decision IS NULL OR decision IN ('passed', 'needs_more_evidence', 'failed'))
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        message_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+        link_entity_type VARCHAR(50),
+        link_entity_id INTEGER,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      ALTER TABLE notifications
+        ADD COLUMN IF NOT EXISTS message_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+        ADD COLUMN IF NOT EXISTS link_entity_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS link_entity_id INTEGER,
+        ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
+
+      CREATE TABLE IF NOT EXISTS task_review_rounds (
+        id BIGSERIAL PRIMARY KEY,
+        round_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        validation_result_id BIGINT NOT NULL REFERENCES task_validation_results(id) ON DELETE CASCADE,
+        submission_actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        status TEXT NOT NULL,
+        stage TEXT NOT NULL,
+        risk_tier TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        policy_snapshot JSONB NOT NULL,
+        evidence_manifest_sha256 TEXT NOT NULL,
+        peer_approvals_required INTEGER NOT NULL,
+        peer_approvals_received INTEGER NOT NULL DEFAULT 0,
+        peer_deadline_at TIMESTAMP WITH TIME ZONE,
+        peer_gate_satisfied_at TIMESTAMP WITH TIME ZONE,
+        peer_gate_method TEXT,
+        pm_deadline_at TIMESTAMP WITH TIME ZONE,
+        pm_gate_satisfied_at TIMESTAMP WITH TIME ZONE,
+        pm_gate_method TEXT,
+        accepted_at TIMESTAMP WITH TIME ZONE,
+        returned_at TIMESTAMP WITH TIME ZONE,
+        closed_at TIMESTAMP WITH TIME ZONE,
+        shortage_flag BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (jsonb_typeof(policy_snapshot) = 'object'),
+        CHECK (status IN (
+          'awaiting_validation_review',
+          'awaiting_peer_assignment',
+          'peer_review_open',
+          'peer_changes_requested',
+          'awaiting_pm_review',
+          'pm_review_open',
+          'pm_changes_requested',
+          'accepted_pending_settlement',
+          'rejected',
+          'cancelled',
+          'superseded'
+        )),
+        CHECK (stage IN ('validation_review', 'peer_review', 'pm_review', 'accepted', 'closed')),
+        CHECK (risk_tier IN ('standard', 'sensitive', 'high_stakes')),
+        CHECK (peer_gate_method IS NULL OR peer_gate_method IN ('human', 'policy_timeout', 'manual_override')),
+        CHECK (pm_gate_method IS NULL OR pm_gate_method IN ('human', 'policy_timeout', 'manual_override'))
+      );
+
+      CREATE TABLE IF NOT EXISTS task_review_assignments (
+        id BIGSERIAL PRIMARY KEY,
+        assignment_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        review_round_id BIGINT NOT NULL REFERENCES task_review_rounds(id) ON DELETE CASCADE,
+        reviewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reviewer_role TEXT NOT NULL,
+        status TEXT NOT NULL,
+        assigned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        accepted_at TIMESTAMP WITH TIME ZONE,
+        declined_at TIMESTAMP WITH TIME ZONE,
+        recused_at TIMESTAMP WITH TIME ZONE,
+        expires_at TIMESTAMP WITH TIME ZONE,
+        conflict_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        eligibility_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (reviewer_role IN ('validation_reviewer', 'peer_reviewer', 'pm_reviewer')),
+        CHECK (status IN ('offered', 'accepted', 'declined', 'recused', 'expired', 'completed', 'cancelled')),
+        CHECK (jsonb_typeof(conflict_snapshot) = 'object'),
+        CHECK (jsonb_typeof(eligibility_snapshot) = 'object')
+      );
+
+      CREATE TABLE IF NOT EXISTS task_review_decisions (
+        id BIGSERIAL PRIMARY KEY,
+        decision_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        review_round_id BIGINT NOT NULL REFERENCES task_review_rounds(id) ON DELETE CASCADE,
+        assignment_id BIGINT NOT NULL REFERENCES task_review_assignments(id) ON DELETE CASCADE,
+        reviewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        decision TEXT NOT NULL,
+        reason TEXT,
+        requirement_findings JSONB NOT NULL DEFAULT '[]'::jsonb,
+        evidence_manifest_sha256 TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        decision_source TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        supersedes_decision_id BIGINT REFERENCES task_review_decisions(id) ON DELETE SET NULL,
+        CHECK (decision IN ('approve', 'request_changes', 'reject', 'abstain', 'recuse')),
+        CHECK (decision_source IN ('human', 'policy_timeout', 'admin_override')),
+        CHECK (jsonb_typeof(requirement_findings) = 'array')
+      );
+
+      CREATE TABLE IF NOT EXISTS task_review_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        review_round_id BIGINT REFERENCES task_review_rounds(id) ON DELETE CASCADE,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE CASCADE,
+        event_type TEXT NOT NULL,
+        event_key TEXT,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (jsonb_typeof(payload) = 'object')
+      );
+
+      CREATE TABLE IF NOT EXISTS task_acceptance_records (
+        id BIGSERIAL PRIMARY KEY,
+        acceptance_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        validation_result_id BIGINT NOT NULL REFERENCES task_validation_results(id) ON DELETE CASCADE,
+        review_round_id BIGINT NOT NULL REFERENCES task_review_rounds(id) ON DELETE CASCADE,
+        evidence_manifest_sha256 TEXT NOT NULL,
+        peer_gate_method TEXT NOT NULL,
+        pm_gate_method TEXT NOT NULL,
+        accepted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        policy_version TEXT NOT NULL,
+        settlement_status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (settlement_status IN ('pending', 'settled', 'cancelled'))
+      );
+
+      CREATE TABLE IF NOT EXISTS task_evidence_access_events (
+        id BIGSERIAL PRIMARY KEY,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE CASCADE,
+        bundle_id BIGINT REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        reason TEXT NOT NULL,
+        basis JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (jsonb_typeof(basis) = 'object')
       );
     `);
 
@@ -532,6 +683,9 @@ export async function createKamiyaApiTables() {
         ADD COLUMN IF NOT EXISTS response_status INTEGER,
         ADD COLUMN IF NOT EXISTS original_media_type TEXT,
         ADD COLUMN IF NOT EXISTS pinned_address TEXT;
+      ALTER TABLE task_validation_reviews
+        ADD COLUMN IF NOT EXISTS review_round_id BIGINT,
+        ADD COLUMN IF NOT EXISTS assignment_id BIGINT;
       ALTER TABLE task_evidence_bundles DROP CONSTRAINT IF EXISTS task_evidence_bundles_manifest_object_check;
       ALTER TABLE task_evidence_bundles ADD CONSTRAINT task_evidence_bundles_manifest_object_check
         CHECK (frozen_manifest IS NULL OR jsonb_typeof(frozen_manifest) = 'object');
@@ -625,6 +779,32 @@ export async function createKamiyaApiTables() {
         WHERE automation_run_id IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_task_validation_findings_result ON task_validation_findings(validation_result_id);
       CREATE INDEX IF NOT EXISTS idx_task_validation_reviews_task_status ON task_validation_reviews(task_id, status);
+      CREATE INDEX IF NOT EXISTS idx_task_review_rounds_task ON task_review_rounds(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_review_rounds_status ON task_review_rounds(status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_review_one_active_round
+        ON task_review_rounds(bundle_id)
+        WHERE status IN (
+          'awaiting_validation_review',
+          'awaiting_peer_assignment',
+          'peer_review_open',
+          'peer_changes_requested',
+          'awaiting_pm_review',
+          'pm_review_open',
+          'pm_changes_requested',
+          'accepted_pending_settlement'
+        );
+      CREATE INDEX IF NOT EXISTS idx_task_review_assignments_reviewer ON task_review_assignments(reviewer_user_id, status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_review_one_active_assignment
+        ON task_review_assignments(review_round_id, reviewer_user_id, reviewer_role)
+        WHERE status IN ('offered', 'accepted');
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_review_one_terminal_decision
+        ON task_review_decisions(assignment_id)
+        WHERE supersedes_decision_id IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_review_events_once
+        ON task_review_events(review_round_id, event_type, event_key)
+        WHERE event_key IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_acceptance_one_round
+        ON task_acceptance_records(review_round_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_task ON task_automation_preparations(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_actor ON task_automation_preparations(actor_user_id);
       CREATE INDEX IF NOT EXISTS idx_work_memory_user_id ON work_memory(user_id);
