@@ -39,3 +39,9 @@ URL evidence is fetched server-side with SSRF protections: no localhost, private
 Task automation visibility, evidence visibility, and validation access share `TaskAccessService`. Private task evidence is visible only to assigned actors, task/project owners, admins, explicitly granted actors, or service actors.
 
 Finalization re-checks task authority from durable task state. Client-provided service flags are not trusted.
+
+## Packet 007B/008 Updates
+
+Preview now freezes manifest v2 with canonical content, provenance, and combined digests for every evidence item. Validation recomputes those digests from authoritative rows, sanitized bytes, and artifact resolvers before deterministic or semantic evaluation.
+
+When validation passes, Cerbanimo creates or activates a review round. The review lifecycle is manual validation review when required, peer Blessings, PM Ritual Seal, and then `accepted_pending_settlement`. Completion, rewards, dependency activation, and story publication are intentionally deferred.

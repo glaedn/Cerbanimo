@@ -59,6 +59,7 @@ Cerbanimo includes a token infrastructure covering:
 - **Marketplace** with discovery feed, geo-proximity (deck.gl + MapLibre), and logistics coordination
 - **Impact tracking** via ImpactGraphService and stamped impact receipts
 - **Verification module** for trust-backed claim validation
+- **Task evidence and review bridge** for immutable evidence bundles, manifest v2 validation, manual validation review, peer Blessings, and PM Ritual Seal acceptance records
 - **Services marketplace** for offering work as reusable services
 - **Governance chamber** with proposals, voting, constitution management, civic simulation, mediation, and delegation
 - **Dispute court** for structured conflict resolution
