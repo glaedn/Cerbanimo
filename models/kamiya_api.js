@@ -127,10 +127,16 @@ export async function createKamiyaApiTables() {
         id BIGSERIAL PRIMARY KEY,
         action_id BIGINT REFERENCES api_actions(id) ON DELETE CASCADE,
         event_type TEXT NOT NULL,
+        event_key TEXT,
         actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         payload JSONB NOT NULL DEFAULT '{}'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await client.query(`
+      ALTER TABLE api_action_events
+        ADD COLUMN IF NOT EXISTS event_key TEXT;
     `);
 
     await client.query(`
@@ -151,6 +157,7 @@ export async function createKamiyaApiTables() {
         lease_expires_at TIMESTAMP WITH TIME ZONE,
         cancelled_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         started_at TIMESTAMP WITH TIME ZONE,
         completed_at TIMESTAMP WITH TIME ZONE,
         UNIQUE (run_uuid)
@@ -163,7 +170,8 @@ export async function createKamiyaApiTables() {
         ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS claim_token TEXT,
         ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMP WITH TIME ZONE,
-        ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE;
+        ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE,
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
     `);
 
     await client.query(`
@@ -242,12 +250,31 @@ export async function createKamiyaApiTables() {
       CREATE TABLE IF NOT EXISTS automation_run_reports (
         id BIGSERIAL PRIMARY KEY,
         run_id BIGINT NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL,
         report_type TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'completed',
         report JSONB NOT NULL DEFAULT '{}'::jsonb,
         artifact_uri TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (run_id, report_type)
       );
+    `);
+
+    await client.query(`
+      ALTER TABLE automation_run_reports
+        ADD COLUMN IF NOT EXISTS task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'completed',
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+      UPDATE automation_run_reports
+      SET status = COALESCE(NULLIF(status, ''), 'completed'),
+          report = COALESCE(report, '{}'::jsonb),
+          updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
+
+      ALTER TABLE automation_run_reports DROP CONSTRAINT IF EXISTS automation_run_reports_status_check;
+      ALTER TABLE automation_run_reports ADD CONSTRAINT automation_run_reports_status_check
+        CHECK (status IN ('queued', 'running', 'checks_passed', 'checks_failed', 'completed', 'blocked', 'failed', 'cancelled', 'executor_failed'));
     `);
 
     await client.query(`
@@ -255,13 +282,42 @@ export async function createKamiyaApiTables() {
         id BIGSERIAL PRIMARY KEY,
         run_id BIGINT NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
         task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        submitted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         proof_uri TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        report JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (run_id),
         UNIQUE (task_id, proof_uri)
       );
     `);
+
+    await client.query(`
+      ALTER TABLE task_automation_submissions
+        ADD COLUMN IF NOT EXISTS submitted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS report JSONB NOT NULL DEFAULT '{}'::jsonb;
+    `);
+
+    const legacySubmissionActorColumn = await client.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'task_automation_submissions'
+          AND column_name = 'actor_user_id'
+      ) AS exists
+    `);
+    if (legacySubmissionActorColumn.rows[0]?.exists) {
+      await client.query(`
+        UPDATE task_automation_submissions
+        SET submitted_by = COALESCE(submitted_by, actor_user_id),
+            report = COALESCE(report, '{}'::jsonb)
+      `);
+    } else {
+      await client.query(`
+        UPDATE task_automation_submissions
+        SET report = COALESCE(report, '{}'::jsonb)
+      `);
+    }
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS work_memory (
@@ -281,6 +337,14 @@ export async function createKamiyaApiTables() {
     `);
 
     await client.query(`
+      DELETE FROM api_action_events a
+      USING api_action_events b
+      WHERE a.id > b.id
+        AND a.action_id = b.action_id
+        AND a.event_type = b.event_type
+        AND COALESCE(a.event_key, '') = COALESCE(b.event_key, '')
+        AND a.event_key IS NOT NULL;
+
       CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
       CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash);
       CREATE INDEX IF NOT EXISTS idx_api_actions_actor ON api_actions(actor_user_id);
@@ -289,6 +353,10 @@ export async function createKamiyaApiTables() {
         ON api_actions(preparation_id)
         WHERE preparation_id IS NOT NULL AND status IN ('previewed', 'confirmed', 'executed');
       CREATE INDEX IF NOT EXISTS idx_api_action_events_action ON api_action_events(action_id);
+      DROP INDEX IF EXISTS idx_api_action_events_once;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_api_action_events_once
+        ON api_action_events(action_id, event_type, event_key)
+        WHERE event_key IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_automation_runs_action ON automation_runs(action_id);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_automation_runs_one_per_action
         ON automation_runs(action_id)

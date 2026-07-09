@@ -15,6 +15,9 @@ const externalIntegrationTemplates = new Set([
   'staging_deployment'
 ]);
 const AUTOMATION_LEASE_MS = Number(process.env.CERBANIMO_AUTOMATION_LEASE_MS || 5 * 60 * 1000);
+const AUTOMATION_HEARTBEAT_MS = Number(
+  process.env.CERBANIMO_AUTOMATION_HEARTBEAT_MS || Math.min(Math.max(Math.floor(AUTOMATION_LEASE_MS / 3), 50), 30_000)
+);
 const productionHostPattern = /(neon\.tech|amazonaws\.com|render\.com|onrender\.com|prod|production)/i;
 
 function nowIso() {
@@ -68,6 +71,7 @@ class AutomationWorkerService {
            attempt_count = COALESCE(attempt_count, 0) + 1,
            claim_token = $2,
            lease_expires_at = NOW() + ($3::int * INTERVAL '1 millisecond'),
+           updated_at = NOW(),
            started_at = COALESCE(started_at, NOW())
        WHERE id::text = $1
          AND status IN ('queued', 'running')
@@ -175,29 +179,72 @@ class AutomationWorkerService {
 
     const run = claim.run;
     await this.log(run.id, 'info', `Starting automation ${run.template_key}`, { input: redactRunInput(run.input || {}) });
+    const controller = new AbortController();
+    let heartbeatError = null;
+    const heartbeat = this.startHeartbeat(run.id, claim.claimToken, controller, (error) => {
+      heartbeatError = error;
+    });
+    const context = {
+      signal: controller.signal,
+      claimToken: claim.claimToken,
+      runId: run.id,
+      heartbeat,
+      assertActive: async () => {
+        if (heartbeatError) throw heartbeatError;
+        await this.assertClaimOwned(run.id, claim.claimToken);
+      }
+    };
 
     try {
-      await this.assertClaimOwned(run.id, claim.claimToken);
-      const result = await this.dispatch(run);
+      await context.assertActive();
+      const result = await this.dispatch(run, context);
+      await context.assertActive();
       await this.renewLease(run.id, claim.claimToken);
       await this.finalizeRunTransaction(run.id, result, claim.claimToken);
       await this.log(run.id, result.status === 'blocked' ? 'warn' : 'info', `Automation ${run.template_key} finished`, result);
       return result;
     } catch (error) {
-      await this.markFailed(run.id, error, claim.claimToken);
-      await this.log(run.id, 'error', `Automation ${run.template_key} failed`, { error: error.message || String(error) });
+      controller.abort();
+      if (error?.code === 'AUTOMATION_CLAIM_LOST' || error?.code === 'AUTOMATION_CANCELLED') {
+        await this.log(run.id, 'warn', `Automation ${run.template_key} stopped without failure finalization`, {
+          code: error.code,
+          error: error.message || String(error)
+        });
+      } else {
+        await this.finalizeFailureTransaction(run.id, error, claim.claimToken);
+        await this.log(run.id, 'error', `Automation ${run.template_key} failed`, { error: error.message || String(error) });
+      }
       throw error;
+    } finally {
+      heartbeat.stop();
     }
   }
 
-  async dispatch(run) {
+  startHeartbeat(runId, claimToken, controller, onError) {
+    const timer = setInterval(async () => {
+      try {
+        await this.renewLease(runId, claimToken);
+      } catch (error) {
+        controller.abort();
+        onError(error);
+      }
+    }, AUTOMATION_HEARTBEAT_MS);
+    return {
+      intervalMs: AUTOMATION_HEARTBEAT_MS,
+      stop() {
+        clearInterval(timer);
+      }
+    };
+  }
+
+  async dispatch(run, context = {}) {
     if (externalIntegrationTemplates.has(run.template_key)) {
       return this.externalIntegrationBlocked(run);
     }
 
     switch (run.template_key) {
       case 'run_quality_checks':
-        return this.runQualityChecks(run);
+        return this.runQualityChecks(run, context);
       case 'submission_validation':
         return this.runSubmissionValidation(run);
       case 'deadline_monitoring':
@@ -241,9 +288,13 @@ class AutomationWorkerService {
   }
 
   async finalizeRunTransaction(runId, result, claimToken) {
+    const runHeader = await this.getRun(runId);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      const action = runHeader?.action_id
+        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [runHeader.action_id])).rows[0]
+        : null;
       const run = (await client.query(
         `SELECT *
          FROM automation_runs
@@ -258,13 +309,14 @@ class AutomationWorkerService {
       }
       if (run.claim_token !== claimToken || run.status !== 'running' || run.cancelled_at) {
         const error = new Error(`Automation run ${runId} claim was lost before finalization.`);
+        error.code = run.cancelled_at ? 'AUTOMATION_CANCELLED' : 'AUTOMATION_CLAIM_LOST';
+        throw error;
+      }
+      if (action && Number(run.action_id) !== Number(action.id)) {
+        const error = new Error('Automation run/action relationship changed before finalization.');
         error.code = 'AUTOMATION_CLAIM_LOST';
         throw error;
       }
-
-      const action = run.action_id
-        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [run.action_id])).rows[0]
-        : null;
       const preparation = run.preparation_id
         ? (await client.query('SELECT * FROM task_automation_preparations WHERE id = $1 FOR UPDATE', [run.preparation_id])).rows[0]
         : null;
@@ -402,10 +454,72 @@ class AutomationWorkerService {
     }
   }
 
-  async runQualityChecks(run) {
+  async finalizeFailureTransaction(runId, error, claimToken) {
+    const runHeader = await this.getRun(runId);
+    const payload = {
+      status: 'executor_failed',
+      code: error?.code || 'AUTOMATION_EXECUTOR_FAILED',
+      error: error.message || String(error),
+      retryable: true,
+      failedAt: nowIso()
+    };
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const action = runHeader?.action_id
+        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [runHeader.action_id])).rows[0]
+        : null;
+      const run = (await client.query(
+        `SELECT *
+         FROM automation_runs
+         WHERE id = $1
+         FOR UPDATE`,
+        [runId]
+      )).rows[0];
+      if (!run || run.claim_token !== claimToken || run.cancelled_at || run.status !== 'running') {
+        await client.query('COMMIT');
+        return;
+      }
+      await client.query(
+        `UPDATE automation_runs
+         SET status = 'retry_wait',
+             result = $2::jsonb,
+             completed_at = NOW(),
+             lease_expires_at = NULL,
+             claim_token = NULL,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [run.id, JSON.stringify(payload)]
+      );
+      if (action) {
+        await client.query(
+          `UPDATE api_actions
+           SET status = 'failed',
+               execution_result = $2::jsonb
+           WHERE id = $1`,
+          [action.id, JSON.stringify(payload)]
+        );
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, event_key, actor_user_id, payload)
+           VALUES ($1, 'automation.failed', $2, $3, $4::jsonb)
+           ON CONFLICT DO NOTHING`,
+          [action.id, `run:${run.id}:failed:${run.attempt_count}`, run.actor_user_id || null, JSON.stringify(payload)]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (finalizeError) {
+      await client.query('ROLLBACK');
+      finalizeError.code = 'AUTOMATION_FINALIZATION_FAILED';
+      throw finalizeError;
+    } finally {
+      client.release();
+    }
+  }
+
+  async runQualityChecks(run, context = {}) {
     const input = run.input || {};
     if (input.preparationId || input.preparation_id) {
-      return this.runPreparedQualityChecks(run);
+      return this.runPreparedQualityChecks(run, context);
     }
 
     const targetType = input.targetType || (input.projectId ? 'project' : 'task');
@@ -453,11 +567,12 @@ class AutomationWorkerService {
     return this.runSubmissionValidation({ ...run, input: { ...input, taskId: targetId } });
   }
 
-  async runPreparedQualityChecks(run) {
-    const context = await this.loadQualityCheckPreparation(run);
-    if (context.blocked) return context.blocked;
+  async runPreparedQualityChecks(run, executorContext = {}) {
+    await executorContext.assertActive?.();
+    const preparationContext = await this.loadQualityCheckPreparation(run);
+    if (preparationContext.blocked) return preparationContext.blocked;
 
-    const { task, preparation, values } = context;
+    const { task, preparation, values } = preparationContext;
     const executor = resolveQualityCheckExecutor();
     if (!executor.available) {
       return {
@@ -470,6 +585,8 @@ class AutomationWorkerService {
       };
     }
 
+    await waitForDeterministicDelay(executorContext);
+    await executorContext.assertActive?.();
     const forcedResult = process.env.CERBANIMO_QUALITY_CHECK_E2E_RESULT;
     const failed = forcedResult === 'checks_failed';
     const checks = [
@@ -954,6 +1071,21 @@ function parseDatabaseUrl(value) {
     };
   } catch {
     return { host: '', database: '' };
+  }
+}
+
+async function waitForDeterministicDelay(context = {}) {
+  const delayMs = Number(process.env.CERBANIMO_QUALITY_CHECK_E2E_DELAY_MS || 0);
+  if (!delayMs) return;
+  const started = Date.now();
+  while (Date.now() - started < delayMs) {
+    if (context.signal?.aborted) {
+      const error = new Error('Automation was cancelled while deterministic executor was running.');
+      error.code = 'AUTOMATION_CANCELLED';
+      throw error;
+    }
+    await context.assertActive?.();
+    await new Promise(resolve => setTimeout(resolve, Math.min(50, delayMs - (Date.now() - started))));
   }
 }
 

@@ -6,7 +6,8 @@ import { PROJECT_BOOTSTRAP_QUEUE } from '../jobs/workers/projectBootstrapWorker.
 import { BOOTSTRAP_STEPS } from './ProjectBootstrapService.js';
 import {
   classificationDbFields,
-  normalizeTaskAutomationClassification
+  normalizeTaskAutomationClassification,
+  serializeTaskAutomation
 } from './TaskAutomationClassificationService.js';
 import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
 import { validatePreparationInputs } from './TaskAutomationInputValidator.js';
@@ -250,7 +251,7 @@ class ActionQueueService {
        VALUES ($1::jsonb, $2::jsonb, $3, $4, $5::jsonb, $6, $7, $8, NULL, $9, $10, 'previewed')
        ON CONFLICT (preparation_id) WHERE preparation_id IS NOT NULL AND status IN ('previewed', 'confirmed', 'executed')
        DO UPDATE SET preview_payload = api_actions.preview_payload
-       RETURNING *`,
+       RETURNING *, ((xmax = 0)::boolean) AS inserted`,
       [
         JSON.stringify(intent || {}),
         JSON.stringify(preview),
@@ -266,12 +267,19 @@ class ActionQueueService {
     );
 
     const action = actionResult.rows[0];
-    await client.query(
-      `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
-       VALUES ($1, 'preview.created', $2, $3::jsonb)
-       ON CONFLICT DO NOTHING`,
-      [action.id, actorUserId || null, JSON.stringify({ sourceClient, riskLevel: normalizedRisk, preparationId: preparationId || null })]
-    );
+    if (action.inserted) {
+      await client.query(
+        `INSERT INTO api_action_events (action_id, event_type, event_key, actor_user_id, payload)
+         VALUES ($1, 'preview.created', $2, $3, $4::jsonb)
+         ON CONFLICT DO NOTHING`,
+        [
+          action.id,
+          preparationId ? `preparation:${preparationId}` : 'generic',
+          actorUserId || null,
+          JSON.stringify({ sourceClient, riskLevel: normalizedRisk, preparationId: preparationId || null })
+        ]
+      );
+    }
     return action;
   }
 
@@ -658,10 +666,11 @@ class ActionQueueService {
       throw error;
     }
 
+    const canonicalTask = { ...task, automation: serializeTaskAutomation(task) };
     await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, isServiceActor, scopes, roles }, 'canConfirmAutomation', client);
     const validation = validatePreparationInputs(preparation.input_schema_snapshot || [], preparation.input_values || {}, { actorUserId });
     const capability = resolveTaskAutomationCapability({
-      task,
+      task: canonicalTask,
       preparation,
       scopes,
       validationResult: validation,
@@ -784,33 +793,51 @@ class ActionQueueService {
       retryable: true,
       completedAt: new Date().toISOString()
     };
-    await pool.query(
-      `UPDATE automation_runs
-       SET status = 'blocked',
-           result = $2::jsonb,
-           completed_at = NOW(),
-           lease_expires_at = NULL,
-           claim_token = NULL
-       WHERE id = $1
-         AND status = 'queued'`,
-      [
-        runId,
-        JSON.stringify(payload)
-      ]
-    );
-    await pool.query(
-      `UPDATE api_actions
-       SET status = 'failed',
-           execution_result = $2::jsonb
-       WHERE related_automation_run_id = $1
-          OR id = (SELECT action_id FROM automation_runs WHERE id = $1)`,
-      [runId, JSON.stringify(payload)]
-    );
-    await pool.query(
-      `INSERT INTO automation_logs (run_id, level, message, payload)
-       VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
-      [runId, JSON.stringify({ error: queueError.message || String(queueError) })]
-    );
+    const runHeader = (await pool.query('SELECT action_id FROM automation_runs WHERE id = $1', [runId])).rows[0];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const action = runHeader?.action_id
+        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [runHeader.action_id])).rows[0]
+        : null;
+      const run = (await client.query('SELECT * FROM automation_runs WHERE id = $1 FOR UPDATE', [runId])).rows[0];
+      if (!run) {
+        await client.query('COMMIT');
+        return;
+      }
+      await client.query(
+        `UPDATE automation_runs
+         SET status = 'blocked',
+             result = $2::jsonb,
+             completed_at = NOW(),
+             lease_expires_at = NULL,
+             claim_token = NULL,
+             updated_at = NOW()
+         WHERE id = $1
+           AND status = 'queued'`,
+        [runId, JSON.stringify(payload)]
+      );
+      if (action) {
+        await client.query(
+          `UPDATE api_actions
+           SET status = 'failed',
+               execution_result = $2::jsonb
+           WHERE id = $1`,
+          [action.id, JSON.stringify(payload)]
+        );
+      }
+      await client.query(
+        `INSERT INTO automation_logs (run_id, level, message, payload)
+         VALUES ($1, 'error', 'Failed to enqueue automation worker job.', $2::jsonb)`,
+        [runId, JSON.stringify({ error: queueError.message || String(queueError) })]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async cancelAction({ actionId, actorUserId, isServiceActor = false, reason }) {
@@ -824,7 +851,8 @@ class ActionQueueService {
         error.status = 404;
         throw error;
       }
-      if (!['previewed', 'confirmed'].includes(action.status)) {
+      const isRetryableAutomationFailure = action.status === 'failed' && action.related_automation_run_id;
+      if (!['previewed', 'confirmed'].includes(action.status) && !isRetryableAutomationFailure) {
         const error = new Error(`Action cannot be cancelled from status ${action.status}`);
         error.status = 409;
         throw error;
@@ -834,6 +862,20 @@ class ActionQueueService {
       const workflow = functionName === 'projects.bootstrap'
         ? (await client.query('SELECT * FROM workflow_runs WHERE action_id = $1 AND workflow_type = $2 FOR UPDATE', [action.id, 'projects.bootstrap'])).rows[0]
         : null;
+      if (isRetryableAutomationFailure) {
+        const run = (await client.query(
+          `SELECT id, status
+           FROM automation_runs
+           WHERE id = $1
+           FOR UPDATE`,
+          [action.related_automation_run_id]
+        )).rows[0];
+        if (!run || !['retry_wait', 'blocked', 'failed'].includes(run.status)) {
+          const error = new Error(`Action cannot be cancelled from status ${action.status}`);
+          error.status = 409;
+          throw error;
+        }
+      }
       if (workflow?.related_project_id || ['completed'].includes(workflow?.status)) {
         const error = new Error('Cannot cancel a project bootstrap after project persistence has completed');
         error.status = 409;
@@ -886,6 +928,7 @@ class ActionQueueService {
                completed_at = COALESCE(completed_at, NOW()),
                claim_token = NULL,
                lease_expires_at = NULL,
+               updated_at = NOW(),
                result = COALESCE(result, '{}'::jsonb) || $2::jsonb
            WHERE id = $1
              AND status IN ('queued', 'running', 'blocked', 'retry_wait', 'failed')`,
@@ -921,7 +964,7 @@ class ActionQueueService {
     }
   }
 
-  async retryAction({ actionId, actorUserId, isServiceActor = false, reason }) {
+  async retryAction({ actionId, actorUserId, isServiceActor = false, scopes = [], roles = [], reason }) {
     const client = await pool.connect();
     let workflowRunId = null;
     let automationJobToSend = null;
@@ -955,6 +998,46 @@ class ActionQueueService {
         if (['executed', 'cancelled'].includes(action.status) || run.status === 'cancelled') {
           const error = new Error(`Action cannot be retried from status ${action.status}`);
           error.status = 409;
+          throw error;
+        }
+        if (run.result?.status === 'checks_failed' || run.result?.retryable === false) {
+          const error = new Error('This automation result is not retryable. Create a new preview instead.');
+          error.status = 409;
+          throw error;
+        }
+        const preparation = run.preparation_id
+          ? (await client.query('SELECT * FROM task_automation_preparations WHERE id = $1 FOR UPDATE', [run.preparation_id])).rows[0]
+          : null;
+        const task = preparation
+          ? (await client.query(
+              `SELECT t.*, p.creator_id AS project_creator_id
+               FROM tasks t
+               LEFT JOIN projects p ON p.id = t.project_id
+               WHERE t.id = $1
+               FOR UPDATE OF t`,
+              [preparation.task_id]
+            )).rows[0]
+          : null;
+        if (!preparation || !task) {
+          const error = new Error('Task automation retry requires the original preparation and task.');
+          error.status = 409;
+          throw error;
+        }
+        const canonicalTask = { ...task, automation: serializeTaskAutomation(task) };
+        await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, isServiceActor, scopes, roles }, 'canExecuteAutomation', client);
+        const validation = validatePreparationInputs(preparation.input_schema_snapshot || [], preparation.input_values || {}, { actorUserId: run.actor_user_id || actorUserId });
+        const capability = resolveTaskAutomationCapability({
+          task: canonicalTask,
+          preparation,
+          scopes,
+          validationResult: validation,
+          actorUserId: run.actor_user_id || actorUserId,
+          taskAuthority: true
+        });
+        if (!validation.valid || !capability.executionAvailable) {
+          const error = new Error('Task automation retry is no longer executable.');
+          error.status = 409;
+          error.details = { validation, capability };
           throw error;
         }
         await client.query(
@@ -1152,9 +1235,25 @@ class ActionQueueService {
 
     return {
       ...run,
-      logs: logsResult.rows
+      logs: logsResult.rows,
+      allowedActions: allowedAutomationRunActions(run)
     };
   }
 }
 
 export default new ActionQueueService();
+
+function allowedAutomationRunActions(run = {}) {
+  const status = String(run.status || '');
+  const result = run.result || {};
+  if (status === 'queued' || status === 'running') {
+    return { cancel: true, retry: false, startNewRun: false };
+  }
+  if (status === 'retry_wait') {
+    return { cancel: true, retry: true, startNewRun: false };
+  }
+  if ((status === 'blocked' || status === 'failed') && result?.retryable !== false && result?.status !== 'checks_failed') {
+    return { cancel: false, retry: true, startNewRun: false };
+  }
+  return { cancel: false, retry: false, startNewRun: result?.status === 'checks_failed' };
+}

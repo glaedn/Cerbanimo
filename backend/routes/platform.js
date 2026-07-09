@@ -172,6 +172,20 @@ router.post('/actions/:id/confirm', requireScopes([API_SCOPES.ACTIONS_WRITE]), a
   return sendOk(req, res, action);
 }));
 
+router.post('/actions/:id/retry', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const scopes = req.apiAuth?.type === 'auth0'
+    ? allScopesForUser(req.user)
+    : req.apiAuth?.scopes || [];
+  const action = await ActionQueueService.retryAction({
+    actionId: req.params.id,
+    actorUserId: req.user?.id,
+    scopes,
+    roles: req.user?.roles || [],
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, action, 202);
+}));
+
 router.post('/actions/:id/cancel', requireScopes([API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
   const action = await ActionQueueService.cancelAction({
     actionId: req.params.id,

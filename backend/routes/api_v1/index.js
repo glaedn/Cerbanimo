@@ -503,6 +503,8 @@ router.post('/actions/:id/retry', requireScopes([API_SCOPES.ACTIONS_WRITE]), asy
     actionId: req.params.id,
     actorUserId: authContext.actorUserId,
     isServiceActor: authContext.isServiceActor,
+    scopes: authContext.scopes,
+    roles: authContext.roles,
     reason: req.body?.reason
   });
   return sendOk(req, res, action, 202);

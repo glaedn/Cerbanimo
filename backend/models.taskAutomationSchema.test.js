@@ -41,4 +41,16 @@ describe('tasks task automation schema initialization', () => {
     expect(kamiyaApiSource).toContain('idx_task_automation_preparations_one_active');
     expect(kamiyaApiSource).toContain("'draft', 'invalid', 'ready', 'previewed', 'consumed', 'cancelled'");
   });
+
+  it('defines runtime finalization tables with every worker-written column', () => {
+    expect(kamiyaApiSource).toContain('updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP');
+    expect(kamiyaApiSource).toContain('task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL');
+    expect(kamiyaApiSource).toContain('status TEXT NOT NULL DEFAULT');
+    expect(kamiyaApiSource).toContain('automation_run_reports_status_check');
+    expect(kamiyaApiSource).toContain('submitted_by INTEGER REFERENCES users(id) ON DELETE SET NULL');
+    expect(kamiyaApiSource).toContain('report JSONB NOT NULL DEFAULT');
+    expect(kamiyaApiSource).toContain('idx_api_action_events_once');
+    expect(kamiyaApiSource).toContain('WHERE event_key IS NOT NULL');
+    expect(kamiyaApiSource).toContain('event_key TEXT');
+  });
 });

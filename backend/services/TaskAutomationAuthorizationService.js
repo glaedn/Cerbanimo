@@ -96,16 +96,19 @@ class TaskAutomationAuthorizationService {
     const assignedActor = actorUserId > 0 && assignedIds.includes(actorUserId);
     const taskCreator = actorUserId > 0 && Number(task.creator_id) === actorUserId;
     const projectCreator = actorUserId > 0 && Number(task.project_creator_id) === actorUserId;
-    const projectManager = roles.has('project_manager') || roles.has('admin');
+    const admin = roles.has('admin');
     const policyGranted = actorUserId > 0 && grantedActors.includes(actorUserId);
-    const allowed = serviceActor || assignedActor || taskCreator || projectCreator || projectManager || policyGranted;
+    const canView = serviceActor || admin || actorUserId > 0;
+    const canPrepare = serviceActor || assignedActor || taskCreator || projectCreator || admin || policyGranted;
+    const canExecute = canPrepare;
+    const canSubmit = serviceActor || assignedActor || taskCreator || projectCreator || admin || policyGranted;
 
     const basis = {
       serviceActor,
       assignedActor,
       taskCreator,
       projectCreator,
-      projectManager,
+      admin,
       policyGranted
     };
     const allowDecision = { allowed: true, reason: 'Task automation authorized.', basis };
@@ -121,7 +124,13 @@ class TaskAutomationAuthorizationService {
       taskId: task.id,
       actorUserId: actorUserId || null,
       basis,
-      ...Object.fromEntries(decisionNames.map(name => [name, allowed ? allowDecision : denyDecision]))
+      canViewTaskAutomation: canView ? allowDecision : denyDecision,
+      canCreatePreparation: canPrepare ? allowDecision : denyDecision,
+      canEditPreparation: canPrepare ? allowDecision : denyDecision,
+      canPreviewAutomation: canPrepare ? allowDecision : denyDecision,
+      canConfirmAutomation: canExecute ? allowDecision : denyDecision,
+      canExecuteAutomation: canExecute ? allowDecision : denyDecision,
+      canSubmitAutomationResult: canSubmit ? allowDecision : denyDecision
     };
   }
 
