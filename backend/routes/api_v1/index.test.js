@@ -25,6 +25,10 @@ describe('api v1 public contract', () => {
     expect(response.body.data.paths['/actions/{id}']).toBeTruthy();
     expect(response.body.data.paths['/tasks/{id}/automation']).toBeTruthy();
     expect(response.body.data.paths['/tasks/{id}/automation/preparations/{preparationId}/preview']).toBeTruthy();
+    expect(response.body.data.paths['/me/narrative-preferences']).toBeTruthy();
+    expect(response.body.data.paths['/projects/{projectId}/quest-context']).toBeTruthy();
+    expect(response.body.data.paths['/projects/{projectId}/party']).toBeTruthy();
+    expect(response.body.data.paths['/project-invites/{token}/redeem']).toBeTruthy();
   });
 
   it('marks functions unavailable when the actor lacks their scope', () => {
@@ -56,5 +60,23 @@ describe('api v1 public contract', () => {
     expect(runTaskAutomation.available).toBe(true);
     expect(runTaskAutomation.confirmationRequired).toBe(true);
     expect(runTaskAutomation.inputSchema.required).toEqual(['taskId', 'preparationId', 'capabilityName']);
+  });
+
+  it('exposes Game Master project actions as confirmation-gated capabilities', () => {
+    const functions = CapabilityRegistryService.listFunctions(['projects:write']);
+    for (const name of [
+      'projects.create_invite',
+      'projects.revoke_invite',
+      'projects.join_from_invite',
+      'projects.launch_quest',
+      'projects.update_quest_profile',
+      'projects.update_narrative_settings',
+      'projects.update_calling'
+    ]) {
+      const fn = functions.find(candidate => candidate.name === name);
+      expect(fn).toBeTruthy();
+      expect(fn.available).toBe(true);
+      expect(fn.confirmationRequired).toBe(true);
+    }
   });
 });

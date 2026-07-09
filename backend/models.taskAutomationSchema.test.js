@@ -100,4 +100,25 @@ describe('tasks task automation schema initialization', () => {
     expect(kamiyaApiSource).toContain('idx_task_review_one_active_round');
     expect(kamiyaApiSource).toContain('idx_task_acceptance_one_round');
   });
+
+  it('defines durable Game Master quest, party, invite, and chronicle tables', () => {
+    for (const table of [
+      'user_narrative_preferences',
+      'project_quest_profiles',
+      'project_narrative_settings',
+      'project_party_settings',
+      'project_invites',
+      'project_character_callings',
+      'project_narrative_events'
+    ]) {
+      expect(kamiyaApiSource).toContain(table);
+    }
+
+    expect(kamiyaApiSource).toContain("'game_master', 'plain'");
+    expect(kamiyaApiSource).toContain("'light', 'standard', 'immersive'");
+    expect(kamiyaApiSource).toContain("'narrative', 'numeric', 'both'");
+    expect(kamiyaApiSource).toContain('token_hash TEXT UNIQUE NOT NULL');
+    expect(kamiyaApiSource).toContain('idx_project_quest_profiles_one_active');
+    expect(kamiyaApiSource).toContain('idx_project_narrative_events_once');
+  });
 });

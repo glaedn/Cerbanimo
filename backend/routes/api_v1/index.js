@@ -28,6 +28,7 @@ import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
 import TaskAutomationPreparationService from '../../services/TaskAutomationPreparationService.js';
 import TaskEvidenceService from '../../services/TaskEvidenceService.js';
 import TaskReviewService from '../../services/TaskReviewService.js';
+import GameMasterService from '../../services/GameMasterService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 
 const router = express.Router();
@@ -154,6 +155,19 @@ const openApiDocument = {
     '/validation-reviews/{reviewId}/decision': { post: { summary: 'Submit a manual validation review decision' } },
     '/review-rounds/{roundId}/peer-decisions': { post: { summary: 'Submit a peer Blessing decision' } },
     '/review-rounds/{roundId}/pm-decisions': { post: { summary: 'Submit a PM Ritual Seal decision' } },
+    '/me/narrative-preferences': { get: { summary: 'Read current actor Game Master presentation preferences' }, patch: { summary: 'Update current actor Game Master presentation preferences' } },
+    '/projects/{projectId}/quest-profile': { get: { summary: 'Read or initialize a project quest profile' } },
+    '/projects/{projectId}/quest-context': { get: { summary: 'Read canonical Game Master context for a project' } },
+    '/projects/{projectId}/narrative-settings': { patch: { summary: 'Update project narrative settings' } },
+    '/projects/{projectId}/quest-profile/preview-update': { post: { summary: 'Preview a quest profile update action' } },
+    '/projects/{projectId}/party': { get: { summary: 'Read project party members, settings, and manageable invites' } },
+    '/projects/{projectId}/invites': { post: { summary: 'Create a hashed project invite token' } },
+    '/projects/{projectId}/invites/{inviteId}/revoke': { post: { summary: 'Revoke a project invite' } },
+    '/project-invites/{token}/preview': { get: { summary: 'Preview a project invite without exposing its token hash' } },
+    '/project-invites/{token}/redeem': { post: { summary: 'Redeem a project invite into a character calling' } },
+    '/projects/{projectId}/launch/preview': { post: { summary: 'Preview a quest launch action' } },
+    '/projects/{projectId}/calling': { get: { summary: 'Read current actor character calling for a project' }, patch: { summary: 'Update current actor character calling for a project' } },
+    '/projects/{projectId}/chronicle': { get: { summary: 'Read project narrative chronicle events' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
     '/stats': { get: { summary: 'Read dashboard stats' } },
@@ -693,6 +707,128 @@ router.post('/review-rounds/:roundId/pm-decisions', requireScopes([API_SCOPES.WR
   return sendOk(req, res, result);
 }));
 
+router.get('/me/narrative-preferences', requireScopes([API_SCOPES.READ_PROFILE]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getNarrativePreferences(req.user?.id);
+  return sendOk(req, res, result);
+}));
+
+router.patch('/me/narrative-preferences', requireScopes([API_SCOPES.WRITE_PROFILE]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.updateNarrativePreferences(req.user?.id, req.body || {});
+  return sendOk(req, res, result);
+}));
+
+router.get('/projects/:projectId/quest-profile', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getQuestProfile({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/projects/:projectId/quest-context', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getQuestContext({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.patch('/projects/:projectId/narrative-settings', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.updateNarrativeSettings({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    input: req.body || {}
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/projects/:projectId/quest-profile/preview-update', requireScopes([API_SCOPES.WRITE_PROJECTS, API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.previewQuestProfileUpdate({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    input: req.body || {},
+    sourceClient: req.body?.sourceClient || req.apiAuth?.clientName || 'api'
+  });
+  return sendOk(req, res, result, 201);
+}));
+
+router.get('/projects/:projectId/party', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getParty({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/projects/:projectId/invites', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.createInvite({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    input: req.body || {}
+  });
+  return sendOk(req, res, result, 201);
+}));
+
+router.post('/projects/:projectId/invites/:inviteId/revoke', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.revokeInvite({
+    projectId: req.params.projectId,
+    inviteId: req.params.inviteId,
+    authContext: actionAuthContext(req),
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/project-invites/:token/preview', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.previewInvite({
+    token: req.params.token,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/project-invites/:token/redeem', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.redeemInvite({
+    token: req.params.token,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result, 201);
+}));
+
+router.post('/projects/:projectId/launch/preview', requireScopes([API_SCOPES.WRITE_PROJECTS, API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.launchPreview({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result, 201);
+}));
+
+router.get('/projects/:projectId/calling', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getCalling({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, result);
+}));
+
+router.patch('/projects/:projectId/calling', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.updateCalling({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    input: req.body || {}
+  });
+  return sendOk(req, res, result);
+}));
+
+router.get('/projects/:projectId/chronicle', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getChronicle({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    limit: req.query.limit
+  });
+  return sendOk(req, res, result);
+}));
+
 router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
   const result = await pool.query(
     `SELECT t.*, s.name AS skill_name
@@ -866,6 +1002,7 @@ router.use('/profile', requireReadWriteScopes(API_SCOPES.READ_PROFILE, API_SCOPE
 router.use('/notifications', requireReadWriteScopes(API_SCOPES.READ_NOTIFICATIONS, API_SCOPES.WRITE_NOTIFICATIONS), resolveUser, notificationRoutes);
 
 router.use((err, req, res, next) => {
+  void next;
   console.error('API v1 error:', err);
   const status = err.status || err.statusCode || 500;
   return sendError(req, res, status, err.message || 'Internal server error', err.details || null);

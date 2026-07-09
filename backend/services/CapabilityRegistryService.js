@@ -73,6 +73,140 @@ export const functionSchemas = [
     }
   },
   {
+    name: 'projects.create_invite',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Create a hashed project party invite for Game Master mode. The raw token is returned once and is never stored.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId'],
+      properties: {
+        projectId: { type: 'integer' },
+        maxUses: { type: 'integer', minimum: 1, maximum: 50 },
+        expiresInHours: { type: 'integer', minimum: 1, maximum: 1440 }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.revoke_invite',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Revoke an active Game Master party invite for a project.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId', 'inviteId'],
+      properties: {
+        projectId: { type: 'integer' },
+        inviteId: { type: 'integer' },
+        reason: { type: 'string' }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.join_from_invite',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Redeem a project invite into an active party calling.',
+    inputSchema: {
+      type: 'object',
+      required: ['inviteToken'],
+      properties: {
+        inviteToken: { type: 'string' }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.launch_quest',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Create a Game Master launch preview and opening scene without completing work, assigning rewards, or activating dependencies.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId'],
+      properties: {
+        projectId: { type: 'integer' }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.update_quest_profile',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Supersede the active durable quest profile for a project.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId', 'title', 'premise'],
+      properties: {
+        projectId: { type: 'integer' },
+        title: { type: 'string' },
+        premise: { type: 'string' },
+        desiredOutcome: { type: 'string' },
+        genre: { type: 'string' },
+        tone: { type: 'string' },
+        stakes: { type: 'string' },
+        openingScene: { type: 'string' },
+        keyThemes: { type: 'array', items: { type: 'string' } },
+        avoidedThemes: { type: 'array', items: { type: 'string' } }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.update_narrative_settings',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Update project-scoped Game Master presentation settings.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId'],
+      properties: {
+        projectId: { type: 'integer' },
+        presentationMode: { type: 'string', enum: ['game_master', 'plain'] },
+        narrativeIntensity: { type: 'string', enum: ['light', 'standard', 'immersive'] },
+        genreOverride: { type: 'string' },
+        avoidThemes: { type: 'array', items: { type: 'string' } },
+        statDisplayMode: { type: 'string', enum: ['narrative', 'numeric', 'both'] }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
+    name: 'projects.update_calling',
+    domain: 'projects',
+    version: '1.0.0',
+    scope: 'projects:write',
+    confirmationRequired: true,
+    description: 'Update the current actor character calling for a project party.',
+    inputSchema: {
+      type: 'object',
+      required: ['projectId'],
+      properties: {
+        projectId: { type: 'integer' },
+        callingTitle: { type: 'string' },
+        roleArchetype: { type: 'string', enum: ['party_member', 'builder', 'organizer', 'reviewer', 'scout', 'scribe', 'guardian', 'steward'] },
+        contributionSummary: { type: 'string' },
+        skillsSnapshot: { type: 'object' }
+      }
+    },
+    outputSchema: { type: 'object' }
+  },
+  {
     name: 'tasks.list',
     domain: 'tasks',
     version: '1.0.0',

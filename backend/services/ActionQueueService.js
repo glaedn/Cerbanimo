@@ -75,6 +75,35 @@ function buildPreviewPayload(intent = {}) {
   };
 }
 
+function requireProjectOwner(project, actorUserId) {
+  if (!project) {
+    const error = new Error('Project not found.');
+    error.status = 404;
+    throw error;
+  }
+  if (!actorUserId || Number(project.creator_id) !== Number(actorUserId)) {
+    const error = new Error('Only the project creator may confirm this Game Master project action.');
+    error.status = 403;
+    throw error;
+  }
+}
+
+function gameMasterProfileArgs(project, args = {}) {
+  const title = String(args.title || project.name || 'Untitled Quest').trim().slice(0, 160);
+  const premise = String(args.premise || project.description || 'A collaborative Cerbanimo quest.').trim().slice(0, 1000);
+  return {
+    title,
+    premise,
+    desiredOutcome: String(args.desiredOutcome || args.desired_outcome || premise).trim().slice(0, 600),
+    genre: String(args.genre || 'hopeful adventure').trim().slice(0, 80),
+    tone: String(args.tone || 'collaborative').trim().slice(0, 80),
+    stakes: String(args.stakes || `The party is trying to bring "${title}" from intent into lived reality.`).trim().slice(0, 600),
+    openingScene: String(args.openingScene || args.opening_scene || `The quest begins with ${title}: ${premise}`).trim().slice(0, 1000),
+    keyThemes: Array.isArray(args.keyThemes || args.key_themes) ? (args.keyThemes || args.key_themes).map(String).slice(0, 8) : [],
+    avoidedThemes: Array.isArray(args.avoidedThemes || args.avoided_themes) ? (args.avoidedThemes || args.avoided_themes).map(String).slice(0, 8) : []
+  };
+}
+
 async function executeKnownIntent(client, action, actorUserId) {
   const intent = action.intent_json || {};
   const functionName = intent.functionName || intent.function || intent.type;
@@ -149,6 +178,216 @@ async function executeKnownIntent(client, action, actorUserId) {
     };
   }
 
+  if (functionName === 'projects.update_quest_profile') {
+    const projectId = args.projectId || args.project_id || action.related_project_id;
+    const project = (await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [projectId])).rows[0];
+    requireProjectOwner(project, actorUserId);
+    const profile = gameMasterProfileArgs(project, args);
+    await client.query(
+      `UPDATE project_quest_profiles
+       SET status = 'superseded',
+           updated_at = NOW()
+       WHERE project_id = $1
+         AND status = 'active'`,
+      [projectId]
+    );
+    const result = await client.query(
+      `INSERT INTO project_quest_profiles (
+         project_id, title, premise, desired_outcome, genre, tone, stakes,
+         opening_scene, key_themes, avoided_themes, source, created_by
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12)
+       RETURNING *`,
+      [
+        projectId,
+        profile.title,
+        profile.premise,
+        profile.desiredOutcome,
+        profile.genre,
+        profile.tone,
+        profile.stakes,
+        profile.openingScene,
+        profile.keyThemes,
+        profile.avoidedThemes,
+        JSON.stringify({ source: 'confirmed_api_action', actionId: action.id }),
+        actorUserId || null
+      ]
+    );
+    await client.query(
+      `INSERT INTO project_narrative_events (
+         project_id, actor_user_id, event_type, event_key, title, facts
+       )
+       VALUES ($1, $2, 'quest.profile_updated', $3, 'Quest profile updated', $4::jsonb)
+       ON CONFLICT DO NOTHING`,
+      [projectId, actorUserId || null, `action:${action.id}:quest-profile`, JSON.stringify({ profileId: result.rows[0].id, title: profile.title })]
+    );
+    return {
+      status: 'executed',
+      entityType: 'quest_profile',
+      entityId: result.rows[0].id,
+      questProfile: result.rows[0]
+    };
+  }
+
+  if (functionName === 'projects.update_narrative_settings') {
+    const projectId = args.projectId || args.project_id || action.related_project_id;
+    const project = (await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [projectId])).rows[0];
+    requireProjectOwner(project, actorUserId);
+    const presentationMode = ['game_master', 'plain'].includes(args.presentationMode || args.presentation_mode)
+      ? (args.presentationMode || args.presentation_mode)
+      : 'game_master';
+    const narrativeIntensity = ['light', 'standard', 'immersive'].includes(args.narrativeIntensity || args.narrative_intensity)
+      ? (args.narrativeIntensity || args.narrative_intensity)
+      : 'standard';
+    const statDisplayMode = ['narrative', 'numeric', 'both'].includes(args.statDisplayMode || args.stat_display_mode)
+      ? (args.statDisplayMode || args.stat_display_mode)
+      : 'both';
+    const result = await client.query(
+      `INSERT INTO project_narrative_settings (
+         project_id, presentation_mode, narrative_intensity, genre_override,
+         avoid_themes, stat_display_mode, updated_by
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (project_id) DO UPDATE
+       SET presentation_mode = EXCLUDED.presentation_mode,
+           narrative_intensity = EXCLUDED.narrative_intensity,
+           genre_override = EXCLUDED.genre_override,
+           avoid_themes = EXCLUDED.avoid_themes,
+           stat_display_mode = EXCLUDED.stat_display_mode,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = NOW()
+       RETURNING *`,
+      [
+        projectId,
+        presentationMode,
+        narrativeIntensity,
+        args.genreOverride || args.genre_override || null,
+        Array.isArray(args.avoidThemes || args.avoid_themes) ? (args.avoidThemes || args.avoid_themes) : [],
+        statDisplayMode,
+        actorUserId || null
+      ]
+    );
+    return {
+      status: 'executed',
+      entityType: 'project_narrative_settings',
+      entityId: projectId,
+      narrativeSettings: result.rows[0]
+    };
+  }
+
+  if (functionName === 'projects.update_calling') {
+    const projectId = args.projectId || args.project_id || action.related_project_id;
+    if (!actorUserId) {
+      const error = new Error('A signed-in user is required to update a calling.');
+      error.status = 401;
+      throw error;
+    }
+    const project = (await client.query('SELECT * FROM projects WHERE id = $1', [projectId])).rows[0];
+    if (!project) {
+      const error = new Error('Project not found.');
+      error.status = 404;
+      throw error;
+    }
+    const roleArchetype = ['party_member', 'builder', 'organizer', 'reviewer', 'scout', 'scribe', 'guardian', 'steward'].includes(args.roleArchetype || args.role_archetype)
+      ? (args.roleArchetype || args.role_archetype)
+      : 'party_member';
+    const result = await client.query(
+      `INSERT INTO project_character_callings (
+         project_id, user_id, calling_title, role_archetype, contribution_summary, skills_snapshot, source
+       )
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'manual')
+       ON CONFLICT (project_id, user_id) DO UPDATE
+       SET calling_title = EXCLUDED.calling_title,
+           role_archetype = EXCLUDED.role_archetype,
+           contribution_summary = EXCLUDED.contribution_summary,
+           skills_snapshot = EXCLUDED.skills_snapshot,
+           status = 'active',
+           updated_at = NOW()
+       RETURNING *`,
+      [
+        projectId,
+        actorUserId,
+        String(args.callingTitle || args.calling_title || 'Party Member').trim().slice(0, 120),
+        roleArchetype,
+        String(args.contributionSummary || args.contribution_summary || '').trim().slice(0, 1000) || null,
+        JSON.stringify(args.skillsSnapshot || args.skills_snapshot || {})
+      ]
+    );
+    return {
+      status: 'executed',
+      entityType: 'project_character_calling',
+      entityId: result.rows[0].id,
+      calling: result.rows[0]
+    };
+  }
+
+  if (functionName === 'projects.revoke_invite') {
+    const projectId = args.projectId || args.project_id || action.related_project_id;
+    const inviteId = args.inviteId || args.invite_id;
+    const project = (await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [projectId])).rows[0];
+    requireProjectOwner(project, actorUserId);
+    const result = await client.query(
+      `UPDATE project_invites
+       SET status = 'revoked',
+           revoked_at = NOW(),
+           revoked_by = $3,
+           updated_at = NOW()
+       WHERE id = $1
+         AND project_id = $2
+         AND status = 'active'
+       RETURNING *`,
+      [inviteId, projectId, actorUserId || null]
+    );
+    if (!result.rows[0]) {
+      const error = new Error('Active project invite not found.');
+      error.status = 404;
+      throw error;
+    }
+    return {
+      status: 'executed',
+      entityType: 'project_invite',
+      entityId: result.rows[0].id,
+      invite: result.rows[0]
+    };
+  }
+
+  if (functionName === 'projects.launch_quest') {
+    const projectId = args.projectId || args.project_id || action.related_project_id;
+    const project = (await client.query('SELECT * FROM projects WHERE id = $1 FOR UPDATE', [projectId])).rows[0];
+    requireProjectOwner(project, actorUserId);
+    const profile = (await client.query(
+      `SELECT *
+       FROM project_quest_profiles
+       WHERE project_id = $1
+         AND status = 'active'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [projectId]
+    )).rows[0];
+    const event = (await client.query(
+      `INSERT INTO project_narrative_events (
+         project_id, actor_user_id, event_type, event_key, title, body, facts, visibility
+       )
+       VALUES ($1, $2, 'quest.launched', $3, $4, $5, $6::jsonb, 'project')
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [
+        projectId,
+        actorUserId || null,
+        `action:${action.id}:quest-launch`,
+        `Quest launched: ${profile?.title || project.name}`,
+        profile?.opening_scene || project.description || null,
+        JSON.stringify({ actionId: action.id, projectId: Number(projectId), profileId: profile?.id || null })
+      ]
+    )).rows[0];
+    return {
+      status: 'executed',
+      entityType: 'project_narrative_event',
+      entityId: event?.id || null,
+      event
+    };
+  }
+
   return {
     status: 'queued',
     message: 'Action confirmed and queued for policy-controlled execution.'
@@ -158,7 +397,6 @@ async function executeKnownIntent(client, action, actorUserId) {
 class ActionQueueService {
   async createPreview({
     actorUserId,
-    isServiceActor = false,
     actorBotIdentity,
     sourceClient,
     intent,

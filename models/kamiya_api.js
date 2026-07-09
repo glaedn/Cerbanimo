@@ -43,6 +43,45 @@ const defaultPrompts = [
         riskLevel: 'string'
       }
     }
+  },
+  {
+    prompt_key: 'game-master-narration',
+    version: 1,
+    status: 'active',
+    prompt_text: 'Render Cerbanimo facts as Game Master narration without inventing project state, reward outcomes, deadlines, reviewers, task status, or private evidence. Honor plain-mode overrides by beginning with "Out of character:" and keeping the response direct.',
+    schema: {
+      input: {
+        questContext: 'object',
+        presentationMode: 'game_master|plain',
+        narrativeIntensity: 'light|standard|immersive',
+        statDisplayMode: 'narrative|numeric|both'
+      },
+      output: {
+        narration: 'string',
+        factualRefs: 'array',
+        cards: 'array',
+        withheldFacts: 'array'
+      }
+    }
+  },
+  {
+    prompt_key: 'quest-bible-projection',
+    version: 1,
+    status: 'active',
+    prompt_text: 'Project a Cerbanimo project into a durable quest profile using only supplied canonical facts. Return title, premise, desired outcome, genre, tone, stakes, opening scene, and themes while keeping all business logic in Cerbanimo APIs.',
+    schema: {
+      output: {
+        title: 'string',
+        premise: 'string',
+        desiredOutcome: 'string',
+        genre: 'string',
+        tone: 'string',
+        stakes: 'string',
+        openingScene: 'string',
+        keyThemes: 'array',
+        avoidedThemes: 'array'
+      }
+    }
   }
 ];
 
@@ -57,6 +96,155 @@ export async function createKamiyaApiTables() {
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS kamiya_chats JSONB NOT NULL DEFAULT '[]'::jsonb,
         ADD COLUMN IF NOT EXISTS kamiya_chat_seq INTEGER NOT NULL DEFAULT 0;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_narrative_preferences (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        presentation_mode TEXT NOT NULL DEFAULT 'game_master',
+        narrative_intensity TEXT NOT NULL DEFAULT 'standard',
+        preferred_genres TEXT[] NOT NULL DEFAULT '{}',
+        avoid_themes TEXT[] NOT NULL DEFAULT '{}',
+        stat_display_mode TEXT NOT NULL DEFAULT 'both',
+        seen_intro BOOLEAN NOT NULL DEFAULT FALSE,
+        plain_override_prefixes TEXT[] NOT NULL DEFAULT ARRAY['Game Master,', 'Game Master:', '/plain'],
+        content_safety_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (presentation_mode IN ('game_master', 'plain')),
+        CHECK (narrative_intensity IN ('light', 'standard', 'immersive')),
+        CHECK (stat_display_mode IN ('narrative', 'numeric', 'both')),
+        CHECK (jsonb_typeof(content_safety_preferences) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_quest_profiles (
+        id BIGSERIAL PRIMARY KEY,
+        profile_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'active',
+        profile_version INTEGER NOT NULL DEFAULT 1,
+        title TEXT NOT NULL,
+        premise TEXT NOT NULL,
+        desired_outcome TEXT,
+        genre TEXT NOT NULL DEFAULT 'hopeful adventure',
+        tone TEXT NOT NULL DEFAULT 'collaborative',
+        stakes TEXT,
+        opening_scene TEXT,
+        key_themes TEXT[] NOT NULL DEFAULT '{}',
+        avoided_themes TEXT[] NOT NULL DEFAULT '{}',
+        audience TEXT NOT NULL DEFAULT 'project_party',
+        source JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (status IN ('active', 'superseded', 'archived')),
+        CHECK (jsonb_typeof(source) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_narrative_settings (
+        project_id INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+        presentation_mode TEXT NOT NULL DEFAULT 'game_master',
+        narrative_intensity TEXT NOT NULL DEFAULT 'standard',
+        genre_override TEXT,
+        avoid_themes TEXT[] NOT NULL DEFAULT '{}',
+        stat_display_mode TEXT NOT NULL DEFAULT 'both',
+        spoiler_level TEXT NOT NULL DEFAULT 'current',
+        safety_level TEXT NOT NULL DEFAULT 'standard',
+        updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (presentation_mode IN ('game_master', 'plain')),
+        CHECK (narrative_intensity IN ('light', 'standard', 'immersive')),
+        CHECK (stat_display_mode IN ('narrative', 'numeric', 'both')),
+        CHECK (spoiler_level IN ('current', 'foreshadow', 'full')),
+        CHECK (safety_level IN ('standard', 'careful', 'restricted'))
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_party_settings (
+        project_id INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+        min_party_size INTEGER NOT NULL DEFAULT 1,
+        target_party_size INTEGER NOT NULL DEFAULT 3,
+        max_party_size INTEGER NOT NULL DEFAULT 7,
+        open_recruitment BOOLEAN NOT NULL DEFAULT TRUE,
+        invite_required BOOLEAN NOT NULL DEFAULT FALSE,
+        role_slots JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (min_party_size >= 1),
+        CHECK (target_party_size >= min_party_size),
+        CHECK (max_party_size >= target_party_size),
+        CHECK (jsonb_typeof(role_slots) = 'array')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_invites (
+        id BIGSERIAL PRIMARY KEY,
+        invite_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        token_hash TEXT UNIQUE NOT NULL,
+        token_hint TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        max_uses INTEGER NOT NULL DEFAULT 1,
+        use_count INTEGER NOT NULL DEFAULT 0,
+        expires_at TIMESTAMP WITH TIME ZONE,
+        revoked_at TIMESTAMP WITH TIME ZONE,
+        revoked_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (status IN ('active', 'revoked', 'expired')),
+        CHECK (max_uses >= 1),
+        CHECK (use_count >= 0)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_character_callings (
+        id BIGSERIAL PRIMARY KEY,
+        calling_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        calling_title TEXT,
+        role_archetype TEXT NOT NULL DEFAULT 'party_member',
+        contribution_summary TEXT,
+        skills_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        status TEXT NOT NULL DEFAULT 'active',
+        source TEXT NOT NULL DEFAULT 'manual',
+        joined_via_invite_id BIGINT REFERENCES project_invites(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (status IN ('active', 'left', 'revoked')),
+        CHECK (source IN ('manual', 'invite', 'task_assignment', 'project_creator', 'admin')),
+        CHECK (jsonb_typeof(skills_snapshot) = 'object'),
+        UNIQUE (project_id, user_id)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_narrative_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL,
+        review_round_id BIGINT,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        event_type TEXT NOT NULL,
+        event_key TEXT,
+        title TEXT NOT NULL,
+        body TEXT,
+        facts JSONB NOT NULL DEFAULT '{}'::jsonb,
+        visibility TEXT NOT NULL DEFAULT 'party',
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (jsonb_typeof(facts) = 'object'),
+        CHECK (visibility IN ('private', 'party', 'project', 'public'))
+      );
     `);
 
     await client.query(`
@@ -810,6 +998,18 @@ export async function createKamiyaApiTables() {
       CREATE INDEX IF NOT EXISTS idx_work_memory_user_id ON work_memory(user_id);
       CREATE INDEX IF NOT EXISTS idx_work_memory_category ON work_memory(category);
       CREATE INDEX IF NOT EXISTS idx_work_memory_project ON work_memory(related_project_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_project_quest_profiles_one_active
+        ON project_quest_profiles(project_id)
+        WHERE status = 'active';
+      CREATE INDEX IF NOT EXISTS idx_project_quest_profiles_project ON project_quest_profiles(project_id);
+      CREATE INDEX IF NOT EXISTS idx_project_invites_project_status ON project_invites(project_id, status);
+      CREATE INDEX IF NOT EXISTS idx_project_invites_token_hash ON project_invites(token_hash);
+      CREATE INDEX IF NOT EXISTS idx_project_character_callings_project ON project_character_callings(project_id, status);
+      CREATE INDEX IF NOT EXISTS idx_project_character_callings_user ON project_character_callings(user_id, status);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_project_narrative_events_once
+        ON project_narrative_events(project_id, event_key)
+        WHERE event_key IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_project_narrative_events_project ON project_narrative_events(project_id, created_at DESC);
     `);
 
     for (const prompt of defaultPrompts) {
