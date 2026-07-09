@@ -60,6 +60,7 @@ Cerbanimo includes a token infrastructure covering:
 - **Impact tracking** via ImpactGraphService and stamped impact receipts
 - **Verification module** for trust-backed claim validation
 - **Task evidence and review bridge** for immutable evidence bundles, manifest v2 validation, manual validation review, peer Blessings, and PM Ritual Seal acceptance records
+- **Game Master Mode API** for durable quest profiles, party assembly, narrative preferences, project invites, character callings, launch previews, and project chronicles for Kamiya
 - **Services marketplace** for offering work as reusable services
 - **Governance chamber** with proposals, voting, constitution management, civic simulation, mediation, and delegation
 - **Dispute court** for structured conflict resolution

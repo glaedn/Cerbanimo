@@ -35,3 +35,32 @@ Every modifying route rechecks actor ownership and returns server-owned `allowed
 - PM decision: `POST /api/v1/review-rounds/:roundId/pm-decisions`
 
 Clients must not infer permissions from role names or statuses.
+
+## Game Master Mode
+
+Game Master Mode exposes quest presentation state to Kamiya without moving project business logic into the client.
+
+- Preferences: `GET/PATCH /api/v1/me/narrative-preferences`
+- Quest profile: `GET /api/v1/projects/:projectId/quest-profile`
+- Quest context: `GET /api/v1/projects/:projectId/quest-context`
+- Narrative settings: `PATCH /api/v1/projects/:projectId/narrative-settings`
+- Quest profile preview: `POST /api/v1/projects/:projectId/quest-profile/preview-update`
+- Party: `GET /api/v1/projects/:projectId/party`
+- Invites: `POST /api/v1/projects/:projectId/invites`
+- Revoke invite: `POST /api/v1/projects/:projectId/invites/:inviteId/revoke`
+- Invite preview/redeem: `GET/POST /api/v1/project-invites/:token/{preview,redeem}`
+- Launch preview: `POST /api/v1/projects/:projectId/launch/preview`
+- Calling: `GET/PATCH /api/v1/projects/:projectId/calling`
+- Chronicle: `GET /api/v1/projects/:projectId/chronicle`
+
+Canonical action names:
+
+- `projects.create_invite`
+- `projects.revoke_invite`
+- `projects.join_from_invite`
+- `projects.launch_quest`
+- `projects.update_quest_profile`
+- `projects.update_narrative_settings`
+- `projects.update_calling`
+
+Raw invite tokens are returned once and are stored only as hashes in Cerbanimo.
