@@ -1,37 +1,48 @@
 import dns from 'node:dns/promises';
+import http from 'node:http';
+import https from 'node:https';
 import net from 'node:net';
 import fetch from 'node-fetch';
 import EvidenceArtifactStore, { MAX_ITEM_BYTES } from './EvidenceArtifactStore.js';
+import { inspectBinary, normalizeMediaType, urlSnapshotAllowedMediaTypes } from './EvidenceBinaryInspectionService.js';
 
-const allowedMediaTypes = new Set([
-  'text/plain',
-  'text/html',
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp'
-]);
+const connectTimeoutMs = Number(process.env.CERBANIMO_EVIDENCE_FETCH_CONNECT_TIMEOUT_MS || 5000);
+const totalTimeoutMs = Number(process.env.CERBANIMO_EVIDENCE_FETCH_TOTAL_TIMEOUT_MS || 15000);
 
 function isPrivateIpv4(address) {
   const octets = address.split('.').map(Number);
   if (octets.length !== 4 || octets.some(part => Number.isNaN(part))) return true;
-  const [a, b] = octets;
+  const [a, b, c, d] = octets;
   return a === 0
     || a === 10
     || a === 127
+    || (a === 100 && b >= 64 && b <= 127)
     || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && b === 0 && c === 0)
+    || (a === 192 && b === 0 && c === 2)
     || (a === 192 && b === 168)
+    || (a === 198 && (b === 18 || b === 19))
+    || (a === 198 && b === 51 && c === 100)
+    || (a === 203 && b === 0 && c === 113)
+    || (a === 255 && b === 255 && c === 255 && d === 255)
     || a >= 224;
 }
 
 function isPrivateIpv6(address) {
   const normalized = address.toLowerCase();
+  if (normalized.startsWith('::ffff:')) {
+    const embedded = normalized.replace(/^::ffff:/, '');
+    return net.isIP(embedded) === 4 ? isPrivateIpv4(embedded) : true;
+  }
   return normalized === '::1'
     || normalized === '::'
+    || normalized.startsWith('64:ff9b:')
     || normalized.startsWith('fc')
     || normalized.startsWith('fd')
     || normalized.startsWith('fe80:')
+    || normalized.startsWith('ff')
+    || normalized.startsWith('2001:db8:')
     || normalized.startsWith('::ffff:127.')
     || normalized.startsWith('::ffff:10.')
     || normalized.startsWith('::ffff:192.168.')
@@ -48,18 +59,7 @@ function blockedHostname(hostname) {
 }
 
 function mediaTypeFromHeader(header = '') {
-  return String(header || '').split(';')[0].trim().toLowerCase();
-}
-
-function sniffMediaType(buffer, fallback) {
-  if (buffer.length >= 4 && buffer.slice(0, 4).toString('ascii') === '%PDF') return 'application/pdf';
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
-  if (buffer.length >= 8 && buffer.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
-  if (buffer.length >= 12 && buffer.slice(0, 4).toString('ascii') === 'RIFF' && buffer.slice(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
-  const prefix = buffer.slice(0, 200).toString('utf8').trim().toLowerCase();
-  if (prefix.startsWith('<!doctype html') || prefix.startsWith('<html')) return 'text/html';
-  if (prefix.includes('<svg')) return 'image/svg+xml';
-  return fallback || 'application/octet-stream';
+  return normalizeMediaType(header);
 }
 
 async function readBounded(response, maxBytes) {
@@ -97,10 +97,15 @@ class EvidenceFetchService {
       throw error;
     }
 
-    const ipVersion = net.isIP(parsed.hostname);
+    const addresses = await this.resolvePublicAddresses(parsed.hostname);
+    return { parsed, addresses };
+  }
+
+  async resolvePublicAddresses(hostname) {
+    const ipVersion = net.isIP(hostname);
     const addresses = ipVersion
-      ? [{ address: parsed.hostname, family: ipVersion }]
-      : await dns.lookup(parsed.hostname, { all: true, verbatim: true });
+      ? [{ address: hostname, family: ipVersion }]
+      : await dns.lookup(hostname, { all: true, verbatim: true });
     for (const address of addresses) {
       const blocked = address.family === 4 ? isPrivateIpv4(address.address) : isPrivateIpv6(address.address);
       if (blocked) {
@@ -110,25 +115,48 @@ class EvidenceFetchService {
         throw error;
       }
     }
-
-    return parsed;
+    return addresses;
   }
 
-  async fetchSnapshot(rawUrl, { client, timeoutMs = 8000, maxRedirects = 3 } = {}) {
-    let current = await this.assertSafeUrl(rawUrl);
-    for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+  pinnedAgent(parsed, pinnedAddress) {
+    const lookup = (_hostname, _options, callback) => {
+      callback(null, pinnedAddress.address, pinnedAddress.family);
+    };
+    const Agent = parsed.protocol === 'https:' ? https.Agent : http.Agent;
+    return new Agent({
+      lookup,
+      timeout: connectTimeoutMs,
+      servername: parsed.hostname
+    });
+  }
+
+  async fetchSnapshot(rawUrl, { client, timeoutMs = totalTimeoutMs, maxRedirects = 3 } = {}) {
+    let safety = await this.assertSafeUrl(rawUrl);
+    let current = safety.parsed;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+      const addresses = redirectCount === 0 ? safety.addresses : await this.resolvePublicAddresses(current.hostname);
+      const pinnedAddress = addresses[0];
       let response;
       try {
         response = await fetch(current.toString(), {
           method: 'GET',
           redirect: 'manual',
-          headers: { 'user-agent': 'CerbanimoEvidenceFetcher/1.0' },
+          headers: {
+            'user-agent': 'CerbanimoEvidenceFetcher/1.0',
+            host: current.host
+          },
+          agent: this.pinnedAgent(current, pinnedAddress),
           signal: controller.signal
         });
-      } finally {
-        clearTimeout(timer);
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          error.status = 408;
+          error.code = 'EVIDENCE_URL_FETCH_TIMEOUT';
+        }
+        throw error;
       }
 
       if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -139,49 +167,69 @@ class EvidenceFetchService {
           error.code = 'EVIDENCE_URL_BAD_REDIRECT';
           throw error;
         }
-        current = await this.assertSafeUrl(new URL(location, current).toString());
+        safety = await this.assertSafeUrl(new URL(location, current).toString());
+        current = safety.parsed;
         continue;
       }
 
+      if (!response.ok) {
+        const error = new Error(`Evidence URL returned unsupported status ${response.status}.`);
+        error.status = 422;
+        error.code = 'EVIDENCE_URL_NON_2XX';
+        error.details = { statusCode: response.status };
+        throw error;
+      }
+
       const headerMediaType = mediaTypeFromHeader(response.headers.get('content-type'));
-      if (headerMediaType && !allowedMediaTypes.has(headerMediaType)) {
+      if (headerMediaType && !urlSnapshotAllowedMediaTypes.has(headerMediaType)) {
         const error = new Error(`Evidence URL content type ${headerMediaType} is not allowed.`);
         error.status = 415;
         error.code = 'EVIDENCE_MEDIA_TYPE_NOT_ALLOWED';
         throw error;
       }
-
-      const buffer = await readBounded(response, MAX_ITEM_BYTES);
-      const sniffedMediaType = sniffMediaType(buffer, headerMediaType || undefined);
-      if (!allowedMediaTypes.has(sniffedMediaType)) {
-        const error = new Error(`Evidence content type ${sniffedMediaType} is not allowed.`);
-        error.status = 415;
-        error.code = 'EVIDENCE_MEDIA_TYPE_NOT_ALLOWED';
+      const contentLength = Number(response.headers.get('content-length') || 0);
+      if (contentLength > MAX_ITEM_BYTES) {
+        const error = new Error(`Fetched evidence exceeds ${MAX_ITEM_BYTES} bytes.`);
+        error.status = 413;
+        error.code = 'FETCHED_EVIDENCE_TOO_LARGE';
         throw error;
       }
 
-      const blob = await EvidenceArtifactStore.putBuffer({
+      const buffer = await readBounded(response, MAX_ITEM_BYTES);
+      const inspected = inspectBinary({
         buffer,
-        mediaType: sniffedMediaType,
+        claimedMediaType: headerMediaType || undefined,
+        sourceKind: 'url_snapshot',
+        maxBytes: MAX_ITEM_BYTES
+      });
+
+      const blob = await EvidenceArtifactStore.putBuffer({
+        buffer: inspected.buffer,
+        mediaType: inspected.mediaType,
         client,
         metadata: {
           sourceUrl: rawUrl,
           canonicalUrl: current.toString(),
           statusCode: response.status,
-          capturedAt: new Date().toISOString()
+          capturedAt: new Date().toISOString(),
+          pinnedAddress: pinnedAddress.address,
+          metadataPolicy: inspected.metadataPolicy
         }
       });
 
       return {
         sourceUrl: rawUrl,
         canonicalUrl: current.toString(),
-        mediaType: sniffedMediaType,
-        byteSize: buffer.length,
+        mediaType: inspected.mediaType,
+        byteSize: inspected.byteSize,
         contentSha256: blob.content_sha256,
         blobStorageKey: blob.storage_key,
         statusCode: response.status,
         ok: response.ok
       };
+      }
+    } finally {
+      clearTimeout(timer);
     }
 
     const error = new Error('Evidence URL redirected too many times.');
@@ -192,3 +240,4 @@ class EvidenceFetchService {
 }
 
 export default new EvidenceFetchService();
+export { blockedHostname, isPrivateIpv4, isPrivateIpv6 };

@@ -141,6 +141,7 @@ const openApiDocument = {
     '/tasks/{id}/evidence/bundles/{bundleId}/fetch-url': { post: { summary: 'Fetch and snapshot an allowed URL as evidence' } },
     '/tasks/{id}/evidence/bundles/{bundleId}/preview': { post: { summary: 'Freeze an evidence bundle and create a confirmation-gated submit action' } },
     '/tasks/{id}/evidence/bundles/{bundleId}/cancel': { post: { summary: 'Cancel an evidence bundle before terminal validation' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/supersede': { post: { summary: 'Create a new draft bundle that supersedes a needs-more-evidence or manual-review bundle' } },
     '/tasks/{id}/validations/{validationId}': { get: { summary: 'Read a task validation result and findings' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
@@ -567,22 +568,25 @@ router.post('/tasks/:taskId/evidence/bundles/:bundleId/cancel', requireScopes([A
   return sendOk(req, res, detail);
 }));
 
+router.post('/tasks/:taskId/evidence/bundles/:bundleId/supersede', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.createSupersedingBundle({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    reflection: req.body?.reflection,
+    summary: req.body?.summary
+  });
+  return sendOk(req, res, detail, 201);
+}));
+
 router.get('/tasks/:taskId/validations/:validationId', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
-  const authContext = actionAuthContext(req);
-  await TaskEvidenceService.listEvidence({ taskId: req.params.taskId, authContext });
-  const result = await pool.query(
-    `SELECT vr.*,
-            COALESCE(json_agg(vf ORDER BY vf.created_at ASC) FILTER (WHERE vf.id IS NOT NULL), '[]') AS findings
-     FROM task_validation_results vr
-     LEFT JOIN task_validation_findings vf ON vf.validation_result_id = vr.id
-     WHERE vr.task_id::text = $1
-       AND (vr.id::text = $2 OR vr.validation_uuid::text = $2)
-     GROUP BY vr.id
-     LIMIT 1`,
-    [String(req.params.taskId), String(req.params.validationId)]
-  );
-  if (!result.rows[0]) return sendError(req, res, 404, 'Validation result not found');
-  return sendOk(req, res, result.rows[0]);
+  const result = await TaskEvidenceService.getValidationResult({
+    taskId: req.params.taskId,
+    validationId: req.params.validationId,
+    authContext: actionAuthContext(req)
+  });
+  if (!result) return sendError(req, res, 404, 'Validation result not found');
+  return sendOk(req, res, result);
 }));
 
 router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {

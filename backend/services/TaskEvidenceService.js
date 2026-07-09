@@ -6,10 +6,40 @@ import TaskEvidenceRequirementService from './TaskEvidenceRequirementService.js'
 import EvidenceArtifactStore from './EvidenceArtifactStore.js';
 import EvidenceFetchService from './EvidenceFetchService.js';
 import EvidenceValidationProvider from './EvidenceValidationProvider.js';
+import EvidenceArtifactReferenceResolver from './EvidenceArtifactReferenceResolver.js';
+import { decodeStrictBase64, inspectBinary } from './EvidenceBinaryInspectionService.js';
 
 const draftStatuses = new Set(['draft']);
 const previewableStatuses = new Set(['draft', 'previewed']);
 const terminalBundleStatuses = new Set(['validation_passed', 'validation_failed', 'cancelled', 'superseded']);
+const canonicalEvidenceTypes = new Set([
+  'text',
+  'url_snapshot',
+  'image',
+  'document',
+  'artifact_reference',
+  'repository_commit',
+  'pull_request',
+  'automation_report',
+  'command_result',
+  'attestation',
+  'receipt',
+  'reflection'
+]);
+const deterministicChecks = new Set([
+  'evidence_present',
+  'reflection_present',
+  'report_status_checks_passed',
+  'report_belongs_to_task',
+  'resolved_commit_present',
+  'distinct_evidence_items',
+  'no_duplicate_hashes',
+  'source_url_captured',
+  'artifact_reference_authorized',
+  'command_exit_zero',
+  'receipt_present',
+  'attestation_present'
+]);
 
 function nowIso() {
   return new Date().toISOString();
@@ -66,11 +96,168 @@ function buildAuthoritySnapshot({ actorUserId, isServiceActor = false, scopes = 
   };
 }
 
+function permissionError(message, code = 'EVIDENCE_BUNDLE_OWNER_REQUIRED') {
+  const error = new Error(message);
+  error.status = 403;
+  error.code = code;
+  return error;
+}
+
+function actorOwnsBundle(bundle, authContext = {}) {
+  return Boolean(bundle?.actor_user_id && authContext?.actorUserId && Number(bundle.actor_user_id) === Number(authContext.actorUserId));
+}
+
+function isServiceEvidenceOperation(bundle, authContext = {}) {
+  return Boolean(authContext.isServiceActor && bundle?.source_kind === 'automation');
+}
+
+function coverageSummary(requirements = [], items = []) {
+  const itemRows = asArray(items);
+  return asArray(requirements).map(requirement => {
+    const accepted = new Set(asArray(requirement.acceptedEvidenceTypes || requirement.proofTypes).map(String));
+    const matches = itemRows.filter(item => {
+      const ids = asArray(item.requirement_ids || item.requirementIds).map(String);
+      if (ids.length === 0 && asArray(requirements).length > 1) return false;
+      const idMatch = ids.length === 0 || ids.includes(String(requirement.requirementId));
+      const typeMatch = accepted.size === 0 || accepted.has(String(item.evidence_type || item.evidenceType));
+      return idMatch && typeMatch;
+    });
+    return {
+      requirementId: requirement.requirementId,
+      status: matches.length >= Number(requirement.minimumEvidenceItems || 1) ? 'covered' : 'needs_evidence',
+      evidenceItemCount: matches.length
+    };
+  });
+}
+
 class TaskEvidenceService {
+  async assertBundleMutationAuthority(client, bundle, authContext, operation = 'mutate') {
+    const policy = await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
+    if (['human', 'mixed'].includes(bundle.source_kind || 'human') && !actorOwnsBundle(bundle, authContext)) {
+      throw permissionError(`Only the contributor who owns this evidence bundle can ${operation} it.`);
+    }
+    if (bundle.source_kind === 'automation' && !isServiceEvidenceOperation(bundle, authContext) && !actorOwnsBundle(bundle, authContext)) {
+      throw permissionError(`Automation evidence bundles require the owning actor or service scope to ${operation}.`, 'EVIDENCE_SERVICE_OPERATION_REQUIRED');
+    }
+    return policy;
+  }
+
+  async evidencePolicy(taskId, authContext, client = pool) {
+    const policy = await TaskAccessService.policyForTask(taskId, authContext, client);
+    if (!policy.exists) {
+      const error = new Error('Task not found');
+      error.status = 404;
+      throw error;
+    }
+    if (!policy.canViewEvidenceSummary?.allowed) {
+      const error = new Error(policy.canViewEvidenceSummary?.reason || 'Evidence is not visible to this actor.');
+      error.status = 403;
+      error.code = policy.canViewEvidenceSummary?.code || 'EVIDENCE_SUMMARY_DENIED';
+      throw error;
+    }
+    return policy;
+  }
+
+  buildFrozenManifest(bundle, items, requirements) {
+    const base = {
+      bundleId: Number(bundle.id),
+      version: Number(bundle.version || 1),
+      taskId: Number(bundle.task_id),
+      requirementSnapshotHash: jsonHash(TaskEvidenceRequirementService.summarize(requirements)),
+      items: asArray(items)
+        .slice()
+        .sort((a, b) => Number(a.id) - Number(b.id))
+        .map(item => ({
+          itemId: Number(item.id),
+          evidenceType: item.evidence_type,
+          contentSha256: item.content_sha256,
+          blobStorageKey: item.blob_storage_key || null,
+          artifactUri: item.artifact_uri || null,
+          requirementIds: asArray(item.requirement_ids).map(String).sort()
+        })),
+      reflectionSha256: crypto.createHash('sha256').update(String(bundle.reflection || '')).digest('hex')
+    };
+    return {
+      ...base,
+      manifestSha256: jsonHash(base)
+    };
+  }
+
+  manifestFailure(code, message, metadata = {}) {
+    return {
+      ok: false,
+      status: 'validation_failed',
+      finding: {
+        requirementId: null,
+        severity: 'critical',
+        code,
+        message,
+        evidenceItemIds: [],
+        metadata
+      }
+    };
+  }
+
+  async verifyFrozenManifest(client, bundle, task) {
+    const frozenManifest = parseJsonish(bundle.frozen_manifest, null);
+    if (!frozenManifest || !bundle.manifest_sha256) {
+      return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'Frozen evidence manifest is missing.');
+    }
+    const items = await this.loadItemsForBundle(client, bundle.id);
+    const requirements = parseJsonish(bundle.requirement_snapshot, []).length
+      ? parseJsonish(bundle.requirement_snapshot, [])
+      : TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task));
+    const rebuilt = this.buildFrozenManifest(bundle, items, requirements);
+    if (rebuilt.manifestSha256 !== bundle.manifest_sha256 || rebuilt.manifestSha256 !== frozenManifest.manifestSha256) {
+      return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'Evidence manifest no longer matches the frozen preview snapshot.', {
+        expected: bundle.manifest_sha256,
+        actual: rebuilt.manifestSha256
+      });
+    }
+
+    const itemsById = new Map(items.map(item => [Number(item.id), item]));
+    for (const manifestItem of asArray(frozenManifest.items)) {
+      const row = itemsById.get(Number(manifestItem.itemId));
+      if (!row) {
+        return this.manifestFailure('EVIDENCE_ITEM_MISSING', 'A frozen evidence item is missing before validation.', { itemId: manifestItem.itemId });
+      }
+      if (row.content_sha256 !== manifestItem.contentSha256) {
+        return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'A frozen evidence item hash no longer matches its manifest.', { itemId: manifestItem.itemId });
+      }
+      if (manifestItem.blobStorageKey) {
+        const blob = await EvidenceArtifactStore.getByStorageKey(manifestItem.blobStorageKey, client);
+        if (!blob || EvidenceArtifactStore.contentHash(blob.content) !== manifestItem.contentSha256) {
+          return this.manifestFailure('EVIDENCE_BLOB_HASH_MISMATCH', 'Stored evidence blob hash no longer matches the frozen manifest.', { itemId: manifestItem.itemId });
+        }
+      }
+      if (row.evidence_type === 'artifact_reference') {
+        try {
+          const resolved = await EvidenceArtifactReferenceResolver.resolve({
+            artifactUri: row.artifact_uri,
+            taskId: bundle.task_id,
+            authContext: {
+              actorUserId: bundle.actor_user_id,
+              isServiceActor: bundle.source_kind === 'automation',
+              scopes: bundle.source_kind === 'automation' ? ['evidence:service'] : []
+            },
+            client
+          });
+          if (resolved.contentSha256 !== row.content_sha256) {
+            return this.manifestFailure('EVIDENCE_ARTIFACT_UNAUTHORIZED', 'Artifact reference content changed or is no longer authorized.', { itemId: manifestItem.itemId });
+          }
+        } catch (error) {
+          return this.manifestFailure('EVIDENCE_ARTIFACT_UNAUTHORIZED', error.message || 'Artifact reference is no longer authorized.', { itemId: manifestItem.itemId });
+        }
+      }
+    }
+
+    return { ok: true, items, requirements };
+  }
+
   async listEvidence({ taskId, authContext }) {
     const task = await TaskAccessService.loadTask(taskId);
     if (!task) return null;
-    await TaskAccessService.assert(task.id, authContext, 'canViewEvidence');
+    const policy = await this.evidencePolicy(task.id, authContext);
     const [bundles, items, validations] = await Promise.all([
       pool.query(
         `SELECT *
@@ -100,13 +287,18 @@ class TaskEvidenceService {
     const itemsByBundle = new Map();
     for (const item of items.rows) {
       const key = String(item.bundle_id);
-      itemsByBundle.set(key, [...(itemsByBundle.get(key) || []), this.serializeItem(item)]);
+      itemsByBundle.set(key, [...(itemsByBundle.get(key) || []), item]);
     }
+    const requirements = TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task));
     return {
       task,
-      requirements: TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task)),
-      bundles: bundles.rows.map(bundle => this.serializeBundle(bundle, itemsByBundle.get(String(bundle.id)) || [])),
-      validations: validations.rows
+      requirements,
+      bundles: bundles.rows.map(bundle => this.serializeBundle(bundle, itemsByBundle.get(String(bundle.id)) || [], {
+        policy,
+        authContext,
+        requirements
+      })),
+      validations: validations.rows.map(validation => this.serializeValidation(validation, { policy }))
     };
   }
 
@@ -114,11 +306,27 @@ class TaskEvidenceService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const task = await TaskAccessService.loadTask(taskId, client);
+      const taskResult = await client.query(
+        `SELECT t.*,
+                p.creator_id AS project_creator_id,
+                p.visibility AS project_visibility,
+                p.status AS project_status,
+                p.community_id AS project_community_id
+         FROM tasks t
+         LEFT JOIN projects p ON p.id = t.project_id
+         WHERE t.id::text = $1
+         FOR UPDATE OF t`,
+        [String(taskId)]
+      );
+      const task = taskResult.rows[0] || null;
       if (!task) {
         const error = new Error('Task not found');
         error.status = 404;
         throw error;
+      }
+      const normalizedSourceKind = sourceKind || 'human';
+      if (['human', 'mixed'].includes(normalizedSourceKind) && !actorUserId) {
+        throw permissionError('Human evidence bundles require an authenticated owning contributor.', 'EVIDENCE_BUNDLE_ACTOR_REQUIRED');
       }
       await TaskAccessService.assert(task.id, authContext, 'canSubmitEvidence', client);
       const existing = await this.findActiveDraft(client, task.id, actorUserId);
@@ -142,7 +350,7 @@ class TaskEvidenceService {
         [
           task.id,
           actorUserId || null,
-          sourceKind || 'human',
+          normalizedSourceKind,
           versionResult.rows[0]?.next_version || 1,
           compactText(reflection, 8000) || null,
           compactText(summary, 1200) || null
@@ -161,8 +369,25 @@ class TaskEvidenceService {
   async getBundle({ taskId, bundleId, authContext }) {
     const bundle = await this.findBundle(bundleId, taskId);
     if (!bundle) return null;
-    await TaskAccessService.assert(bundle.task_id, authContext, 'canViewEvidence');
+    await this.evidencePolicy(bundle.task_id, authContext);
     return this.hydrateBundle(bundle.id, authContext);
+  }
+
+  async getValidationResult({ taskId, validationId, authContext }) {
+    const policy = await this.evidencePolicy(taskId, authContext);
+    const result = await pool.query(
+      `SELECT vr.*,
+              COALESCE(json_agg(vf ORDER BY vf.created_at ASC) FILTER (WHERE vf.id IS NOT NULL), '[]') AS findings
+       FROM task_validation_results vr
+       LEFT JOIN task_validation_findings vf ON vf.validation_result_id = vr.id
+       WHERE vr.task_id::text = $1
+         AND (vr.id::text = $2 OR vr.validation_uuid::text = $2)
+       GROUP BY vr.id
+       LIMIT 1`,
+      [String(taskId), String(validationId)]
+    );
+    if (!result.rows[0]) return null;
+    return this.serializeValidation(result.rows[0], { policy });
   }
 
   async updateBundle({ taskId, bundleId, authContext, reflection, summary, sourceKind }) {
@@ -176,7 +401,7 @@ class TaskEvidenceService {
         throw error;
       }
       validateBundleStatus(bundle, draftStatuses);
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'update');
       const result = await client.query(
         `UPDATE task_evidence_bundles
          SET reflection = COALESCE($2, reflection),
@@ -213,7 +438,7 @@ class TaskEvidenceService {
         throw error;
       }
       validateBundleStatus(bundle, draftStatuses);
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'add evidence to');
       const task = await TaskAccessService.loadTask(bundle.task_id, client);
       const requirements = TaskEvidenceRequirementService.normalizeForTask(task);
       const created = await this.createItemWithClient(client, bundle, item, requirements);
@@ -244,7 +469,7 @@ class TaskEvidenceService {
         throw error;
       }
       validateBundleStatus(bundle, draftStatuses);
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'delete evidence from');
       await client.query(
         `DELETE FROM task_evidence_items
          WHERE bundle_id = $1
@@ -263,18 +488,76 @@ class TaskEvidenceService {
   }
 
   async fetchUrl({ taskId, bundleId, authContext, url, requirementIds = [], title }) {
-    const client = await pool.connect();
+    let fetchRecord;
+    const reserveClient = await pool.connect();
     try {
-      await client.query('BEGIN');
-      const bundle = await this.findBundleForUpdate(client, bundleId, taskId);
+      await reserveClient.query('BEGIN');
+      const bundle = await this.findBundleForUpdate(reserveClient, bundleId, taskId);
       if (!bundle) {
         const error = new Error('Evidence bundle not found');
         error.status = 404;
         throw error;
       }
       validateBundleStatus(bundle, draftStatuses);
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
-      const snapshot = await EvidenceFetchService.fetchSnapshot(url, { client });
+      await this.assertBundleMutationAuthority(reserveClient, bundle, authContext, 'fetch URL evidence into');
+      fetchRecord = (await reserveClient.query(
+        `INSERT INTO task_evidence_fetches (bundle_id, task_id, actor_user_id, status, requested_url)
+         VALUES ($1, $2, $3, 'pending', $4)
+         RETURNING *`,
+        [bundle.id, bundle.task_id, authContext.actorUserId || null, String(url)]
+      )).rows[0];
+      await reserveClient.query('COMMIT');
+    } catch (error) {
+      await reserveClient.query('ROLLBACK');
+      throw error;
+    } finally {
+      reserveClient.release();
+    }
+
+    let snapshot;
+    try {
+      snapshot = await EvidenceFetchService.fetchSnapshot(url);
+    } catch (error) {
+      await pool.query(
+        `UPDATE task_evidence_fetches
+         SET status = 'failed',
+             error_code = $2,
+             error_message = $3,
+             completed_at = NOW()
+         WHERE id = $1
+           AND status = 'pending'`,
+        [fetchRecord.id, error.code || 'EVIDENCE_URL_FETCH_FAILED', error.message || String(error)]
+      );
+      throw error;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const fetchRow = (await client.query(
+        `SELECT *
+         FROM task_evidence_fetches
+         WHERE id = $1
+         FOR UPDATE`,
+        [fetchRecord.id]
+      )).rows[0];
+      const bundle = await this.findBundleForUpdate(client, bundleId, taskId);
+      if (!fetchRow || fetchRow.status !== 'pending' || !bundle || bundle.status !== 'draft') {
+        await client.query(
+          `UPDATE task_evidence_fetches
+           SET status = 'cancelled',
+               error_code = 'EVIDENCE_FETCH_STALE',
+               error_message = 'Bundle changed before the fetched evidence could be attached.',
+               completed_at = NOW()
+           WHERE id = $1`,
+          [fetchRecord.id]
+        );
+        const error = new Error('Evidence fetch could not be attached because the bundle is no longer a mutable draft.');
+        error.status = 409;
+        error.code = 'EVIDENCE_FETCH_STALE';
+        throw error;
+      }
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'attach fetched URL evidence to');
       await EvidenceArtifactStore.assertBundleSize(bundle.id, snapshot.byteSize, client);
       const item = await this.createItemWithClient(client, bundle, {
         evidenceType: 'url_snapshot',
@@ -291,6 +574,15 @@ class TaskEvidenceService {
           capturedAt: nowIso()
         }
       }, TaskEvidenceRequirementService.normalizeForTask(await TaskAccessService.loadTask(bundle.task_id, client)));
+      await client.query(
+        `UPDATE task_evidence_fetches
+         SET status = 'completed',
+             canonical_url = $2,
+             evidence_item_id = $3,
+             completed_at = NOW()
+         WHERE id = $1`,
+        [fetchRecord.id, snapshot.canonicalUrl, item.id]
+      );
       await client.query('UPDATE task_evidence_bundles SET updated_at = NOW() WHERE id = $1', [bundle.id]);
       await client.query('COMMIT');
       return this.hydrateBundle(bundle.id, authContext, { createdItemId: item.id });
@@ -313,7 +605,7 @@ class TaskEvidenceService {
         throw error;
       }
       validateBundleStatus(bundle, previewableStatuses);
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'preview');
       const task = await TaskAccessService.loadTask(bundle.task_id, client);
       const requirements = TaskEvidenceRequirementService.normalizeForTask(task);
       const items = await this.loadItemsForBundle(client, bundle.id);
@@ -321,7 +613,7 @@ class TaskEvidenceService {
         const action = (await client.query('SELECT * FROM api_actions WHERE id = $1', [bundle.action_id])).rows[0];
         await client.query('COMMIT');
         return {
-          bundle: this.serializeBundle(bundle, items.map(item => this.serializeItem(item))),
+          bundle: this.serializeBundle(bundle, items, { authContext, requirements }),
           action,
           requirements: TaskEvidenceRequirementService.summarize(requirements)
         };
@@ -342,6 +634,7 @@ class TaskEvidenceService {
         permissions: ['tasks:write', 'actions:write'],
         confirmationRequired: true
       };
+      const frozenManifest = this.buildFrozenManifest(bundle, items, requirements);
       const action = (await client.query(
         `INSERT INTO api_actions (
            intent_json,
@@ -371,6 +664,9 @@ class TaskEvidenceService {
              requirement_snapshot = $2::jsonb,
              validation_policy_snapshot = $3::jsonb,
              action_id = $4,
+             frozen_manifest = $5::jsonb,
+             manifest_sha256 = $6,
+             frozen_at = NOW(),
              updated_at = NOW()
          WHERE id = $1
          RETURNING *`,
@@ -382,7 +678,9 @@ class TaskEvidenceService {
             semanticProvider: process.env.CERBANIMO_EVIDENCE_SEMANTIC_PROVIDER || null,
             capturedAt: nowIso()
           }),
-          action.id
+          action.id,
+          JSON.stringify(frozenManifest),
+          frozenManifest.manifestSha256
         ]
       )).rows[0];
       await client.query(
@@ -392,7 +690,7 @@ class TaskEvidenceService {
       );
       await client.query('COMMIT');
       return {
-        bundle: this.serializeBundle(updatedBundle, items.map(item => this.serializeItem(item))),
+        bundle: this.serializeBundle(updatedBundle, items, { authContext, requirements }),
         action,
         requirements: TaskEvidenceRequirementService.summarize(requirements)
       };
@@ -405,19 +703,40 @@ class TaskEvidenceService {
   }
 
   async cancelBundle({ taskId, bundleId, authContext, reason }) {
+    const existingBundle = await this.findBundle(bundleId, taskId);
+    if (!existingBundle) {
+      const error = new Error('Evidence bundle not found');
+      error.status = 404;
+      throw error;
+    }
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      const action = existingBundle.action_id
+        ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [existingBundle.action_id])).rows[0] || null
+        : null;
+      const run = action?.related_automation_run_id
+        ? (await client.query('SELECT * FROM automation_runs WHERE id = $1 FOR UPDATE', [action.related_automation_run_id])).rows[0] || null
+        : existingBundle.action_id
+          ? (await client.query('SELECT * FROM automation_runs WHERE action_id = $1 FOR UPDATE', [existingBundle.action_id])).rows[0] || null
+          : null;
       const bundle = await this.findBundleForUpdate(client, bundleId, taskId);
       if (!bundle) {
         const error = new Error('Evidence bundle not found');
         error.status = 404;
         throw error;
       }
-      await TaskAccessService.assert(bundle.task_id, authContext, 'canSubmitEvidence', client);
-      if (terminalBundleStatuses.has(bundle.status)) {
+      const taskResult = await client.query('SELECT * FROM tasks WHERE id = $1 FOR UPDATE', [bundle.task_id]);
+      if (!taskResult.rows[0]) {
+        const error = new Error('Task not found');
+        error.status = 404;
+        throw error;
+      }
+      await this.assertBundleMutationAuthority(client, bundle, authContext, 'cancel');
+      if (terminalBundleStatuses.has(bundle.status) || bundle.status === 'validation_passed' || taskResult.rows[0].submitted) {
         const error = new Error(`Evidence bundle cannot be cancelled from status ${bundle.status}.`);
         error.status = 409;
+        error.code = 'EVIDENCE_CANCEL_TERMINAL';
         throw error;
       }
       const updated = (await client.query(
@@ -430,18 +749,124 @@ class TaskEvidenceService {
          RETURNING *`,
         [bundle.id, JSON.stringify({ cancelReason: reason || null, cancelledAt: nowIso() })]
       )).rows[0];
+      if (run) {
+        await client.query(
+          `UPDATE automation_runs
+           SET status = 'cancelled',
+               cancelled_at = NOW(),
+               claim_token = NULL,
+               lease_expires_at = NULL,
+               updated_at = NOW()
+           WHERE id = $1
+             AND status IN ('queued', 'running', 'retry_wait', 'blocked')`,
+          [run.id]
+        );
+        await client.query(
+          `INSERT INTO automation_logs (run_id, level, message, payload)
+           VALUES ($1, 'warn', 'Evidence validation run cancelled with its bundle.', $2::jsonb)`,
+          [run.id, JSON.stringify({ taskId: bundle.task_id, bundleId: bundle.id, reason: reason || null })]
+        );
+      }
       if (updated.action_id) {
         await client.query(
           `UPDATE api_actions
            SET status = 'cancelled',
                cancelled_at = NOW()
            WHERE id = $1
-             AND status = 'previewed'`,
+             AND status IN ('previewed', 'confirmed')`,
           [updated.action_id]
         );
+        await client.query(
+          `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+           VALUES ($1, 'evidence.cancelled', $2, $3::jsonb)`,
+          [updated.action_id, authContext.actorUserId || null, JSON.stringify({ bundleId: bundle.id, runId: run?.id || null, reason: reason || null })]
+        );
       }
+      await client.query(
+        `UPDATE task_evidence_fetches
+         SET status = 'cancelled',
+             error_code = 'EVIDENCE_BUNDLE_CANCELLED',
+             error_message = 'Evidence bundle was cancelled before fetch finalization.',
+             completed_at = NOW()
+         WHERE bundle_id = $1
+           AND status = 'pending'`,
+        [bundle.id]
+      );
       await client.query('COMMIT');
       return this.hydrateBundle(updated.id, authContext);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async createSupersedingBundle({ taskId, bundleId, authContext, reflection = '', summary = '' }) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const oldBundle = await this.findBundleForUpdate(client, bundleId, taskId);
+      if (!oldBundle) {
+        const error = new Error('Evidence bundle not found');
+        error.status = 404;
+        throw error;
+      }
+      if (!['needs_more_evidence', 'manual_review_required'].includes(oldBundle.status)) {
+        const error = new Error('Only bundles that need more evidence or manual review can be superseded.');
+        error.status = 409;
+        error.code = 'EVIDENCE_SUPERSEDE_NOT_ALLOWED';
+        throw error;
+      }
+      await this.assertBundleMutationAuthority(client, oldBundle, authContext, 'supersede');
+      await client.query('SELECT id FROM tasks WHERE id = $1 FOR UPDATE', [oldBundle.task_id]);
+      const existing = await this.findActiveDraft(client, oldBundle.task_id, authContext.actorUserId);
+      if (existing) {
+        await client.query('COMMIT');
+        return this.hydrateBundle(existing.id, authContext);
+      }
+      if (oldBundle.action_id) {
+        await client.query(
+          `UPDATE api_actions
+           SET status = 'cancelled',
+               cancelled_at = COALESCE(cancelled_at, NOW())
+           WHERE id = $1
+             AND status IN ('previewed', 'confirmed')`,
+          [oldBundle.action_id]
+        );
+      }
+      const version = (await client.query(
+        `SELECT COALESCE(MAX(version), 0)::int + 1 AS next_version
+         FROM task_evidence_bundles
+         WHERE task_id = $1
+           AND actor_user_id = $2`,
+        [oldBundle.task_id, authContext.actorUserId]
+      )).rows[0]?.next_version || Number(oldBundle.version || 0) + 1;
+      const created = (await client.query(
+        `INSERT INTO task_evidence_bundles (
+           task_id, actor_user_id, source_kind, status, version, reflection, summary, supersedes_bundle_id
+         )
+         VALUES ($1, $2, 'human', 'draft', $3, $4, $5, $6)
+         RETURNING *`,
+        [
+          oldBundle.task_id,
+          authContext.actorUserId,
+          version,
+          compactText(reflection, 8000) || null,
+          compactText(summary, 1200) || null,
+          oldBundle.id
+        ]
+      )).rows[0];
+      await client.query(
+        `INSERT INTO api_action_events (action_id, event_type, actor_user_id, payload)
+         SELECT action_id, 'evidence.superseded', $2, $3::jsonb
+         FROM task_evidence_bundles
+         WHERE id = $1
+           AND action_id IS NOT NULL`,
+        [oldBundle.id, authContext.actorUserId || null, JSON.stringify({ oldBundleId: oldBundle.id, newBundleId: created.id })]
+      );
+      await client.query('COMMIT');
+      return this.hydrateBundle(created.id, authContext);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -475,7 +900,7 @@ class TaskEvidenceService {
       error.status = 409;
       throw error;
     }
-    await TaskAccessService.assert(bundle.task_id, { actorUserId, isServiceActor, scopes, roles }, 'canSubmitEvidence', client);
+    await this.assertBundleMutationAuthority(client, bundle, { actorUserId, isServiceActor, scopes, roles }, 'confirm');
     const template = CapabilityRegistryService.findAutomationTemplate('submission_validation');
     const authoritySnapshot = buildAuthoritySnapshot({ actorUserId, isServiceActor, scopes, roles });
     const run = (await client.query(
@@ -591,20 +1016,40 @@ class TaskEvidenceService {
         completedAt: nowIso()
       };
     }
-    const items = await this.loadItemsForBundle(pool, bundle.id);
-    const requirements = parseJsonish(bundle.requirement_snapshot, []).length
-      ? parseJsonish(bundle.requirement_snapshot, [])
-      : TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task));
-    const normalizedRequirements = requirements.map(requirement => ({
+    const integrity = await this.verifyFrozenManifest(pool, bundle, task);
+    if (!integrity.ok) {
+      const requirementResults = [{
+        requirementId: 'evidence-integrity',
+        description: 'Frozen evidence manifest integrity',
+        verdict: 'failed',
+        evidenceItemIds: [],
+        checks: ['manifest_integrity']
+      }];
+      return {
+        status: 'validation_failed',
+        taskId: task.id,
+        bundleId: bundle.id,
+        bundleUuid: bundle.bundle_uuid,
+        provider: 'deterministic',
+        passed: false,
+        requirementResults,
+        findings: [integrity.finding],
+        summary: integrity.finding.message,
+        completedAt: nowIso()
+      };
+    }
+    const items = integrity.items;
+    const normalizedRequirements = integrity.requirements.map(requirement => ({
       ...requirement,
       acceptedEvidenceTypes: requirement.acceptedEvidenceTypes || requirement.proofTypes || requirement.evidenceTypes || [],
       checks: requirement.checks || ['evidence_present'],
-      minimumEvidenceItems: Math.max(Number(requirement.minimumEvidenceItems || 1), 1)
+      minimumEvidenceItems: Math.max(Number(requirement.minimumEvidenceItems || 1), 1),
+      semanticReview: requirement.semanticReview || 'never'
     }));
     const requirementResults = [];
     const findings = [];
     for (const requirement of normalizedRequirements) {
-      const result = await this.evaluateRequirement({ requirement, task, bundle, items });
+      const result = await this.evaluateRequirement({ requirement, task, bundle, items, requirementCount: normalizedRequirements.length });
       requirementResults.push(result.requirementResult);
       findings.push(...result.findings);
     }
@@ -630,6 +1075,27 @@ class TaskEvidenceService {
     if (!bundle) {
       const error = new Error('Evidence bundle not found during validation finalization.');
       error.status = 409;
+      throw error;
+    }
+    if (bundle.status === 'cancelled') {
+      const error = new Error('Evidence bundle was cancelled before validation finalization.');
+      error.status = 409;
+      error.code = 'EVIDENCE_VALIDATION_CANCELLED';
+      throw error;
+    }
+    if (bundle.action_id && Number(bundle.action_id) !== Number(run.action_id)) {
+      const error = new Error('Evidence bundle/action relationship changed before finalization.');
+      error.status = 409;
+      error.code = 'EVIDENCE_RELATIONSHIP_CHANGED';
+      throw error;
+    }
+    const action = run.action_id
+      ? (await client.query('SELECT * FROM api_actions WHERE id = $1 FOR UPDATE', [run.action_id])).rows[0] || null
+      : null;
+    if (run.status === 'cancelled' || run.cancelled_at || action?.status === 'cancelled') {
+      const error = new Error('Evidence validation action or run was cancelled before finalization.');
+      error.status = 409;
+      error.code = 'EVIDENCE_VALIDATION_CANCELLED';
       throw error;
     }
     const task = await TaskAccessService.loadTask(bundle.task_id, client);
@@ -721,28 +1187,42 @@ class TaskEvidenceService {
   async finalizeQualityReport(client, { run, task, result, actorUserId }) {
     if (result.status !== 'checks_passed') return result;
     const proofUri = result.artifactUri || `cerbanimo://automation-runs/${run.run_uuid || run.id}/quality-check-report`;
-    const existing = run.action_id
-      ? (await client.query('SELECT * FROM task_evidence_bundles WHERE action_id = $1 FOR UPDATE', [run.action_id])).rows[0]
-      : null;
-    const bundle = existing || (await client.query(
+    await client.query('SELECT id FROM tasks WHERE id = $1 FOR UPDATE', [task.id]);
+    const requirements = TaskEvidenceRequirementService.normalizeForTask(task);
+    const requirementSnapshot = TaskEvidenceRequirementService.summarize(requirements);
+    const reportRequirementIds = requirementSnapshot
+      .filter(requirement => {
+        const accepted = new Set(asArray(requirement.acceptedEvidenceTypes || requirement.proofTypes).map(String));
+        const checks = new Set(asArray(requirement.checks).map(String));
+        return accepted.has('automation_report')
+          || checks.has('report_status_checks_passed')
+          || checks.has('report_belongs_to_task')
+          || checks.has('resolved_commit_present');
+      })
+      .map(requirement => requirement.requirementId);
+
+    let bundle = (await client.query(
       `INSERT INTO task_evidence_bundles (
          task_id, actor_user_id, source_kind, status, version, reflection, summary,
-         requirement_snapshot, validation_policy_snapshot, action_id, submitted_at
+         requirement_snapshot, validation_policy_snapshot, action_id, source_automation_run_id, submitted_at
        )
        VALUES (
          $1, $2, 'automation', 'validating',
          COALESCE((SELECT MAX(version) + 1 FROM task_evidence_bundles WHERE task_id = $1 AND actor_user_id = $2), 1),
-         $3, $4, $5::jsonb, $6::jsonb, $7, NOW()
+         $3, $4, $5::jsonb, $6::jsonb, $7, $8, NOW()
        )
+       ON CONFLICT (source_automation_run_id) WHERE source_automation_run_id IS NOT NULL
+       DO UPDATE SET updated_at = task_evidence_bundles.updated_at
        RETURNING *`,
       [
         task.id,
         actorUserId || null,
         `Automated quality-check report from run ${run.run_uuid || run.id}: ${result.summary || 'Quality checks passed.'}`,
         result.summary || 'Quality checks passed.',
-        JSON.stringify(TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task))),
+        JSON.stringify(requirementSnapshot),
         JSON.stringify({ generatedFrom: 'run_quality_checks', automationRunId: run.id, capturedAt: nowIso() }),
-        run.action_id || null
+        run.action_id || null,
+        run.id
       ]
     )).rows[0];
 
@@ -753,75 +1233,152 @@ class TaskEvidenceService {
       runUuid: run.run_uuid,
       artifactUri: proofUri
     };
-    await client.query(
+    let reportItem = (await client.query(
+      `SELECT *
+       FROM task_evidence_items
+       WHERE bundle_id = $1
+         AND evidence_type = 'automation_report'
+       ORDER BY id ASC
+       LIMIT 1
+       FOR UPDATE`,
+      [bundle.id]
+    )).rows[0] || null;
+    if (!reportItem) {
+      reportItem = (await client.query(
       `INSERT INTO task_evidence_items (
          bundle_id, task_id, actor_user_id, evidence_type, requirement_ids,
          title, artifact_uri, content_sha256, metadata
        )
-       VALUES ($1, $2, $3, 'automation_report', '{}', $4, $5, $6, $7::jsonb)
-       ON CONFLICT DO NOTHING`,
+       VALUES ($1, $2, $3, 'automation_report', $4::text[], $5, $6, $7, $8::jsonb)
+       RETURNING *`,
       [
         bundle.id,
         task.id,
         actorUserId || null,
+        reportRequirementIds,
         'Quality-check automation report',
         proofUri,
         jsonHash(metadata),
         JSON.stringify(metadata)
       ]
-    );
+      )).rows[0];
+    }
 
+    const items = await this.loadItemsForBundle(client, bundle.id);
+    const frozenManifest = this.buildFrozenManifest(bundle, items, requirements);
+    bundle = (await client.query(
+      `UPDATE task_evidence_bundles
+       SET status = 'validating',
+           requirement_snapshot = $2::jsonb,
+           validation_policy_snapshot = COALESCE(validation_policy_snapshot, '{}'::jsonb) || $3::jsonb,
+           frozen_manifest = $4::jsonb,
+           manifest_sha256 = $5,
+           frozen_at = COALESCE(frozen_at, NOW()),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [
+        bundle.id,
+        JSON.stringify(requirementSnapshot),
+        JSON.stringify({ generatedFrom: 'run_quality_checks', automationRunId: run.id, capturedAt: nowIso() }),
+        JSON.stringify(frozenManifest),
+        frozenManifest.manifestSha256
+      ]
+    )).rows[0];
+
+    const integrity = await this.verifyFrozenManifest(client, bundle, task);
+    const requirementResults = [];
+    const findings = [];
+    if (!integrity.ok) {
+      requirementResults.push({
+        requirementId: 'evidence-integrity',
+        description: 'Frozen evidence manifest integrity',
+        verdict: 'failed',
+        evidenceItemIds: [],
+        checks: ['manifest_integrity']
+      });
+      findings.push(integrity.finding);
+    } else {
+      for (const requirement of requirementSnapshot) {
+        const evaluated = await this.evaluateRequirement({
+          requirement,
+          task,
+          bundle,
+          items: integrity.items,
+          requirementCount: requirementSnapshot.length
+        });
+        requirementResults.push(evaluated.requirementResult);
+        findings.push(...evaluated.findings);
+      }
+      if (reportRequirementIds.length > 0) {
+        findings.push({
+          requirementId: reportRequirementIds[0],
+          severity: 'info',
+          code: 'AUTOMATION_REPORT_ATTACHED',
+          message: 'Passing quality-check report was attached as canonical evidence.',
+          evidenceItemIds: [reportItem.id]
+        });
+      }
+    }
+    const status = this.overallValidationStatus(requirementResults);
     const validationResult = {
-      status: 'validation_passed',
+      status,
       taskId: task.id,
       bundleId: bundle.id,
       bundleUuid: bundle.bundle_uuid,
       provider: 'deterministic',
-      passed: true,
-      requirementResults: [{
-        requirementId: 'automation-report',
-        verdict: 'satisfied',
-        evidenceItemIds: [],
-        messages: ['Quality checks passed and were attached as canonical evidence.']
-      }],
-      findings: [{
-        requirementId: 'automation-report',
-        severity: 'info',
-        code: 'AUTOMATION_REPORT_ACCEPTED',
-        message: 'Passing quality-check report was accepted as canonical task evidence.'
-      }],
-      summary: result.summary || 'Quality checks passed.',
+      passed: status === 'validation_passed',
+      requirementResults,
+      findings,
+      summary: this.validationSummary(status, requirementResults),
       completedAt: nowIso()
     };
     const validation = await this.insertValidationResult(client, {
       bundle,
       task,
       run,
-      status: 'validation_passed',
+      status,
       result: validationResult,
       provider: 'deterministic'
     });
-    await this.bridgeTaskToReview(client, { task, bundle, run, result: validationResult });
+    if (status === 'validation_passed') {
+      await this.bridgeTaskToReview(client, { task, bundle, run, result: validationResult });
+    } else if (status === 'manual_review_required') {
+      await client.query(
+        `INSERT INTO task_validation_reviews (
+           validation_result_id, bundle_id, task_id, requested_by, status, reason
+         )
+         VALUES ($1, $2, $3, $4, 'pending', $5)
+         ON CONFLICT DO NOTHING`,
+        [validation.id, bundle.id, task.id, actorUserId || null, validationResult.summary]
+      );
+    }
     await client.query(
       `UPDATE task_evidence_bundles
-       SET status = 'validation_passed',
+       SET status = $2,
            validated_at = NOW(),
            updated_at = NOW()
        WHERE id = $1`,
-      [bundle.id]
+      [bundle.id, status]
     );
     return {
       ...result,
       evidenceBundleId: bundle.id,
       evidenceBundleUuid: bundle.bundle_uuid,
       validationResultId: validation.id,
-      validationStatus: 'validation_passed',
-      submittedTask: true
+      validationStatus: status,
+      submittedTask: status === 'validation_passed'
     };
   }
 
   async createItemWithClient(client, bundle, item, requirements = []) {
-    const evidenceType = item.evidenceType || item.evidence_type || 'text';
+    const evidenceType = String(item.evidenceType || item.evidence_type || 'text');
+    if (!canonicalEvidenceTypes.has(evidenceType)) {
+      const error = new Error(`Evidence type ${evidenceType} is not supported.`);
+      error.status = 422;
+      error.code = 'EVIDENCE_TYPE_UNSUPPORTED';
+      throw error;
+    }
     const requirementIds = asArray(item.requirementIds || item.requirement_ids).map(String).filter(Boolean);
     const knownRequirementIds = new Set(asArray(requirements).map(requirement => String(requirement.requirementId)));
     const unknown = requirementIds.filter(id => knownRequirementIds.size > 0 && !knownRequirementIds.has(id));
@@ -842,7 +1399,7 @@ class TaskEvidenceService {
     let contentSha256 = item.contentSha256 || item.content_sha256 || null;
     const metadata = item.metadata || {};
 
-    if (['text', 'reflection', 'attestation'].includes(evidenceType)) {
+    if (['text', 'reflection', 'attestation', 'receipt'].includes(evidenceType)) {
       textContent = compactText(textContent || '', 20000);
       if (!textContent) {
         const error = new Error('Text evidence requires textContent.');
@@ -859,9 +1416,31 @@ class TaskEvidenceService {
         throw error;
       }
       if (base64) {
-        const buffer = Buffer.from(String(base64), 'base64');
-        await EvidenceArtifactStore.assertBundleSize(bundle.id, buffer.length, client);
-        const blob = await EvidenceArtifactStore.putBuffer({ buffer, mediaType, metadata, client });
+        const decoded = decodeStrictBase64(base64);
+        const inspected = inspectBinary({
+          buffer: decoded,
+          claimedMediaType: mediaType,
+          sourceKind: 'upload'
+        });
+        if (evidenceType === 'image' && !String(inspected.mediaType).startsWith('image/')) {
+          const error = new Error(`Image evidence cannot use ${inspected.mediaType}.`);
+          error.status = 415;
+          error.code = 'EVIDENCE_MEDIA_TYPE_MISMATCH';
+          throw error;
+        }
+        if (evidenceType === 'document' && !['application/pdf', 'text/plain'].includes(inspected.mediaType)) {
+          const error = new Error(`Document evidence cannot use ${inspected.mediaType}.`);
+          error.status = 415;
+          error.code = 'EVIDENCE_MEDIA_TYPE_MISMATCH';
+          throw error;
+        }
+        await EvidenceArtifactStore.assertBundleSize(bundle.id, inspected.byteSize, client);
+        const blob = await EvidenceArtifactStore.putBuffer({
+          buffer: inspected.buffer,
+          mediaType: inspected.mediaType,
+          metadata: { ...metadata, metadataPolicy: inspected.metadataPolicy },
+          client
+        });
         blobStorageKey = blob.storage_key;
         mediaType = blob.media_type;
         byteSize = blob.byte_size;
@@ -874,8 +1453,19 @@ class TaskEvidenceService {
         error.status = 400;
         throw error;
       }
-      contentSha256 = jsonHash({ artifactUri, metadata });
-      byteSize = Buffer.byteLength(artifactUri, 'utf8');
+      const resolved = await EvidenceArtifactReferenceResolver.resolve({
+        artifactUri,
+        taskId: bundle.task_id,
+        authContext: {
+          actorUserId: bundle.actor_user_id,
+          isServiceActor: bundle.source_kind === 'automation',
+          scopes: bundle.source_kind === 'automation' ? ['evidence:service'] : []
+        },
+        client
+      });
+      contentSha256 = resolved.contentSha256;
+      byteSize = resolved.byteSize;
+      Object.assign(metadata, { artifact: resolved.metadata });
     } else if (evidenceType === 'automation_report') {
       contentSha256 = contentSha256 || jsonHash(metadata);
       byteSize = byteSize || Buffer.byteLength(JSON.stringify(metadata), 'utf8');
@@ -885,6 +1475,21 @@ class TaskEvidenceService {
         error.status = 400;
         throw error;
       }
+    } else if (['repository_commit', 'pull_request', 'command_result'].includes(evidenceType)) {
+      const payload = {
+        textContent: compactText(textContent || '', 20000) || null,
+        sourceUrl,
+        artifactUri,
+        metadata
+      };
+      if (!payload.textContent && !payload.sourceUrl && !payload.artifactUri && Object.keys(metadata || {}).length === 0) {
+        const error = new Error(`${evidenceType} evidence requires structured content, URL, artifact URI, or metadata.`);
+        error.status = 400;
+        throw error;
+      }
+      textContent = payload.textContent;
+      contentSha256 = jsonHash(payload);
+      byteSize = Buffer.byteLength(JSON.stringify(payload), 'utf8');
     }
 
     if (!contentSha256) {
@@ -922,11 +1527,13 @@ class TaskEvidenceService {
     return result.rows[0];
   }
 
-  async evaluateRequirement({ requirement, task, bundle, items }) {
+  async evaluateRequirement({ requirement, task, bundle, items, requirementCount = 1 }) {
     const accepted = new Set(asArray(requirement.acceptedEvidenceTypes).map(String));
     const matchingItems = items.filter(item => {
       const requirementIds = asArray(item.requirement_ids);
-      const matchesRequirement = requirementIds.length === 0 || requirementIds.includes(requirement.requirementId);
+      const matchesRequirement = requirementIds.length === 0
+        ? requirementCount <= 1
+        : requirementIds.includes(requirement.requirementId);
       const matchesType = accepted.size === 0 || accepted.has(item.evidence_type);
       return matchesRequirement && matchesType;
     });
@@ -943,7 +1550,32 @@ class TaskEvidenceService {
     }
 
     const checks = asArray(requirement.checks);
+    const unsupportedChecks = checks.filter(check => !deterministicChecks.has(String(check)));
+    if (unsupportedChecks.length > 0) {
+      verdict = 'manual_review_required';
+      findings.push({
+        requirementId: requirement.requirementId,
+        severity: 'high',
+        code: 'VALIDATION_CHECK_UNSUPPORTED',
+        message: `Unsupported deterministic validation check(s): ${unsupportedChecks.join(', ')}.`,
+        evidenceItemIds: matchingItems.map(item => item.id)
+      });
+    }
+    const meaningfulChecks = checks.filter(check => check !== 'evidence_present');
+    if (meaningfulChecks.length === 0 && String(requirement.semanticReview || 'never') === 'never') {
+      verdict = 'manual_review_required';
+      findings.push({
+        requirementId: requirement.requirementId,
+        severity: 'medium',
+        code: 'VALIDATION_REQUIREMENT_TOO_VAGUE',
+        message: 'This validation requirement is too vague to pass deterministically without semantic or manual review.',
+        evidenceItemIds: matchingItems.map(item => item.id)
+      });
+    }
     for (const check of checks) {
+      if (!deterministicChecks.has(String(check)) || check === 'evidence_present') {
+        continue;
+      }
       if (check === 'reflection_present') {
         const hasReflection = Boolean(compactText(bundle.reflection || ''))
           || matchingItems.some(item => item.evidence_type === 'reflection' && compactText(item.text_content || ''));
@@ -957,8 +1589,7 @@ class TaskEvidenceService {
             evidenceItemIds: []
           });
         }
-      }
-      if (check === 'report_status_checks_passed') {
+      } else if (check === 'report_status_checks_passed') {
         const passingReport = matchingItems.some(item => {
           const metadata = item.metadata || {};
           const report = metadata.report || metadata;
@@ -974,8 +1605,7 @@ class TaskEvidenceService {
             evidenceItemIds: matchingItems.map(item => item.id)
           });
         }
-      }
-      if (check === 'report_belongs_to_task') {
+      } else if (check === 'report_belongs_to_task') {
         const mismatched = matchingItems.filter(item => {
           const metadata = item.metadata || {};
           const report = metadata.report || metadata;
@@ -992,8 +1622,7 @@ class TaskEvidenceService {
             evidenceItemIds: mismatched.map(item => item.id)
           });
         }
-      }
-      if (check === 'resolved_commit_present') {
+      } else if (check === 'resolved_commit_present') {
         const hasRef = matchingItems.some(item => {
           const metadata = item.metadata || {};
           const report = metadata.report || metadata;
@@ -1009,8 +1638,7 @@ class TaskEvidenceService {
             evidenceItemIds: matchingItems.map(item => item.id)
           });
         }
-      }
-      if (check === 'distinct_evidence_items' || check === 'no_duplicate_hashes') {
+      } else if (check === 'distinct_evidence_items' || check === 'no_duplicate_hashes') {
         const uniqueHashes = new Set(matchingItems.map(item => item.content_sha256).filter(Boolean));
         if (uniqueHashes.size < Math.min(matchingItems.length, Number(requirement.minimumEvidenceItems || 1))) {
           verdict = 'insufficient_evidence';
@@ -1022,8 +1650,7 @@ class TaskEvidenceService {
             evidenceItemIds: matchingItems.map(item => item.id)
           });
         }
-      }
-      if (check === 'source_url_captured') {
+      } else if (check === 'source_url_captured') {
         const missingSnapshot = matchingItems.filter(item => item.evidence_type === 'url_snapshot' && !item.canonical_url);
         if (missingSnapshot.length > 0 || matchingItems.every(item => item.evidence_type !== 'url_snapshot')) {
           verdict = 'insufficient_evidence';
@@ -1035,10 +1662,71 @@ class TaskEvidenceService {
             evidenceItemIds: matchingItems.map(item => item.id)
           });
         }
+      } else if (check === 'artifact_reference_authorized') {
+        const references = matchingItems.filter(item => item.evidence_type === 'artifact_reference');
+        if (references.length === 0) {
+          verdict = 'insufficient_evidence';
+          findings.push({
+            requirementId: requirement.requirementId,
+            severity: 'medium',
+            code: 'ARTIFACT_REFERENCE_MISSING',
+            message: 'An authorized Cerbanimo artifact reference is required.',
+            evidenceItemIds: matchingItems.map(item => item.id)
+          });
+        }
+      } else if (check === 'command_exit_zero') {
+        const failing = matchingItems.filter(item => {
+          const metadata = item.metadata || {};
+          const exitCode = metadata.exitCode ?? metadata.exit_code ?? metadata.code;
+          return item.evidence_type === 'command_result' && Number(exitCode) !== 0;
+        });
+        if (failing.length > 0 || matchingItems.every(item => item.evidence_type !== 'command_result')) {
+          verdict = 'insufficient_evidence';
+          findings.push({
+            requirementId: requirement.requirementId,
+            severity: 'medium',
+            code: 'COMMAND_SUCCESS_MISSING',
+            message: 'A command result with exit code 0 is required.',
+            evidenceItemIds: matchingItems.map(item => item.id)
+          });
+        }
+      } else if (check === 'receipt_present' && matchingItems.every(item => item.evidence_type !== 'receipt')) {
+        verdict = 'insufficient_evidence';
+        findings.push({
+          requirementId: requirement.requirementId,
+          severity: 'medium',
+          code: 'RECEIPT_MISSING',
+          message: 'A receipt evidence item is required.',
+          evidenceItemIds: matchingItems.map(item => item.id)
+        });
+      } else if (check === 'attestation_present' && matchingItems.every(item => item.evidence_type !== 'attestation')) {
+        verdict = 'insufficient_evidence';
+        findings.push({
+          requirementId: requirement.requirementId,
+          severity: 'medium',
+          code: 'ATTESTATION_MISSING',
+          message: 'An attestation evidence item is required.',
+          evidenceItemIds: matchingItems.map(item => item.id)
+        });
       }
     }
 
-    if (requirement.semanticReview && verdict === 'satisfied') {
+    const semanticMode = String(requirement.semanticReview || 'never');
+    if (semanticMode === 'configuration_error') {
+      verdict = 'manual_review_required';
+      findings.push({
+        requirementId: requirement.requirementId,
+        severity: 'high',
+        code: 'SEMANTIC_REVIEW_CONFIGURATION_ERROR',
+        message: 'Semantic review must be one of never, optional, or required.',
+        evidenceItemIds: matchingItems.map(item => item.id)
+      });
+    }
+    const providerConfigured = Boolean(process.env.CERBANIMO_EVIDENCE_SEMANTIC_PROVIDER);
+    const shouldRunSemantic = semanticMode === 'required'
+      ? verdict !== 'failed'
+      : semanticMode === 'optional' && providerConfigured && verdict === 'satisfied';
+    if (shouldRunSemantic) {
       const semantic = await EvidenceValidationProvider.semanticReview({ requirement, items: matchingItems, bundle, task });
       if (semantic.status === 'needs_more_evidence') {
         verdict = 'insufficient_evidence';
@@ -1054,6 +1742,9 @@ class TaskEvidenceService {
         message: semantic.message,
         evidenceItemIds: semantic.evidenceItemIds || matchingItems.map(item => item.id)
       });
+    }
+    if (findings.some(finding => ['VALIDATION_CHECK_UNSUPPORTED', 'VALIDATION_REQUIREMENT_TOO_VAGUE', 'SEMANTIC_REVIEW_CONFIGURATION_ERROR'].includes(finding.code))) {
+      verdict = 'manual_review_required';
     }
 
     return {
@@ -1187,8 +1878,11 @@ class TaskEvidenceService {
   async hydrateBundle(bundleId, authContext, extra = {}) {
     const bundle = await this.findBundle(bundleId);
     if (!bundle) return null;
-    await TaskAccessService.assert(bundle.task_id, authContext, 'canViewEvidence');
+    const policy = await this.evidencePolicy(bundle.task_id, authContext);
     const items = await this.loadItemsForBundle(pool, bundle.id);
+    const requirements = parseJsonish(bundle.requirement_snapshot, []).length
+      ? parseJsonish(bundle.requirement_snapshot, [])
+      : [];
     const validations = await pool.query(
       `SELECT *
        FROM task_validation_results
@@ -1199,10 +1893,21 @@ class TaskEvidenceService {
     const action = bundle.action_id
       ? (await pool.query('SELECT * FROM api_actions WHERE id = $1', [bundle.action_id])).rows[0] || null
       : null;
+    const canMutate = !terminalBundleStatuses.has(bundle.status)
+      && actorOwnsBundle(bundle, authContext)
+      && ['draft', 'previewed', 'validation_queued', 'validating'].includes(bundle.status);
     return {
-      bundle: this.serializeBundle(bundle, items.map(item => this.serializeItem(item))),
-      action,
-      validations: validations.rows,
+      bundle: this.serializeBundle(bundle, items, { policy, authContext, requirements }),
+      action: canMutate ? action : null,
+      validations: validations.rows.map(validation => this.serializeValidation(validation, { policy })),
+      allowedActions: {
+        update: actorOwnsBundle(bundle, authContext) && bundle.status === 'draft',
+        addItem: actorOwnsBundle(bundle, authContext) && bundle.status === 'draft',
+        fetchUrl: actorOwnsBundle(bundle, authContext) && bundle.status === 'draft',
+        preview: actorOwnsBundle(bundle, authContext) && ['draft', 'previewed'].includes(bundle.status),
+        cancel: canMutate,
+        confirm: Boolean(canMutate && action && action.status === 'previewed' && bundle.status === 'previewed')
+      },
       ...extra
     };
   }
@@ -1266,19 +1971,96 @@ class TaskEvidenceService {
     return result.rows;
   }
 
-  serializeBundle(bundle, items = []) {
+  canSerializeEvidenceContent(bundle, { policy, authContext } = {}) {
+    if (policy?.basis?.serviceActor || policy?.basis?.admin) return true;
+    if (actorOwnsBundle(bundle, authContext)) return true;
+    if (['draft', 'previewed'].includes(bundle.status)) return false;
+    return Boolean(policy?.canViewEvidenceContent?.allowed);
+  }
+
+  serializeBundle(bundle, items = [], options = {}) {
+    const canViewContent = this.canSerializeEvidenceContent(bundle, options);
+    const requirements = options.requirements || parseJsonish(bundle.requirement_snapshot, []);
+    if (!canViewContent) {
+      return {
+        id: bundle.id,
+        bundle_uuid: bundle.bundle_uuid,
+        task_id: bundle.task_id,
+        source_kind: bundle.source_kind,
+        status: bundle.status,
+        version: bundle.version,
+        itemCount: items.length,
+        validationStatus: bundle.status,
+        requirementCoverage: coverageSummary(requirements, items),
+        created_at: bundle.created_at,
+        updated_at: bundle.updated_at
+      };
+    }
     return {
-      ...bundle,
+      id: bundle.id,
+      bundle_uuid: bundle.bundle_uuid,
+      task_id: bundle.task_id,
+      actor_user_id: bundle.actor_user_id,
+      source_kind: bundle.source_kind,
+      status: bundle.status,
+      version: bundle.version,
+      reflection: bundle.reflection,
+      summary: bundle.summary,
+      requirement_snapshot: bundle.requirement_snapshot,
+      supersedes_bundle_id: bundle.supersedes_bundle_id,
+      manifest_sha256: bundle.manifest_sha256 ? '[redacted]' : null,
+      frozen_at: bundle.frozen_at,
+      submitted_at: bundle.submitted_at,
+      validated_at: bundle.validated_at,
+      cancelled_at: bundle.cancelled_at,
+      created_at: bundle.created_at,
+      updated_at: bundle.updated_at,
       actionId: actionIdFromBundle(bundle),
-      items
+      itemCount: items.length,
+      requirementCoverage: coverageSummary(requirements, items),
+      items: items.map(item => this.serializeItem(item))
     };
   }
 
   serializeItem(item) {
     return {
-      ...item,
-      text_content: item.text_content ? compactText(item.text_content, 1000) : item.text_content
+      id: item.id,
+      evidence_uuid: item.evidence_uuid,
+      evidence_type: item.evidence_type,
+      requirement_ids: item.requirement_ids,
+      title: item.title,
+      text_content: item.text_content ? compactText(item.text_content, 1000) : item.text_content,
+      source_url: item.source_url,
+      canonical_url: item.canonical_url,
+      artifact_uri: item.artifact_uri,
+      media_type: item.media_type,
+      byte_size: item.byte_size,
+      created_at: item.created_at
     };
+  }
+
+  serializeValidation(validation, { policy } = {}) {
+    if (!policy?.canReviewValidation?.allowed) {
+      return {
+        id: validation.id,
+        validation_uuid: validation.validation_uuid,
+        bundle_id: validation.bundle_id,
+        task_id: validation.task_id,
+        status: validation.status,
+        overall_verdict: validation.overall_verdict,
+        summary: validation.summary,
+        requirement_results: validation.requirement_results,
+        findings: asArray(validation.findings).map(finding => ({
+          requirement_id: finding.requirement_id,
+          severity: finding.severity,
+          code: finding.code,
+          message: finding.message,
+          evidence_item_count: asArray(finding.evidence_item_ids).length
+        })),
+        created_at: validation.created_at
+      };
+    }
+    return validation;
   }
 }
 

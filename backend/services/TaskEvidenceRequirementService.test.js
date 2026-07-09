@@ -30,4 +30,22 @@ describe('TaskEvidenceRequirementService', () => {
       validation_requirements: [{ requirementId: 'same' }, { requirementId: 'same' }]
     })).toThrow(/Duplicate validation requirement id/);
   });
+
+  it('normalizes semantic review as a canonical enum without truthy string coercion', () => {
+    const requirements = TaskEvidenceRequirementService.normalizeForTask({
+      validation_requirements: [
+        { requirementId: 'never', semanticReview: 'never' },
+        { requirementId: 'optional', semanticReview: 'optional' },
+        { requirementId: 'required', semanticReview: true },
+        { requirementId: 'bad', semanticReview: 'sometimes' }
+      ]
+    });
+
+    expect(requirements.map(requirement => requirement.semanticReview)).toEqual([
+      'never',
+      'optional',
+      'required',
+      'configuration_error'
+    ]);
+  });
 });

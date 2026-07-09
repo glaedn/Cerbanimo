@@ -347,8 +347,12 @@ export async function createKamiyaApiTables() {
         summary TEXT,
         requirement_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
         validation_policy_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        frozen_manifest JSONB,
+        manifest_sha256 TEXT,
+        source_automation_run_id BIGINT REFERENCES automation_runs(id) ON DELETE SET NULL,
         action_id BIGINT REFERENCES api_actions(id) ON DELETE SET NULL,
         supersedes_bundle_id BIGINT REFERENCES task_evidence_bundles(id) ON DELETE SET NULL,
+        frozen_at TIMESTAMP WITH TIME ZONE,
         submitted_at TIMESTAMP WITH TIME ZONE,
         validated_at TIMESTAMP WITH TIME ZONE,
         cancelled_at TIMESTAMP WITH TIME ZONE,
@@ -402,10 +406,33 @@ export async function createKamiyaApiTables() {
           'document',
           'artifact_reference',
           'automation_report',
+          'repository_commit',
+          'pull_request',
+          'command_result',
           'reflection',
-          'attestation'
+          'attestation',
+          'receipt'
         )),
         CHECK (jsonb_typeof(metadata) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_evidence_fetches (
+        id BIGSERIAL PRIMARY KEY,
+        fetch_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        requested_url TEXT NOT NULL,
+        canonical_url TEXT,
+        evidence_item_id BIGINT REFERENCES task_evidence_items(id) ON DELETE SET NULL,
+        error_code TEXT,
+        error_message TEXT,
+        reserved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP WITH TIME ZONE,
+        CHECK (status IN ('pending', 'completed', 'failed', 'cancelled'))
       );
     `);
 
@@ -485,6 +512,14 @@ export async function createKamiyaApiTables() {
           'cancelled',
           'superseded'
         ));
+      ALTER TABLE task_evidence_bundles
+        ADD COLUMN IF NOT EXISTS frozen_manifest JSONB,
+        ADD COLUMN IF NOT EXISTS manifest_sha256 TEXT,
+        ADD COLUMN IF NOT EXISTS source_automation_run_id BIGINT REFERENCES automation_runs(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE task_evidence_bundles DROP CONSTRAINT IF EXISTS task_evidence_bundles_manifest_object_check;
+      ALTER TABLE task_evidence_bundles ADD CONSTRAINT task_evidence_bundles_manifest_object_check
+        CHECK (frozen_manifest IS NULL OR jsonb_typeof(frozen_manifest) = 'object');
       ALTER TABLE task_evidence_items DROP CONSTRAINT IF EXISTS task_evidence_items_evidence_type_check;
       ALTER TABLE task_evidence_items ADD CONSTRAINT task_evidence_items_evidence_type_check
         CHECK (evidence_type IN (
@@ -494,8 +529,12 @@ export async function createKamiyaApiTables() {
           'document',
           'artifact_reference',
           'automation_report',
+          'repository_commit',
+          'pull_request',
+          'command_result',
           'reflection',
-          'attestation'
+          'attestation',
+          'receipt'
         ));
     `);
 
@@ -550,12 +589,18 @@ export async function createKamiyaApiTables() {
       CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_task ON task_evidence_bundles(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_actor ON task_evidence_bundles(actor_user_id);
       CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_action ON task_evidence_bundles(action_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_source_run ON task_evidence_bundles(source_automation_run_id);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_task_evidence_one_active_draft
         ON task_evidence_bundles(task_id, actor_user_id)
         WHERE status = 'draft';
       CREATE UNIQUE INDEX IF NOT EXISTS idx_task_evidence_one_action
         ON task_evidence_bundles(action_id)
         WHERE action_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_evidence_one_source_run
+        ON task_evidence_bundles(source_automation_run_id)
+        WHERE source_automation_run_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_fetches_bundle ON task_evidence_fetches(bundle_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_fetches_status ON task_evidence_fetches(status);
       CREATE INDEX IF NOT EXISTS idx_task_evidence_items_bundle ON task_evidence_items(bundle_id);
       CREATE INDEX IF NOT EXISTS idx_task_evidence_items_task ON task_evidence_items(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_validation_results_bundle ON task_validation_results(bundle_id);

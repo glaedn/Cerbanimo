@@ -6,8 +6,12 @@ const defaultEvidenceTypes = [
   'image',
   'document',
   'artifact_reference',
+  'repository_commit',
+  'pull_request',
   'automation_report',
-  'attestation'
+  'command_result',
+  'attestation',
+  'receipt'
 ];
 
 function asArray(value) {
@@ -34,6 +38,14 @@ function stableRequirementId(requirement, index) {
   const basis = compactText(`${requirement.description || ''} ${asArray(requirement.checks).join(',')}`) || `requirement-${index + 1}`;
   const hash = crypto.createHash('sha1').update(basis).digest('hex').slice(0, 8);
   return `req-${index + 1}-${hash}`;
+}
+
+function normalizeSemanticReview(value) {
+  if (value === undefined || value === null || value === false || value === '') return 'never';
+  if (value === true) return 'required';
+  const normalized = String(value).trim().toLowerCase();
+  if (['never', 'optional', 'required'].includes(normalized)) return normalized;
+  return 'configuration_error';
 }
 
 class TaskEvidenceRequirementService {
@@ -74,7 +86,7 @@ class TaskEvidenceRequirementService {
           ? asArray(requirement.checks).map(String).filter(Boolean)
           : ['evidence_present'],
         minimumEvidenceItems: Math.max(Number(requirement.minimumEvidenceItems || requirement.minimum_evidence_items || 1), 1),
-        semanticReview: Boolean(requirement.semanticReview || requirement.semantic_review),
+        semanticReview: normalizeSemanticReview(requirement.semanticReview ?? requirement.semantic_review),
         manualReviewAllowed: requirement.manualReviewAllowed !== false,
         raw: requirement
       };
@@ -94,4 +106,4 @@ class TaskEvidenceRequirementService {
 }
 
 export default new TaskEvidenceRequirementService();
-export { defaultEvidenceTypes };
+export { defaultEvidenceTypes, normalizeSemanticReview };

@@ -212,9 +212,10 @@ function validTasks(dueDate) {
       validation_requirements: [
         {
           requirementId: 'checks-pass',
-          description: 'The configured quality-check command exits successfully or returns a clear failure report.',
-          proofTypes: ['automation_log', 'command_result'],
-          checks: ['exit_code_recorded']
+          description: 'The configured quality-check automation report belongs to this task and passed.',
+          proofTypes: ['automation_report'],
+          checks: ['report_status_checks_passed', 'report_belongs_to_task', 'resolved_commit_present'],
+          semanticReview: 'never'
         }
       ]
     }

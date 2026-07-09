@@ -17,7 +17,10 @@ const decisionNames = [
   'canExecuteAutomation',
   'canSubmitAutomationResult',
   'canViewEvidence',
-  'canSubmitEvidence'
+  'canViewEvidenceSummary',
+  'canViewEvidenceContent',
+  'canSubmitEvidence',
+  'canReviewValidation'
 ];
 
 function normalizeActor(authContext = {}) {
@@ -99,6 +102,7 @@ class TaskAccessService {
 
     const taskAuthority = actor.serviceActor || actor.admin || assignedActor || taskCreator || projectCreator || policyGranted;
     const canView = taskAuthority || publicVisible;
+    const canViewEvidenceContent = taskAuthority;
     const basis = {
       serviceActor: actor.serviceActor,
       admin: actor.admin,
@@ -112,6 +116,13 @@ class TaskAccessService {
     const authorityReason = 'Task access requires task assignment, task/project ownership, project-manager authority, service authority, or explicit task policy.';
     const viewDecision = decision(canView, canView ? 'Task is visible to this actor.' : authorityReason, 'TASK_VISIBILITY_DENIED', basis);
     const authorityDecision = decision(taskAuthority, taskAuthority ? 'Task authority confirmed.' : authorityReason, 'TASK_AUTHORITY_REQUIRED', basis);
+    const evidenceSummaryDecision = decision(canView, canView ? 'Evidence summary is visible with task visibility.' : authorityReason, 'EVIDENCE_SUMMARY_DENIED', basis);
+    const evidenceContentDecision = decision(
+      canViewEvidenceContent,
+      canViewEvidenceContent ? 'Raw evidence content access confirmed.' : 'Raw evidence content requires assignment, ownership, reviewer/admin authority, or service authority.',
+      'EVIDENCE_CONTENT_DENIED',
+      basis
+    );
 
     return {
       exists: true,
@@ -126,8 +137,11 @@ class TaskAccessService {
       canConfirmAutomation: authorityDecision,
       canExecuteAutomation: authorityDecision,
       canSubmitAutomationResult: authorityDecision,
-      canViewEvidence: viewDecision,
-      canSubmitEvidence: authorityDecision
+      canViewEvidence: evidenceSummaryDecision,
+      canViewEvidenceSummary: evidenceSummaryDecision,
+      canViewEvidenceContent: evidenceContentDecision,
+      canSubmitEvidence: authorityDecision,
+      canReviewValidation: evidenceContentDecision
     };
   }
 

@@ -14,6 +14,8 @@ describe('TaskAccessService policyForTaskRecord', () => {
     const policy = TaskAccessService.policyForTaskRecord(privateTask, { actorUserId: 3, scopes: [] });
 
     expect(policy.canViewTask.allowed).toBe(true);
+    expect(policy.canViewEvidenceSummary.allowed).toBe(true);
+    expect(policy.canViewEvidenceContent.allowed).toBe(true);
     expect(policy.canSubmitEvidence.allowed).toBe(true);
   });
 
@@ -22,6 +24,8 @@ describe('TaskAccessService policyForTaskRecord', () => {
 
     expect(policy.canViewTask.allowed).toBe(false);
     expect(policy.canViewTaskAutomation.allowed).toBe(false);
+    expect(policy.canViewEvidenceSummary.allowed).toBe(false);
+    expect(policy.canViewEvidenceContent.allowed).toBe(false);
     expect(policy.canSubmitEvidence.allowed).toBe(false);
   });
 
@@ -32,6 +36,8 @@ describe('TaskAccessService policyForTaskRecord', () => {
     );
 
     expect(policy.canViewTask.allowed).toBe(true);
+    expect(policy.canViewEvidenceSummary.allowed).toBe(true);
+    expect(policy.canViewEvidenceContent.allowed).toBe(false);
     expect(policy.canSubmitEvidence.allowed).toBe(false);
   });
 
