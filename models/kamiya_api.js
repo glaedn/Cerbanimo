@@ -330,6 +330,7 @@ export async function createKamiyaApiTables() {
         content_sha256 TEXT NOT NULL,
         content BYTEA NOT NULL,
         metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        sanitizer_version TEXT,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -396,6 +397,8 @@ export async function createKamiyaApiTables() {
         media_type TEXT,
         byte_size BIGINT,
         content_sha256 TEXT NOT NULL,
+        provenance_sha256 TEXT,
+        combined_sha256 TEXT,
         metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
         captured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -427,6 +430,9 @@ export async function createKamiyaApiTables() {
         status TEXT NOT NULL DEFAULT 'pending',
         requested_url TEXT NOT NULL,
         canonical_url TEXT,
+        response_status INTEGER,
+        original_media_type TEXT,
+        pinned_address TEXT,
         evidence_item_id BIGINT REFERENCES task_evidence_items(id) ON DELETE SET NULL,
         error_code TEXT,
         error_message TEXT,
@@ -517,6 +523,15 @@ export async function createKamiyaApiTables() {
         ADD COLUMN IF NOT EXISTS manifest_sha256 TEXT,
         ADD COLUMN IF NOT EXISTS source_automation_run_id BIGINT REFERENCES automation_runs(id) ON DELETE SET NULL,
         ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE task_evidence_blobs
+        ADD COLUMN IF NOT EXISTS sanitizer_version TEXT;
+      ALTER TABLE task_evidence_items
+        ADD COLUMN IF NOT EXISTS provenance_sha256 TEXT,
+        ADD COLUMN IF NOT EXISTS combined_sha256 TEXT;
+      ALTER TABLE task_evidence_fetches
+        ADD COLUMN IF NOT EXISTS response_status INTEGER,
+        ADD COLUMN IF NOT EXISTS original_media_type TEXT,
+        ADD COLUMN IF NOT EXISTS pinned_address TEXT;
       ALTER TABLE task_evidence_bundles DROP CONSTRAINT IF EXISTS task_evidence_bundles_manifest_object_check;
       ALTER TABLE task_evidence_bundles ADD CONSTRAINT task_evidence_bundles_manifest_object_check
         CHECK (frozen_manifest IS NULL OR jsonb_typeof(frozen_manifest) = 'object');

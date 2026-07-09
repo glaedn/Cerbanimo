@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import * as parse5 from 'parse5';
+import sharp from 'sharp';
 
 const uploadAllowedMediaTypes = new Set([
   'image/jpeg',
@@ -12,6 +14,11 @@ const urlSnapshotAllowedMediaTypes = new Set([
   ...uploadAllowedMediaTypes,
   'text/html'
 ]);
+
+const IMAGE_SANITIZER_VERSION = 'image-sanitize-v1';
+const HTML_SANITIZER_VERSION = 'html-inert-text-v1';
+const MAX_IMAGE_PIXELS = Number(process.env.CERBANIMO_EVIDENCE_MAX_IMAGE_PIXELS || 36_000_000);
+const MAX_IMAGE_DIMENSION = Number(process.env.CERBANIMO_EVIDENCE_MAX_IMAGE_DIMENSION || 12000);
 
 const activeOrExecutableMediaTypes = new Set([
   'image/svg+xml',
@@ -116,15 +123,85 @@ function decodeStrictBase64(value, { maxBytes, allowDataUri = false } = {}) {
   return buffer;
 }
 
-function sanitizeHtml(buffer) {
-  const html = buffer.toString('utf8');
-  return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/javascript:/gi, '');
+function textFromNode(node, parts, state = { title: '' }) {
+  if (!node) return state;
+  const nodeName = String(node.nodeName || '').toLowerCase();
+  if (['script', 'style', 'iframe', 'object', 'embed', 'svg', 'form', 'template', 'noscript', 'meta'].includes(nodeName)) {
+    return state;
+  }
+  if (nodeName === '#text' && node.value) {
+    parts.push(node.value);
+  }
+  if (nodeName === 'title') {
+    const titleParts = [];
+    for (const child of node.childNodes || []) textFromNode(child, titleParts, state);
+    state.title = titleParts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+    return state;
+  }
+  for (const child of node.childNodes || []) {
+    textFromNode(child, parts, state);
+  }
+  return state;
 }
 
-function inspectBinary({
+function sanitizeHtml(buffer) {
+  const document = parse5.parse(buffer.toString('utf8'), { sourceCodeLocationInfo: false });
+  const parts = [];
+  const state = textFromNode(document, parts);
+  const text = parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 200000);
+  const output = [
+    state.title ? `Title: ${state.title}` : null,
+    text ? `Text: ${text}` : null
+  ].filter(Boolean).join('\n\n');
+  return {
+    buffer: Buffer.from(output || 'No extractable inert text.', 'utf8'),
+    title: state.title || null,
+    textLength: text.length,
+    sanitizerVersion: HTML_SANITIZER_VERSION
+  };
+}
+
+async function sanitizeImage(content, sniffedType) {
+  let metadata;
+  try {
+    metadata = await sharp(content, {
+      failOn: 'error',
+      limitInputPixels: MAX_IMAGE_PIXELS
+    }).metadata();
+  } catch (error) {
+    fail(`Image evidence could not be decoded safely: ${error.message}`, 'EVIDENCE_IMAGE_DECODE_FAILED', 415);
+  }
+  const width = Number(metadata.width || 0);
+  const height = Number(metadata.height || 0);
+  if (!width || !height || width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION || width * height > MAX_IMAGE_PIXELS) {
+    fail('Image evidence exceeds safe pixel or dimension limits.', 'EVIDENCE_IMAGE_DIMENSIONS_UNSAFE', 413, { width, height });
+  }
+  const output = await sharp(content, {
+    failOn: 'error',
+    limitInputPixels: MAX_IMAGE_PIXELS
+  })
+    .rotate()
+    .png({ compressionLevel: 9, adaptiveFiltering: true })
+    .toBuffer();
+  return {
+    buffer: output,
+    mediaType: 'image/png',
+    sanitizerVersion: IMAGE_SANITIZER_VERSION,
+    metadataPolicy: {
+      metadataPolicyVersion: IMAGE_SANITIZER_VERSION,
+      metadataStripped: true,
+      gpsRemoved: true,
+      originalRetained: false,
+      decoder: `sharp-${sharp.versions?.sharp || 'unknown'}`,
+      originalMediaType: sniffedType,
+      normalizedMediaType: 'image/png',
+      width,
+      height
+    }
+  };
+}
+
+async function inspectBinary({
   buffer,
   claimedMediaType,
   sourceKind = 'upload',
@@ -148,20 +225,43 @@ function inspectBinary({
   const polyglot = detectPolyglot(content, sniffedType);
   if (polyglot) fail(`Evidence content was rejected as polyglot or active content: ${polyglot}.`, 'EVIDENCE_POLYGLOT_REJECTED', 415);
 
-  const storedBuffer = sniffedType === 'text/html'
-    ? Buffer.from(sanitizeHtml(content), 'utf8')
-    : content;
+  let storedBuffer = content;
+  let storedMediaType = sniffedType;
+  let sanitizerVersion = null;
+  let metadataPolicy = {
+    exifGpsExposed: false,
+    activeContent: 'rejected',
+    htmlSanitized: false
+  };
+  if (sniffedType === 'text/html') {
+    const sanitized = sanitizeHtml(content);
+    storedBuffer = sanitized.buffer;
+    storedMediaType = 'text/plain';
+    sanitizerVersion = sanitized.sanitizerVersion;
+    metadataPolicy = {
+      originalMediaType: 'text/html',
+      storedMediaType,
+      activeContent: 'removed',
+      htmlSanitized: true,
+      sanitizerVersion,
+      title: sanitized.title,
+      extractedTextLength: sanitized.textLength
+    };
+  } else if (sniffedType.startsWith('image/')) {
+    const sanitized = await sanitizeImage(content, sniffedType);
+    storedBuffer = sanitized.buffer;
+    storedMediaType = sanitized.mediaType;
+    sanitizerVersion = sanitized.sanitizerVersion;
+    metadataPolicy = sanitized.metadataPolicy;
+  }
 
   return {
     buffer: storedBuffer,
-    mediaType: sniffedType,
+    mediaType: storedMediaType,
     byteSize: storedBuffer.length,
     contentSha256: crypto.createHash('sha256').update(storedBuffer).digest('hex'),
-    metadataPolicy: {
-      exifGpsExposed: false,
-      activeContent: 'rejected',
-      htmlSanitized: sniffedType === 'text/html'
-    }
+    sanitizerVersion,
+    metadataPolicy
   };
 }
 

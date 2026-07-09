@@ -1,62 +1,9 @@
-import dns from 'node:dns/promises';
-import http from 'node:http';
-import https from 'node:https';
-import net from 'node:net';
-import fetch from 'node-fetch';
 import EvidenceArtifactStore, { MAX_ITEM_BYTES } from './EvidenceArtifactStore.js';
 import { inspectBinary, normalizeMediaType, urlSnapshotAllowedMediaTypes } from './EvidenceBinaryInspectionService.js';
+import EvidenceNetworkResolver, { blockedHostname, isPrivateIpv4, isPrivateIpv6 } from './EvidenceNetworkResolver.js';
+import EvidenceHttpTransport from './EvidenceHttpTransport.js';
 
-const connectTimeoutMs = Number(process.env.CERBANIMO_EVIDENCE_FETCH_CONNECT_TIMEOUT_MS || 5000);
 const totalTimeoutMs = Number(process.env.CERBANIMO_EVIDENCE_FETCH_TOTAL_TIMEOUT_MS || 15000);
-
-function isPrivateIpv4(address) {
-  const octets = address.split('.').map(Number);
-  if (octets.length !== 4 || octets.some(part => Number.isNaN(part))) return true;
-  const [a, b, c, d] = octets;
-  return a === 0
-    || a === 10
-    || a === 127
-    || (a === 100 && b >= 64 && b <= 127)
-    || (a === 169 && b === 254)
-    || (a === 172 && b >= 16 && b <= 31)
-    || (a === 192 && b === 0 && c === 0)
-    || (a === 192 && b === 0 && c === 2)
-    || (a === 192 && b === 168)
-    || (a === 198 && (b === 18 || b === 19))
-    || (a === 198 && b === 51 && c === 100)
-    || (a === 203 && b === 0 && c === 113)
-    || (a === 255 && b === 255 && c === 255 && d === 255)
-    || a >= 224;
-}
-
-function isPrivateIpv6(address) {
-  const normalized = address.toLowerCase();
-  if (normalized.startsWith('::ffff:')) {
-    const embedded = normalized.replace(/^::ffff:/, '');
-    return net.isIP(embedded) === 4 ? isPrivateIpv4(embedded) : true;
-  }
-  return normalized === '::1'
-    || normalized === '::'
-    || normalized.startsWith('64:ff9b:')
-    || normalized.startsWith('fc')
-    || normalized.startsWith('fd')
-    || normalized.startsWith('fe80:')
-    || normalized.startsWith('ff')
-    || normalized.startsWith('2001:db8:')
-    || normalized.startsWith('::ffff:127.')
-    || normalized.startsWith('::ffff:10.')
-    || normalized.startsWith('::ffff:192.168.')
-    || normalized.includes('169.254.');
-}
-
-function blockedHostname(hostname) {
-  const normalized = String(hostname || '').toLowerCase();
-  return normalized === 'localhost'
-    || normalized.endsWith('.localhost')
-    || normalized.endsWith('.local')
-    || normalized === 'metadata.google.internal'
-    || normalized === '169.254.169.254';
-}
 
 function mediaTypeFromHeader(header = '') {
   return normalizeMediaType(header);
@@ -80,6 +27,12 @@ async function readBounded(response, maxBytes) {
 }
 
 class EvidenceFetchService {
+  constructor({ resolver = EvidenceNetworkResolver, transport = EvidenceHttpTransport, fetchImpl = undefined } = {}) {
+    this.resolver = resolver;
+    this.transport = transport;
+    this.fetchImpl = fetchImpl;
+  }
+
   async assertSafeUrl(rawUrl) {
     let parsed;
     try {
@@ -97,37 +50,8 @@ class EvidenceFetchService {
       throw error;
     }
 
-    const addresses = await this.resolvePublicAddresses(parsed.hostname);
+    const addresses = await this.resolver.resolvePublicAddresses(parsed.hostname);
     return { parsed, addresses };
-  }
-
-  async resolvePublicAddresses(hostname) {
-    const ipVersion = net.isIP(hostname);
-    const addresses = ipVersion
-      ? [{ address: hostname, family: ipVersion }]
-      : await dns.lookup(hostname, { all: true, verbatim: true });
-    for (const address of addresses) {
-      const blocked = address.family === 4 ? isPrivateIpv4(address.address) : isPrivateIpv6(address.address);
-      if (blocked) {
-        const error = new Error('Evidence URL resolves to a private or reserved network address.');
-        error.status = 400;
-        error.code = 'EVIDENCE_URL_PRIVATE_NETWORK';
-        throw error;
-      }
-    }
-    return addresses;
-  }
-
-  pinnedAgent(parsed, pinnedAddress) {
-    const lookup = (_hostname, _options, callback) => {
-      callback(null, pinnedAddress.address, pinnedAddress.family);
-    };
-    const Agent = parsed.protocol === 'https:' ? https.Agent : http.Agent;
-    return new Agent({
-      lookup,
-      timeout: connectTimeoutMs,
-      servername: parsed.hostname
-    });
   }
 
   async fetchSnapshot(rawUrl, { client, timeoutMs = totalTimeoutMs, maxRedirects = 3 } = {}) {
@@ -137,19 +61,14 @@ class EvidenceFetchService {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
-      const addresses = redirectCount === 0 ? safety.addresses : await this.resolvePublicAddresses(current.hostname);
+      const addresses = redirectCount === 0 ? safety.addresses : await this.resolver.resolvePublicAddresses(current.hostname);
       const pinnedAddress = addresses[0];
       let response;
       try {
-        response = await fetch(current.toString(), {
-          method: 'GET',
-          redirect: 'manual',
-          headers: {
-            'user-agent': 'CerbanimoEvidenceFetcher/1.0',
-            host: current.host
-          },
-          agent: this.pinnedAgent(current, pinnedAddress),
-          signal: controller.signal
+        response = await this.transport.get(current, {
+          pinnedAddress,
+          signal: controller.signal,
+          fetchImpl: this.fetchImpl
         });
       } catch (error) {
         if (error.name === 'AbortError') {
@@ -196,7 +115,7 @@ class EvidenceFetchService {
       }
 
       const buffer = await readBounded(response, MAX_ITEM_BYTES);
-      const inspected = inspectBinary({
+      const inspected = await inspectBinary({
         buffer,
         claimedMediaType: headerMediaType || undefined,
         sourceKind: 'url_snapshot',
@@ -208,24 +127,23 @@ class EvidenceFetchService {
         mediaType: inspected.mediaType,
         client,
         metadata: {
-          sourceUrl: rawUrl,
-          canonicalUrl: current.toString(),
-          statusCode: response.status,
-          capturedAt: new Date().toISOString(),
-          pinnedAddress: pinnedAddress.address,
           metadataPolicy: inspected.metadataPolicy
-        }
+        },
+        sanitizerVersion: inspected.sanitizerVersion
       });
 
       return {
         sourceUrl: rawUrl,
         canonicalUrl: current.toString(),
+        originalMediaType: headerMediaType || inspected.metadataPolicy?.originalMediaType || null,
         mediaType: inspected.mediaType,
         byteSize: inspected.byteSize,
         contentSha256: blob.content_sha256,
         blobStorageKey: blob.storage_key,
         statusCode: response.status,
-        ok: response.ok
+        ok: response.ok,
+        pinnedAddress: pinnedAddress.address,
+        metadataPolicy: inspected.metadataPolicy
       };
       }
     } finally {
@@ -240,4 +158,4 @@ class EvidenceFetchService {
 }
 
 export default new EvidenceFetchService();
-export { blockedHostname, isPrivateIpv4, isPrivateIpv6 };
+export { EvidenceFetchService, blockedHostname, isPrivateIpv4, isPrivateIpv6 };

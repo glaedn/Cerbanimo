@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "test:evidence-eval": "node scripts/evidence-eval.js",
+    "test:review-races": "node scripts/review-races.js",
     "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
   },
   "type": "module",
@@ -30,7 +32,9 @@
     "nvm": "^0.0.4",
     "openai": "^5.21.0",
     "p-limit": "^7.3.0",
+    "parse5": "^8.0.1",
     "pg-boss": "^12.18.2",
+    "sharp": "^0.35.3",
     "socket.io": "^4.8.1",
     "uuid": "^11.1.0",
     "watchman": "^1.0.0"

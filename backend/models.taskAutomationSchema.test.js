@@ -73,6 +73,10 @@ describe('tasks task automation schema initialization', () => {
     expect(kamiyaApiSource).toContain("'needs_more_evidence'");
     expect(kamiyaApiSource).toContain("'manual_review_required'");
     expect(kamiyaApiSource).toContain("'automation_report'");
+    expect(kamiyaApiSource).toContain('sanitizer_version TEXT');
+    expect(kamiyaApiSource).toContain('provenance_sha256 TEXT');
+    expect(kamiyaApiSource).toContain('combined_sha256 TEXT');
+    expect(kamiyaApiSource).toContain('response_status INTEGER');
     expect(kamiyaApiSource).toContain('idx_task_evidence_one_active_draft');
     expect(kamiyaApiSource).toContain('idx_task_validation_results_run');
   });

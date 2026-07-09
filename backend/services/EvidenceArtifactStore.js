@@ -34,18 +34,18 @@ class EvidenceArtifactStore {
     }
   }
 
-  async putBuffer({ buffer, mediaType, metadata = {}, client = pool }) {
+  async putBuffer({ buffer, mediaType, metadata = {}, sanitizerVersion = null, client = pool }) {
     const content = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || '');
     this.assertItemSize(content.length);
     const contentSha256 = sha256(content);
     const storageKey = `cerbanimo://evidence-blobs/sha256/${contentSha256}`;
     const result = await client.query(
       `INSERT INTO task_evidence_blobs (
-         storage_key, media_type, byte_size, content_sha256, content, metadata
+         storage_key, media_type, byte_size, content_sha256, content, metadata, sanitizer_version
        )
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
        ON CONFLICT (storage_key)
-       DO UPDATE SET metadata = task_evidence_blobs.metadata || EXCLUDED.metadata
+       DO UPDATE SET storage_key = task_evidence_blobs.storage_key
        RETURNING *`,
       [
         storageKey,
@@ -53,7 +53,8 @@ class EvidenceArtifactStore {
         content.length,
         contentSha256,
         content,
-        JSON.stringify(metadata || {})
+        JSON.stringify(metadata || {}),
+        sanitizerVersion
       ]
     );
     return result.rows[0];

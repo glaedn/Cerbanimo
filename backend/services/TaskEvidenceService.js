@@ -8,6 +8,7 @@ import EvidenceFetchService from './EvidenceFetchService.js';
 import EvidenceValidationProvider from './EvidenceValidationProvider.js';
 import EvidenceArtifactReferenceResolver from './EvidenceArtifactReferenceResolver.js';
 import { decodeStrictBase64, inspectBinary } from './EvidenceBinaryInspectionService.js';
+import EvidenceCanonicalDigestService, { MANIFEST_VERSION } from './EvidenceCanonicalDigestService.js';
 
 const draftStatuses = new Set(['draft']);
 const previewableStatuses = new Set(['draft', 'previewed']);
@@ -158,38 +159,25 @@ class TaskEvidenceService {
     return policy;
   }
 
-  buildFrozenManifest(bundle, items, requirements) {
-    const base = {
-      bundleId: Number(bundle.id),
-      version: Number(bundle.version || 1),
-      taskId: Number(bundle.task_id),
-      requirementSnapshotHash: jsonHash(TaskEvidenceRequirementService.summarize(requirements)),
-      items: asArray(items)
-        .slice()
-        .sort((a, b) => Number(a.id) - Number(b.id))
-        .map(item => ({
-          itemId: Number(item.id),
-          evidenceType: item.evidence_type,
-          contentSha256: item.content_sha256,
-          blobStorageKey: item.blob_storage_key || null,
-          artifactUri: item.artifact_uri || null,
-          requirementIds: asArray(item.requirement_ids).map(String).sort()
-        })),
-      reflectionSha256: crypto.createHash('sha256').update(String(bundle.reflection || '')).digest('hex')
-    };
-    return {
-      ...base,
-      manifestSha256: jsonHash(base)
-    };
+  async buildFrozenManifest(client, bundle, items, requirements, { task, validationPolicySnapshot = {}, persistItemDigests = false } = {}) {
+    return (await EvidenceCanonicalDigestService.buildManifest({
+      client,
+      bundle,
+      items,
+      task: task || await TaskAccessService.loadTask(bundle.task_id, client),
+      requirements,
+      validationPolicySnapshot,
+      persistItemDigests
+    })).manifest;
   }
 
-  manifestFailure(code, message, metadata = {}) {
+  manifestFailure(code, message, metadata = {}, status = 'validation_failed') {
     return {
       ok: false,
-      status: 'validation_failed',
+      status,
       finding: {
         requirementId: null,
-        severity: 'critical',
+        severity: status === 'manual_review_required' ? 'high' : 'critical',
         code,
         message,
         evidenceItemIds: [],
@@ -203,11 +191,40 @@ class TaskEvidenceService {
     if (!frozenManifest || !bundle.manifest_sha256) {
       return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'Frozen evidence manifest is missing.');
     }
+    if (frozenManifest.manifestVersion !== MANIFEST_VERSION) {
+      return this.manifestFailure(
+        'EVIDENCE_MANIFEST_MISMATCH',
+        'Legacy evidence manifest requires manual validation review before it can proceed.',
+        { manifestVersion: frozenManifest.manifestVersion || 'legacy-v1' },
+        'manual_review_required'
+      );
+    }
     const items = await this.loadItemsForBundle(client, bundle.id);
     const requirements = parseJsonish(bundle.requirement_snapshot, []).length
       ? parseJsonish(bundle.requirement_snapshot, [])
       : TaskEvidenceRequirementService.summarize(TaskEvidenceRequirementService.normalizeForTask(task));
-    const rebuilt = this.buildFrozenManifest(bundle, items, requirements);
+    const validationPolicySnapshot = parseJsonish(bundle.validation_policy_snapshot, {});
+    let rebuilt;
+    let itemDigests;
+    try {
+      const digestResult = await EvidenceCanonicalDigestService.buildManifest({
+        client,
+        bundle,
+        items,
+        task,
+        requirements,
+        validationPolicySnapshot
+      });
+      rebuilt = digestResult.manifest;
+      itemDigests = digestResult.itemDigests;
+    } catch (error) {
+      return this.manifestFailure(
+        error.code || 'EVIDENCE_CANONICALIZER_UNAVAILABLE',
+        error.message || 'Evidence canonicalization failed before validation.',
+        {},
+        error.code === 'EVIDENCE_ARTIFACT_UNAUTHORIZED' ? 'validation_failed' : 'manual_review_required'
+      );
+    }
     if (rebuilt.manifestSha256 !== bundle.manifest_sha256 || rebuilt.manifestSha256 !== frozenManifest.manifestSha256) {
       return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'Evidence manifest no longer matches the frozen preview snapshot.', {
         expected: bundle.manifest_sha256,
@@ -216,16 +233,24 @@ class TaskEvidenceService {
     }
 
     const itemsById = new Map(items.map(item => [Number(item.id), item]));
+    const digestByItemId = new Map(itemDigests.map(({ item, digest }) => [Number(item.id), digest]));
     for (const manifestItem of asArray(frozenManifest.items)) {
       const row = itemsById.get(Number(manifestItem.itemId));
       if (!row) {
         return this.manifestFailure('EVIDENCE_ITEM_MISSING', 'A frozen evidence item is missing before validation.', { itemId: manifestItem.itemId });
       }
-      if (row.content_sha256 !== manifestItem.contentSha256) {
-        return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'A frozen evidence item hash no longer matches its manifest.', { itemId: manifestItem.itemId });
+      const digest = digestByItemId.get(Number(manifestItem.itemId));
+      if (!digest || digest.contentSha256 !== manifestItem.contentSha256) {
+        return this.manifestFailure('EVIDENCE_CONTENT_HASH_MISMATCH', 'A frozen evidence item content digest no longer matches its manifest.', { itemId: manifestItem.itemId });
       }
-      if (manifestItem.blobStorageKey) {
-        const blob = await EvidenceArtifactStore.getByStorageKey(manifestItem.blobStorageKey, client);
+      if (digest.provenanceSha256 !== manifestItem.provenanceSha256) {
+        return this.manifestFailure('EVIDENCE_PROVENANCE_HASH_MISMATCH', 'A frozen evidence item provenance digest no longer matches its manifest.', { itemId: manifestItem.itemId });
+      }
+      if (digest.combinedSha256 !== manifestItem.combinedSha256) {
+        return this.manifestFailure('EVIDENCE_MANIFEST_MISMATCH', 'A frozen evidence item combined digest no longer matches its manifest.', { itemId: manifestItem.itemId });
+      }
+      if (row.blob_storage_key) {
+        const blob = await EvidenceArtifactStore.getByStorageKey(row.blob_storage_key, client);
         if (!blob || EvidenceArtifactStore.contentHash(blob.content) !== manifestItem.contentSha256) {
           return this.manifestFailure('EVIDENCE_BLOB_HASH_MISMATCH', 'Stored evidence blob hash no longer matches the frozen manifest.', { itemId: manifestItem.itemId });
         }
@@ -571,7 +596,12 @@ class TaskEvidenceService {
         contentSha256: snapshot.contentSha256,
         metadata: {
           statusCode: snapshot.statusCode,
-          capturedAt: nowIso()
+          capturedAt: nowIso(),
+          sourceUrl: snapshot.sourceUrl,
+          canonicalUrl: snapshot.canonicalUrl,
+          originalMediaType: snapshot.originalMediaType,
+          pinnedAddress: snapshot.pinnedAddress,
+          metadataPolicy: snapshot.metadataPolicy
         }
       }, TaskEvidenceRequirementService.normalizeForTask(await TaskAccessService.loadTask(bundle.task_id, client)));
       await client.query(
@@ -579,9 +609,12 @@ class TaskEvidenceService {
          SET status = 'completed',
              canonical_url = $2,
              evidence_item_id = $3,
+             response_status = $4,
+             original_media_type = $5,
+             pinned_address = $6,
              completed_at = NOW()
          WHERE id = $1`,
-        [fetchRecord.id, snapshot.canonicalUrl, item.id]
+        [fetchRecord.id, snapshot.canonicalUrl, item.id, snapshot.statusCode || null, snapshot.originalMediaType || null, snapshot.pinnedAddress || null]
       );
       await client.query('UPDATE task_evidence_bundles SET updated_at = NOW() WHERE id = $1', [bundle.id]);
       await client.query('COMMIT');
@@ -619,6 +652,12 @@ class TaskEvidenceService {
         };
       }
 
+      const validationPolicySnapshot = {
+        validationProviders: ['deterministic'],
+        semanticProvider: process.env.CERBANIMO_EVIDENCE_SEMANTIC_PROVIDER || null,
+        policyVersion: 'submission-validation-v2',
+        capturedAt: nowIso()
+      };
       const previewPayload = {
         title: `Submit evidence for task: ${task.name || task.title || task.id}`,
         summary: `Cerbanimo will freeze ${items.length} evidence item${items.length === 1 ? '' : 's'} and validate them before handing the task to peer/PM review.`,
@@ -634,7 +673,11 @@ class TaskEvidenceService {
         permissions: ['tasks:write', 'actions:write'],
         confirmationRequired: true
       };
-      const frozenManifest = this.buildFrozenManifest(bundle, items, requirements);
+      const frozenManifest = await this.buildFrozenManifest(client, bundle, items, requirements, {
+        task,
+        validationPolicySnapshot,
+        persistItemDigests: true
+      });
       const action = (await client.query(
         `INSERT INTO api_actions (
            intent_json,
@@ -673,11 +716,7 @@ class TaskEvidenceService {
         [
           bundle.id,
           JSON.stringify(TaskEvidenceRequirementService.summarize(requirements)),
-          JSON.stringify({
-            validationProviders: ['deterministic'],
-            semanticProvider: process.env.CERBANIMO_EVIDENCE_SEMANTIC_PROVIDER || null,
-            capturedAt: nowIso()
-          }),
+          JSON.stringify(validationPolicySnapshot),
           action.id,
           JSON.stringify(frozenManifest),
           frozenManifest.manifestSha256
@@ -1018,15 +1057,17 @@ class TaskEvidenceService {
     }
     const integrity = await this.verifyFrozenManifest(pool, bundle, task);
     if (!integrity.ok) {
+      const integrityStatus = integrity.status || 'validation_failed';
+      const integrityVerdict = integrityStatus === 'manual_review_required' ? 'manual_review_required' : 'failed';
       const requirementResults = [{
         requirementId: 'evidence-integrity',
         description: 'Frozen evidence manifest integrity',
-        verdict: 'failed',
+        verdict: integrityVerdict,
         evidenceItemIds: [],
         checks: ['manifest_integrity']
       }];
       return {
-        status: 'validation_failed',
+        status: integrityStatus,
         taskId: task.id,
         bundleId: bundle.id,
         bundleUuid: bundle.bundle_uuid,
@@ -1265,12 +1306,22 @@ class TaskEvidenceService {
     }
 
     const items = await this.loadItemsForBundle(client, bundle.id);
-    const frozenManifest = this.buildFrozenManifest(bundle, items, requirements);
+    const validationPolicySnapshot = {
+      generatedFrom: 'run_quality_checks',
+      automationRunId: run.id,
+      policyVersion: 'submission-validation-v2',
+      capturedAt: nowIso()
+    };
+    const frozenManifest = await this.buildFrozenManifest(client, bundle, items, requirements, {
+      task,
+      validationPolicySnapshot,
+      persistItemDigests: true
+    });
     bundle = (await client.query(
       `UPDATE task_evidence_bundles
        SET status = 'validating',
            requirement_snapshot = $2::jsonb,
-           validation_policy_snapshot = COALESCE(validation_policy_snapshot, '{}'::jsonb) || $3::jsonb,
+           validation_policy_snapshot = $3::jsonb,
            frozen_manifest = $4::jsonb,
            manifest_sha256 = $5,
            frozen_at = COALESCE(frozen_at, NOW()),
@@ -1280,7 +1331,7 @@ class TaskEvidenceService {
       [
         bundle.id,
         JSON.stringify(requirementSnapshot),
-        JSON.stringify({ generatedFrom: 'run_quality_checks', automationRunId: run.id, capturedAt: nowIso() }),
+        JSON.stringify(validationPolicySnapshot),
         JSON.stringify(frozenManifest),
         frozenManifest.manifestSha256
       ]
@@ -1290,10 +1341,11 @@ class TaskEvidenceService {
     const requirementResults = [];
     const findings = [];
     if (!integrity.ok) {
+      const integrityVerdict = integrity.status === 'manual_review_required' ? 'manual_review_required' : 'failed';
       requirementResults.push({
         requirementId: 'evidence-integrity',
         description: 'Frozen evidence manifest integrity',
-        verdict: 'failed',
+        verdict: integrityVerdict,
         evidenceItemIds: [],
         checks: ['manifest_integrity']
       });
@@ -1417,7 +1469,7 @@ class TaskEvidenceService {
       }
       if (base64) {
         const decoded = decodeStrictBase64(base64);
-        const inspected = inspectBinary({
+        const inspected = await inspectBinary({
           buffer: decoded,
           claimedMediaType: mediaType,
           sourceKind: 'upload'
@@ -1438,7 +1490,8 @@ class TaskEvidenceService {
         const blob = await EvidenceArtifactStore.putBuffer({
           buffer: inspected.buffer,
           mediaType: inspected.mediaType,
-          metadata: { ...metadata, metadataPolicy: inspected.metadataPolicy },
+          metadata: { metadataPolicy: inspected.metadataPolicy },
+          sanitizerVersion: inspected.sanitizerVersion,
           client
         });
         blobStorageKey = blob.storage_key;
