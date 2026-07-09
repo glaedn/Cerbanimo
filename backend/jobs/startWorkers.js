@@ -1,6 +1,7 @@
 import { startAgentWorker } from './workers/agentWorker.js';
 import { AUTOMATION_EXECUTION_QUEUE, startAutomationWorker } from './workers/automationWorker.js';
 import { PROJECT_BOOTSTRAP_QUEUE, startProjectBootstrapWorker } from './workers/projectBootstrapWorker.js';
+import { TASK_REVIEW_QUEUES, startTaskReviewWorker } from './workers/taskReviewWorker.js';
 import { startDomainWorkers } from './workers/domain/domainWorkers.js';
 import boss from './boss.js';
 import VestingService from '../services/VestingService.js';
@@ -45,7 +46,8 @@ export async function startWorkers() {
       'token-decay-job',
       'community-health-update-job',
       AUTOMATION_EXECUTION_QUEUE,
-      PROJECT_BOOTSTRAP_QUEUE
+      PROJECT_BOOTSTRAP_QUEUE,
+      ...TASK_REVIEW_QUEUES
     ];
 
     for (const queue of queues) {
@@ -64,6 +66,7 @@ export async function startWorkers() {
     await startAgentWorker();
     await startAutomationWorker();
     await startProjectBootstrapWorker();
+    await startTaskReviewWorker();
     await startDomainWorkers();
 
     // Define worker for scheduled tasks

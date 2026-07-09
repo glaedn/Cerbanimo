@@ -1,3 +1,4 @@
+import process from 'node:process';
 import pool from '../db.js';
 import boss from '../jobs/boss.js';
 import TaskAccessService from './TaskAccessService.js';
@@ -12,10 +13,6 @@ function asArray(value) {
 
 function humanReviewEnabled() {
   return process.env.CERBANIMO_HUMAN_REVIEW_ENABLED === 'true';
-}
-
-function nowIso() {
-  return new Date().toISOString();
 }
 
 function requireReason(decision, reason) {
@@ -679,6 +676,98 @@ class TaskReviewService {
       });
       await client.query('COMMIT');
       return { advanced: true, round: this.serializeRound(accepted) };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async handleReviewFinalize({ reviewRoundId }) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const round = await this.lockRound(client, reviewRoundId);
+      if (!round) {
+        await client.query('COMMIT');
+        return { stale: true };
+      }
+      if (round.status === 'accepted_pending_settlement') {
+        await client.query(
+          `INSERT INTO task_acceptance_records (
+             task_id, bundle_id, validation_result_id, review_round_id,
+             evidence_manifest_sha256, peer_gate_method, pm_gate_method, policy_version
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (review_round_id) DO NOTHING`,
+          [
+            round.task_id,
+            round.bundle_id,
+            round.validation_result_id,
+            round.id,
+            round.evidence_manifest_sha256,
+            round.peer_gate_method || 'human',
+            round.pm_gate_method || 'human',
+            round.policy_version
+          ]
+        );
+        await client.query('COMMIT');
+        return { accepted: true, round: this.serializeRound(round) };
+      }
+      if (round.status === 'pm_review_open' && round.peer_gate_satisfied_at && round.pm_gate_satisfied_at && round.pm_gate_method) {
+        const accepted = await this.acceptRound(client, { roundId: round.id, method: round.pm_gate_method });
+        await client.query('COMMIT');
+        return { accepted: true, round: this.serializeRound(accepted) };
+      }
+      await client.query('COMMIT');
+      return { stale: true, status: round.status };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async handleAssignmentExpiry({ assignmentId }) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existing = (await client.query(
+        `SELECT *
+         FROM task_review_assignments
+         WHERE id::text = $1 OR assignment_uuid::text = $1
+         LIMIT 1`,
+        [String(assignmentId)]
+      )).rows[0];
+      if (!existing) {
+        await client.query('COMMIT');
+        return { stale: true };
+      }
+      const round = await this.lockRound(client, existing.review_round_id);
+      const assignment = await this.lockAssignment(client, existing.id);
+      if (!round || !assignment || assignment.status !== 'offered') {
+        await client.query('COMMIT');
+        return { stale: true };
+      }
+      if (assignment.expires_at && new Date(assignment.expires_at).getTime() > Date.now()) {
+        await client.query('COMMIT');
+        return { stale: true, notExpired: true };
+      }
+      await client.query(
+        `UPDATE task_review_assignments
+         SET status = 'expired',
+             updated_at = NOW()
+         WHERE id = $1`,
+        [assignment.id]
+      );
+      await this.recordEvent(client, round, `${assignment.reviewer_role.replace('_reviewer', '')}.assignment_expired`, {
+        eventKey: `assignment:${assignment.id}:expired`,
+        payload: { assignmentId: assignment.id }
+      });
+      await client.query('COMMIT');
+      return { expired: true };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
