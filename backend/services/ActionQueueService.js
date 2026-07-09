@@ -12,6 +12,7 @@ import {
 import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
 import { validatePreparationInputs } from './TaskAutomationInputValidator.js';
 import { resolveTaskAutomationCapability } from './TaskAutomationCapabilityResolver.js';
+import TaskEvidenceService, { buildAuthoritySnapshot } from './TaskEvidenceService.js';
 
 export function canAccessAction(action, { actorUserId, isServiceActor = false } = {}) {
   if (!action) return false;
@@ -372,6 +373,25 @@ class ActionQueueService {
       }
 
       const functionName = action.intent_json?.functionName || action.intent_json?.function || action.intent_json?.type;
+      if (functionName === 'tasks.submit_evidence') {
+        const { updatedAction, automationJob } = await TaskEvidenceService.confirmEvidenceAction(client, action, {
+          actorUserId,
+          isServiceActor,
+          scopes,
+          roles,
+          confirmation
+        });
+        automationJobToSend = automationJob;
+        await client.query('COMMIT');
+        if (automationJobToSend) {
+          try {
+            await boss.send(AUTOMATION_EXECUTION_QUEUE, automationJobToSend);
+          } catch (queueError) {
+            await this.markAutomationQueueFailure(automationJobToSend.runId, queueError);
+          }
+        }
+        return this.hydrateActionOnly(updatedAction.id, { actorUserId, isServiceActor });
+      }
       if (functionName === 'tasks.run_automation') {
         const { updatedAction, automationJob } = await this.confirmTaskAutomationAction(client, action, {
           actorUserId,
@@ -727,7 +747,8 @@ class ActionQueueService {
         JSON.stringify({
           taskId: task.id,
           preparationId: preparation.id,
-          capabilityName: preparation.capability_name
+          capabilityName: preparation.capability_name,
+          authoritySnapshot: buildAuthoritySnapshot({ actorUserId, isServiceActor, scopes, roles })
         }),
         template?.workerName || null,
         action.source_client,

@@ -6,6 +6,7 @@ import { qualityCheckInputSchema, validatePreparationInputs } from './TaskAutoma
 import TaskAutomationAuthorizationService from './TaskAutomationAuthorizationService.js';
 import { resolveTaskAutomationCapability } from './TaskAutomationCapabilityResolver.js';
 import { serializeTaskAutomation } from './TaskAutomationClassificationService.js';
+import TaskEvidenceService from './TaskEvidenceService.js';
 
 const externalIntegrationTemplates = new Set([
   'github_issue_creation',
@@ -246,7 +247,7 @@ class AutomationWorkerService {
       case 'run_quality_checks':
         return this.runQualityChecks(run, context);
       case 'submission_validation':
-        return this.runSubmissionValidation(run);
+        return TaskEvidenceService.validateSubmissionRun(run, context);
       case 'deadline_monitoring':
         return this.runDeadlineMonitoring(run);
       case 'blocker_detection':
@@ -338,23 +339,36 @@ class AutomationWorkerService {
           throw error;
         }
         const actorUserId = run.actor_user_id || preparation.actor_user_id;
+        const authoritySnapshot = run.input?.authoritySnapshot || {};
+        const currentUser = actorUserId
+          ? (await client.query('SELECT roles FROM users WHERE id = $1 LIMIT 1', [actorUserId])).rows[0]
+          : null;
+        const finalizationAuthContext = {
+          actorUserId: currentUser ? actorUserId : null,
+          isServiceActor: Boolean(authoritySnapshot.isServiceActor),
+          scopes: Array.isArray(authoritySnapshot.scopes) && authoritySnapshot.scopes.length
+            ? authoritySnapshot.scopes
+            : ['automation:write'],
+          roles: Array.isArray(currentUser?.roles) ? currentUser.roles : []
+        };
         const validation = validatePreparationInputs(preparation.input_schema_snapshot || qualityCheckInputSchema(), preparation.input_values || {}, { actorUserId });
         const capability = resolveTaskAutomationCapability({
           task: { ...task, automation: serializeTaskAutomation(task) },
           preparation,
-          scopes: ['automation:write'],
+          scopes: finalizationAuthContext.scopes,
           validationResult: validation,
           actorUserId,
           taskAuthority: true
         });
-        await TaskAutomationAuthorizationService.assert(task.id, { actorUserId, scopes: ['automation:write'] }, 'canSubmitAutomationResult', client);
-        if (!validation.valid || !capability.executionAvailable) {
+        const authorization = await TaskAutomationAuthorizationService.policyForTask(task.id, finalizationAuthContext, client);
+        if (!validation.valid || !capability.executionAvailable || !authorization.canSubmitAutomationResult?.allowed) {
           result = {
             status: 'blocked',
             reason: 'FINALIZATION_REVALIDATION_FAILED',
             message: 'Task automation authorization or inputs changed before finalization.',
             validation,
             capability,
+            authorization: authorization.canSubmitAutomationResult || null,
             completedAt: nowIso()
           };
         }
@@ -377,41 +391,11 @@ class AutomationWorkerService {
           ]
         );
 
-        if (result.status === 'checks_passed') {
-          const proofUri = result.artifactUri || `cerbanimo://automation-runs/${run.run_uuid || run.id}/quality-check-report`;
-          await client.query(
-            `INSERT INTO task_automation_submissions (run_id, task_id, submitted_by, proof_uri, report)
-             VALUES ($1, $2, $3, $4, $5::jsonb)
-             ON CONFLICT (run_id) DO NOTHING`,
-            [run.id, task.id, actorUserId || null, proofUri, JSON.stringify(result)]
-          );
-          await client.query(
-            `UPDATE tasks
-             SET submitted = TRUE,
-                 submitted_at = COALESCE(submitted_at, NOW()),
-                 status = 'submitted',
-                 peer_review_deadline = COALESCE(peer_review_deadline, NOW() + INTERVAL '6 hours'),
-                 proof_of_work_links = CASE
-                   WHEN $2 = ANY(COALESCE(proof_of_work_links, '{}'::text[])) THEN proof_of_work_links
-                   ELSE array_append(COALESCE(proof_of_work_links, '{}'::text[]), $2)
-                 END,
-                 reflection = COALESCE(NULLIF(reflection, ''), $3),
-                 submitted_by = COALESCE(submitted_by, $4)
-             WHERE id = $1`,
-            [
-              task.id,
-              proofUri,
-              `Automated quality-check report from run ${run.run_uuid || run.id}: ${result.summary || 'Quality checks passed.'}`,
-              actorUserId || null
-            ]
-          );
-          await client.query(
-            `INSERT INTO automation_logs (run_id, level, message, payload)
-             VALUES ($1, 'info', 'Task submitted from passing quality-check report.', $2::jsonb)`,
-            [run.id, JSON.stringify({ taskId: task.id, proofUri, status: 'submitted' })]
-          );
-          result = { ...result, submittedTask: true };
-        }
+        result = await TaskEvidenceService.finalizeQualityReport(client, { run, task, result, actorUserId });
+      }
+
+      if (run.template_key === 'submission_validation') {
+        result = await TaskEvidenceService.finalizeValidationRun(client, { run, result, action });
       }
 
       const finalStatus = statusForResult(result);
@@ -706,28 +690,13 @@ class AutomationWorkerService {
   }
 
   async runSubmissionValidation(run) {
-    const input = run.input || {};
-    const taskId = input.taskId || input.targetId;
-    const taskResult = await pool.query(
-      `SELECT id, name, status, submitted, proof_of_work_links, reflection, submitted_by, submitted_at
-       FROM tasks WHERE id = $1`,
-      [taskId]
-    );
-    const task = taskResult.rows[0];
-    const checks = [
-      { key: 'task_exists', ok: Boolean(task), message: task ? 'Task found.' : 'Task not found.' },
-      { key: 'submitted', ok: Boolean(task?.submitted), message: task?.submitted ? 'Task is submitted.' : 'Task is not submitted.' },
-      { key: 'proof_of_work', ok: Boolean(task?.proof_of_work_links?.length), message: task?.proof_of_work_links?.length ? 'Proof of work is attached.' : 'Proof of work is missing.' },
-      { key: 'reflection', ok: Boolean(task?.reflection), message: task?.reflection ? 'Reflection is present.' : 'Reflection is missing.' }
-    ];
-
+    if (run.input?.bundleId || run.input?.bundleUuid) {
+      return TaskEvidenceService.validateSubmissionRun(run);
+    }
     return {
-      status: 'completed',
-      targetType: 'task',
-      targetId: taskId,
-      passed: checks.every(check => check.ok),
-      checks,
-      target: task || null,
+      status: 'blocked',
+      reason: 'EVIDENCE_BUNDLE_REQUIRED',
+      message: 'Submission validation now requires a frozen evidence bundle.',
       completedAt: nowIso()
     };
   }
@@ -1016,7 +985,15 @@ function statusForResult(result = {}) {
 }
 
 function shouldMarkActionExecuted(result = {}) {
-  return ['completed', 'checks_passed', 'checks_failed'].includes(result.status);
+  return [
+    'completed',
+    'checks_passed',
+    'checks_failed',
+    'validation_passed',
+    'needs_more_evidence',
+    'manual_review_required',
+    'validation_failed'
+  ].includes(result.status);
 }
 
 function redactRunInput(input = {}) {

@@ -51,6 +51,8 @@ export async function createKamiyaApiTables() {
   try {
     await client.query('BEGIN');
 
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
+
     await client.query(`
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS kamiya_chats JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -320,6 +322,184 @@ export async function createKamiyaApiTables() {
     }
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS task_evidence_blobs (
+        id BIGSERIAL PRIMARY KEY,
+        storage_key TEXT UNIQUE NOT NULL,
+        media_type TEXT NOT NULL,
+        byte_size BIGINT NOT NULL,
+        content_sha256 TEXT NOT NULL,
+        content BYTEA NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_evidence_bundles (
+        id BIGSERIAL PRIMARY KEY,
+        bundle_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        source_kind TEXT NOT NULL DEFAULT 'human',
+        status TEXT NOT NULL DEFAULT 'draft',
+        version INTEGER NOT NULL DEFAULT 1,
+        reflection TEXT,
+        summary TEXT,
+        requirement_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
+        validation_policy_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        action_id BIGINT REFERENCES api_actions(id) ON DELETE SET NULL,
+        supersedes_bundle_id BIGINT REFERENCES task_evidence_bundles(id) ON DELETE SET NULL,
+        submitted_at TIMESTAMP WITH TIME ZONE,
+        validated_at TIMESTAMP WITH TIME ZONE,
+        cancelled_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (source_kind IN ('human', 'automation', 'mixed')),
+        CHECK (status IN (
+          'draft',
+          'previewed',
+          'submitted',
+          'validation_queued',
+          'validating',
+          'validation_passed',
+          'needs_more_evidence',
+          'manual_review_required',
+          'validation_failed',
+          'cancelled',
+          'superseded'
+        )),
+        CHECK (jsonb_typeof(requirement_snapshot) = 'array'),
+        CHECK (jsonb_typeof(validation_policy_snapshot) = 'object'),
+        UNIQUE (task_id, actor_user_id, version)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_evidence_items (
+        id BIGSERIAL PRIMARY KEY,
+        evidence_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        evidence_type TEXT NOT NULL,
+        requirement_ids TEXT[] NOT NULL DEFAULT '{}',
+        title TEXT,
+        text_content TEXT,
+        source_url TEXT,
+        canonical_url TEXT,
+        artifact_uri TEXT,
+        blob_storage_key TEXT REFERENCES task_evidence_blobs(storage_key) ON DELETE SET NULL,
+        media_type TEXT,
+        byte_size BIGINT,
+        content_sha256 TEXT NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        captured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (evidence_type IN (
+          'text',
+          'url_snapshot',
+          'image',
+          'document',
+          'artifact_reference',
+          'automation_report',
+          'reflection',
+          'attestation'
+        )),
+        CHECK (jsonb_typeof(metadata) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_validation_results (
+        id BIGSERIAL PRIMARY KEY,
+        validation_uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        automation_run_id BIGINT REFERENCES automation_runs(id) ON DELETE SET NULL,
+        provider TEXT NOT NULL DEFAULT 'deterministic',
+        status TEXT NOT NULL,
+        overall_verdict TEXT NOT NULL,
+        requirement_results JSONB NOT NULL DEFAULT '[]'::jsonb,
+        summary TEXT,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (status IN ('passed', 'needs_more_evidence', 'manual_review_required', 'failed')),
+        CHECK (overall_verdict IN ('passed', 'needs_more_evidence', 'manual_review_required', 'failed')),
+        CHECK (jsonb_typeof(requirement_results) = 'array'),
+        CHECK (jsonb_typeof(metadata) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_validation_findings (
+        id BIGSERIAL PRIMARY KEY,
+        validation_result_id BIGINT NOT NULL REFERENCES task_validation_results(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        requirement_id TEXT,
+        severity TEXT NOT NULL DEFAULT 'info',
+        code TEXT NOT NULL,
+        message TEXT NOT NULL,
+        evidence_item_ids BIGINT[] NOT NULL DEFAULT '{}',
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (severity IN ('info', 'low', 'medium', 'high', 'critical')),
+        CHECK (jsonb_typeof(metadata) = 'object')
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_validation_reviews (
+        id BIGSERIAL PRIMARY KEY,
+        validation_result_id BIGINT NOT NULL REFERENCES task_validation_results(id) ON DELETE CASCADE,
+        bundle_id BIGINT NOT NULL REFERENCES task_evidence_bundles(id) ON DELETE CASCADE,
+        task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        reason TEXT,
+        decision TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        decided_at TIMESTAMP WITH TIME ZONE,
+        CHECK (status IN ('pending', 'assigned', 'completed', 'cancelled')),
+        CHECK (decision IS NULL OR decision IN ('passed', 'needs_more_evidence', 'failed'))
+      );
+    `);
+
+    await client.query(`
+      ALTER TABLE task_evidence_bundles DROP CONSTRAINT IF EXISTS task_evidence_bundles_source_kind_check;
+      ALTER TABLE task_evidence_bundles ADD CONSTRAINT task_evidence_bundles_source_kind_check
+        CHECK (source_kind IN ('human', 'automation', 'mixed'));
+      ALTER TABLE task_evidence_bundles DROP CONSTRAINT IF EXISTS task_evidence_bundles_status_check;
+      ALTER TABLE task_evidence_bundles ADD CONSTRAINT task_evidence_bundles_status_check
+        CHECK (status IN (
+          'draft',
+          'previewed',
+          'submitted',
+          'validation_queued',
+          'validating',
+          'validation_passed',
+          'needs_more_evidence',
+          'manual_review_required',
+          'validation_failed',
+          'cancelled',
+          'superseded'
+        ));
+      ALTER TABLE task_evidence_items DROP CONSTRAINT IF EXISTS task_evidence_items_evidence_type_check;
+      ALTER TABLE task_evidence_items ADD CONSTRAINT task_evidence_items_evidence_type_check
+        CHECK (evidence_type IN (
+          'text',
+          'url_snapshot',
+          'image',
+          'document',
+          'artifact_reference',
+          'automation_report',
+          'reflection',
+          'attestation'
+        ));
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS work_memory (
         id BIGSERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -366,6 +546,25 @@ export async function createKamiyaApiTables() {
       CREATE INDEX IF NOT EXISTS idx_automation_logs_run ON automation_logs(run_id);
       CREATE INDEX IF NOT EXISTS idx_automation_run_reports_run ON automation_run_reports(run_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_submissions_task ON task_automation_submissions(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_blobs_hash ON task_evidence_blobs(content_sha256);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_task ON task_evidence_bundles(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_actor ON task_evidence_bundles(actor_user_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_bundles_action ON task_evidence_bundles(action_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_evidence_one_active_draft
+        ON task_evidence_bundles(task_id, actor_user_id)
+        WHERE status = 'draft';
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_evidence_one_action
+        ON task_evidence_bundles(action_id)
+        WHERE action_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_items_bundle ON task_evidence_items(bundle_id);
+      CREATE INDEX IF NOT EXISTS idx_task_evidence_items_task ON task_evidence_items(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_validation_results_bundle ON task_validation_results(bundle_id);
+      CREATE INDEX IF NOT EXISTS idx_task_validation_results_task ON task_validation_results(task_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_validation_results_run
+        ON task_validation_results(automation_run_id)
+        WHERE automation_run_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_task_validation_findings_result ON task_validation_findings(validation_result_id);
+      CREATE INDEX IF NOT EXISTS idx_task_validation_reviews_task_status ON task_validation_reviews(task_id, status);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_task ON task_automation_preparations(task_id);
       CREATE INDEX IF NOT EXISTS idx_task_automation_preparations_actor ON task_automation_preparations(actor_user_id);
       CREATE INDEX IF NOT EXISTS idx_work_memory_user_id ON work_memory(user_id);

@@ -53,4 +53,27 @@ describe('tasks task automation schema initialization', () => {
     expect(kamiyaApiSource).toContain('WHERE event_key IS NOT NULL');
     expect(kamiyaApiSource).toContain('event_key TEXT');
   });
+
+  it('defines canonical task evidence and validation tables idempotently', () => {
+    for (const table of [
+      'task_evidence_blobs',
+      'task_evidence_bundles',
+      'task_evidence_items',
+      'task_validation_results',
+      'task_validation_findings',
+      'task_validation_reviews'
+    ]) {
+      expect(kamiyaApiSource).toContain(table);
+    }
+
+    expect(kamiyaApiSource).toContain("'human', 'automation', 'mixed'");
+    expect(kamiyaApiSource).toContain("'draft'");
+    expect(kamiyaApiSource).toContain("'validation_queued'");
+    expect(kamiyaApiSource).toContain("'validation_passed'");
+    expect(kamiyaApiSource).toContain("'needs_more_evidence'");
+    expect(kamiyaApiSource).toContain("'manual_review_required'");
+    expect(kamiyaApiSource).toContain("'automation_report'");
+    expect(kamiyaApiSource).toContain('idx_task_evidence_one_active_draft');
+    expect(kamiyaApiSource).toContain('idx_task_validation_results_run');
+  });
 });

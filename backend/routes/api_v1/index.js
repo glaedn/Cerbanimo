@@ -26,6 +26,7 @@ import CapabilityRegistryService from '../../services/CapabilityRegistryService.
 import ActionQueueService from '../../services/ActionQueueService.js';
 import ProjectBootstrapService from '../../services/ProjectBootstrapService.js';
 import TaskAutomationPreparationService from '../../services/TaskAutomationPreparationService.js';
+import TaskEvidenceService from '../../services/TaskEvidenceService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 
 const router = express.Router();
@@ -132,6 +133,15 @@ const openApiDocument = {
     '/tasks/{id}/automation/preparations/{preparationId}/validate': { post: { summary: 'Validate a task automation preparation' } },
     '/tasks/{id}/automation/preparations/{preparationId}/preview': { post: { summary: 'Create a confirmation-gated action preview from a ready preparation' } },
     '/tasks/{id}/automation/preparations/{preparationId}/cancel': { post: { summary: 'Cancel an actor-owned task automation preparation' } },
+    '/tasks/{id}/evidence': { get: { summary: 'List task evidence requirements, bundles, and validation history' } },
+    '/tasks/{id}/evidence/bundles': { post: { summary: 'Create or return the actor-owned draft evidence bundle' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}': { get: { summary: 'Read an evidence bundle' }, patch: { summary: 'Update a draft evidence bundle' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/items': { post: { summary: 'Add evidence to a draft bundle' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/items/{itemId}': { delete: { summary: 'Remove evidence from a draft bundle' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/fetch-url': { post: { summary: 'Fetch and snapshot an allowed URL as evidence' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/preview': { post: { summary: 'Freeze an evidence bundle and create a confirmation-gated submit action' } },
+    '/tasks/{id}/evidence/bundles/{bundleId}/cancel': { post: { summary: 'Cancel an evidence bundle before terminal validation' } },
+    '/tasks/{id}/validations/{validationId}': { get: { summary: 'Read a task validation result and findings' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
     '/stats': { get: { summary: 'Read dashboard stats' } },
@@ -458,6 +468,121 @@ router.post('/tasks/:taskId/automation/preparations/:preparationId/cancel', requ
   });
   if (!preparation) return sendError(req, res, 404, 'Task automation preparation not found');
   return sendOk(req, res, { preparation });
+}));
+
+router.get('/tasks/:taskId/evidence', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.listEvidence({
+    taskId: req.params.taskId,
+    authContext: actionAuthContext(req)
+  });
+  if (!detail) return sendError(req, res, 404, 'Task not found');
+  return sendOk(req, res, detail);
+}));
+
+router.post('/tasks/:taskId/evidence/bundles', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
+  const detail = await TaskEvidenceService.createBundle({
+    taskId: req.params.taskId,
+    actorUserId: authContext.actorUserId,
+    authContext,
+    sourceKind: req.body?.sourceKind || req.body?.source_kind || 'human',
+    reflection: req.body?.reflection,
+    summary: req.body?.summary
+  });
+  return sendOk(req, res, detail, 201);
+}));
+
+router.get('/tasks/:taskId/evidence/bundles/:bundleId', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.getBundle({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req)
+  });
+  if (!detail) return sendError(req, res, 404, 'Evidence bundle not found');
+  return sendOk(req, res, detail);
+}));
+
+router.patch('/tasks/:taskId/evidence/bundles/:bundleId', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.updateBundle({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    reflection: req.body?.reflection,
+    summary: req.body?.summary,
+    sourceKind: req.body?.sourceKind || req.body?.source_kind
+  });
+  return sendOk(req, res, detail);
+}));
+
+router.post('/tasks/:taskId/evidence/bundles/:bundleId/items', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.addItem({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    item: req.body || {}
+  });
+  return sendOk(req, res, detail, 201);
+}));
+
+router.delete('/tasks/:taskId/evidence/bundles/:bundleId/items/:itemId', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.deleteItem({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    itemId: req.params.itemId,
+    authContext: actionAuthContext(req)
+  });
+  return sendOk(req, res, detail);
+}));
+
+router.post('/tasks/:taskId/evidence/bundles/:bundleId/fetch-url', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  if (!req.body?.url) return sendError(req, res, 400, 'url is required');
+  const detail = await TaskEvidenceService.fetchUrl({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    url: req.body.url,
+    requirementIds: req.body?.requirementIds || req.body?.requirement_ids || [],
+    title: req.body?.title
+  });
+  return sendOk(req, res, detail, 201);
+}));
+
+router.post('/tasks/:taskId/evidence/bundles/:bundleId/preview', requireScopes([API_SCOPES.WRITE_TASKS, API_SCOPES.ACTIONS_WRITE]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.previewBundle({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    sourceClient: req.body?.sourceClient || req.apiAuth?.clientName || 'api'
+  });
+  return sendOk(req, res, detail, 201);
+}));
+
+router.post('/tasks/:taskId/evidence/bundles/:bundleId/cancel', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const detail = await TaskEvidenceService.cancelBundle({
+    taskId: req.params.taskId,
+    bundleId: req.params.bundleId,
+    authContext: actionAuthContext(req),
+    reason: req.body?.reason
+  });
+  return sendOk(req, res, detail);
+}));
+
+router.get('/tasks/:taskId/validations/:validationId', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
+  await TaskEvidenceService.listEvidence({ taskId: req.params.taskId, authContext });
+  const result = await pool.query(
+    `SELECT vr.*,
+            COALESCE(json_agg(vf ORDER BY vf.created_at ASC) FILTER (WHERE vf.id IS NOT NULL), '[]') AS findings
+     FROM task_validation_results vr
+     LEFT JOIN task_validation_findings vf ON vf.validation_result_id = vr.id
+     WHERE vr.task_id::text = $1
+       AND (vr.id::text = $2 OR vr.validation_uuid::text = $2)
+     GROUP BY vr.id
+     LIMIT 1`,
+    [String(req.params.taskId), String(req.params.validationId)]
+  );
+  if (!result.rows[0]) return sendError(req, res, 404, 'Validation result not found');
+  return sendOk(req, res, result.rows[0]);
 }));
 
 router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {

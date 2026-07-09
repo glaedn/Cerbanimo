@@ -189,6 +189,32 @@ export const functionSchemas = [
     }
   },
   {
+    name: 'tasks.submit_evidence',
+    domain: 'tasks',
+    version: '1.0.0',
+    scope: 'tasks:write',
+    confirmationRequired: true,
+    async: true,
+    description: 'Freeze a task evidence bundle, queue submission validation, and bridge passing work to the existing peer/PM review loop.',
+    inputSchema: {
+      type: 'object',
+      required: ['taskId', 'bundleId'],
+      properties: {
+        taskId: { type: 'integer' },
+        bundleId: { oneOf: [{ type: 'integer' }, { type: 'string' }] },
+        bundleUuid: { type: 'string', format: 'uuid' }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'object' },
+        automationRun: { type: 'object' },
+        validationResult: { type: 'object' }
+      }
+    }
+  },
+  {
     name: 'automation.create_github_issue',
     domain: 'automation',
     version: '0.1.0',
@@ -276,7 +302,7 @@ export const automationTemplates = [
     name: 'Submission Validation',
     workerName: 'submissionValidationWorker',
     riskLevel: 'normal',
-    status: 'planned'
+    status: 'available'
   },
   {
     key: 'staging_deploy_hooks',
