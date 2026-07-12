@@ -39,14 +39,14 @@ const { default: platformRoutes } = await import('./platform.js');
 function buildApp() {
   const app = express();
   app.use(express.json());
-  app.use(platformRoutes);
+  app.use('/platform', platformRoutes);
   return app;
 }
 
 describe('platform routes', () => {
   it('routes intent requests through the normalized envelope', async () => {
     const response = await request(buildApp())
-      .post('/ai/intent-route')
+      .post('/platform/ai/intent-route')
       .send({ message: 'create a project plan' })
       .expect(200);
 
@@ -57,7 +57,7 @@ describe('platform routes', () => {
 
   it('returns planning missing fields and next questions', async () => {
     const response = await request(buildApp())
-      .post('/ai/planning/analyze')
+      .post('/platform/ai/planning/analyze')
       .send({ idea: 'make a task', intent: 'task', draft: { name: 'Draft task' } })
       .expect(200);
 
@@ -68,7 +68,7 @@ describe('platform routes', () => {
 
   it('returns callable function metadata with confirmation policy', async () => {
     const response = await request(buildApp())
-      .get('/capabilities/functions')
+      .get('/platform/capabilities/functions')
       .expect(200);
 
     const projectCreate = response.body.data.functions.find(fn => fn.name === 'projects.create');

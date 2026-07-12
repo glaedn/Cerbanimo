@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { auth } from 'express-oauth2-jwt-bearer';
 import pool from '../db.js';
+import { ensureDevAuthUser, isDevAuthRequest } from '../middlewares/devAuthBypass.js';
 import { hashApiToken } from '../../models/kamiya_api.js';
 import { sendError } from '../utils/apiEnvelope.js';
 
@@ -159,6 +160,31 @@ export function apiAuthenticate(req, res, next) {
   const token = getBearerToken(req);
   if (!token) {
     return sendError(req, res, 401, 'Authorization bearer token required');
+  }
+
+  if (isDevAuthRequest(req)) {
+    return ensureDevAuthUser()
+      .then(({ authUser, dbUser }) => {
+        req.auth = {
+          payload: {
+            sub: authUser.sub,
+            email: authUser.email,
+            name: authUser.name,
+            nickname: authUser.nickname,
+            picture: authUser.picture,
+            scope: allScopesForUser(dbUser).join(' ')
+          }
+        };
+        req.user = dbUser || null;
+        req.apiAuth = {
+          type: 'devAuthBypass',
+          clientName: 'cerbanimo-dev-auth-bypass',
+          scopes: allScopesForUser(dbUser)
+        };
+        req.devAuthBypass = true;
+        return next();
+      })
+      .catch(next);
   }
 
   if (token.startsWith('cerb_')) {

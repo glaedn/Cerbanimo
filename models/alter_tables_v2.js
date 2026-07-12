@@ -47,6 +47,7 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS is_expanded BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS project_plan TEXT,
     ADD COLUMN IF NOT EXISTS auto_assign BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public',
     ADD COLUMN IF NOT EXISTS public_good_score NUMERIC DEFAULT 1.0,
     ADD COLUMN IF NOT EXISTS public_good_scored_at TIMESTAMP WITH TIME ZONE,
     ADD COLUMN IF NOT EXISTS public_good_source VARCHAR(20) DEFAULT 'default',
@@ -81,7 +82,11 @@ const alterExistingTables = async () => {
 
   const alterUsersQuery = `
     ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS skills JSONB,
+    ADD COLUMN IF NOT EXISTS interests JSONB,
     ADD COLUMN IF NOT EXISTS story_archetypes TEXT[] DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT '{"user"}'::text[],
+    ADD COLUMN IF NOT EXISTS alpha BOOLEAN DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS capacity_status TEXT DEFAULT 'active' CHECK (capacity_status IN ('active', 'limited', 'unavailable')),
     ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50),
     ${hasPostGIS ? 'ADD COLUMN IF NOT EXISTS location_point GEOGRAPHY(Point, 4326),' : ''}
@@ -106,7 +111,48 @@ const alterExistingTables = async () => {
     ADD COLUMN IF NOT EXISTS total_decayed NUMERIC(36, 18) DEFAULT 0,
     ADD COLUMN IF NOT EXISTS resume_text TEXT,
     ADD COLUMN IF NOT EXISTS last_resume_analysis_at TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS focus_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS focus_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+    DO $$
+    DECLARE
+      skills_type TEXT;
+      interests_type TEXT;
+    BEGIN
+      SELECT udt_name INTO skills_type
+      FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'skills';
+
+      IF skills_type IN ('_text', '_jsonb') THEN
+        ALTER TABLE users
+        ALTER COLUMN skills DROP DEFAULT;
+
+        ALTER TABLE users
+        ALTER COLUMN skills TYPE JSONB
+        USING CASE WHEN skills IS NULL THEN NULL ELSE to_jsonb(skills) END;
+      END IF;
+
+      ALTER TABLE users
+      ALTER COLUMN skills SET DEFAULT '[]'::jsonb;
+
+      SELECT udt_name INTO interests_type
+      FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'interests';
+
+      IF interests_type IN ('_text', '_jsonb') THEN
+        ALTER TABLE users
+        ALTER COLUMN interests DROP DEFAULT;
+
+        ALTER TABLE users
+        ALTER COLUMN interests TYPE JSONB
+        USING CASE WHEN interests IS NULL THEN NULL ELSE to_jsonb(interests) END;
+      END IF;
+
+      ALTER TABLE users
+      ALTER COLUMN interests SET DEFAULT '[]'::jsonb;
+    END
+    $$;
   `;
 
   const alterSkillsQuery = `

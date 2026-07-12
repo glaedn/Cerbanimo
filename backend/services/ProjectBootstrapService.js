@@ -2,7 +2,7 @@ import pool from '../db.js';
 import GuildService from './GuildService.js';
 import ImpactGraphService from './ImpactGraphService.js';
 import TaskRoutingService from './TaskRoutingService.js';
-import { autoGenerateTasks, autogeneratePlan } from './taskGenerator.js';
+import { autoGenerateTasks, autogeneratePlan, refineGeneratedTaskGraph } from './taskGenerator.js';
 import { validateGeneratedGraph } from './ProjectTaskGraphValidator.js';
 import { createDeterministicBootstrapGenerators } from './ProjectBootstrapDeterministicProvider.js';
 import { serializeTaskAutomation } from './TaskAutomationClassificationService.js';
@@ -11,6 +11,7 @@ export const BOOTSTRAP_STEPS = [
   'validateInput',
   'generateProjectPlan',
   'generateTaskGraph',
+  'refineTaskGraph',
   'validateTaskGraph',
   'persistProjectGraph',
   'activateRootTasks',
@@ -34,6 +35,22 @@ export const BOOTSTRAP_ERROR_CODES = {
 export const BOOTSTRAP_MAX_ATTEMPTS = 3;
 const BOOTSTRAP_LEASE_MS = 5 * 60 * 1000;
 
+export const TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS = Object.freeze({
+  maxPasses: 2,
+  maxTasks: 60,
+  maxTaskGrowthPercent: 250,
+  minMegaTaskExpansionBuffer: 16,
+  maxPromptChars: 50000
+});
+
+const CLERICAL_FRAGMENT_PATTERNS = [
+  /\bopen (a |the )?file\b/i,
+  /\bthink about\b/i,
+  /\breview your own previous sentence\b/i,
+  /\bsend (a )?message\b/i,
+  /\bmake a note\b/i
+];
+
 class ProjectBootstrapError extends Error {
   constructor(code, message, stage, details = {}, retryable = false) {
     super(message);
@@ -51,6 +68,7 @@ export class ProjectBootstrapService {
     this.impactGraphService = deps.impactGraphService || ImpactGraphService;
     this.taskRoutingService = deps.taskRoutingService || TaskRoutingService;
     this.generators = deps.generators || defaultGenerators();
+    this.refinementLimits = normalizeRefinementLimits(deps.refinementLimits);
   }
 
   async bootstrapFromWorkflow(workflowRunId) {
@@ -79,6 +97,7 @@ export class ProjectBootstrapService {
           generatedData = await this.runStep(workflow.id, 'generateTaskGraph', () => this.generateTaskGraph(projectInput), claimToken);
         }
 
+        generatedData = await this.runStep(workflow.id, 'refineTaskGraph', () => this.refineTaskGraph(projectInput, generatedData), claimToken);
         const validation = await this.runStep(workflow.id, 'validateTaskGraph', () => this.validateGeneratedGraph(generatedData, projectInput), claimToken);
         await this.assertNotCancelled(workflow.id, 'persistProjectGraph', claimToken);
         const persisted = await this.runStep(
@@ -180,14 +199,15 @@ export class ProjectBootstrapService {
     const generated = input.generationMode === 'plan_then_tasks'
       ? await this.generateProjectPlan(input)
       : await this.generateTaskGraph(input);
-    const validation = this.validateGeneratedGraph(generated, input);
-    await this.persistTasksForExistingProject(projectId, input, { ...generated, tasks: validation.tasks });
+    const refined = await this.refineTaskGraph(input, generated);
+    const validation = this.validateGeneratedGraph(refined, input);
+    await this.persistTasksForExistingProject(projectId, input, { ...refined, tasks: validation.tasks });
     const activation = await this.activateAndVerify(projectId);
     return { project, tasks: activation.tasks, activeTasks: activation.activeTasks, reusedExistingTasks: false };
   }
 
   validateGeneratedGraph(generatedData, projectInput) {
-    const result = validateGeneratedGraph(generatedData, projectInput);
+    const result = validateGeneratedGraph(ensureDependencyAwareGraph(generatedData), projectInput);
     if (!result.valid) {
       throw new ProjectBootstrapError(BOOTSTRAP_ERROR_CODES.GRAPH_INVALID, 'Generated task graph is invalid.', 'validateTaskGraph', { findings: result.findings });
     }
@@ -299,6 +319,81 @@ export class ProjectBootstrapService {
     return this.generators.autoGenerateTasks(input.name, input.description, input.tags, null, input.dueDate, input.outcomeStatement, e2eOptions(input));
   }
 
+  async refineTaskGraph(input, generatedData = {}) {
+    const tasks = Array.isArray(generatedData?.tasks) ? generatedData.tasks : [];
+    if (tasks.length === 0 || typeof this.generators.refineGeneratedTaskGraph !== 'function') {
+      return {
+        ...generatedData,
+        taskGraphRefinement: {
+          ...(generatedData.taskGraphRefinement || {}),
+          applied: false,
+          skipped: true,
+          reason: tasks.length === 0 ? 'no_tasks_to_refine' : 'refinement_provider_unavailable',
+          originalTaskCount: tasks.length,
+          refinedTaskCount: tasks.length,
+          limits: this.refinementLimits
+        }
+      };
+    }
+
+    let previousFindings = [];
+    let lastError = null;
+    for (let pass = 1; pass <= this.refinementLimits.maxPasses; pass += 1) {
+      try {
+        const refined = await this.generators.refineGeneratedTaskGraph(
+          input.name,
+          input.description,
+          input.tags,
+          null,
+          input.dueDate,
+          input.outcomeStatement,
+          {
+            ...e2eOptions(input),
+            generatedData,
+            projectPlan: generatedData.projectPlan || generatedData.project_plan || input.description,
+            tasks,
+            refinementPass: pass,
+            previousFindings,
+            limits: this.refinementLimits
+          }
+        );
+
+        const normalized = normalizeRefinedTaskGraph(refined, tasks, this.refinementLimits);
+        const candidate = {
+          ...generatedData,
+          ...normalized,
+          projectPlan: normalized.projectPlan || generatedData.projectPlan,
+          taskGraphRefinement: {
+            ...(generatedData.taskGraphRefinement || {}),
+            applied: true,
+            failed: false,
+            fallbackToOriginal: false,
+            pass,
+            maxPasses: this.refinementLimits.maxPasses,
+            originalTaskCount: tasks.length,
+            refinedTaskCount: normalized.tasks.length,
+            limits: this.refinementLimits,
+            summary: normalized.refinementSummary || null,
+            changes: normalized.changes
+          }
+        };
+        const validation = this.validateGeneratedGraph(candidate, input);
+        return {
+          ...candidate,
+          tasks: validation.tasks
+        };
+      } catch (error) {
+        lastError = error;
+        previousFindings = extractRefinementFindings(error);
+        if (pass >= this.refinementLimits.maxPasses || !isRepairableRefinementError(error)) {
+          break;
+        }
+      }
+    }
+
+    return buildRefinementFallback(generatedData, tasks, lastError, this.refinementLimits);
+  }
+
   async persistTasksForExistingProject(projectId, projectInput, generatedData) {
     return this.withTransaction(null, async (trx) => {
       await trx.query('UPDATE projects SET project_plan = COALESCE($1, project_plan) WHERE id = $2', [generatedData.projectPlan || null, projectId]);
@@ -364,10 +459,16 @@ export class ProjectBootstrapService {
       );
       const dbTask = result.rows[0];
       idMap.set(String(task.generated_id ?? task.id), dbTask.id);
-      inserted.push({ ...task, ...dbTask, db_id: dbTask.id, db_id_internal: dbTask.id });
+      inserted.push({
+        ...task,
+        ...dbTask,
+        generated_dependencies: Array.isArray(task.dependencies) ? task.dependencies : [],
+        db_id: dbTask.id,
+        db_id_internal: dbTask.id
+      });
     }
     for (const task of inserted) {
-      const deps = (task.dependencies || []).map((depId) => idMap.get(String(depId))).filter(Boolean);
+      const deps = (task.generated_dependencies || []).map((depId) => idMap.get(String(depId))).filter(Boolean);
       await client.query('UPDATE tasks SET dependencies = $1::int[] WHERE id = $2', [deps, task.db_id]);
       task.resolvedDependencies = deps;
     }
@@ -724,11 +825,311 @@ function isActiveStatus(status) {
   return typeof status === 'string' && /^(active|urgent|ready|open|available|in_progress)/i.test(status);
 }
 
+function ensureDependencyAwareGraph(generatedData = {}) {
+  const tasks = Array.isArray(generatedData.tasks) ? generatedData.tasks : [];
+  if (tasks.length < 2) return generatedData;
+  if (tasks.some((task) => Array.isArray(task.dependencies) && task.dependencies.length > 0)) return generatedData;
+
+  const copiedTasks = tasks.map((task) => ({ ...task }));
+  const finalIndex = copiedTasks.length - 1;
+  const prerequisiteIds = copiedTasks
+    .slice(0, finalIndex)
+    .map(generatedTaskId)
+    .filter((id) => id != null);
+
+  if (prerequisiteIds.length === 0) return generatedData;
+
+  copiedTasks[finalIndex].dependencies = prerequisiteIds;
+  normalizeDependentStart(copiedTasks, finalIndex);
+
+  return {
+    ...generatedData,
+    tasks: copiedTasks,
+    dependencyInference: {
+      applied: true,
+      strategy: 'final-task-depends-on-prior-generated-work',
+      taskId: generatedTaskId(copiedTasks[finalIndex]),
+      dependencies: prerequisiteIds
+    }
+  };
+}
+
+function generatedTaskId(task) {
+  return task?.id ?? task?.generated_id ?? null;
+}
+
+function normalizeDependentStart(tasks, index) {
+  const task = tasks[index];
+  const maxDependencyDue = tasks
+    .slice(0, index)
+    .map((dependency) => dependency.due_date ? new Date(dependency.due_date) : null)
+    .filter((date) => date && !Number.isNaN(date.getTime()))
+    .reduce((latest, date) => !latest || date > latest ? date : latest, null);
+
+  if (!maxDependencyDue) return;
+
+  const currentStart = task.start_date ? new Date(task.start_date) : null;
+  if (currentStart && !Number.isNaN(currentStart.getTime()) && currentStart >= maxDependencyDue) return;
+
+  const inferredStart = new Date(maxDependencyDue.getTime() + 60 * 60 * 1000);
+  const currentDue = task.due_date ? new Date(task.due_date) : null;
+  task.start_date = inferredStart.toISOString();
+
+  if (!currentDue || Number.isNaN(currentDue.getTime()) || currentDue <= inferredStart) {
+    const inferredDue = new Date(inferredStart.getTime() + 24 * 60 * 60 * 1000);
+    task.due_date = inferredDue.toISOString();
+  }
+}
+
+function normalizeRefinedTaskGraph(refined, originalTasks, limits) {
+  if (!refined || !Array.isArray(refined.tasks)) {
+    throw new ProjectBootstrapError(
+      BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+      'Task refinement returned no tasks.',
+      'refineTaskGraph',
+      { taskCount: originalTasks.length },
+      true
+    );
+  }
+
+  assertTaskCountWithinLimits(refined.tasks, originalTasks, limits);
+
+  const aliases = new Map();
+  const normalizedTasks = refined.tasks.map((task, index) => {
+    const taskKey = stableTaskKey(task.taskKey ?? task.task_key ?? task.key ?? task.id ?? task.generated_id);
+    if (!taskKey) {
+      throw new ProjectBootstrapError(
+        BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+        'Refined task is missing a stable taskKey.',
+        'refineTaskGraph',
+        { index },
+        true
+      );
+    }
+    aliases.set(String(task.id ?? index + 1), taskKey);
+    aliases.set(String(task.generated_id ?? taskKey), taskKey);
+    aliases.set(String(task.taskKey ?? task.task_key ?? task.key ?? taskKey), taskKey);
+    return { ...task, taskKey };
+  });
+
+  const seen = new Set();
+  for (const task of normalizedTasks) {
+    if (seen.has(task.taskKey)) {
+      throw new ProjectBootstrapError(
+        BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+        `Duplicate refined taskKey ${task.taskKey}.`,
+        'refineTaskGraph',
+        { taskKey: task.taskKey },
+        true
+      );
+    }
+    seen.add(task.taskKey);
+  }
+
+  const tasks = normalizedTasks.map((task) => {
+    const rawDependencies = Array.isArray(task.dependsOn ?? task.depends_on)
+      ? (task.dependsOn ?? task.depends_on)
+      : (Array.isArray(task.dependencies) ? task.dependencies : []);
+    const dependencies = rawDependencies.map((dependency) => stableTaskKey(aliases.get(String(dependency)) ?? dependency)).filter(Boolean);
+    const text = `${task.name || ''} ${task.description || ''}`;
+    if (isClericalFragmentTask(text)) {
+      throw new ProjectBootstrapError(
+        BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+        `Refined task "${task.name || task.taskKey}" is too clerical to stand alone.`,
+        'refineTaskGraph',
+        { taskKey: task.taskKey },
+        true
+      );
+    }
+    return {
+      ...task,
+      id: task.taskKey,
+      generated_id: task.taskKey,
+      dependencies,
+      dependsOn: dependencies
+    };
+  });
+
+  return {
+    ...refined,
+    tasks,
+    changes: normalizeRefinementChanges(refined.changes, refined.refinementSummary),
+    refinementSummary: refined.refinementSummary || {
+      rationale: 'Task graph refinement returned no summary.',
+      splitTaskIds: [],
+      deletedTaskIds: [],
+      addedTaskNames: []
+    }
+  };
+}
+
+function assertTaskCountWithinLimits(refinedTasks, originalTasks, limits) {
+  const originalCount = Math.max(1, originalTasks.length);
+  const maxByGrowth = Math.max(
+    originalCount + limits.minMegaTaskExpansionBuffer,
+    Math.ceil(originalCount * (1 + (limits.maxTaskGrowthPercent / 100)))
+  );
+  const maxAllowed = Math.min(limits.maxTasks, maxByGrowth);
+  if (refinedTasks.length > maxAllowed) {
+    throw new ProjectBootstrapError(
+      BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+      'Task refinement exceeded the configured task growth limit.',
+      'refineTaskGraph',
+      {
+        originalTaskCount: originalTasks.length,
+        refinedTaskCount: refinedTasks.length,
+        maxAllowed,
+        limits
+      },
+      true
+    );
+  }
+}
+
+function normalizeRefinementChanges(changes, summary = {}) {
+  if (Array.isArray(changes)) {
+    return changes.map((change) => ({
+      operation: limitText(change.operation || 'note', 40),
+      sourceTaskKeys: Array.isArray(change.sourceTaskKeys ?? change.source_task_keys)
+        ? (change.sourceTaskKeys ?? change.source_task_keys).map(stableTaskKey).filter(Boolean)
+        : [],
+      resultTaskKeys: Array.isArray(change.resultTaskKeys ?? change.result_task_keys)
+        ? (change.resultTaskKeys ?? change.result_task_keys).map(stableTaskKey).filter(Boolean)
+        : [],
+      reason: limitText(change.reason || '', 500)
+    }));
+  }
+
+  const derivedChanges = [];
+  if (Array.isArray(summary.splitTaskIds) && summary.splitTaskIds.length > 0) {
+    derivedChanges.push({
+      operation: 'split',
+      sourceTaskKeys: summary.splitTaskIds.map(stableTaskKey).filter(Boolean),
+      resultTaskKeys: [],
+      reason: limitText(summary.rationale || 'The refinement split broad tasks into more discrete asks.', 500)
+    });
+  }
+  if (Array.isArray(summary.deletedTaskIds) && summary.deletedTaskIds.length > 0) {
+    derivedChanges.push({
+      operation: 'delete',
+      sourceTaskKeys: summary.deletedTaskIds.map(stableTaskKey).filter(Boolean),
+      resultTaskKeys: [],
+      reason: limitText(summary.rationale || 'The refinement removed duplicate or out-of-scope tasks.', 500)
+    });
+  }
+  if (Array.isArray(summary.addedTaskNames) && summary.addedTaskNames.length > 0) {
+    derivedChanges.push({
+      operation: 'add',
+      sourceTaskKeys: [],
+      resultTaskKeys: summary.addedTaskNames.map(stableTaskKey).filter(Boolean),
+      reason: limitText(summary.rationale || 'The refinement added missing work required for the outcome.', 500)
+    });
+  }
+  return derivedChanges;
+}
+
+function buildRefinementFallback(generatedData, tasks, error, limits) {
+  return {
+    ...generatedData,
+    tasks,
+    taskGraphRefinement: {
+      ...(generatedData.taskGraphRefinement || {}),
+      applied: false,
+      failed: Boolean(error),
+      fallbackToOriginal: true,
+      originalTaskCount: tasks.length,
+      refinedTaskCount: tasks.length,
+      limits,
+      error: error ? {
+        code: error.code || BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID,
+        message: limitText(error.message || 'Task refinement failed.', 500),
+        stage: error.stage || 'refineTaskGraph',
+        details: safeJson(error.details || {})
+      } : null,
+      warnings: [
+        'Task refinement failed or was skipped; Cerbanimo will validate the original generated graph before persistence.'
+      ]
+    }
+  };
+}
+
+function extractRefinementFindings(error) {
+  if (Array.isArray(error?.details?.findings)) return error.details.findings;
+  if (Array.isArray(error?.findings)) return error.findings;
+  return [];
+}
+
+function isRepairableRefinementError(error) {
+  return error?.stage === 'validateTaskGraph'
+    || error?.stage === 'refineTaskGraph'
+    || error?.code === BOOTSTRAP_ERROR_CODES.GRAPH_INVALID
+    || error?.code === BOOTSTRAP_ERROR_CODES.OUTPUT_INVALID;
+}
+
+function isClericalFragmentTask(text) {
+  const normalized = String(text || '').trim();
+  if (!normalized) return false;
+  return CLERICAL_FRAGMENT_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function stableTaskKey(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const key = raw
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return key || '';
+}
+
+function normalizeRefinementLimits(overrides = {}) {
+  return {
+    maxPasses: clampInteger(
+      overrides.maxPasses ?? process.env.CERBANIMO_TASK_REFINEMENT_MAX_PASSES,
+      TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS.maxPasses,
+      1,
+      2
+    ),
+    maxTasks: clampInteger(
+      overrides.maxTasks ?? process.env.CERBANIMO_TASK_REFINEMENT_MAX_TASKS,
+      TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS.maxTasks,
+      1,
+      100
+    ),
+    maxTaskGrowthPercent: clampInteger(
+      overrides.maxTaskGrowthPercent ?? process.env.CERBANIMO_TASK_REFINEMENT_MAX_GROWTH_PERCENT,
+      TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS.maxTaskGrowthPercent,
+      0,
+      2000
+    ),
+    minMegaTaskExpansionBuffer: clampInteger(
+      overrides.minMegaTaskExpansionBuffer ?? process.env.CERBANIMO_TASK_REFINEMENT_MIN_MEGA_TASK_EXPANSION_BUFFER,
+      TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS.minMegaTaskExpansionBuffer,
+      0,
+      50
+    ),
+    maxPromptChars: clampInteger(
+      overrides.maxPromptChars ?? process.env.CERBANIMO_TASK_REFINEMENT_MAX_PROMPT_CHARS,
+      TASK_GRAPH_REFINEMENT_DEFAULT_LIMITS.maxPromptChars,
+      5000,
+      200000
+    )
+  };
+}
+
+function clampInteger(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
 function defaultGenerators() {
   if (process.env.CERBANIMO_PROJECT_BOOTSTRAP_PROVIDER === 'deterministic') {
     return createDeterministicBootstrapGenerators();
   }
-  return { autoGenerateTasks, autogeneratePlan };
+  return { autoGenerateTasks, autogeneratePlan, refineGeneratedTaskGraph };
 }
 
 function e2eOnly(value) {
@@ -779,5 +1180,11 @@ function safeJson(value) {
   return JSON.parse(JSON.stringify(value ?? null));
 }
 
-export { ProjectBootstrapError, isActiveStatus };
+export {
+  ProjectBootstrapError,
+  isActiveStatus,
+  ensureDependencyAwareGraph,
+  normalizeRefinedTaskGraph,
+  stableTaskKey
+};
 export default new ProjectBootstrapService();

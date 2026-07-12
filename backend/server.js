@@ -56,6 +56,7 @@ import apiV1Routes from './routes/api_v1/index.js';
 import platformRoutes from './routes/platform.js';
 import kamiyaChatRoutes from './routes/kamiya_chats.js';
 import { apiAuthenticate } from './services/apiAuthService.js';
+import { withDevAuthBypass } from './middlewares/devAuthBypass.js';
 
 import TaskRoutingService from './services/TaskRoutingService.js';
 import ProjectHealthService from './services/ProjectHealthService.js';
@@ -130,10 +131,32 @@ const parseOriginList = (value) => (value || '')
   .map(normalizeOrigin)
   .filter(Boolean);
 
-const allowedCorsOrigins = Array.from(new Set([
+const loopbackOriginAliases = (origin) => {
+  if (process.env.NODE_ENV === 'production') return [];
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname === 'localhost') {
+      parsed.hostname = '127.0.0.1';
+      return [parsed.origin];
+    }
+    if (parsed.hostname === '127.0.0.1') {
+      parsed.hostname = 'localhost';
+      return [parsed.origin];
+    }
+  } catch {
+    return [];
+  }
+  return [];
+};
+
+const configuredCorsOrigins = [
   normalizeOrigin(process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || "http://localhost:3000"),
   ...parseOriginList(process.env.KAMIYA_ALLOWED_ORIGINS || process.env.VITE_AUTH_BRIDGE_ALLOWED_ORIGINS)
-].filter(Boolean)));
+].filter(Boolean);
+
+const allowedCorsOrigins = Array.from(new Set(
+  configuredCorsOrigins.flatMap((origin) => [origin, ...loopbackOriginAliases(origin)])
+));
 
 const corsOptions = {
   origin(origin, callback) {
@@ -181,12 +204,13 @@ setIo(io);
 if (!process.env.BACKEND_URL) {
   throw new Error("Environment variable BACKEND_URL is not defined. Please set it in your .env file.");
 }
-const jwtCheck = auth({
+const auth0JwtCheck = auth({
   audience: process.env.BACKEND_URL,
   issuerBaseURL: 'https://dev-i5331ndl5kxve1hd.us.auth0.com/',
   tokenSigningAlg: 'RS256',
   tokenSigningClockTolerance: 300, // Tolerance for clock skew
 });
+const jwtCheck = withDevAuthBypass(auth0JwtCheck);
 
 // Middleware
 app.use(cors(corsOptions));
@@ -225,7 +249,7 @@ if (!fs.existsSync('uploads')) {
 app.use('/uploads', express.static('uploads'));
 
 // Register routes
-app.use(platformRoutes);
+app.use('/platform', platformRoutes);
 app.use('/auth/2fa', jwtCheck);
 app.use('/auth', authRoutes);
 app.use('/notifications', jwtCheck, notificationRoutes);
@@ -388,6 +412,7 @@ async function initializeDatabase() {
     // Ensure projects table has service columns
     await pool.query(`
       ALTER TABLE projects
+      ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public',
       ADD COLUMN IF NOT EXISTS is_service BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS service_price INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS service_visibility TEXT[] DEFAULT '{}'

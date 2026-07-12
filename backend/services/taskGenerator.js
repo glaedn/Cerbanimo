@@ -10,8 +10,8 @@ function getGeminiModel(envName) {
   });
 }
 
-async function generateContentWithTimeout(model, payload) {
-  const timeoutMs = Number.parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "60000", 10);
+async function generateContentWithTimeout(model, payload, timeoutOverrideMs = null) {
+  const timeoutMs = Number.parseInt(timeoutOverrideMs ?? process.env.GEMINI_REQUEST_TIMEOUT_MS ?? "60000", 10);
   let timeoutId;
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error(`Gemini request timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -505,6 +505,188 @@ Dependencies are the IDs of the tasks that must be completed before this task ca
   } catch (error) {
     console.error("Error generating tasks:", error);
     throw new Error(`Failed to generate tasks: ${error.message}`);
+  }
+};
+
+export const refineGeneratedTaskGraph = async (
+  projectName,
+  projectDescription,
+  tags,
+  creator_id,
+  project_due_date = null,
+  outcomeStatement = '',
+  context = {}
+) => {
+  const now = new Date().toISOString();
+  const options = context && typeof context === 'object' && !Array.isArray(context) ? context : {};
+  const originalTasks = Array.isArray(options.tasks) ? options.tasks : [];
+  const projectPlan = options.projectPlan || projectDescription || '';
+  const limits = options.limits || {};
+  const initialTaskGraphJson = JSON.stringify(originalTasks, null, 2);
+  const maxPromptChars = Number.parseInt(process.env.CERBANIMO_TASK_REFINEMENT_MAX_PROMPT_CHARS || limits.maxPromptChars || "50000", 10);
+  const outputTokens = Number.parseInt(process.env.GEMINI_TASK_GRAPH_REFINEMENT_MAX_OUTPUT_TOKENS || "8192", 10);
+  const timeoutMs = Number.parseInt(process.env.GEMINI_TASK_GRAPH_REFINEMENT_TIMEOUT_MS || process.env.GEMINI_REQUEST_TIMEOUT_MS || "60000", 10);
+
+  if (initialTaskGraphJson.length > maxPromptChars) {
+    throw new Error(`Initial task graph is too large for refinement prompt (${initialTaskGraphJson.length}/${maxPromptChars} chars).`);
+  }
+
+  if (originalTasks.length === 0) {
+    return {
+      tasks: [],
+      refinementSummary: {
+        applied: false,
+        reason: 'No tasks were available to refine.'
+      }
+    };
+  }
+
+  const userPrompt = `
+You are the Cerbanimo project task graph refinement pass.
+
+Your job is to review the project title, intended outcome, strategic plan, and each initially generated task. Before the project is shown in Cerbanimo or Kamiya, refine the task graph so it exposes the discrete asks needed to complete the project.
+
+Current Date/Time: ${now}
+Refinement Pass: ${options.refinementPass || 1}
+Project Title: ${projectName}
+Project Description: ${projectDescription || 'None provided'}
+Intended Outcome: ${outcomeStatement || 'None provided'}
+Project Due Date: ${project_due_date || 'None provided'}
+Project Tags: ${JSON.stringify(Array.isArray(tags) ? tags : [])}
+Creator ID: ${creator_id ?? 'None provided'}
+Hard Limits:
+- Maximum refinement passes: ${limits.maxPasses || 2}
+- Maximum final task count: ${limits.maxTasks || 60}
+- Maximum task growth percent: ${limits.maxTaskGrowthPercent || 250}
+- Minimum single-mega-task expansion buffer: ${limits.minMegaTaskExpansionBuffer || 16}
+
+Strategic Project Plan:
+${projectPlan || 'None provided'}
+
+Initial Task Graph JSON:
+${initialTaskGraphJson}
+
+Previous structural findings to repair, if any:
+${JSON.stringify(Array.isArray(options.previousFindings) ? options.previousFindings : [], null, 2)}
+
+Refinement goal:
+- Consider the title, intended outcome, strategic plan, and every task.
+- Split vague, broad, or multi-phase tasks into smaller execution-ready asks.
+- Add missing prerequisite, coordination, implementation, validation, handoff, launch, or follow-up tasks when they are necessary to reach the outcome.
+- Delete duplicate, out-of-scope, or superseded tasks.
+- Preserve the intent of tasks that are already discrete.
+- Ensure dependencies expose a coherent order of work.
+
+A discrete ask must:
+- Have one accountable outcome.
+- Be completable by one contributor or one bounded automation mode.
+- Have a verifiable completion condition.
+- Avoid bundling unrelated phases such as research, design, build, test, launch, and ongoing operations into one task.
+
+Large or vague signals:
+- Names such as "build the platform", "launch everything", "manage community", "implement system", "do marketing", "finish project", or "coordinate all work".
+- Descriptions that require multiple roles, multiple deliverables, or hidden prerequisite decisions.
+- Tasks whose proof would be unclear to a reviewer.
+
+Required output:
+- Return ONLY a JSON object.
+- The object must contain "tasks" and "refinementSummary".
+- Reassign task IDs to unique integers starting at 1.
+- Every dependency must reference a returned task ID.
+- Every task must include "taskKey": a stable model-local lowercase slug independent of database IDs.
+- Every task must include "dependsOn": an array of taskKey values. Use [] for root tasks.
+- You may also include "dependencies", but dependsOn is the authoritative dependency field.
+- Task names must be 100 characters or fewer.
+- Skill names must be 100 characters or fewer.
+- Use ISO 8601 dates. The project starts at the current date/time above.
+- If no due date is provided, distribute work over a reasonable 30-day window from the current date/time.
+- The final impact_weight values must sum to 100.
+- Do not invent credentials, account access, repositories, secrets, or permissions.
+- Do not return a task that depends on itself or creates a dependency cycle.
+- Do not split tasks into clerical fragments such as opening a file, thinking about work, sending a generic message, or reviewing your own sentence unless that is truly the project deliverable.
+- Already discrete tasks should remain stable. Preserve their intent and taskKey when possible.
+
+Every task must include:
+{
+  "taskKey": "define-vertical-slice-scope",
+  "dependsOn": [],
+  "id": "define-vertical-slice-scope",
+  "name": "Task name",
+  "description": "Task description with a concrete deliverable and acceptance boundary.",
+  "project_id": 1,
+  "skill_name": "Skill name",
+  "skill_level": 1,
+  "dependencies": [],
+  "reward_tokens": 80,
+  "resource_requirements": [],
+  "start_date": "${now}",
+  "due_date": "${project_due_date || ''}",
+  "impact_label": "One concise sentence explaining how this task contributes to the outcome.",
+  "impact_weight": 10,
+  "is_local": false,
+  "automation_classification": "human_driven",
+  "automation_confidence": 0.75,
+  "automation_rationale": "One short user-safe sentence. No hidden reasoning.",
+  "required_human_inputs": [],
+  "automation_requirements": {},
+  "validation_requirements": []
+}
+
+${TASK_AUTOMATION_CLASSIFICATION_PROMPT}
+
+The refinementSummary must include:
+{
+  "splitTaskIds": [],
+  "deletedTaskIds": [],
+  "addedTaskNames": [],
+  "rationale": "Short user-safe summary of what changed."
+}
+
+The changes ledger must include each material change:
+{
+  "changes": [
+    {
+      "operation": "split",
+      "sourceTaskKeys": ["build-game"],
+      "resultTaskKeys": ["inventory-prototype", "room-interactions", "playtest"],
+      "reason": "The original task contained independently assignable outcomes."
+    }
+  ]
+}
+`;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: process.env.GEMINI_TASK_GRAPH_REFINEMENT_MODEL || process.env.GEMINI_TASK_GRAPH_MODEL || DEFAULT_GEMINI_MODEL,
+    });
+
+    const result = await generateContentWithTimeout(model, {
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.35,
+        maxOutputTokens: outputTokens,
+      }
+    }, timeoutMs);
+    const response = await result.response;
+    const responseText = response.text();
+
+    const data = parseLLMJsonResponse(responseText);
+    if (!data.tasks || !Array.isArray(data.tasks)) {
+      throw new Error("Tasks array missing or invalid in refinement response.");
+    }
+    data.tasks = normalizeTaskImpactWeights(data.tasks);
+    data.taskGraphRefinement = {
+      applied: true,
+      modelDriven: true,
+      originalTaskCount: originalTasks.length,
+      refinedTaskCount: data.tasks.length,
+      summary: data.refinementSummary || null
+    };
+    return data;
+  } catch (error) {
+    console.error("Error refining task graph:", error);
+    throw new Error(`Failed to refine task graph: ${error.message}`);
   }
 };
 

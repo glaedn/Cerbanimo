@@ -43,8 +43,14 @@ describe('ProjectBootstrap deterministic provider guard', () => {
       { e2eRunId: 'unit', e2eScenario: 'success_slow' }
     );
 
-    expect(result.tasks).toHaveLength(3);
+    expect(result.tasks).toHaveLength(4);
     expect(result.tasks.some((task) => task.dependencies.length === 0)).toBe(true);
+    expect(result.tasks.some((task) => task.dependencies.length > 0)).toBe(true);
+    expect(result.tasks.find((task) => task.id === 'pilot-launch-readiness')?.dependencies).toEqual([
+      'governance-map',
+      'voting-prototype',
+      'coordination-ledger'
+    ]);
     expect(new Set(result.tasks.map((task) => task.automation_classification))).toEqual(new Set([
       'human_driven',
       'assisted_automation',

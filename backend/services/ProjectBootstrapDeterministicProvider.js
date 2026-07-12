@@ -53,12 +53,38 @@ export function createDeterministicBootstrapGenerators() {
     };
   };
 
+  const refineTaskGraph = async (_name, _description, _tags, _userId, _dueDate, _outcomeStatement, options = {}) => {
+    const tasks = Array.isArray(options.tasks) ? options.tasks : [];
+    return {
+      ...(options.generatedData || {}),
+      tasks,
+      refinementSummary: {
+        splitTaskIds: [],
+        deletedTaskIds: [],
+        addedTaskNames: [],
+        rationale: 'Deterministic provider preserved the generated task graph.'
+      },
+      taskGraphRefinement: {
+        applied: true,
+        deterministic: true,
+        originalTaskCount: tasks.length,
+        refinedTaskCount: tasks.length,
+        summary: {
+          splitTaskIds: [],
+          deletedTaskIds: [],
+          addedTaskNames: []
+        }
+      }
+    };
+  };
+
   return {
     autogeneratePlan: generatePlan,
     autoGenerateTasks: async (name, description, tags, userId, dueDate, outcomeStatement, options = {}) => {
       const plan = await generatePlan(name, description, tags, userId, dueDate, outcomeStatement, options);
       return { tasks: plan.tasks };
-    }
+    },
+    refineGeneratedTaskGraph: refineTaskGraph
   };
 }
 
@@ -85,10 +111,14 @@ function validTasks(dueDate) {
   const end = dueDate ? new Date(dueDate) : new Date('2027-01-02T00:00:00.000Z');
   const start = new Date(end);
   start.setMonth(start.getMonth() - 5);
+  const early = new Date(start);
+  early.setMonth(early.getMonth() + 1);
   const mid = new Date(start);
-  mid.setMonth(mid.getMonth() + 2);
+  mid.setMonth(mid.getMonth() + 3);
   const late = new Date(start);
   late.setMonth(late.getMonth() + 4);
+  const finalStart = new Date(late);
+  finalStart.setDate(finalStart.getDate() + 1);
 
   return [
     {
@@ -100,9 +130,9 @@ function validTasks(dueDate) {
       reward_tokens: 50,
       dependencies: [],
       start_date: isoDate(start),
-      due_date: isoDate(mid),
+      due_date: isoDate(early),
       impact_label: 'Clarifies how democratic group constitutions should work.',
-      impact_weight: 35,
+      impact_weight: 30,
       automation_classification: 'human_driven',
       automation_confidence: 0.91,
       automation_rationale: 'This task requires stakeholder interviews, judgment, and consent-aware governance research.',
@@ -128,7 +158,7 @@ function validTasks(dueDate) {
       start_date: isoDate(start),
       due_date: isoDate(mid),
       impact_label: 'Creates the first usable collective decision mechanism.',
-      impact_weight: 40,
+      impact_weight: 35,
       automation_classification: 'assisted_automation',
       automation_confidence: 0.78,
       automation_rationale: 'Kamiya can help implement the prototype after repository, branch, constraints, and acceptance criteria are supplied.',
@@ -195,7 +225,7 @@ function validTasks(dueDate) {
       start_date: isoDate(start),
       due_date: isoDate(late),
       impact_label: 'Verifies the implementation baseline before deeper coordination work proceeds.',
-      impact_weight: 25,
+      impact_weight: 20,
       automation_classification: 'fully_automatable',
       automation_confidence: 0.86,
       automation_rationale: 'The task is bounded digital work with a known capability and expected quality-check report.',
@@ -216,6 +246,32 @@ function validTasks(dueDate) {
           proofTypes: ['automation_report'],
           checks: ['report_status_checks_passed', 'report_belongs_to_task', 'resolved_commit_present'],
           semanticReview: 'never'
+        }
+      ]
+    },
+    {
+      id: 'pilot-launch-readiness',
+      name: 'Coordinate pilot launch readiness',
+      description: 'Review the research, prototype, and quality-check results before opening a pilot group launch.',
+      skill_name: 'Project Coordination',
+      skill_level: 2,
+      reward_tokens: 60,
+      dependencies: ['governance-map', 'voting-prototype', 'coordination-ledger'],
+      start_date: isoDate(finalStart),
+      due_date: isoDate(end),
+      impact_label: 'Connects validated requirements and implementation readiness before the pilot goes live.',
+      impact_weight: 15,
+      automation_classification: 'human_driven',
+      automation_confidence: 0.88,
+      automation_rationale: 'This task requires accountable project judgment before public launch readiness is accepted.',
+      required_human_inputs: [],
+      automation_requirements: {},
+      validation_requirements: [
+        {
+          requirementId: 'launch-readiness-summary',
+          description: 'A readiness summary cites the requirement map, prototype status, and quality-check result.',
+          proofTypes: ['document', 'attestation'],
+          checks: ['human_review']
         }
       ]
     }
