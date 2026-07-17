@@ -1,4 +1,6 @@
-# Cerbanimo Mobile
+# Cerbanimo Mobile (frozen)
+
+This standalone client is retained as a historical reference and receives no new feature work. Resonera is the supported mobile/game overlay and consumes Cerbanimo's `/api/v1` contract. Do not add task authority, rewards, settlement, or new screens here.
 
 Native iOS/Android rewrite of the Cerbanimo platform using Expo and React Native.
 

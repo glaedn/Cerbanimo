@@ -32,3 +32,4 @@ backend/.env
 # Test results
 test-results/
 backend/.artifacts/
+.artifacts/

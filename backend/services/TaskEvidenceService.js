@@ -68,6 +68,28 @@ function parseJsonish(value, fallback) {
   }
 }
 
+function normalizeEncounterContext(value = {}) {
+  const input = parseJsonish(value, {});
+  const visibility = ['private', 'split_party', 'shared_party'].includes(input.visibility)
+    ? input.visibility
+    : 'shared_party';
+  const participantUserIds = [...new Set(asArray(input.participantUserIds || input.participant_user_ids)
+    .map(Number).filter(id => Number.isInteger(id) && id > 0))].slice(0, 12);
+  const reward = parseJsonish(input.rewardPolicy || input.reward_policy, {});
+  const mode = reward.mode === 'leader_weighted' ? 'leader_weighted' : 'equal';
+  const nominatedLeader = Number(reward.partyLeaderUserId || reward.party_leader_user_id || 0) || null;
+  return {
+    visibility,
+    participantUserIds,
+    npcMode: input.npcMode === 'off' ? 'off' : 'optional',
+    rewardPolicy: {
+      mode,
+      partyLeaderUserId: nominatedLeader && participantUserIds.includes(nominatedLeader) ? nominatedLeader : null,
+      leaderWeight: mode === 'leader_weighted' ? Math.min(3, Math.max(1, Number(reward.leaderWeight || 1.5))) : 1
+    }
+  };
+}
+
 function normalizeStatus(status) {
   if (status === 'passed') return 'validation_passed';
   if (status === 'failed') return 'validation_failed';
@@ -327,7 +349,7 @@ class TaskEvidenceService {
     };
   }
 
-  async createBundle({ taskId, actorUserId, authContext, sourceKind = 'human', reflection = '', summary = '' }) {
+  async createBundle({ taskId, actorUserId, authContext, sourceKind = 'human', reflection = '', summary = '', encounterContext = {} }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -368,9 +390,9 @@ class TaskEvidenceService {
       );
       const result = await client.query(
         `INSERT INTO task_evidence_bundles (
-           task_id, actor_user_id, source_kind, status, version, reflection, summary
+           task_id, actor_user_id, source_kind, status, version, reflection, summary, encounter_context
          )
-         VALUES ($1, $2, $3, 'draft', $4, $5, $6)
+         VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7::jsonb)
          RETURNING *`,
         [
           task.id,
@@ -378,7 +400,8 @@ class TaskEvidenceService {
           normalizedSourceKind,
           versionResult.rows[0]?.next_version || 1,
           compactText(reflection, 8000) || null,
-          compactText(summary, 1200) || null
+          compactText(summary, 1200) || null,
+          JSON.stringify(normalizeEncounterContext(encounterContext))
         ]
       );
       await client.query('COMMIT');
@@ -415,7 +438,7 @@ class TaskEvidenceService {
     return this.serializeValidation(result.rows[0], { policy });
   }
 
-  async updateBundle({ taskId, bundleId, authContext, reflection, summary, sourceKind }) {
+  async updateBundle({ taskId, bundleId, authContext, reflection, summary, sourceKind, encounterContext }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -432,6 +455,7 @@ class TaskEvidenceService {
          SET reflection = COALESCE($2, reflection),
              summary = COALESCE($3, summary),
              source_kind = COALESCE($4, source_kind),
+             encounter_context = COALESCE($5::jsonb, encounter_context),
              updated_at = NOW()
          WHERE id = $1
          RETURNING *`,
@@ -439,7 +463,8 @@ class TaskEvidenceService {
           bundle.id,
           reflection === undefined ? null : compactText(reflection, 8000),
           summary === undefined ? null : compactText(summary, 1200),
-          sourceKind || null
+          sourceKind || null,
+          encounterContext === undefined ? null : JSON.stringify(normalizeEncounterContext(encounterContext))
         ]
       );
       await client.query('COMMIT');
@@ -2099,6 +2124,7 @@ class TaskEvidenceService {
       version: bundle.version,
       reflection: bundle.reflection,
       summary: bundle.summary,
+      encounter_context: parseJsonish(bundle.encounter_context, {}),
       requirement_snapshot: bundle.requirement_snapshot,
       supersedes_bundle_id: bundle.supersedes_bundle_id,
       manifest_sha256: bundle.manifest_sha256 ? '[redacted]' : null,

@@ -117,7 +117,9 @@ async function authenticateApiToken(req, res, next, token) {
        u.auth0_id,
        u.username,
        u.email,
-       u.roles
+       u.roles,
+       u.cotokens,
+       u.skills
      FROM api_tokens t
      JOIN users u ON u.id = t.user_id
      WHERE t.token_hash = $1
@@ -150,7 +152,9 @@ async function authenticateApiToken(req, res, next, token) {
     id: record.user_id,
     username: record.username,
     email: record.email,
-    roles: record.roles || []
+    roles: record.roles || [],
+    cotokens: Number(record.cotokens || 0),
+    skills: record.skills || []
   };
 
   return next();
@@ -206,7 +210,7 @@ export function apiAuthenticate(req, res, next) {
     try {
       if (req.auth?.payload?.sub) {
         const userResult = await pool.query(
-          'SELECT id, username, email, roles FROM users WHERE auth0_id = $1',
+          'SELECT id, username, email, roles, cotokens, skills FROM users WHERE auth0_id = $1',
           [req.auth.payload.sub]
         );
         const user = userResult.rows[0];

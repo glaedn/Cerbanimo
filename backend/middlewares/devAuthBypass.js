@@ -65,7 +65,7 @@ async function ensureDevUser(user) {
        alpha = TRUE,
        updated_at = NOW()
      WHERE auth0_id = $1
-     RETURNING id, username, email, roles`,
+     RETURNING id, username, email, roles, cotokens, skills`,
     params
   );
 
@@ -81,7 +81,7 @@ async function ensureDevUser(user) {
        $1, $2, $3, $4,
        $5::jsonb, $6::jsonb, $7::text[], TRUE
      )
-     RETURNING id, username, email, roles`,
+     RETURNING id, username, email, roles, cotokens, skills`,
     params
   );
   return insertResult.rows[0];

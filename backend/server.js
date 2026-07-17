@@ -103,6 +103,7 @@ import { createNeedFulfillmentTable } from '../models/need_fulfillments.js';
 import { createAgentTables } from '../models/agents.js';
 import { createWorkflowTables } from '../models/workflows.js';
 import { createKamiyaApiTables } from '../models/kamiya_api.js';
+import { createTaskSettlementTables } from '../models/task_settlements.js';
 import { createNarrativeTables } from '../models/narrative_v2.js';
 import { createWalletTable } from '../models/wallets.js';
 import { alterStoryNodesForNarrative } from '../models/alter_story_nodes_f6.js';
@@ -476,6 +477,12 @@ async function initializeDatabase() {
       await createKamiyaApiTables();
     } catch (err) {
       console.warn('Optional Subsystem Skip: Kamiya API table initialization failed:', err.message);
+    }
+
+    try {
+      await createTaskSettlementTables();
+    } catch (err) {
+      console.warn('Optional Subsystem Skip: task settlement table initialization failed:', err.message);
     }
 
     try {

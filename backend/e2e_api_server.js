@@ -9,6 +9,7 @@ import resolveUser from './middlewares/resolveUser.js';
 import { apiAuthenticate } from './services/apiAuthService.js';
 import { PROJECT_BOOTSTRAP_QUEUE, startProjectBootstrapWorker } from './jobs/workers/projectBootstrapWorker.js';
 import { AUTOMATION_EXECUTION_QUEUE, startAutomationWorker } from './jobs/workers/automationWorker.js';
+import { TASK_SETTLEMENT_QUEUES, startTaskSettlementWorker } from './jobs/workers/taskSettlementWorker.js';
 import { assertDeterministicProviderAllowed } from './services/ProjectBootstrapDeterministicProvider.js';
 
 const app = express();
@@ -43,7 +44,7 @@ app.get('/api/health', async (_req, res) => {
     res.json({
       ok: true,
       service: 'cerbanimo-e2e-api',
-      queues: [PROJECT_BOOTSTRAP_QUEUE, AUTOMATION_EXECUTION_QUEUE],
+      queues: [PROJECT_BOOTSTRAP_QUEUE, AUTOMATION_EXECUTION_QUEUE, ...TASK_SETTLEMENT_QUEUES],
       database: safeDatabaseTarget(process.env.POSTGRES_URL || process.env.DATABASE_URL || '')
     });
   } catch (error) {
@@ -83,8 +84,14 @@ try {
   await boss.createQueue(AUTOMATION_EXECUTION_QUEUE).catch((error) => {
     console.warn(`[Cerbanimo E2E] queue creation notice for ${AUTOMATION_EXECUTION_QUEUE}:`, error.message);
   });
+  for (const queue of TASK_SETTLEMENT_QUEUES) {
+    await boss.createQueue(queue).catch((error) => {
+      console.warn(`[Cerbanimo E2E] queue creation notice for ${queue}:`, error.message);
+    });
+  }
   await startProjectBootstrapWorker();
   await startAutomationWorker();
+  await startTaskSettlementWorker();
 
   server = app.listen(port, '127.0.0.1', () => {
     console.log(`[Cerbanimo E2E] API listening on http://127.0.0.1:${port}`);
