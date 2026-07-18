@@ -23,7 +23,12 @@ if (process.env.CERBANIMO_PROJECT_BOOTSTRAP_PROVIDER === 'deterministic') {
 
 app.use(cors({
   origin: true,
-  credentials: true
+  credentials: true,
+  exposedHeaders: [
+    'x-request-id',
+    'x-cerbanimo-contract-version',
+    'x-cerbanimo-contract-digest'
+  ]
 }));
 app.use(express.json({ limit: '1mb' }));
 

@@ -1,4 +1,6 @@
 export declare const CONTRACT_VERSION: '1.0.0';
+export declare const CONTRACT_SCHEMA_DIGEST: `sha256:${string}`;
+export declare const CONTRACT_IDENTITY: Readonly<{ version: typeof CONTRACT_VERSION; digest: typeof CONTRACT_SCHEMA_DIGEST }>;
 export declare const apiContractSchemas: Readonly<Record<string, Record<string, unknown>>>;
 
 export type Identifier = string | number;

@@ -164,6 +164,25 @@ export async function createTaskSettlementTables() {
       CREATE INDEX IF NOT EXISTS idx_domain_events_aggregate ON domain_events(aggregate_type, aggregate_id, sequence);
     `);
 
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'task_settlements_attempt_count_check' AND conrelid = 'task_settlements'::regclass) THEN
+          ALTER TABLE task_settlements ADD CONSTRAINT task_settlements_attempt_count_check CHECK (attempt_count >= 0);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reward_ledger_events_amount_bound_check' AND conrelid = 'reward_ledger_events'::regclass) THEN
+          ALTER TABLE reward_ledger_events ADD CONSTRAINT reward_ledger_events_amount_bound_check
+            CHECK (amount >= 0 AND amount <= 1000000 AND amount = trunc(amount));
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'skill_xp_events_consistency_check' AND conrelid = 'skill_xp_events'::regclass) THEN
+          ALTER TABLE skill_xp_events ADD CONSTRAINT skill_xp_events_consistency_check
+            CHECK (xp_delta BETWEEN 0 AND 1000000 AND previous_xp >= 0 AND new_xp = previous_xp + xp_delta AND previous_level >= 1 AND new_level >= 1);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'task_settlement_outbox_attempt_count_check' AND conrelid = 'task_settlement_outbox'::regclass) THEN
+          ALTER TABLE task_settlement_outbox ADD CONSTRAINT task_settlement_outbox_attempt_count_check CHECK (attempt_count >= 0);
+        END IF;
+      END $$;
+    `);
+
     await client.query('COMMIT');
     console.log('PostgreSQL: task settlement and canonical domain event tables created or already exist.');
   } catch (error) {

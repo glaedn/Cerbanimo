@@ -32,10 +32,15 @@ import GameMasterService from '../../services/GameMasterService.js';
 import TaskSettlementService from '../../services/TaskSettlementService.js';
 import TaskAccessService from '../../services/TaskAccessService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
-import { apiContractSchemas, CONTRACT_VERSION } from '../../../packages/api-contract/src/index.js';
+import { apiContractSchemas, CONTRACT_SCHEMA_DIGEST, CONTRACT_VERSION } from '../../../packages/api-contract/src/index.js';
 
 const router = express.Router();
 
+router.use((_req, res, next) => {
+  res.setHeader('x-cerbanimo-contract-version', CONTRACT_VERSION);
+  res.setHeader('x-cerbanimo-contract-digest', CONTRACT_SCHEMA_DIGEST);
+  next();
+});
 router.use(requestIdMiddleware);
 router.use(envelopeMiddleware);
 
@@ -64,6 +69,7 @@ const openApiDocument = {
     version: CONTRACT_VERSION,
     description: 'Versioned API surface for standalone clients such as Kamiya.'
   },
+  'x-cerbanimo-contract-digest': CONTRACT_SCHEMA_DIGEST,
   servers: [{ url: '/api/v1' }],
   security: [{ bearerAuth: [] }],
   components: {
@@ -100,6 +106,7 @@ const openApiDocument = {
     }
   },
   paths: {
+    '/contract': { get: { summary: 'Read the canonical contract version, schema digest, and schemas' } },
     '/auth/permissions': {
       get: {
         summary: 'Inspect the current actor, scopes, and client permissions.',
@@ -187,6 +194,11 @@ const openApiDocument = {
 };
 
 router.get('/openapi.json', (req, res) => sendOk(req, res, openApiDocument));
+router.get('/contract', (req, res) => sendOk(req, res, {
+  version: CONTRACT_VERSION,
+  digest: CONTRACT_SCHEMA_DIGEST,
+  schemas: apiContractSchemas
+}));
 router.get('/docs', (req, res) => sendOk(req, res, {
   openapi: '/api/v1/openapi.json',
   note: 'Use the OpenAPI document with Swagger UI, Redoc, or the Kamiya SDK generator.'
@@ -886,6 +898,10 @@ router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PR
   const projectId = Number(req.params.projectId);
   const authContext = actionAuthContext(req);
   const quest = await GameMasterService.getQuestContext({ projectId, authContext });
+  const projectViewAuthContext = {
+    ...authContext,
+    authorizedProjectIds: [projectId]
+  };
   const taskRows = (await pool.query(
     `SELECT t.*, s.name AS skill_name,
             p.creator_id AS project_creator_id,
@@ -896,8 +912,8 @@ router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PR
      WHERE t.project_id = $1 ORDER BY t.created_at ASC, t.id ASC`, [projectId]
   )).rows;
   const tasks = await Promise.all(taskRows.map(async task => {
-    const policy = await TaskAccessService.policyForTaskRecord(task, authContext);
-    const settlement = await TaskSettlementService.getByTask(task.id, authContext);
+    const policy = await TaskAccessService.policyForTaskRecord(task, projectViewAuthContext);
+    const settlement = await TaskSettlementService.getByTask(task.id, projectViewAuthContext);
     return toCanonicalTask(task, {
       view: policy.canViewTask.allowed,
       submitEvidence: policy.canSubmitEvidence.allowed && task.status !== 'completed',

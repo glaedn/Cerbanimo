@@ -3,9 +3,8 @@ import { render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate, useLocation, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import AuthWrapper from './AuthWrapper';
-import React from 'react';
 
 // Mock axios
 vi.mock('axios', () => ({
@@ -32,7 +31,6 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock environment variable
 const mockApiUrl = 'http://localhost:5000';
 
 const TestComponent = () => <div>Test Content</div>;
@@ -52,6 +50,8 @@ describe('AuthWrapper', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('VITE_BACKEND_URL', mockApiUrl);
+    sessionStorage.clear();
     mockGetAccessTokenSilently.mockResolvedValue('test-token');
     mockUseLocation.mockReturnValue({ pathname: '/dashboard' });
     axios.post.mockResolvedValue({ data: { message: 'User saved' } });
@@ -86,7 +86,7 @@ describe('AuthWrapper', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  test('redirects to /onboarding if profile has < 3 skills', async () => {
+  test('redirects to the soft-onboarding profile when fewer than 3 skills exist', async () => {
     setupAuth0Mock(true, false);
     axios.get.mockResolvedValueOnce({
       data: {
@@ -99,11 +99,11 @@ describe('AuthWrapper', () => {
     renderAuthWrapper();
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/onboarding');
+      expect(mockNavigate).toHaveBeenCalledWith('/profile');
     });
   });
 
-  test('redirects to /onboarding if profile has < 3 interests', async () => {
+  test('redirects to the soft-onboarding profile when fewer than 3 interests exist', async () => {
     setupAuth0Mock(true, false);
     axios.get.mockResolvedValueOnce({
       data: {
@@ -113,6 +113,6 @@ describe('AuthWrapper', () => {
       },
     });
     renderAuthWrapper();
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/profile'));
   });
 });

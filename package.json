@@ -16,7 +16,7 @@
     "test:review-schema": "npm --prefix backend run test:review-schema",
     "test:contract": "node backend/scripts/contract-smoke.js",
     "test:db-races": "node backend/scripts/run-db-races.js",
-    "test:core-world": "npm run guard:generated && npx vitest run backend/services/TaskSettlementService.test.js && npm run test:contract && npm run test:db-races",
+    "test:core-world": "npm run guard:generated && npm --prefix backend test -- services/TaskSettlementService.test.js && npm run test:contract && npm run test:db-races",
     "test:e2e": "playwright test",
     "postinstall": "node -e \"console.log(require.resolve('backblaze-b2'))\""
   },

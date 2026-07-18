@@ -167,7 +167,12 @@ const corsOptions = {
     }
     return callback(new Error(`CORS origin not allowed: ${origin}`));
   },
-  credentials: true
+  credentials: true,
+  exposedHeaders: [
+    'x-request-id',
+    'x-cerbanimo-contract-version',
+    'x-cerbanimo-contract-digest'
+  ]
 };
 
 const server = http.createServer(app);

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export const CONTRACT_VERSION = '1.0.0';
 
 const identifier = { anyOf: [{ type: 'integer' }, { type: 'string' }] };
@@ -171,3 +173,14 @@ export const apiContractSchemas = Object.freeze({
     additionalProperties: true
   }
 });
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export const CONTRACT_SCHEMA_DIGEST = `sha256:${createHash('sha256').update(canonicalJson(apiContractSchemas)).digest('hex')}`;
+export const CONTRACT_IDENTITY = Object.freeze({ version: CONTRACT_VERSION, digest: CONTRACT_SCHEMA_DIGEST });

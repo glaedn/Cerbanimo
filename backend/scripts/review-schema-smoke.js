@@ -6,6 +6,7 @@ import { createKamiyaApiTables } from '../../models/kamiya_api.js';
 
 const { Pool } = pg;
 const connectionString = process.env.PACKET008C_POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const isolatedSchema = process.env.PACKET008C_SCHEMA || '';
 
 if (!connectionString) {
   console.error('PACKET008C_POSTGRES_URL, POSTGRES_URL, or DATABASE_URL is required for review schema smoke tests.');
@@ -13,16 +14,22 @@ if (!connectionString) {
 }
 
 const databaseName = new URL(connectionString).pathname.replace(/^\//, '').toLowerCase();
-if (!/(test|e2e|packet008c)/.test(databaseName)) {
+if (isolatedSchema && !/^cerbanimo_review_test_[a-z0-9_]+$/.test(isolatedSchema)) {
+  console.error(`Refusing unsafe review schema name: ${isolatedSchema}`);
+  process.exit(1);
+}
+if (!isolatedSchema && !/(test|e2e|packet008c)/.test(databaseName)) {
   console.error(`Refusing to reset schema for non-test database: ${databaseName}`);
   process.exit(1);
 }
+const schemaName = isolatedSchema || 'public';
+const schemaSql = `"${schemaName}"`;
 
 const adminPool = new Pool({ connectionString, max: 2 });
 
 async function resetPublicSchema() {
-  await adminPool.query('DROP SCHEMA IF EXISTS public CASCADE');
-  await adminPool.query('CREATE SCHEMA public');
+  await adminPool.query(`DROP SCHEMA IF EXISTS ${schemaSql} CASCADE`);
+  await adminPool.query(`CREATE SCHEMA ${schemaSql}`);
   await adminPool.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
   await adminPool.query(`
     CREATE TABLE users (
@@ -85,7 +92,7 @@ async function createRenderDeployLikeBaseline() {
 async function tableExists(tableName) {
   const result = await adminPool.query(
     `SELECT to_regclass($1) IS NOT NULL AS exists`,
-    [`public.${tableName}`]
+    [`${schemaName}.${tableName}`]
   );
   return Boolean(result.rows[0].exists);
 }
@@ -95,11 +102,11 @@ async function columnExists(tableName, columnName) {
     `SELECT EXISTS (
        SELECT 1
        FROM information_schema.columns
-       WHERE table_schema = 'public'
-         AND table_name = $1
-         AND column_name = $2
+       WHERE table_schema = $1
+         AND table_name = $2
+         AND column_name = $3
      ) AS exists`,
-    [tableName, columnName]
+    [schemaName, tableName, columnName]
   );
   return Boolean(result.rows[0].exists);
 }
@@ -107,7 +114,7 @@ async function columnExists(tableName, columnName) {
 async function indexExists(indexName) {
   const result = await adminPool.query(
     `SELECT to_regclass($1) IS NOT NULL AS exists`,
-    [`public.${indexName}`]
+    [`${schemaName}.${indexName}`]
   );
   return Boolean(result.rows[0].exists);
 }

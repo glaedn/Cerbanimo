@@ -1,5 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: new URL('../.env', import.meta.url), quiet: true });
 
 const connectionString = process.env.PACKET008C_POSTGRES_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL;
 if (!connectionString) {

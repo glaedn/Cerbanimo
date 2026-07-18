@@ -1,9 +1,13 @@
 import pool from '../db.js';
 import boss from '../jobs/boss.js';
+import TaskAccessService from './TaskAccessService.js';
 
 export const TASK_SETTLEMENT_QUEUE = 'task-completion-settlement';
 export const TASK_SETTLEMENT_SWEEP_QUEUE = 'task-completion-settlement-sweep';
 export const SETTLEMENT_POLICY_VERSION = 'task-settlement-v1';
+export const MAX_SETTLEMENT_REWARD = 1_000_000;
+
+const serviceAuthContext = Object.freeze({ isServiceActor: true, scopes: ['actions:service'] });
 
 const terminalStatuses = new Set(['completed', 'blocked', 'failed', 'cancelled']);
 
@@ -26,10 +30,38 @@ export function levelForXp(xp) {
   return Math.floor(Math.sqrt(Math.max(0, Number(xp || 0)) / 40)) + 1;
 }
 
+export function validateSettlementReward(value, label = 'reward') {
+  const amount = Number(value);
+  if (!Number.isSafeInteger(amount) || amount < 0 || amount > MAX_SETTLEMENT_REWARD) {
+    throw new RangeError(`${label} must be a whole number between 0 and ${MAX_SETTLEMENT_REWARD}.`);
+  }
+  return amount;
+}
+
+export function settlementPolicyProblem(policy) {
+  if (policy.rewardTokens === null || policy.rewardTokens === undefined) {
+    return { code: 'SETTLEMENT_REWARD_POLICY_MISSING', message: 'The accepted task has no authoritative contributor reward amount.', details: { field: 'rewardTokens' } };
+  }
+  try {
+    validateSettlementReward(policy.rewardTokens, 'Contributor reward');
+    validateSettlementReward(policy.peerReviewerRewardAmount, 'Peer reviewer reward');
+    validateSettlementReward(policy.pmReviewerRewardAmount, 'Project-manager reviewer reward');
+    if (!['equal', 'leader_weighted'].includes(policy.rewardMode)) throw new RangeError('Reward mode must be equal or leader_weighted.');
+    if (!Number.isFinite(policy.leaderWeight) || policy.leaderWeight < 1 || policy.leaderWeight > 10) throw new RangeError('Leader weight must be between 1 and 10.');
+    if (!policy.tokenType?.trim() || policy.tokenType.length > 100) throw new RangeError('Token type must contain 1 to 100 characters.');
+    if (policy.partyLeaderUserId !== null && (!Number.isSafeInteger(policy.partyLeaderUserId) || policy.partyLeaderUserId <= 0)) throw new RangeError('Party leader must be a positive user ID.');
+  } catch (error) {
+    return { code: 'SETTLEMENT_REWARD_POLICY_INVALID', message: error.message, details: { policyVersion: policy.policyVersion } };
+  }
+  return null;
+}
+
 export function buildContributorAllocations({ total, participantUserIds, leaderUserId = null, mode = 'equal', leaderWeight = 1.5 }) {
   const participants = uniqueIds(participantUserIds).sort((a, b) => a - b);
-  const reward = Math.max(0, Math.round(Number(total || 0)));
+  const reward = validateSettlementReward(total, 'Contributor reward');
   if (!participants.length) return [];
+  if (!['equal', 'leader_weighted'].includes(mode)) throw new RangeError('Reward mode must be equal or leader_weighted.');
+  if (!Number.isFinite(Number(leaderWeight)) || Number(leaderWeight) < 1 || Number(leaderWeight) > 10) throw new RangeError('Leader weight must be between 1 and 10.');
   const leader = participants.includes(Number(leaderUserId)) ? Number(leaderUserId) : null;
   const weights = participants.map(userId => mode === 'leader_weighted' && userId === leader ? Math.max(1, Number(leaderWeight || 1.5)) : 1);
   const denominator = weights.reduce((sum, weight) => sum + weight, 0);
@@ -62,8 +94,10 @@ export function resolveSettlementPolicy(row) {
 }
 
 class TaskSettlementService {
-  constructor(database = pool) {
+  constructor(database = pool, { queue = boss, faultInjector = null } = {}) {
     this.pool = database;
+    this.queue = queue;
+    this.faultInjector = faultInjector;
   }
 
   async previewForTask({ taskId, authContext = {}, sourceClient = 'api' }) {
@@ -71,31 +105,43 @@ class TaskSettlementService {
     let settlementId;
     try {
       await client.query('BEGIN');
+      await TaskAccessService.assert(taskId, authContext, 'canSubmitEvidence', client);
       const row = await this.lockAcceptedTask(client, taskId);
-      if (!row) throw this.error('SETTLEMENT_NOT_READY', 'No accepted review is ready for settlement.', 409);
-      const existing = await client.query('SELECT * FROM task_settlements WHERE acceptance_record_id = $1 FOR UPDATE', [row.acceptance_record_id]);
-      if (existing.rows[0]) {
-        settlementId = existing.rows[0].id;
+      if (!row) {
+        const committed = await client.query(
+          `SELECT id FROM task_settlements
+           WHERE task_id::text = $1 AND status = 'completed'
+           ORDER BY completed_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+          [String(taskId)]
+        );
+        if (!committed.rows[0]) throw this.error('SETTLEMENT_NOT_READY', 'No accepted review is ready for settlement.', 409);
+        settlementId = committed.rows[0].id;
         await client.query('COMMIT');
       } else {
-        const policy = resolveSettlementPolicy(row);
-        const missingRewardPolicy = !Number.isFinite(policy.rewardTokens) || policy.rewardTokens < 0;
-        const status = missingRewardPolicy ? 'blocked' : 'queued';
-        const errorCode = missingRewardPolicy ? 'SETTLEMENT_REWARD_POLICY_MISSING' : null;
-        const errorMessage = missingRewardPolicy ? 'The accepted task has no authoritative contributor reward amount.' : null;
-        const inserted = await client.query(
-          `INSERT INTO task_settlements (
-             acceptance_record_id, task_id, review_round_id, project_id, status,
-             policy_version, policy_snapshot, idempotency_key,
-             last_error_code, last_error_message, last_error_details
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11::jsonb)
-           RETURNING *`,
-          [row.acceptance_record_id, row.task_id, row.review_round_id, row.project_id, status,
-            SETTLEMENT_POLICY_VERSION, JSON.stringify(policy), `acceptance:${row.acceptance_uuid}`,
-            errorCode, errorMessage, errorCode ? JSON.stringify({ sourceClient, rewardTokens: row.reward_tokens }) : null]
-        );
-        settlementId = inserted.rows[0].id;
-        await client.query('COMMIT');
+        const existing = await client.query('SELECT * FROM task_settlements WHERE acceptance_record_id = $1 FOR UPDATE', [row.acceptance_record_id]);
+        if (existing.rows[0]) {
+          settlementId = existing.rows[0].id;
+          await client.query('COMMIT');
+        } else {
+          const policy = resolveSettlementPolicy(row);
+          const policyProblem = settlementPolicyProblem(policy);
+          const status = policyProblem ? 'blocked' : 'queued';
+          const errorCode = policyProblem?.code || null;
+          const errorMessage = policyProblem?.message || null;
+          const inserted = await client.query(
+            `INSERT INTO task_settlements (
+               acceptance_record_id, task_id, review_round_id, project_id, status,
+               policy_version, policy_snapshot, idempotency_key,
+               last_error_code, last_error_message, last_error_details
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11::jsonb)
+             RETURNING *`,
+            [row.acceptance_record_id, row.task_id, row.review_round_id, row.project_id, status,
+              SETTLEMENT_POLICY_VERSION, JSON.stringify(policy), `acceptance:${row.acceptance_uuid}`,
+              errorCode, errorMessage, errorCode ? JSON.stringify({ sourceClient, rewardTokens: row.reward_tokens, ...policyProblem.details }) : null]
+          );
+          settlementId = inserted.rows[0].id;
+          await client.query('COMMIT');
+        }
       }
     } catch (error) {
       await client.query('ROLLBACK');
@@ -113,7 +159,7 @@ class TaskSettlementService {
 
   async enqueue(settlementId) {
     try {
-      await boss.send(TASK_SETTLEMENT_QUEUE, { settlementId }, { retryLimit: 5, retryBackoff: true });
+      await this.queue.send(TASK_SETTLEMENT_QUEUE, { settlementId }, { retryLimit: 5, retryBackoff: true });
     } catch (error) {
       if (process.env.NODE_ENV !== 'test') console.warn('Settlement queue unavailable; durable sweep will retry.', error.message);
     }
@@ -153,6 +199,7 @@ class TaskSettlementService {
       const settlement = (await client.query(
         `SELECT s.*, ar.settlement_status AS acceptance_status, ar.evidence_manifest_sha256,
                 r.submission_actor_user_id, r.policy_snapshot AS review_policy_snapshot,
+                r.status AS review_status,
                 t.name AS task_name, t.status AS task_status, t.assigned_user_ids, t.submitted_by,
                 t.reward_tokens, t.skill_id, t.reflection, t.proof_of_work_links,
                 p.name AS project_name, p.community_id,
@@ -170,11 +217,11 @@ class TaskSettlementService {
       if (!settlement) throw this.error('SETTLEMENT_NOT_FOUND', 'Settlement not found.', 404);
       if (settlement.status === 'completed') {
         await client.query('COMMIT');
-        return this.hydrate(settlement.id);
+        return this.hydrate(settlement.id, serviceAuthContext);
       }
       if (!['queued', 'retry_wait', 'pending', 'running'].includes(settlement.status)) {
         await client.query('COMMIT');
-        return this.hydrate(settlement.id);
+        return this.hydrate(settlement.id, serviceAuthContext);
       }
       await client.query(
         `UPDATE task_settlements SET status = 'running', attempt_count = attempt_count + 1,
@@ -183,10 +230,12 @@ class TaskSettlementService {
          WHERE id = $1`, [settlement.id]
       );
       if (settlement.acceptance_status !== 'pending') throw this.error('SETTLEMENT_ACCEPTANCE_STALE', 'Acceptance is not pending settlement.', 409);
-      if (settlement.task_status === 'completed') throw this.error('SETTLEMENT_TASK_ALREADY_COMPLETED', 'Task was completed outside the accepted settlement.', 409);
+      if (settlement.review_status !== 'accepted_pending_settlement') throw this.error('SETTLEMENT_REVIEW_STALE', 'The accepted review is no longer pending settlement.', 409, false);
+      if (terminalStatuses.has(settlement.task_status)) throw this.error('SETTLEMENT_TASK_TERMINAL', 'Task entered a terminal state outside the accepted settlement.', 409, false, { taskStatus: settlement.task_status });
 
       const policy = asObject(settlement.policy_snapshot);
-      if (!Number.isFinite(Number(policy.rewardTokens))) throw this.error('SETTLEMENT_REWARD_POLICY_MISSING', 'The accepted task has no authoritative contributor reward amount.', 409, false);
+      const policyProblem = settlementPolicyProblem(policy);
+      if (policyProblem) throw this.error(policyProblem.code, policyProblem.message, 409, false, policyProblem.details);
       const contributorIds = uniqueIds([
         ...asArray(settlement.assigned_user_ids),
         settlement.submitted_by,
@@ -218,10 +267,12 @@ class TaskSettlementService {
       })).filter(reward => reward.amount > 0);
       const rewards = [...contributorRewards, ...reviewerRewards];
       for (const reward of rewards) await this.postReward(client, settlement, reward, policy.tokenType);
+      await this.checkpoint('rewards_posted', { settlementId: settlement.id, rewardCount: rewards.length });
 
       const skillChanges = settlement.skill_id
         ? await this.postSkillXp(client, settlement, contributorRewards)
         : [];
+      await this.checkpoint('skill_xp_posted', { settlementId: settlement.id, skillChangeCount: skillChanges.length });
       const completion = (await client.query(
         `INSERT INTO task_completion_records (
            settlement_id, task_id, project_id, completed_by, evidence_manifest_sha256, completion_snapshot
@@ -232,6 +283,7 @@ class TaskSettlementService {
           settlement.evidence_manifest_sha256,
           JSON.stringify({ reviewRoundId: settlement.review_round_id, policyVersion: settlement.policy_version })]
       )).rows[0];
+      await this.checkpoint('completion_recorded', { settlementId: settlement.id, completionRecordId: completion.id });
       await client.query(
         `UPDATE tasks SET status = 'completed', completed_at = $2, updated_at = NOW() WHERE id = $1`,
         [settlement.task_id, completion.completed_at]
@@ -252,12 +304,14 @@ class TaskSettlementService {
          RETURNING candidate.id, candidate.name, candidate.status`,
         [settlement.project_id, settlement.task_id]
       )).rows;
+      await this.checkpoint('dependencies_activated', { settlementId: settlement.id, activatedTaskIds: activatedTasks.map(task => task.id) });
       const remaining = Number((await client.query(
         `SELECT COUNT(*)::int AS count FROM tasks
          WHERE project_id = $1 AND status NOT IN ('completed', 'cancelled')`, [settlement.project_id]
       )).rows[0]?.count || 0);
       const projectCompleted = remaining === 0;
       if (projectCompleted) await client.query(`UPDATE projects SET status = 'completed', completed_at = NOW() WHERE id = $1`, [settlement.project_id]);
+      await this.checkpoint('project_state_updated', { settlementId: settlement.id, projectCompleted, remaining });
       const storyEvent = (await client.query(
         `INSERT INTO project_narrative_events (
            project_id, task_id, review_round_id, actor_user_id, event_type, event_key, title, body, facts, visibility
@@ -271,6 +325,7 @@ class TaskSettlementService {
           projectCompleted ? 'The final encounter is complete. The quest has reached its epilogue.' : `${activatedTasks.length} sealed path(s) opened for the party.`,
           JSON.stringify({ settlementId: settlement.settlement_uuid, activatedTaskIds: activatedTasks.map(task => task.id), projectCompleted })]
       )).rows[0];
+      await this.checkpoint('chronicle_created', { settlementId: settlement.id, storyEventId: storyEvent?.event_uuid || null });
 
       const resultSnapshot = {
         activatedTasks,
@@ -285,12 +340,14 @@ class TaskSettlementService {
       await this.recordSettlementEvent(client, settlement, 'reward.released', { rewardCount: rewards.length });
       await this.recordSettlementEvent(client, settlement, 'dependencies.activated', { activatedTasks });
       await this.recordSettlementEvent(client, settlement, 'chronicle.entry_created', { eventId: storyEvent?.event_uuid || null });
+      await this.checkpoint('settlement_events_recorded', { settlementId: settlement.id });
       for (const [eventType, payload] of [
         ['task.completed', { taskId: settlement.task_id, projectId: settlement.project_id, completedAt: completion.completed_at }],
         ['reward.released', { taskId: settlement.task_id, projectId: settlement.project_id, rewards: rewards.map(reward => ({ userId: reward.userId, role: reward.role, amount: reward.amount, tokenType: policy.tokenType })) }],
         ['dependencies.activated', { taskId: settlement.task_id, projectId: settlement.project_id, activatedTasks }],
         ['chronicle.entry_created', { taskId: settlement.task_id, projectId: settlement.project_id, eventId: storyEvent?.event_uuid || null, projectCompleted }]
       ]) await this.writeOutbox(client, settlement, eventType, payload);
+      await this.checkpoint('outbox_written', { settlementId: settlement.id });
 
       await client.query(`UPDATE task_acceptance_records SET settlement_status = 'settled', settled_at = NOW() WHERE id = $1`, [settlement.acceptance_record_id]);
       await client.query(
@@ -298,6 +355,7 @@ class TaskSettlementService {
            completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
         [settlement.id, JSON.stringify(resultSnapshot)]
       );
+      await this.checkpoint('before_commit', { settlementId: settlement.id });
       await client.query('COMMIT');
       result = { settlementId: settlement.id };
     } catch (error) {
@@ -307,30 +365,33 @@ class TaskSettlementService {
     } finally {
       client.release();
     }
+    await this.checkpoint('after_commit_before_dispatch', { settlementId: result.settlementId });
     await this.dispatchOutbox(result.settlementId);
-    return this.hydrate(result.settlementId);
+    return this.hydrate(result.settlementId, serviceAuthContext);
   }
 
   async postReward(client, settlement, reward, tokenType) {
+    const amount = validateSettlementReward(reward.amount, `${reward.role} reward`);
+    if (!Number.isSafeInteger(Number(reward.userId)) || Number(reward.userId) <= 0) throw this.error('SETTLEMENT_REWARD_ACTOR_INVALID', 'Reward recipient must be a positive user ID.', 409, false);
     const eventKey = `settlement:${settlement.settlement_uuid}:reward:${reward.role}:${reward.userId}`;
     const inserted = await client.query(
       `INSERT INTO reward_ledger_events (settlement_id, task_id, user_id, reward_role, amount, token_type, event_key, metadata)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
        ON CONFLICT (event_key) DO NOTHING RETURNING *`,
-      [settlement.id, settlement.task_id, reward.userId, reward.role, reward.amount, tokenType, eventKey,
+      [settlement.id, settlement.task_id, reward.userId, reward.role, amount, tokenType, eventKey,
         JSON.stringify({ projectId: settlement.project_id, reviewRoundId: settlement.review_round_id })]
     );
-    if (!inserted.rows[0] || reward.amount <= 0) return inserted.rows[0] || null;
-    const ledgerEntry = [{ mode: 'earn', type: `task_settlement_${reward.role}`, taskId: settlement.task_id, tokens: reward.amount, tokenType, settlementId: settlement.settlement_uuid, creationDate: new Date().toISOString() }];
+    if (!inserted.rows[0] || amount <= 0) return inserted.rows[0] || null;
+    const ledgerEntry = [{ mode: 'earn', type: `task_settlement_${reward.role}`, taskId: settlement.task_id, tokens: amount, tokenType, settlementId: settlement.settlement_uuid, creationDate: new Date().toISOString() }];
     await client.query(
       `UPDATE users SET cotokens = COALESCE(cotokens, 0) + $1,
          token_ledger = COALESCE(token_ledger, '[]'::jsonb) || $2::jsonb
-       WHERE id = $3`, [reward.amount, JSON.stringify(ledgerEntry), reward.userId]
+       WHERE id = $3`, [amount, JSON.stringify(ledgerEntry), reward.userId]
     );
     await client.query(
       `INSERT INTO token_transactions (sender_id, receiver_id, amount, reason, related_task_id, transaction_date, notes)
        VALUES (NULL, $1, $2, $3, $4, NOW(), $5)`,
-      [reward.userId, reward.amount, `task_settlement_${reward.role}`, settlement.task_id, `Settlement ${settlement.settlement_uuid}`]
+      [reward.userId, amount, `task_settlement_${reward.role}`, settlement.task_id, `Settlement ${settlement.settlement_uuid}`]
     );
     return inserted.rows[0];
   }
@@ -345,7 +406,8 @@ class TaskSettlementService {
       const previous = byUser.get(reward.userId) || { user_id: reward.userId, exp: 0, level: 1 };
       const previousXp = Number(previous.exp || 0);
       const previousLevel = Number(previous.level || levelForXp(previousXp));
-      const xpDelta = Math.max(0, Math.round(Number(reward.amount || 0)));
+      const xpDelta = validateSettlementReward(reward.amount, 'Skill XP reward');
+      if (!Number.isSafeInteger(previousXp) || previousXp < 0 || previousXp > Number.MAX_SAFE_INTEGER - xpDelta) throw this.error('SETTLEMENT_SKILL_XP_INVALID', 'Existing skill XP cannot be safely incremented.', 409, false);
       const newXp = previousXp + xpDelta;
       const newLevel = levelForXp(newXp);
       const eventKey = `settlement:${settlement.settlement_uuid}:xp:${settlement.skill_id}:${reward.userId}`;
@@ -427,6 +489,9 @@ class TaskSettlementService {
   }
 
   async retry({ settlementId, authContext = {} }) {
+    const current = await this.hydrate(settlementId, authContext);
+    if (!current) throw this.error('SETTLEMENT_NOT_FOUND', 'Settlement not found.', 404, false);
+    await TaskAccessService.assert(current.task.id, authContext, 'canSubmitEvidence', this.pool);
     const row = (await this.pool.query(
       `UPDATE task_settlements SET status = 'queued', next_attempt_at = NULL,
          last_error_code = NULL, last_error_message = NULL, last_error_details = NULL, updated_at = NOW()
@@ -439,6 +504,9 @@ class TaskSettlementService {
   }
 
   async cancel({ settlementId, reason = 'Cancelled.', authContext = {} }) {
+    const current = await this.hydrate(settlementId, authContext);
+    if (!current) throw this.error('SETTLEMENT_NOT_FOUND', 'Settlement not found.', 404, false);
+    await TaskAccessService.assert(current.task.id, authContext, 'canSubmitEvidence', this.pool);
     const row = (await this.pool.query(
       `UPDATE task_settlements SET status = 'cancelled', cancelled_at = NOW(),
          last_error_code = 'SETTLEMENT_CANCELLED', last_error_message = $2, updated_at = NOW()
@@ -463,16 +531,18 @@ class TaskSettlementService {
   }
 
   async getByTask(taskId, authContext = {}) {
+    await TaskAccessService.assert(taskId, authContext, 'canViewTask', this.pool);
     const row = (await this.pool.query(`SELECT id FROM task_settlements WHERE task_id::text = $1 ORDER BY id DESC LIMIT 1`, [String(taskId)])).rows[0];
     return row ? this.hydrate(row.id, authContext) : null;
   }
 
   async getByReviewRound(reviewRoundId, authContext = {}) {
-    const row = (await this.pool.query(`SELECT id FROM task_settlements WHERE review_round_id = $1 ORDER BY id DESC LIMIT 1`, [reviewRoundId])).rows[0];
+    const row = (await this.pool.query(`SELECT id, task_id FROM task_settlements WHERE review_round_id = $1 ORDER BY id DESC LIMIT 1`, [reviewRoundId])).rows[0];
+    if (row) await TaskAccessService.assert(row.task_id, authContext, 'canViewTask', this.pool);
     return row ? this.hydrate(row.id, authContext) : null;
   }
 
-  async hydrate(settlementId) {
+  async hydrate(settlementId, authContext = {}) {
     const settlement = (await this.pool.query(
       `SELECT s.*, t.name AS task_name, t.status AS task_status, t.completed_at AS task_completed_at,
               p.name AS project_name, p.status AS project_status, p.completed_at AS project_completed_at
@@ -480,6 +550,7 @@ class TaskSettlementService {
        WHERE s.id::text = $1 OR s.settlement_uuid::text = $1 LIMIT 1`, [String(settlementId)]
     )).rows[0];
     if (!settlement) return null;
+    const accessPolicy = await TaskAccessService.assert(settlement.task_id, authContext, 'canViewTask', this.pool);
     const [rewards, skills, completion, outbox] = await Promise.all([
       this.pool.query(`SELECT * FROM reward_ledger_events WHERE settlement_id = $1 ORDER BY id`, [settlement.id]),
       this.pool.query(`SELECT * FROM skill_xp_events WHERE settlement_id = $1 ORDER BY id`, [settlement.id]),
@@ -542,9 +613,9 @@ class TaskSettlementService {
       allowedActions: {
         view: true,
         confirm: false,
-        retry: ['retry_wait', 'failed'].includes(settlement.status),
-        cancel: ['pending', 'queued', 'retry_wait'].includes(settlement.status),
-        reconcile: settlement.status === 'completed' && (outboxCounts.delivered || 0) < 4
+        retry: accessPolicy.canSubmitEvidence.allowed && ['retry_wait', 'failed'].includes(settlement.status),
+        cancel: accessPolicy.canSubmitEvidence.allowed && ['pending', 'queued', 'retry_wait'].includes(settlement.status),
+        reconcile: accessPolicy.canSubmitEvidence.allowed && settlement.status === 'completed' && (outboxCounts.delivered || 0) < 4
       }
     };
   }
@@ -580,8 +651,14 @@ class TaskSettlementService {
        JOIN task_evidence_bundles b ON b.id = ar.bundle_id
        LEFT JOIN communities c ON c.id = p.community_id
        WHERE ar.task_id::text = $1 AND ar.settlement_status = 'pending'
+         AND r.status = 'accepted_pending_settlement'
+         AND t.status NOT IN ('completed', 'blocked', 'failed', 'cancelled')
        ORDER BY ar.id DESC LIMIT 1 FOR UPDATE OF ar`, [String(taskId)]
     )).rows[0] || null;
+  }
+
+  async checkpoint(stage, context = {}) {
+    if (this.faultInjector) await this.faultInjector(stage, context);
   }
 
   error(code, message, status = 500, retryable = true, details = {}) {

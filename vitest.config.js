@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.js'],
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     globals: true,
     server: {
       deps: {
