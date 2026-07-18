@@ -31,6 +31,7 @@ import TaskReviewService from '../../services/TaskReviewService.js';
 import GameMasterService from '../../services/GameMasterService.js';
 import TaskSettlementService from '../../services/TaskSettlementService.js';
 import TaskAccessService from '../../services/TaskAccessService.js';
+import { getAtlasForUser } from '../../services/AtlasService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 import { apiContractSchemas, CONTRACT_SCHEMA_DIGEST, CONTRACT_VERSION } from '../../../packages/api-contract/src/index.js';
 
@@ -158,6 +159,7 @@ const openApiDocument = {
     '/settlements/{settlementId}/cancel': { post: { summary: 'Cancel a settlement before effects are committed' } },
     '/events': { get: { summary: 'Read canonical domain events after a durable cursor' } },
     '/me/narrative-preferences': { get: { summary: 'Read current actor Game Master presentation preferences' }, patch: { summary: 'Update current actor Game Master presentation preferences' } },
+    '/me/atlas': { get: { summary: 'Read current actor projects, member communities, and adjacent communities' } },
     '/projects/{projectId}/quest-profile': { get: { summary: 'Read or initialize a project quest profile' } },
     '/projects/{projectId}/quest-context': { get: { summary: 'Read canonical Game Master context for a project' } },
     '/projects/{projectId}/narrative-settings': { patch: { summary: 'Update project narrative settings' } },
@@ -235,6 +237,23 @@ router.get('/auth/permissions', (req, res) => {
     }
   });
 });
+
+router.get('/me/atlas', requireScopes([
+  API_SCOPES.READ_PROFILE,
+  API_SCOPES.READ_PROJECTS,
+  API_SCOPES.READ_COMMUNITIES
+]), asyncHandler(async (req, res) => {
+  if (!req.user?.id) {
+    return sendError(req, res, 404, 'The authenticated Cerbanimo account does not have a local profile yet.');
+  }
+
+  const atlas = await getAtlasForUser(req.user.id);
+  if (!atlas) {
+    return sendError(req, res, 404, 'The authenticated Cerbanimo profile could not be found.');
+  }
+
+  return sendOk(req, res, atlas);
+}));
 
 router.get('/auth/tokens', requireScopes([API_SCOPES.TOKENS_WRITE]), asyncHandler(async (req, res) => {
   const result = await pool.query(

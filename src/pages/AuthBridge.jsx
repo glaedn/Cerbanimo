@@ -103,7 +103,7 @@ export function AuthBridgeStart() {
 
   React.useEffect(() => {
     if (!isAllowedOrigin(returnOrigin)) {
-      setError('This Kamiya origin is not allowed by Cerbanimo.');
+      setError('This companion origin is not allowed by Cerbanimo.');
       postToOpener(returnOrigin, {
         type: bridgeMessageTypes.error,
         error: 'origin_not_allowed',
@@ -167,7 +167,7 @@ export function AuthBridgeCallback() {
       if (isLoading) return;
 
       if (!isAllowedOrigin(returnOrigin)) {
-        setStatus('This Kamiya origin is not allowed by Cerbanimo.');
+        setStatus('This companion origin is not allowed by Cerbanimo.');
         postToOpener(returnOrigin, {
           type: bridgeMessageTypes.error,
           error: 'origin_not_allowed',
@@ -230,7 +230,7 @@ export function AuthBridgeCallback() {
           nonce,
         });
 
-        setStatus('Login complete. Returning to Kamiya...');
+        setStatus('Login complete. Returning to your companion...');
         closePopupSoon();
       } catch (error) {
         if (cancelled) return;

@@ -28,6 +28,7 @@ describe('api v1 public contract', () => {
     expect(response.body.data.paths['/tasks/{id}/automation']).toBeTruthy();
     expect(response.body.data.paths['/tasks/{id}/automation/preparations/{preparationId}/preview']).toBeTruthy();
     expect(response.body.data.paths['/me/narrative-preferences']).toBeTruthy();
+    expect(response.body.data.paths['/me/atlas']).toBeTruthy();
     expect(response.body.data.paths['/projects/{projectId}/quest-context']).toBeTruthy();
     expect(response.body.data.paths['/projects/{projectId}/party']).toBeTruthy();
     expect(response.body.data.paths['/project-invites/{token}/redeem']).toBeTruthy();
