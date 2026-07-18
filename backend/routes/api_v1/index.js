@@ -32,6 +32,7 @@ import GameMasterService from '../../services/GameMasterService.js';
 import TaskSettlementService from '../../services/TaskSettlementService.js';
 import TaskAccessService from '../../services/TaskAccessService.js';
 import { getAtlasForUser } from '../../services/AtlasService.js';
+import { getActorProgression } from '../../services/ActorProgressionService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
 import { apiContractSchemas, CONTRACT_SCHEMA_DIGEST, CONTRACT_VERSION } from '../../../packages/api-contract/src/index.js';
 
@@ -946,6 +947,7 @@ router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PR
     after: req.query.after || req.query.cursor || 0,
     limit: req.query.limit || 100
   });
+  const experience = await getActorProgression(req.user?.id, req.user?.skills || []);
   return sendOk(req, res, {
     contractVersion: CONTRACT_VERSION,
     region: {
@@ -965,7 +967,7 @@ router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PR
     resources: {
       tokenType: `${quest.project?.community_name || 'Cerbanimo'} Coin`,
       balance: Number(req.user?.cotokens || 0),
-      experience: req.user?.skills || []
+      experience
     },
     events: events.events,
     eventCursor: events.nextCursor,
