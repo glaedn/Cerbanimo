@@ -1,20 +1,35 @@
-name: Run Unit Tests
+name: Default Branch Security Gates
 on:
   pull_request:
     branches:
       - main
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
-      - name: Install dependencies
-        run: npm install
-      - name: Run tests
-        run: npm test
+          node-version: 22.16.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=low
+      - name: Audit backend dependencies
+        run: npm --prefix backend audit --audit-level=low
+      - name: Build production client
+        run: npm run build
+      - name: Verify backend dependency compatibility
+        working-directory: backend
+        run: |
+          node --input-type=module -e "import cron from 'node-cron'; import multer from 'multer'; import { auth } from 'express-oauth2-jwt-bearer'; const task = cron.schedule('0 0 1 1 *', () => {}); task.destroy(); const upload = multer({ storage: multer.diskStorage({}) }); if (typeof upload.single !== 'function' || typeof auth !== 'function') throw new Error('Dependency compatibility smoke failed');"
+          node --check server.js
 
