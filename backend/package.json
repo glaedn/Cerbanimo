@@ -7,7 +7,7 @@
     "test:evidence-eval": "node scripts/evidence-eval.js",
     "test:review-races": "node scripts/review-races.js",
     "test:review-schema": "node scripts/review-schema-smoke.js",
-    "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
+    "postinstall": "node -e \"console.log(require.resolve('backblaze-b2'))\""
   },
   "type": "module",
   "keywords": [],
@@ -28,17 +28,15 @@
     "graceful-fs": "^4.2.11",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
-    "nvm": "^0.0.4",
     "openai": "^5.21.0",
     "p-limit": "^7.3.0",
     "parse5": "^8.0.1",
     "pg-boss": "^12.18.2",
     "sharp": "^0.35.3",
     "socket.io": "^4.8.1",
-    "uuid": "^11.1.0",
-    "watchman": "^1.0.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@vitest/ui": "^4.1.5",
