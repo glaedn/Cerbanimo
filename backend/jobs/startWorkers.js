@@ -2,6 +2,7 @@ import { startAgentWorker } from './workers/agentWorker.js';
 import { AUTOMATION_EXECUTION_QUEUE, startAutomationWorker } from './workers/automationWorker.js';
 import { PROJECT_BOOTSTRAP_QUEUE, startProjectBootstrapWorker } from './workers/projectBootstrapWorker.js';
 import { TASK_REVIEW_QUEUES, startTaskReviewWorker } from './workers/taskReviewWorker.js';
+import { TASK_SETTLEMENT_QUEUES, startTaskSettlementWorker } from './workers/taskSettlementWorker.js';
 import { startDomainWorkers } from './workers/domain/domainWorkers.js';
 import boss from './boss.js';
 import VestingService from '../services/VestingService.js';
@@ -47,7 +48,8 @@ export async function startWorkers() {
       'community-health-update-job',
       AUTOMATION_EXECUTION_QUEUE,
       PROJECT_BOOTSTRAP_QUEUE,
-      ...TASK_REVIEW_QUEUES
+      ...TASK_REVIEW_QUEUES,
+      ...TASK_SETTLEMENT_QUEUES
     ];
 
     for (const queue of queues) {
@@ -67,6 +69,7 @@ export async function startWorkers() {
     await startAutomationWorker();
     await startProjectBootstrapWorker();
     await startTaskReviewWorker();
+    await startTaskSettlementWorker();
     await startDomainWorkers();
 
     // Define worker for scheduled tasks
@@ -129,6 +132,7 @@ export async function startWorkers() {
     await boss.schedule('crisis-evaluation-job', '0 5 * * *', { type: 'crisis-evaluation' }, { queue: 'scheduled-tasks' });
     await boss.schedule('reward-adjustment-job', '0 */6 * * *', { type: 'reward-adjustment' }, { queue: 'scheduled-tasks' });
     await boss.schedule('intelligence-scoring-job', '0 * * * *', { type: 'intelligence-scoring' }, { queue: 'scheduled-tasks' });
+    await boss.schedule('task-completion-settlement-sweep-job', '* * * * *', {}, { queue: 'task-completion-settlement-sweep' });
 
     console.log('All pg-boss workers and schedules started.');
   } catch (err) {

@@ -4,6 +4,7 @@ import TaskAccessService from './TaskAccessService.js';
 describe('TaskAccessService policyForTaskRecord', () => {
   const privateTask = {
     id: 9,
+    project_id: 7,
     creator_id: 1,
     project_creator_id: 2,
     assigned_user_ids: [3],
@@ -34,6 +35,19 @@ describe('TaskAccessService policyForTaskRecord', () => {
       { ...privateTask, project_visibility: 'public' },
       { actorUserId: 4, scopes: [] }
     );
+
+    expect(policy.canViewTask.allowed).toBe(true);
+    expect(policy.canViewEvidenceSummary.allowed).toBe(true);
+    expect(policy.canViewEvidenceContent.allowed).toBe(false);
+    expect(policy.canSubmitEvidence.allowed).toBe(false);
+  });
+
+  it('carries an approved project view into task summaries without granting authority', () => {
+    const policy = TaskAccessService.policyForTaskRecord(privateTask, {
+      actorUserId: 4,
+      scopes: [],
+      authorizedProjectIds: [7]
+    });
 
     expect(policy.canViewTask.allowed).toBe(true);
     expect(policy.canViewEvidenceSummary.allowed).toBe(true);

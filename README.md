@@ -119,7 +119,6 @@ authentication, profiles, projects, tasks, skills, rewards, notifications, commu
 - Multer / Backblaze B2 (file storage)
 - Discord.js
 - ethers.js (crypto infrastructure)
-- node-cron
 
 ## Database model, at a glance
 

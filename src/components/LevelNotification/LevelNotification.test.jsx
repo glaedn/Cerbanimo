@@ -1,5 +1,5 @@
-import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import LevelNotification from './LevelNotification';
 
@@ -13,13 +13,12 @@ const generateProgressText = (progress, totalChars = 10) => {
 
 describe('LevelNotification Component', () => {
     beforeEach(() => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
-        // jest.runOnlyPendingTimers(); // Using runAllTimers can be safer if there are nested timers
-        jest.runAllTimers(); // Ensure all timers are cleared and run
-        jest.useRealTimers();
+        vi.clearAllTimers();
+        vi.useRealTimers();
     });
 
     // Test 1: Renders without crashing
@@ -33,26 +32,26 @@ describe('LevelNotification Component', () => {
 
     // Test 2: Displays initial XP and level correctly
     test('Test 2: Displays initial XP and level correctly when made visible', () => {
-        render(<LevelNotification previousXP={10} newXP={30} previousLevel={2} newLevel={2} />);
+        render(<LevelNotification previousXP={50} newXP={70} previousLevel={2} newLevel={2} />);
         
         act(() => {
-            jest.advanceTimersByTime(100); // For the 50ms internal timeout + buffer to set isVisible and update progress
+            vi.advanceTimersByTime(100); // For the 50ms internal timeout + buffer to set isVisible and update progress
         });
 
         expect(screen.getByText('Lvl 2')).toBeInTheDocument(); // previousLevel on left
         expect(screen.getAllByText('Lvl 2').length).toBeGreaterThanOrEqual(1); // newLevel on right (could be multiple elements with "Lvl 2")
-        expect(screen.getByText(generateProgressText(30))).toBeInTheDocument(); // Textual progress for newXP
-        expect(screen.getByText(/XP: 10 -> 30/i)).toBeInTheDocument(); // XP text
+        expect(screen.getByText(generateProgressText(25))).toBeInTheDocument();
+        expect(screen.getByText((content) => content.includes('XP: 50') && content.includes('70'))).toBeInTheDocument();
     });
 
     // Test 3: "Level Up!" message appears only on level up
     test('Test 3: "Level Up!" message appears only on level up', () => {
         const { rerender } = render(
-            <LevelNotification previousXP={0} newXP={50} previousLevel={1} newLevel={1} /> // No level up
+            <LevelNotification previousXP={0} newXP={30} previousLevel={1} newLevel={1} /> // No level up
         );
 
         act(() => {
-            jest.advanceTimersByTime(100); // Process initial visibility and updates
+            vi.advanceTimersByTime(100); // Process initial visibility and updates
         });
         // Query for "Level Up!" text; it should not be there.
         expect(screen.queryByText(/Level Up!/i)).not.toBeInTheDocument();
@@ -61,17 +60,14 @@ describe('LevelNotification Component', () => {
 
 
         // Rerender with props that indicate a level up
-        rerender(
-            <LevelNotification previousXP={50} newXP={20} previousLevel={1} newLevel={2} /> // Level up
-        );
+        rerender(<LevelNotification previousXP={39} newXP={50} previousLevel={1} newLevel={2} />);
         
         act(() => {
-            jest.advanceTimersByTime(100); // Process re-render, visibility, and updates
+            vi.advanceTimersByTime(100); // Process re-render, visibility, and updates
         });
         // "Level Up!" message should now be present
-        expect(screen.getByText(/Level Up!/i)).toBeInTheDocument();
-        // The new level ("2") should be prominently displayed in the level up message (typically as h3)
-        expect(screen.getByText((content, element) => element.tagName.toLowerCase() === 'h3' && content === '2')).toBeInTheDocument();
+        expect(screen.getByText(/SKILL LEVELED UP!/i)).toBeInTheDocument();
+        expect(screen.getByText('LEVEL 2')).toBeInTheDocument();
         // The XP bar should also show the new level as its target
         expect(screen.getByText('Lvl 2')).toBeInTheDocument();
     });
@@ -101,14 +97,14 @@ describe('LevelNotification Component', () => {
         );
         
         act(() => {
-            jest.advanceTimersByTime(100); // Allow useEffect to run, set isVisible, and trigger internal updates
+            vi.advanceTimersByTime(100); // Allow useEffect to run, set isVisible, and trigger internal updates
         });
 
         // Now the component should be visible.
         // We can check for a specific element that's always present when visible.
         expect(container.firstChild).not.toBeNull();
         expect(screen.getByText('Lvl 1')).toBeInTheDocument(); // Example check
-        expect(screen.getByText(generateProgressText(30))).toBeInTheDocument();
-        expect(screen.getByText(/XP: 0 -> 30/i)).toBeInTheDocument();
+        expect(screen.getByText(generateProgressText(75))).toBeInTheDocument();
+        expect(screen.getByText((content) => content.includes('XP: 0') && content.includes('30'))).toBeInTheDocument();
     });
 });

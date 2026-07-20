@@ -1,5 +1,5 @@
 {
-  "name": "resonera",
+  "name": "cerbanimo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,8 +8,17 @@
     "build": "vite build",
     "lint": "eslint \"src/**/*.{js,jsx}\" --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
+    "test": "npm run guard:generated && npm run test:frontend && npm run test:backend && npm run test:evidence-eval && npm run test:review-schema && npm run test:contract && npm run test:db-races",
+    "guard:generated": "node scripts/check-generated-twins.mjs",
+    "test:frontend": "vitest run",
+    "test:backend": "npm --prefix backend test",
+    "test:evidence-eval": "npm --prefix backend run test:evidence-eval",
+    "test:review-schema": "npm --prefix backend run test:review-schema",
+    "test:contract": "node backend/scripts/contract-smoke.js",
+    "test:db-races": "node backend/scripts/run-db-races.js",
+    "test:core-world": "npm run guard:generated && npm --prefix backend test -- services/TaskSettlementService.test.js && npm run test:contract && npm run test:db-races",
     "test:e2e": "playwright test",
-    "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
+    "postinstall": "node -e \"console.log(require.resolve('backblaze-b2'))\""
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
@@ -53,7 +62,6 @@
     "lucide-react": "^0.477.0",
     "maplibre-gl": "^5.24.0",
     "multer": "^1.4.5-lts.2",
-    "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "nvm": "^0.0.4",
     "pg": "^8.13.3",

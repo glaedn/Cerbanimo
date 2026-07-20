@@ -21,14 +21,26 @@ describe('api v1 public contract', () => {
     expect(response.body.error).toBeNull();
     expect(response.body.requestId).toBeTruthy();
     expect(response.body.data.openapi).toBe('3.1.0');
+    expect(response.body.data['x-cerbanimo-contract-digest']).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(response.body.data.paths['/contract']).toBeTruthy();
     expect(response.body.data.paths['/actions/preview']).toBeTruthy();
     expect(response.body.data.paths['/actions/{id}']).toBeTruthy();
     expect(response.body.data.paths['/tasks/{id}/automation']).toBeTruthy();
     expect(response.body.data.paths['/tasks/{id}/automation/preparations/{preparationId}/preview']).toBeTruthy();
     expect(response.body.data.paths['/me/narrative-preferences']).toBeTruthy();
+    expect(response.body.data.paths['/me/atlas']).toBeTruthy();
     expect(response.body.data.paths['/projects/{projectId}/quest-context']).toBeTruthy();
     expect(response.body.data.paths['/projects/{projectId}/party']).toBeTruthy();
     expect(response.body.data.paths['/project-invites/{token}/redeem']).toBeTruthy();
+  });
+
+  it('serves a machine-verifiable contract identity without authentication', async () => {
+    const response = await request(buildApp()).get('/api/v1/contract').expect(200);
+    expect(response.headers['x-cerbanimo-contract-version']).toBe(response.body.data.version);
+    expect(response.headers['x-cerbanimo-contract-digest']).toBe(response.body.data.digest);
+    expect(response.body.data.version).toBe('1.0.0');
+    expect(response.body.data.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(response.body.data.schemas.AcceptanceSettlement).toBeTruthy();
   });
 
   it('marks functions unavailable when the actor lacks their scope', () => {

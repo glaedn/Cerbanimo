@@ -29,10 +29,20 @@ import TaskAutomationPreparationService from '../../services/TaskAutomationPrepa
 import TaskEvidenceService from '../../services/TaskEvidenceService.js';
 import TaskReviewService from '../../services/TaskReviewService.js';
 import GameMasterService from '../../services/GameMasterService.js';
+import TaskSettlementService from '../../services/TaskSettlementService.js';
+import TaskAccessService from '../../services/TaskAccessService.js';
+import { getAtlasForUser } from '../../services/AtlasService.js';
+import { getActorProgression } from '../../services/ActorProgressionService.js';
 import { serializeTaskAutomation } from '../../services/TaskAutomationClassificationService.js';
+import { apiContractSchemas, CONTRACT_SCHEMA_DIGEST, CONTRACT_VERSION } from '../../../packages/api-contract/src/index.js';
 
 const router = express.Router();
 
+router.use((_req, res, next) => {
+  res.setHeader('x-cerbanimo-contract-version', CONTRACT_VERSION);
+  res.setHeader('x-cerbanimo-contract-digest', CONTRACT_SCHEMA_DIGEST);
+  next();
+});
 router.use(requestIdMiddleware);
 router.use(envelopeMiddleware);
 
@@ -58,9 +68,10 @@ const openApiDocument = {
   openapi: '3.1.0',
   info: {
     title: 'Cerbanimo Public API',
-    version: '1.0.0',
+    version: CONTRACT_VERSION,
     description: 'Versioned API surface for standalone clients such as Kamiya.'
   },
+  'x-cerbanimo-contract-digest': CONTRACT_SCHEMA_DIGEST,
   servers: [{ url: '/api/v1' }],
   security: [{ bearerAuth: [] }],
   components: {
@@ -72,6 +83,7 @@ const openApiDocument = {
       }
     },
     schemas: {
+      ...apiContractSchemas,
       Envelope: {
         type: 'object',
         properties: {
@@ -92,25 +104,11 @@ const openApiDocument = {
           },
           requestId: { type: 'string' }
         }
-      },
-      TaskAutomation: {
-        type: 'object',
-        properties: {
-          classification: { enum: ['human_driven', 'assisted_automation', 'fully_automatable'] },
-          confidenceBand: { enum: ['low', 'medium', 'high', null] },
-          rationale: { type: 'string' },
-          requiredHumanInputs: { type: 'array' },
-          requirements: { type: 'object' },
-          validationRequirements: { type: 'array' },
-          source: { enum: ['generated', 'manual', 'legacy_default', 'policy_downgrade', 'review_override'] },
-          version: { type: 'string' },
-          classifiedAt: {},
-          findings: { type: 'array' }
-        }
       }
     }
   },
   paths: {
+    '/contract': { get: { summary: 'Read the canonical contract version, schema digest, and schemas' } },
     '/auth/permissions': {
       get: {
         summary: 'Inspect the current actor, scopes, and client permissions.',
@@ -155,7 +153,14 @@ const openApiDocument = {
     '/validation-reviews/{reviewId}/decision': { post: { summary: 'Submit a manual validation review decision' } },
     '/review-rounds/{roundId}/peer-decisions': { post: { summary: 'Submit a peer Blessing decision' } },
     '/review-rounds/{roundId}/pm-decisions': { post: { summary: 'Submit a PM Ritual Seal decision' } },
+    '/tasks/{id}/settlement': { get: { summary: 'Read the authoritative completion settlement for a task' } },
+    '/tasks/{id}/settlement/preview': { post: { summary: 'Create and queue the replay-safe settlement for an accepted task' } },
+    '/settlements/{settlementId}': { get: { summary: 'Read settlement progress and committed effects' } },
+    '/settlements/{settlementId}/retry': { post: { summary: 'Retry a retryable settlement' } },
+    '/settlements/{settlementId}/cancel': { post: { summary: 'Cancel a settlement before effects are committed' } },
+    '/events': { get: { summary: 'Read canonical domain events after a durable cursor' } },
     '/me/narrative-preferences': { get: { summary: 'Read current actor Game Master presentation preferences' }, patch: { summary: 'Update current actor Game Master presentation preferences' } },
+    '/me/atlas': { get: { summary: 'Read current actor projects, member communities, and adjacent communities' } },
     '/projects/{projectId}/quest-profile': { get: { summary: 'Read or initialize a project quest profile' } },
     '/projects/{projectId}/quest-context': { get: { summary: 'Read canonical Game Master context for a project' } },
     '/projects/{projectId}/narrative-settings': { patch: { summary: 'Update project narrative settings' } },
@@ -168,6 +173,7 @@ const openApiDocument = {
     '/projects/{projectId}/launch/preview': { post: { summary: 'Preview a quest launch action' } },
     '/projects/{projectId}/calling': { get: { summary: 'Read current actor character calling for a project' }, patch: { summary: 'Update current actor character calling for a project' } },
     '/projects/{projectId}/chronicle': { get: { summary: 'Read project narrative chronicle events' } },
+    '/projects/{projectId}/world-state': { get: { summary: 'Read a Resonera-ready project region, task graph, party, chronicle, and event cursor' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
     '/stats': { get: { summary: 'Read dashboard stats' } },
@@ -191,6 +197,11 @@ const openApiDocument = {
 };
 
 router.get('/openapi.json', (req, res) => sendOk(req, res, openApiDocument));
+router.get('/contract', (req, res) => sendOk(req, res, {
+  version: CONTRACT_VERSION,
+  digest: CONTRACT_SCHEMA_DIGEST,
+  schemas: apiContractSchemas
+}));
 router.get('/docs', (req, res) => sendOk(req, res, {
   openapi: '/api/v1/openapi.json',
   note: 'Use the OpenAPI document with Swagger UI, Redoc, or the Kamiya SDK generator.'
@@ -227,6 +238,23 @@ router.get('/auth/permissions', (req, res) => {
     }
   });
 });
+
+router.get('/me/atlas', requireScopes([
+  API_SCOPES.READ_PROFILE,
+  API_SCOPES.READ_PROJECTS,
+  API_SCOPES.READ_COMMUNITIES
+]), asyncHandler(async (req, res) => {
+  if (!req.user?.id) {
+    return sendError(req, res, 404, 'The authenticated Cerbanimo account does not have a local profile yet.');
+  }
+
+  const atlas = await getAtlasForUser(req.user.id);
+  if (!atlas) {
+    return sendError(req, res, 404, 'The authenticated Cerbanimo profile could not be found.');
+  }
+
+  return sendOk(req, res, atlas);
+}));
 
 router.get('/auth/tokens', requireScopes([API_SCOPES.TOKENS_WRITE]), asyncHandler(async (req, res) => {
   const result = await pool.query(
@@ -513,7 +541,8 @@ router.post('/tasks/:taskId/evidence/bundles', requireScopes([API_SCOPES.WRITE_T
     authContext,
     sourceKind: req.body?.sourceKind || req.body?.source_kind || 'human',
     reflection: req.body?.reflection,
-    summary: req.body?.summary
+    summary: req.body?.summary,
+    encounterContext: req.body?.encounterContext || req.body?.encounter_context || {}
   });
   return sendOk(req, res, detail, 201);
 }));
@@ -535,7 +564,8 @@ router.patch('/tasks/:taskId/evidence/bundles/:bundleId', requireScopes([API_SCO
     authContext: actionAuthContext(req),
     reflection: req.body?.reflection,
     summary: req.body?.summary,
-    sourceKind: req.body?.sourceKind || req.body?.source_kind
+    sourceKind: req.body?.sourceKind || req.body?.source_kind,
+    encounterContext: req.body?.encounterContext || req.body?.encounter_context
   });
   return sendOk(req, res, detail);
 }));
@@ -707,6 +737,61 @@ router.post('/review-rounds/:roundId/pm-decisions', requireScopes([API_SCOPES.WR
   return sendOk(req, res, result);
 }));
 
+router.get('/tasks/:taskId/settlement', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
+  await TaskAccessService.assert(req.params.taskId, authContext, 'canViewTask');
+  const result = await TaskSettlementService.getByTask(req.params.taskId, authContext);
+  if (!result) return sendError(req, res, 404, 'Settlement not found');
+  return sendOk(req, res, result);
+}));
+
+router.post('/tasks/:taskId/settlement/preview', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const authContext = actionAuthContext(req);
+  await TaskAccessService.assert(req.params.taskId, authContext, 'canSubmitEvidence');
+  const result = await TaskSettlementService.previewForTask({
+    taskId: req.params.taskId,
+    authContext,
+    sourceClient: req.body?.sourceClient || req.apiAuth?.clientName || 'api'
+  });
+  return sendOk(req, res, result, 201);
+}));
+
+router.get('/settlements/:settlementId', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const result = await TaskSettlementService.hydrate(req.params.settlementId, actionAuthContext(req));
+  if (!result) return sendError(req, res, 404, 'Settlement not found');
+  await TaskAccessService.assert(result.task?.id, actionAuthContext(req), 'canViewTask');
+  return sendOk(req, res, result);
+}));
+
+router.post('/settlements/:settlementId/retry', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const current = await TaskSettlementService.hydrate(req.params.settlementId, actionAuthContext(req));
+  if (!current) return sendError(req, res, 404, 'Settlement not found');
+  await TaskAccessService.assert(current.task?.id, actionAuthContext(req), 'canSubmitEvidence');
+  return sendOk(req, res, await TaskSettlementService.retry({ settlementId: req.params.settlementId, authContext: actionAuthContext(req) }), 202);
+}));
+
+router.post('/settlements/:settlementId/cancel', requireScopes([API_SCOPES.WRITE_TASKS]), asyncHandler(async (req, res) => {
+  const current = await TaskSettlementService.hydrate(req.params.settlementId, actionAuthContext(req));
+  if (!current) return sendError(req, res, 404, 'Settlement not found');
+  await TaskAccessService.assert(current.task?.id, actionAuthContext(req), 'canSubmitEvidence');
+  return sendOk(req, res, await TaskSettlementService.cancel({
+    settlementId: req.params.settlementId,
+    reason: req.body?.reason,
+    authContext: actionAuthContext(req)
+  }));
+}));
+
+router.get('/events', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const projectId = Number(req.query.projectId || req.query.project_id || 0);
+  if (!projectId) return sendError(req, res, 400, 'projectId is required');
+  await GameMasterService.getQuestContext({ projectId, authContext: actionAuthContext(req) });
+  return sendOk(req, res, await TaskSettlementService.listEvents({
+    projectId,
+    after: req.query.after || req.query.cursor || 0,
+    limit: req.query.limit || 100
+  }));
+}));
+
 router.get('/me/narrative-preferences', requireScopes([API_SCOPES.READ_PROFILE]), asyncHandler(async (req, res) => {
   const result = await GameMasterService.getNarrativePreferences(req.user?.id);
   return sendOk(req, res, result);
@@ -827,6 +912,73 @@ router.get('/projects/:projectId/chronicle', requireScopes([API_SCOPES.READ_PROJ
     limit: req.query.limit
   });
   return sendOk(req, res, result);
+}));
+
+router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PROJECTS, API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  const authContext = actionAuthContext(req);
+  const quest = await GameMasterService.getQuestContext({ projectId, authContext });
+  const projectViewAuthContext = {
+    ...authContext,
+    authorizedProjectIds: [projectId]
+  };
+  const taskRows = (await pool.query(
+    `SELECT t.*, s.name AS skill_name,
+            p.creator_id AS project_creator_id,
+            p.visibility AS project_visibility
+     FROM tasks t
+     JOIN projects p ON p.id = t.project_id
+     LEFT JOIN skills s ON s.id = t.skill_id
+     WHERE t.project_id = $1 ORDER BY t.created_at ASC, t.id ASC`, [projectId]
+  )).rows;
+  const tasks = await Promise.all(taskRows.map(async task => {
+    const policy = await TaskAccessService.policyForTaskRecord(task, projectViewAuthContext);
+    const settlement = await TaskSettlementService.getByTask(task.id, projectViewAuthContext);
+    return toCanonicalTask(task, {
+      view: policy.canViewTask.allowed,
+      submitEvidence: policy.canSubmitEvidence.allowed && task.status !== 'completed',
+      viewEvidence: policy.canViewEvidence.allowed,
+      settle: Boolean(settlement?.allowedActions?.confirm),
+      retrySettlement: Boolean(settlement?.allowedActions?.retry)
+    }, settlement);
+  }));
+  const events = await TaskSettlementService.listEvents({
+    projectId,
+    after: req.query.after || req.query.cursor || 0,
+    limit: req.query.limit || 100
+  });
+  const experience = await getActorProgression(req.user?.id, req.user?.skills || []);
+  return sendOk(req, res, {
+    contractVersion: CONTRACT_VERSION,
+    region: {
+      id: `project:${projectId}`,
+      projectId,
+      title: quest.project?.name || quest.questProfile?.title || `Project ${projectId}`,
+      realmType: 'project_region',
+      status: quest.project?.status || 'active',
+      communityId: quest.project?.community_id || null
+    },
+    project: quest.project,
+    questProfile: quest.questProfile || quest.profile,
+    party: quest.party,
+    tasks,
+    activeTaskId: quest.activeTask?.id || tasks.find(task => task.status.startsWith('active'))?.id || null,
+    chronicle: quest.chronicle || [],
+    resources: {
+      tokenType: `${quest.project?.community_name || 'Cerbanimo'} Coin`,
+      balance: Number(req.user?.cotokens || 0),
+      experience
+    },
+    events: events.events,
+    eventCursor: events.nextCursor,
+    featureFlags: {
+      npcEncounters: true,
+      splitParty: true,
+      communityRegions: false,
+      communityMarket: false,
+      dungeonChains: false
+    }
+  });
 }));
 
 router.get('/tasks/:id', requireScopes([API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {
@@ -1010,9 +1162,23 @@ router.use((err, req, res, next) => {
 
 export default router;
 
-function toCanonicalTask(task) {
+function toCanonicalTask(task, allowedActions = { view: true }, settlement = null) {
   return {
     ...task,
-    automation: serializeTaskAutomation(task)
+    id: task.id,
+    projectId: task.project_id,
+    title: task.name,
+    objective: task.description || '',
+    status: String(task.status || 'inactive-unassigned'),
+    dependencies: task.dependencies || [],
+    rewardPreview: {
+      amount: Number(task.reward_tokens || 0),
+      tokenType: 'Cerbanimo Coin',
+      authoritativeOnlyAfterSettlement: true
+    },
+    skill: task.skill_id ? { id: task.skill_id, name: task.skill_name || null, requiredLevel: Number(task.skill_level || 0) } : null,
+    automation: serializeTaskAutomation(task),
+    settlement,
+    allowedActions
   };
 }

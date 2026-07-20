@@ -6,6 +6,7 @@ import TaskEvidenceService from './TaskEvidenceService.js';
 import TaskReviewPolicyService from './TaskReviewPolicyService.js';
 import TaskReviewAuthorizationService from './TaskReviewAuthorizationService.js';
 import PeerReviewAssignmentService from './PeerReviewAssignmentService.js';
+import TaskSettlementService from './TaskSettlementService.js';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -831,6 +832,7 @@ class TaskReviewService {
       round: this.serializeRound(round),
       assignments: asArray(round.assignments).map(item => this.serializeAssignment(item, { publicSummary: true })),
       decisions: asArray(round.decisions).map(item => this.serializeDecision(item, { redactReviewer: true })),
+      settlement: await TaskSettlementService.getByReviewRound(round.id, authContext),
       allowedActions: this.emptyAllowedActions(),
       copy: this.copyForRound(round)
     };

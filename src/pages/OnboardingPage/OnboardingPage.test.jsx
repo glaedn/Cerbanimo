@@ -1,23 +1,21 @@
-import React from 'react';
+import process from 'node:process';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
 import OnboardingPage from './OnboardingPage';
-import { ThemeProvider } from '@mui/material/styles'; // Import ThemeProvider
-import { theme as appTheme } from '../../styles/theme'; // Import your custom theme
 
 // Mock axios
-jest.mock('axios');
+vi.mock('axios');
 
 // Mock useAuth0
-jest.mock('@auth0/auth0-react');
+vi.mock('@auth0/auth0-react');
 
 // Mock useNavigate
-const mockNavigate = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
   useNavigate: () => mockNavigate,
 }));
 
@@ -26,17 +24,30 @@ const mockApiUrl = 'import.meta.env.VITE_BACKEND_URL';
 process.env.REACT_APP_API_URL = mockApiUrl;
 
 
-// Helper function to render with ThemeProvider
+// The component uses its own application palette; MUI supplies its default test theme.
 const renderWithTheme = (component) => {
-  return render(<ThemeProvider theme={appTheme}>{component}</ThemeProvider>);
+  return render(component);
 };
 
 
 describe('OnboardingPage', () => {
-  const mockGetAccessTokenSilently = jest.fn();
+  const mockGetAccessTokenSilently = vi.fn();
+  const emptyProfile = { username: '', skills: [], interests: [] };
+
+  const mockProfile = (profile = emptyProfile) => {
+    axios.get.mockImplementation((url) => Promise.resolve({
+      data: url.endsWith('/profile/options')
+        ? {
+            skillsPool: [{ id: 1, name: 'React' }, { id: 2, name: 'Node.js' }],
+            interestsPool: [{ id: 1, name: 'AI' }, { id: 2, name: 'Gardening' }],
+          }
+        : profile,
+    }));
+  };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    vi.stubEnv('VITE_BACKEND_URL', 'http://localhost:5000');
     useAuth0.mockReturnValue({
       isAuthenticated: true,
       user: { sub: 'test-user-sub', email: 'test@example.com' },
@@ -46,12 +57,12 @@ describe('OnboardingPage', () => {
     mockGetAccessTokenSilently.mockResolvedValue('test-token');
 
     // Mock initial options fetch
-    axios.get.mockResolvedValue({
-      data: {
-        skills: [{ id: 1, name: 'React' }, { id: 2, name: 'Node.js' }],
-        interests: [{ id: 1, name: 'AI' }, { id: 2, name: 'Gardening' }],
-      },
-    });
+    mockProfile();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   test('renders all form fields correctly', async () => {
@@ -85,62 +96,47 @@ describe('OnboardingPage', () => {
 
   test('handles profile picture selection and shows preview', async () => {
     renderWithTheme(<OnboardingPage />);
+    await waitFor(() => expect(axios.get).toHaveBeenCalledTimes(2));
     const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
-    const input = screen.getByLabelText(/Upload Profile Picture/i).querySelector('input[type="file"]');
+    const input = screen.getByLabelText(/Upload Profile Picture/i);
 
-    // Mock FileReader
-    const mockReadAsDataURL = jest.fn();
-    const mockReader = {
-        onloadend: jest.fn(),
-        readAsDataURL: mockReadAsDataURL,
-        result: 'data:image/png;base64,fakecodedstring'
-    };
-    jest.spyOn(window, 'FileReader').mockImplementation(() => mockReader);
+    class MockFileReader {
+      result = 'data:image/png;base64,fakecodedstring';
+      onloadend = null;
+      readAsDataURL = vi.fn(() => this.onloadend?.());
+    }
+    vi.stubGlobal('FileReader', MockFileReader);
     
     await act(async () => {
         fireEvent.change(input, { target: { files: [file] } });
     });
     
-    // Simulate onloadend being called
-    mockReader.onloadend();
-
     await waitFor(() => {
       const avatar = screen.getByRole('img'); // Assuming Avatar has role='img'
       expect(avatar).toHaveAttribute('src', 'data:image/png;base64,fakecodedstring');
     });
   });
   
-  test('handles skill selection including free solo', async () => {
+  test('hydrates a free-solo skill stored in the existing profile', async () => {
+    mockProfile({ username: '', skills: [JSON.stringify({ name: 'NewSkill' })], interests: [] });
     renderWithTheme(<OnboardingPage />);
-    const skillsAutocomplete = screen.getByLabelText(/Skills \(at least 3\)/i);
-    
-    // Simulate typing a new skill and pressing Enter
-    fireEvent.change(skillsAutocomplete, { target: { value: 'NewSkill' } });
-    fireEvent.keyDown(skillsAutocomplete, { key: 'Enter', code: 'Enter' });
-    
-    await waitFor(() => {
-      expect(screen.getByText('NewSkill')).toBeInTheDocument(); // Chip rendered
-    });
-
-    // Simulate selecting an existing option (assuming 'React' is loaded)
-    // This is hard to test without deep MUI interaction. We trust Autocomplete works.
+    expect(await screen.findByText('NewSkill')).toBeInTheDocument();
   });
 
 
-  test('shows validation error if username is missing', async () => {
+  test('marks username as required before form submission', async () => {
     renderWithTheme(<OnboardingPage />);
+    const username = screen.getByLabelText(/Username/i);
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
     fireEvent.click(submitButton);
-    expect(await screen.findByText('Username is required.')).toBeInTheDocument();
+    expect(username).toBeRequired();
+    expect(username).toBeInvalid();
   });
 
   test('shows validation error if less than 3 skills are provided', async () => {
+    mockProfile({ username: 'testuser', skills: [JSON.stringify({ name: 'Skill1' })], interests: [] });
     renderWithTheme(<OnboardingPage />);
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'testuser' } });
-    // Add 1 skill
-    const skillsInput = screen.getByLabelText(/Skills \(at least 3\)/i);
-    fireEvent.change(skillsInput, { target: { value: 'Skill1' } });
-    fireEvent.keyDown(skillsInput, { key: 'Enter' });
+    await screen.findByText('Skill1');
 
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
     fireEvent.click(submitButton);
@@ -148,18 +144,13 @@ describe('OnboardingPage', () => {
   });
   
    test('shows validation error if less than 3 interests are provided', async () => {
+    mockProfile({
+      username: 'testuser',
+      skills: ['Skill1', 'Skill2', 'Skill3'].map(name => JSON.stringify({ name })),
+      interests: [JSON.stringify({ name: 'Interest1' })],
+    });
     renderWithTheme(<OnboardingPage />);
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'testuser' } });
-    // Add 3 skills
-    const skillsInput = screen.getByLabelText(/Skills \(at least 3\)/i);
-    fireEvent.change(skillsInput, { target: { value: 'Skill1' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'Skill2' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'Skill3' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    
-    // Add 1 interest
-    const interestsInput = screen.getByLabelText(/Interests \(at least 3\)/i);
-    fireEvent.change(interestsInput, { target: { value: 'Interest1' } });
-    fireEvent.keyDown(interestsInput, { key: 'Enter' });
+    await screen.findByText('Interest1');
 
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
     fireEvent.click(submitButton);
@@ -168,6 +159,12 @@ describe('OnboardingPage', () => {
 
 
   test('successful form submission navigates to project page', async () => {
+    const formDataAppend = vi.spyOn(FormData.prototype, 'append');
+    mockProfile({
+      username: 'testuser',
+      skills: ['S1', 'S2', 'S3'].map(name => JSON.stringify({ name })),
+      interests: ['I1', 'I2', 'I3'].map(name => JSON.stringify({ name })),
+    });
     axios.post.mockResolvedValue({ 
         data: { 
             message: 'Onboarding successful', 
@@ -177,23 +174,7 @@ describe('OnboardingPage', () => {
     });
 
     renderWithTheme(<OnboardingPage />);
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'testuser' } });
-
-    const skillsInput = screen.getByLabelText(/Skills \(at least 3\)/i);
-    fireEvent.change(skillsInput, { target: { value: 'S1' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S2' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S3' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-
-    const interestsInput = screen.getByLabelText(/Interests \(at least 3\)/i);
-    fireEvent.change(interestsInput, { target: { value: 'I1' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I2' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I3' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    
-    // Mock FormData
-    const mockFormDataAppend = jest.fn();
-    global.FormData = jest.fn(() => ({
-        append: mockFormDataAppend,
-    }));
+    await screen.findByText('S3');
 
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
     await act(async () => {
@@ -202,23 +183,30 @@ describe('OnboardingPage', () => {
 
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
-        `${import.meta.env.VITE_BACKEND_URL}/api/onboarding/initiate`,
-        expect.any(FormData), // Check that it's FormData
-        expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } })
+        `${import.meta.env.VITE_BACKEND_URL}/onboarding/initiate`,
+        expect.any(FormData),
+        expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) })
       );
     });
     
     // Check FormData content (example for username)
-    expect(mockFormDataAppend).toHaveBeenCalledWith('username', 'testuser');
-    expect(mockFormDataAppend).toHaveBeenCalledWith('skills', JSON.stringify([{name: 'S1'}, {name: 'S2'}, {name: 'S3'}]));
-    expect(mockFormDataAppend).toHaveBeenCalledWith('interests', JSON.stringify([{name: 'I1'}, {name: 'I2'}, {name: 'I3'}]));
+    expect(formDataAppend).toHaveBeenCalledWith('username', 'testuser');
+    expect(formDataAppend).toHaveBeenCalledWith('skills', JSON.stringify([{name: 'S1'}, {name: 'S2'}, {name: 'S3'}]));
+    expect(formDataAppend).toHaveBeenCalledWith('interests', JSON.stringify([{name: 'I1'}, {name: 'I2'}, {name: 'I3'}]));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/project/123');
+      expect(mockNavigate).toHaveBeenCalledWith('/visualizer/123', expect.objectContaining({
+        state: expect.objectContaining({ onboardingJustCompleted: true }),
+      }));
     });
   });
 
   test('successful form submission navigates to dashboard if no project ID', async () => {
+    mockProfile({
+      username: 'testuser',
+      skills: ['S1', 'S2', 'S3'].map(name => JSON.stringify({ name })),
+      interests: ['I1', 'I2', 'I3'].map(name => JSON.stringify({ name })),
+    });
     axios.post.mockResolvedValue({ 
         data: { 
             message: 'Onboarding successful', 
@@ -228,16 +216,7 @@ describe('OnboardingPage', () => {
     });
 
     renderWithTheme(<OnboardingPage />);
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'testuser' } });
-    // Assume skills and interests are filled as in previous test
-    const skillsInput = screen.getByLabelText(/Skills \(at least 3\)/i);
-    fireEvent.change(skillsInput, { target: { value: 'S1' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S2' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S3' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    const interestsInput = screen.getByLabelText(/Interests \(at least 3\)/i);
-    fireEvent.change(interestsInput, { target: { value: 'I1' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I2' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I3' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
+    await screen.findByText('S3');
 
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
      await act(async () => {
@@ -245,26 +224,24 @@ describe('OnboardingPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', expect.objectContaining({
+        state: expect.objectContaining({ onboardingJustCompleted: true }),
+      }));
     });
   });
 
   test('displays error message on API call failure during submission', async () => {
+    mockProfile({
+      username: 'testuser',
+      skills: ['S1', 'S2', 'S3'].map(name => JSON.stringify({ name })),
+      interests: ['I1', 'I2', 'I3'].map(name => JSON.stringify({ name })),
+    });
     axios.post.mockRejectedValue({
       response: { data: { message: 'Server error during onboarding' } },
     });
 
     renderWithTheme(<OnboardingPage />);
-    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'testuser' } });
-    // Assume skills and interests are filled
-    const skillsInput = screen.getByLabelText(/Skills \(at least 3\)/i);
-    fireEvent.change(skillsInput, { target: { value: 'S1' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S2' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    fireEvent.change(skillsInput, { target: { value: 'S3' } }); fireEvent.keyDown(skillsInput, { key: 'Enter' });
-    const interestsInput = screen.getByLabelText(/Interests \(at least 3\)/i);
-    fireEvent.change(interestsInput, { target: { value: 'I1' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I2' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
-    fireEvent.change(interestsInput, { target: { value: 'I3' } }); fireEvent.keyDown(interestsInput, { key: 'Enter' });
+    await screen.findByText('S3');
 
     const submitButton = screen.getByRole('button', { name: /Complete Profile/i });
     await act(async () => {

@@ -6,8 +6,10 @@
     "test": "vitest run",
     "test:evidence-eval": "node scripts/evidence-eval.js",
     "test:review-races": "node scripts/review-races.js",
-    "test:review-schema": "node scripts/review-schema-smoke.js",
-    "postinstall": "echo 'Installed packages:' && ls node_modules/backblaze-b2 || echo 'B2 NOT INSTALLED'"
+    "test:review-schema": "node scripts/run-review-schema-smoke.js",
+    "test:settlement-races": "node scripts/settlement-races.js",
+    "test:contract": "node scripts/contract-smoke.js",
+    "postinstall": "node -e \"console.log(require.resolve('backblaze-b2'))\""
   },
   "type": "module",
   "keywords": [],

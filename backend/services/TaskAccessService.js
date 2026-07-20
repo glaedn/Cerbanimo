@@ -99,9 +99,13 @@ class TaskAccessService {
     const authenticated = Boolean(actorUserId);
     const visibility = String(task.project_visibility || 'public').toLowerCase();
     const publicVisible = authenticated && !['private', 'invite_only', 'members', 'restricted'].includes(visibility);
+    const authorizedProjectIds = Array.isArray(authContext.authorizedProjectIds)
+      ? authContext.authorizedProjectIds.map(Number)
+      : [];
+    const projectViewer = Boolean(actorUserId && authorizedProjectIds.includes(Number(task.project_id)));
 
     const taskAuthority = actor.serviceActor || actor.admin || assignedActor || taskCreator || projectCreator || policyGranted;
-    const canView = taskAuthority || publicVisible;
+    const canView = taskAuthority || publicVisible || projectViewer;
     const canViewEvidenceContent = taskAuthority;
     const basis = {
       serviceActor: actor.serviceActor,
@@ -111,6 +115,7 @@ class TaskAccessService {
       projectCreator,
       policyGranted,
       publicVisible,
+      projectViewer,
       projectVisibility: visibility
     };
     const authorityReason = 'Task access requires task assignment, task/project ownership, project-manager authority, service authority, or explicit task policy.';

@@ -534,6 +534,7 @@ export async function createKamiyaApiTables() {
         version INTEGER NOT NULL DEFAULT 1,
         reflection TEXT,
         summary TEXT,
+        encounter_context JSONB NOT NULL DEFAULT '{}'::jsonb,
         requirement_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
         validation_policy_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
         frozen_manifest JSONB,
@@ -563,6 +564,7 @@ export async function createKamiyaApiTables() {
         )),
         CHECK (jsonb_typeof(requirement_snapshot) = 'array'),
         CHECK (jsonb_typeof(validation_policy_snapshot) = 'object'),
+        CHECK (jsonb_typeof(encounter_context) = 'object'),
         UNIQUE (task_id, actor_user_id, version)
       );
     `);
@@ -861,7 +863,8 @@ export async function createKamiyaApiTables() {
         ADD COLUMN IF NOT EXISTS frozen_manifest JSONB,
         ADD COLUMN IF NOT EXISTS manifest_sha256 TEXT,
         ADD COLUMN IF NOT EXISTS source_automation_run_id BIGINT REFERENCES automation_runs(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMP WITH TIME ZONE;
+        ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMP WITH TIME ZONE,
+        ADD COLUMN IF NOT EXISTS encounter_context JSONB NOT NULL DEFAULT '{}'::jsonb;
       ALTER TABLE task_evidence_blobs
         ADD COLUMN IF NOT EXISTS sanitizer_version TEXT;
       ALTER TABLE task_evidence_items
