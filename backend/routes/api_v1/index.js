@@ -173,6 +173,10 @@ const openApiDocument = {
     '/projects/{projectId}/launch/preview': { post: { summary: 'Preview a quest launch action' } },
     '/projects/{projectId}/calling': { get: { summary: 'Read current actor character calling for a project' }, patch: { summary: 'Update current actor character calling for a project' } },
     '/projects/{projectId}/chronicle': { get: { summary: 'Read project narrative chronicle events' } },
+    '/projects/{projectId}/messages': {
+      get: { summary: 'Read the durable party message channel' },
+      post: { summary: 'Post an idempotent message to the durable party channel' }
+    },
     '/projects/{projectId}/world-state': { get: { summary: 'Read a Resonera-ready project region, task graph, party, chronicle, and event cursor' } },
     '/communities': { get: { summary: 'List communities' } },
     '/profile': { get: { summary: 'Read current actor profile' } },
@@ -912,6 +916,25 @@ router.get('/projects/:projectId/chronicle', requireScopes([API_SCOPES.READ_PROJ
     limit: req.query.limit
   });
   return sendOk(req, res, result);
+}));
+
+router.get('/projects/:projectId/messages', requireScopes([API_SCOPES.READ_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.getPartyMessages({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    after: req.query.after || 0,
+    limit: req.query.limit || 100
+  });
+  return sendOk(req, res, result);
+}));
+
+router.post('/projects/:projectId/messages', requireScopes([API_SCOPES.WRITE_PROJECTS]), asyncHandler(async (req, res) => {
+  const result = await GameMasterService.postPartyMessage({
+    projectId: req.params.projectId,
+    authContext: actionAuthContext(req),
+    input: req.body || {}
+  });
+  return sendOk(req, res, result, 201);
 }));
 
 router.get('/projects/:projectId/world-state', requireScopes([API_SCOPES.READ_PROJECTS, API_SCOPES.READ_TASKS]), asyncHandler(async (req, res) => {

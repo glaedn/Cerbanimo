@@ -49,7 +49,9 @@ export function createDeterministicBootstrapGenerators() {
       ].join('\n\n'),
       tasks: scenario === 'invalid_cycle'
         ? invalidCycleTasks(dueDate)
-        : validTasks(dueDate)
+        : scenario === 'party_completion'
+          ? partyCompletionTasks(dueDate)
+          : validTasks(dueDate)
     };
   };
 
@@ -272,6 +274,40 @@ function validTasks(dueDate) {
           description: 'A readiness summary cites the requirement map, prototype status, and quality-check result.',
           proofTypes: ['document', 'attestation'],
           checks: ['human_review']
+        }
+      ]
+    }
+  ];
+}
+
+function partyCompletionTasks(dueDate) {
+  const end = dueDate ? new Date(dueDate) : new Date('2027-01-02T00:00:00.000Z');
+  const start = new Date(end);
+  start.setDate(start.getDate() - 14);
+  return [
+    {
+      id: 'party-quest-page',
+      name: 'Publish the party quest page',
+      description: 'Co-author a one-page quest guide that states the shared goal, each companion’s next step, and the sign that the work is complete.',
+      skill_name: 'Collaborative Storycraft',
+      skill_level: 1,
+      reward_tokens: 40,
+      dependencies: [],
+      start_date: isoDate(start),
+      due_date: isoDate(end),
+      impact_label: 'Gives the party one clear, shared place to coordinate the quest.',
+      impact_weight: 100,
+      automation_classification: 'human_driven',
+      automation_confidence: 0.95,
+      automation_rationale: 'The party must agree on the shared goal and describe their real contribution.',
+      required_human_inputs: [],
+      automation_requirements: {},
+      validation_requirements: [
+        {
+          requirementId: 'party-guide-complete',
+          description: 'The evidence names the shared goal, the companions’ next steps, and a clear completion signal.',
+          proofTypes: ['text'],
+          checks: ['reflection_present']
         }
       ]
     }

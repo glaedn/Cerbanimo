@@ -56,6 +56,26 @@ function normalizeLimit(value, fallback, min, max) {
   return Math.max(min, Math.min(max, parsed));
 }
 
+export function normalizePartyMessageContent(value) {
+  const content = String(value || '').trim();
+  if (!content) throw httpError(400, 'Party messages cannot be empty.', 'PARTY_MESSAGE_EMPTY');
+  if (content.length > 2000) throw httpError(400, 'Party messages are limited to 2,000 characters.', 'PARTY_MESSAGE_TOO_LONG');
+  return content;
+}
+
+function normalizePartyMessageKind(value) {
+  return String(value || '').trim().toLowerCase() === 'kamiya' ? 'kamiya' : 'player';
+}
+
+function normalizeClientMessageId(value) {
+  const id = String(value || '').trim();
+  if (!id) return null;
+  if (!/^[a-zA-Z0-9:_-]{1,160}$/.test(id)) {
+    throw httpError(400, 'clientMessageId contains unsupported characters.', 'PARTY_MESSAGE_ID_INVALID');
+  }
+  return id;
+}
+
 function httpError(status, message, code = null, details = null) {
   const error = new Error(message);
   error.status = status;
@@ -218,6 +238,21 @@ function serializeEvent(row) {
   };
 }
 
+function serializePartyMessage(row) {
+  const facts = row.facts || {};
+  return {
+    id: row.id,
+    uuid: row.event_uuid,
+    projectId: row.project_id,
+    actorUserId: row.actor_user_id,
+    actorName: row.actor_username || row.title || 'Party member',
+    authorKind: facts.authorKind === 'kamiya' ? 'kamiya' : 'player',
+    content: row.body || '',
+    clientMessageId: facts.clientMessageId || null,
+    createdAt: row.created_at
+  };
+}
+
 function questProfileFromProject(project, input = {}) {
   const title = String(input.title || project.name || 'Untitled Quest').trim().slice(0, 160);
   const description = String(project.description || input.premise || 'A collaborative Cerbanimo quest.').trim();
@@ -262,6 +297,7 @@ class GameMasterService {
         canUpdateQuestProfile: false,
         canUpdateNarrativeSettings: false,
         canUpdateCalling: false,
+        canPostPartyMessage: false,
         reason: 'Project not found.'
       };
     }
@@ -296,6 +332,7 @@ class GameMasterService {
 
     const canView = admin || owner || taskParticipant || partyMember || publicVisible;
     const canManage = admin || owner;
+    const canPostPartyMessage = admin || owner || taskParticipant || partyMember;
     return {
       exists: true,
       actorUserId: actorId,
@@ -312,6 +349,7 @@ class GameMasterService {
       canUpdateQuestProfile: canManage,
       canUpdateNarrativeSettings: canManage,
       canUpdateCalling: Boolean(actorId && canView),
+      canPostPartyMessage,
       reason: canView ? 'Project access authorized.' : 'Project is not visible to this actor.'
     };
   }
@@ -466,7 +504,8 @@ class GameMasterService {
       launchQuest: Boolean(policy.canLaunchQuest),
       updateQuestProfile: Boolean(policy.canUpdateQuestProfile),
       updateNarrativeSettings: Boolean(policy.canUpdateNarrativeSettings),
-      updateCalling: Boolean(policy.canUpdateCalling)
+      updateCalling: Boolean(policy.canUpdateCalling),
+      sendPartyMessage: Boolean(policy.canPostPartyMessage)
     };
   }
 
@@ -784,11 +823,13 @@ class GameMasterService {
       title: 'Party invite created',
       facts: { inviteId: result.rows[0].id, maxUses }
     });
-    const origin = process.env.CERBANIMO_PUBLIC_ORIGIN || process.env.FRONTEND_URL || process.env.BACKEND_URL || '';
+    const resoneraOrigin = process.env.RESONERA_PUBLIC_ORIGIN || '';
+    const origin = resoneraOrigin || process.env.CERBANIMO_PUBLIC_ORIGIN || process.env.FRONTEND_URL || process.env.BACKEND_URL || '';
+    const invitePath = resoneraOrigin ? `/invite/${encodeURIComponent(token)}` : `/project-invites/${encodeURIComponent(token)}`;
     return {
       invite: serializeInvite(result.rows[0], true),
       token,
-      inviteUrl: origin ? `${origin.replace(/\/$/, '')}/project-invites/${token}` : null,
+      inviteUrl: origin ? `${origin.replace(/\/$/, '')}${invitePath}` : null,
       warning: 'This raw invite token is returned once. Cerbanimo stores only a hash.',
       allowedActions: this.allowedActions(policy)
     };
@@ -1063,6 +1104,75 @@ class GameMasterService {
       project: safeProject(project),
       events: result.rows.map(serializeEvent),
       allowedActions: this.allowedActions(policy)
+    };
+  }
+
+  async getPartyMessages({ projectId, authContext, after = 0, limit = 100 }) {
+    const project = await this.loadProject(projectId);
+    const policy = await this.projectPolicy(project, authContext);
+    this.assertPolicy(policy, 'canPostPartyMessage', 'Only active party members can read the party channel.');
+    const cursor = Math.max(0, Number.parseInt(after, 10) || 0);
+    const result = await pool.query(
+      `SELECT event.*, actor.username AS actor_username
+       FROM project_narrative_events event
+       LEFT JOIN users actor ON actor.id = event.actor_user_id
+       WHERE event.project_id = $1
+         AND event.event_type = 'party.message'
+         AND event.visibility = 'party'
+         AND event.id > $2
+       ORDER BY event.id ASC
+       LIMIT $3`,
+      [projectId, cursor, normalizeLimit(limit, 100, 1, 200)]
+    );
+    return {
+      project: safeProject(project),
+      messages: result.rows.map(serializePartyMessage),
+      nextCursor: result.rows.length ? Number(result.rows.at(-1).id) : cursor,
+      allowedActions: { send: Boolean(policy.canPostPartyMessage) }
+    };
+  }
+
+  async postPartyMessage({ projectId, authContext, input = {} }) {
+    const project = await this.loadProject(projectId);
+    const policy = await this.projectPolicy(project, authContext);
+    this.assertPolicy(policy, 'canPostPartyMessage', 'Only active party members can speak in the party channel.');
+    const content = normalizePartyMessageContent(input.content ?? input.message);
+    const authorKind = normalizePartyMessageKind(input.authorKind ?? input.author_kind);
+    const clientMessageId = normalizeClientMessageId(input.clientMessageId ?? input.client_message_id);
+    const userId = actorUserId(authContext);
+    const eventKey = clientMessageId ? `party-message:${userId}:${clientMessageId}` : null;
+    let event = await this.recordNarrativeEvent({
+      projectId,
+      actorUserId: userId,
+      eventType: 'party.message',
+      eventKey,
+      title: authorKind === 'kamiya' ? 'Kamiya · Shared Guide' : 'Party message',
+      body: content,
+      facts: {
+        authorKind,
+        clientMessageId,
+        sourceClient: String(input.sourceClient || input.source_client || 'resonera').slice(0, 80),
+        nonAuthoritative: true
+      },
+      visibility: 'party'
+    });
+    if (!event && eventKey) {
+      event = (await pool.query(
+        `SELECT * FROM project_narrative_events WHERE project_id = $1 AND event_key = $2 LIMIT 1`,
+        [projectId, eventKey]
+      )).rows[0] || null;
+    }
+    if (!event) throw httpError(409, 'The party message could not be recorded.', 'PARTY_MESSAGE_NOT_RECORDED');
+    const hydrated = (await pool.query(
+      `SELECT event.*, actor.username AS actor_username
+       FROM project_narrative_events event
+       LEFT JOIN users actor ON actor.id = event.actor_user_id
+       WHERE event.id = $1`,
+      [event.id]
+    )).rows[0];
+    return {
+      message: serializePartyMessage(hydrated || event),
+      allowedActions: { send: true }
     };
   }
 

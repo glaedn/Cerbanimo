@@ -1,12 +1,14 @@
 import React from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const bridgeMessageTypes = {
   success: 'CERBANIMO_AUTH_BRIDGE_SUCCESS',
   error: 'CERBANIMO_AUTH_BRIDGE_ERROR',
 };
+
+const bridgeScope = 'openid profile email read:profile write:profile';
 
 function normalizeOrigin(value) {
   const origin = (value || '').trim();
@@ -26,12 +28,36 @@ function parseAllowedOrigins() {
     .filter(Boolean);
 }
 
-function useBridgeParams() {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
+function bridgeParamsFromLocation() {
+  const params = new URLSearchParams(window.location.search);
   return {
     returnOrigin: params.get('return_origin') || '',
     nonce: params.get('nonce') || '',
+    consentAttempted: params.get('consent_attempt') === '1',
+  };
+}
+
+export function isConsentRequiredError(error) {
+  const code = String(error?.error || error?.code || '').toLowerCase();
+  const message = String(error?.error_description || error?.message || '').toLowerCase();
+  return code === 'consent_required' || message.includes('consent required') || message.includes('consent_required');
+}
+
+function callbackPathFor(returnOrigin, nonce, consentAttempted = false) {
+  const params = new URLSearchParams({
+    return_origin: normalizeOrigin(returnOrigin),
+    nonce,
+  });
+  if (consentAttempted) params.set('consent_attempt', '1');
+  return `/auth/bridge/callback?${params.toString()}`;
+}
+
+function bridgeAuthorizationParams(prompt) {
+  return {
+    redirect_uri: `${window.location.origin}/auth/bridge/callback`,
+    audience: import.meta.env.VITE_BACKEND_URL,
+    scope: bridgeScope,
+    ...(prompt ? { prompt } : {}),
   };
 }
 
@@ -98,7 +124,7 @@ function AuthBridgeShell({ children }) {
 export function AuthBridgeStart() {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const navigate = useNavigate();
-  const { returnOrigin, nonce } = useBridgeParams();
+  const { returnOrigin, nonce } = bridgeParamsFromLocation();
   const [error, setError] = React.useState('');
 
   React.useEffect(() => {
@@ -116,7 +142,7 @@ export function AuthBridgeStart() {
     if (isLoading) return;
 
     const normalizedReturnOrigin = normalizeOrigin(returnOrigin);
-    const callbackPath = `/auth/bridge/callback?return_origin=${encodeURIComponent(normalizedReturnOrigin)}&nonce=${encodeURIComponent(nonce)}`;
+    const callbackPath = callbackPathFor(normalizedReturnOrigin, nonce);
 
     if (isAuthenticated) {
       navigate(callbackPath, { replace: true });
@@ -125,11 +151,7 @@ export function AuthBridgeStart() {
 
     loginWithRedirect({
       appState: { returnTo: callbackPath },
-      authorizationParams: {
-        redirect_uri: `${window.location.origin}/auth/bridge/callback`,
-        audience: import.meta.env.VITE_BACKEND_URL,
-        scope: 'openid profile email read:profile write:profile',
-      },
+      authorizationParams: bridgeAuthorizationParams(),
     }).catch(loginError => {
       setError(loginError.message || 'Unable to start Cerbanimo login.');
       postToOpener(returnOrigin, {
@@ -157,7 +179,7 @@ export function AuthBridgeCallback() {
     getAccessTokenSilently,
     loginWithRedirect,
   } = useAuth0();
-  const { returnOrigin, nonce } = useBridgeParams();
+  const { returnOrigin, nonce, consentAttempted } = bridgeParamsFromLocation();
   const [status, setStatus] = React.useState('Completing Cerbanimo login...');
 
   React.useEffect(() => {
@@ -180,23 +202,16 @@ export function AuthBridgeCallback() {
       if (!isAuthenticated) {
         await loginWithRedirect({
           appState: {
-            returnTo: `/auth/bridge/callback?return_origin=${encodeURIComponent(normalizeOrigin(returnOrigin))}&nonce=${encodeURIComponent(nonce)}`,
+            returnTo: callbackPathFor(returnOrigin, nonce),
           },
-          authorizationParams: {
-            redirect_uri: `${window.location.origin}/auth/bridge/callback`,
-            audience: import.meta.env.VITE_BACKEND_URL,
-            scope: 'openid profile email read:profile write:profile',
-          },
+          authorizationParams: bridgeAuthorizationParams(),
         });
         return;
       }
 
       try {
         const accessToken = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: import.meta.env.VITE_BACKEND_URL,
-            scope: 'openid profile email read:profile write:profile',
-          },
+          authorizationParams: bridgeAuthorizationParams(),
         });
 
         if (user?.sub) {
@@ -234,6 +249,30 @@ export function AuthBridgeCallback() {
         closePopupSoon();
       } catch (error) {
         if (cancelled) return;
+
+        if (isConsentRequiredError(error) && !consentAttempted) {
+          setStatus('Cerbanimo needs your permission to connect this companion...');
+          try {
+            await loginWithRedirect({
+              appState: {
+                returnTo: callbackPathFor(returnOrigin, nonce, true),
+              },
+              authorizationParams: bridgeAuthorizationParams('consent'),
+            });
+          } catch (consentError) {
+            if (cancelled) return;
+            setStatus('Cerbanimo could not open the permission request.');
+            postToOpener(returnOrigin, {
+              type: bridgeMessageTypes.error,
+              error: 'consent_start_failed',
+              message: consentError.message,
+              nonce,
+            });
+            closePopupSoon();
+          }
+          return;
+        }
+
         setStatus('Cerbanimo login could not be completed.');
         postToOpener(returnOrigin, {
           type: bridgeMessageTypes.error,
@@ -252,6 +291,7 @@ export function AuthBridgeCallback() {
     };
   }, [
     getAccessTokenSilently,
+    consentAttempted,
     isAuthenticated,
     isLoading,
     loginWithRedirect,

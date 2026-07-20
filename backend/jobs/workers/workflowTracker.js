@@ -22,6 +22,8 @@ export async function updateWorkflowRun(runId, status, state = null) {
     query += ' WHERE id = $2';
   }
 
+  params.push(runId);
+
   await pool.query(query, params);
 }
 

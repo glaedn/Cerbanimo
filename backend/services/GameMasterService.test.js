@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import GameMasterService, {
   hashInviteToken,
-  normalizeNarrativePreferences
+  normalizeNarrativePreferences,
+  normalizePartyMessageContent
 } from './GameMasterService.js';
 
 describe('GameMasterService', () => {
@@ -35,6 +36,12 @@ describe('GameMasterService', () => {
     expect(first).not.toContain('cerbanimo-secret-invite');
   });
 
+  it('normalizes party messages and rejects empty or oversized content', () => {
+    expect(normalizePartyMessageContent('  Ready at the gate.  ')).toBe('Ready at the gate.');
+    expect(() => normalizePartyMessageContent('   ')).toThrow('cannot be empty');
+    expect(() => normalizePartyMessageContent('x'.repeat(2001))).toThrow('2,000 characters');
+  });
+
   it('allows public project quest context visibility for authenticated actors', async () => {
     const policy = await GameMasterService.projectPolicy(
       { id: 1, creator_id: 2, visibility: 'public' },
@@ -49,6 +56,7 @@ describe('GameMasterService', () => {
     expect(policy.canView).toBe(true);
     expect(policy.canManage).toBe(false);
     expect(policy.canCreateInvite).toBe(false);
+    expect(policy.canPostPartyMessage).toBe(false);
   });
 
   it('denies private project quest context to unrelated actors', async () => {
@@ -81,5 +89,22 @@ describe('GameMasterService', () => {
     expect(policy.canCreateInvite).toBe(true);
     expect(policy.canUpdateQuestProfile).toBe(true);
     expect(policy.canLaunchQuest).toBe(true);
+    expect(policy.canPostPartyMessage).toBe(true);
+  });
+
+  it('lets an invited party member use party communication without granting project management', async () => {
+    const policy = await GameMasterService.projectPolicy(
+      { id: 1, creator_id: 2, visibility: 'private' },
+      { actorUserId: 7, roles: [] },
+      {
+        query: vi.fn()
+          .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+          .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 7 }] })
+      }
+    );
+
+    expect(policy.canView).toBe(true);
+    expect(policy.canManage).toBe(false);
+    expect(policy.canPostPartyMessage).toBe(true);
   });
 });
