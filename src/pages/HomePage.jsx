@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import "./Homepage.css";
+import "./HomePage.css";
 
 export default function Homepage() {
   // Get the navigate function from React Router
