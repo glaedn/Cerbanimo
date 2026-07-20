@@ -235,6 +235,8 @@
     /* Position adjustments for HUDSettingsPanel fixed wrapper are in SpaceshipHUD.jsx */
   }
 }
+
+.progress-bar-container {
   height: 18px; /* Slightly taller */
   background-color: rgba(0, 0, 0, 0.3); /* Darker, slightly transparent background for the bar */
   border-radius: 4px; /* theme.borders.borderRadiusSm */
