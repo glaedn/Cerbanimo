@@ -94,6 +94,9 @@
     "globals": "^15.14.0",
     "jest-environment-jsdom": "^30.3.0",
     "jsdom": "^29.1.1",
+    "parse5": "^8.0.1",
+    "sharp": "^0.35.3",
+    "supertest": "^7.2.2",
     "vite": "^6.4.2",
     "vitest": "^4.1.6"
   }
