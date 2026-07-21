@@ -11,9 +11,9 @@ import WeeklyWrapUpService from '../services/WeeklyWrapUpService.js';
 
 const router = express.Router();
 
-// Middleware to check if user is ID 15
+// Middleware to check if user is an administrator
 const isAdmin = (req, res, next) => {
-  if (req.user && Number(req.user.id) === 15) {
+  if (req.user && Array.isArray(req.user.roles) && req.user.roles.includes('admin')) {
     next();
   } else {
     res.status(404).json({ message: 'Not Found' });
