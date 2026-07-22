@@ -1,0 +1,4 @@
+## 2026-07-22 - [PII Leakage in Public Profile Query]
+**Vulnerability:** The public unauthenticated endpoint `/profile/public/:userId` was fetching and returning the `resume_text` field from the `users` table, exposing sensitive Personally Identifiable Information (PII) such as real names, phone numbers, home addresses, and work histories.
+**Learning:** Unauthenticated routes that fetch user entities must carefully select only public-safe fields rather than pulling entire user rows or broad subsets of columns that might contain sensitive info like parsed resumes, raw resume texts, internal tokens, or exact location points.
+**Prevention:** Always explicitly define minimal field projections for public-facing queries. Audit all database selection schemas in routes that do not require active user session validation to verify that no sensitive columns are returned.
