@@ -1,0 +1,4 @@
+## 2026-07-23 - Prevent Exposing Sensitive Resume Text on Public Profiles
+**Vulnerability:** The public profile endpoint (`GET /profile/public/:userId`) queried and returned the `resume_text` field of users without authentication or filtering. This exposed user-sensitive Personally Identifiable Information (PII) to unauthenticated public requests.
+**Learning:** Although authentication is bypassed correctly for general public profile fields like `username`, `profile_picture`, `skills`, and `interests`, sensitive fields such as raw resume text can easily be included accidentally if the database query is overly broad.
+**Prevention:** Ensure that unauthenticated public routes explicitly exclude sensitive fields from the SELECT clause, selecting only those fields that are intentionally safe to share.
