@@ -10,7 +10,7 @@ const resolveUser = async (req, res, next) => {
   const auth0Id = req.auth.payload.sub;
 
   try {
-    const result = await pool.query('SELECT id, username FROM users WHERE auth0_id = $1', [auth0Id]);
+    const result = await pool.query('SELECT id, username, roles FROM users WHERE auth0_id = $1', [auth0Id]);
 
     if (result.rows.length > 0) {
       req.user = result.rows[0];
