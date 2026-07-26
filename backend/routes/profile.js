@@ -35,7 +35,7 @@ router.get("/public/:userId",
       const { userId } = req.params;
 
       const result = await pool.query(
-        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status, discord_user_id, resume_text FROM users WHERE id = $1`,
+        `SELECT id, username, profile_picture, skills, interests, badges, contact_links, capacity_status, discord_user_id FROM users WHERE id = $1`,
         [userId]
       );
 

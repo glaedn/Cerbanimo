@@ -1,0 +1,4 @@
+## 2026-07-26 - Public Profile Resume Leakage
+**Vulnerability:** The public profile endpoint `GET /profile/public/:userId` was returning user's `resume_text` alongside non-sensitive fields. Resumes are highly sensitive and usually contain PII (Personally Identifiable Information) such as email, phone, physical address, and detailed employment history. This could be abused to harvest user details at scale without authentication.
+**Learning:** The query fetched all user columns without filter restrictions or field-level protection, resulting in silent exposure when new sensitive columns are added.
+**Prevention:** Avoid wildcard or overly permissive column lists on unauthenticated endpoints. Maintain an explicit whitelist of non-sensitive public attributes and never query sensitive personal attributes like `resume_text` on public-facing endpoints.
