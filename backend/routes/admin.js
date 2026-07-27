@@ -11,12 +11,12 @@ import WeeklyWrapUpService from '../services/WeeklyWrapUpService.js';
 
 const router = express.Router();
 
-// Middleware to check if user is ID 15
+// Middleware to check if the authenticated user has the admin role
 const isAdmin = (req, res, next) => {
-  if (req.user && Number(req.user.id) === 15) {
+  if (req.user && Array.isArray(req.user.roles) && req.user.roles.includes('admin')) {
     next();
   } else {
-    res.status(404).json({ message: 'Not Found' });
+    res.status(403).json({ error: 'Access Denied: Platform Administrator role required.' });
   }
 };
 
