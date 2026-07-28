@@ -1,0 +1,4 @@
+## 2025-03-01 - [PII Leakage via Public Profile API Endpoint]
+**Vulnerability:** The public profile API route `/profile/public/:userId` was returning the sensitive personally identifiable information (PII) field `resume_text` from the database. Unauthenticated/public users could query this endpoint and access users' entire raw resumes without proper authorization.
+**Learning:** When adding new fields (like `resume_text`) to users' profile schemas, it's easy to accidentally include them in generic `SELECT` queries across different endpoints, especially if the schema of public-facing endpoints isn't strictly controlled or minimized.
+**Prevention:** Always restrict the selected fields in database queries for unauthenticated or public-facing endpoints. Explicitly specify safe, non-sensitive public attributes and verify unauthenticated endpoints through unit and routing tests to ensure sensitive parameters (e.g., resumes, PII, email addresses) are never exposed.
