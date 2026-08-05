@@ -1,0 +1,4 @@
+## 2026-08-05 - Private PII Leak in Public Profile Endpoint
+**Vulnerability:** The unauthenticated `GET /profile/public/:userId` route returned `resume_text` which contains sensitive Personally Identifiable Information (PII) including physical address, employment history, and contact information.
+**Learning:** The public profile endpoint used a broad SQL SELECT query on the `users` table, which was updated to include `resume_text` in a separate feature addition without updating the public query filters to exclude it.
+**Prevention:** Ensure public queries explicitly select only safe public attributes (e.g., `id`, `username`, `skills`, `interests`) instead of general user attributes, and write unit/integration tests that assert that newly added private fields are not exposed on public endpoints.
